@@ -123,7 +123,7 @@ object MidiCoreChordGenerator {
         }
     }
 
-    /** Select a bounded legal voicing using voice continuity, melody/bass space, and an explicit seed tie-break. */
+    /** Select a bounded legal voicing using continuity plus read-only melody overlap, accent, and register evidence. */
     private fun selectVoicing(
         context: MidiCoreGenerationContext,
         window: app.melotrail.structure.MidiCoreResolvedChordWindow,
@@ -144,13 +144,113 @@ object MidiCoreChordGenerator {
         }.orEmpty()
         val pool = movementSafe.ifEmpty { safeCandidates }
         val ranked = pool.sortedWith(
-            compareBy<MidiCorePianoVoicingCandidate> { voiceLeadingScore(context, it.pitches, previous) + it.kind.selectionPenalty }
+            compareBy<MidiCorePianoVoicingCandidate> { candidate ->
+                melodyEvidenceScore(context, window, rhythm, candidate.pitches) +
+                    voiceLeadingScore(context, candidate.pitches, previous) + candidate.kind.selectionPenalty
+            }
                 .thenBy { it.kind.ordinal }
                 .thenBy { it.pitches.joinToString(",") },
         )
-        val variationCount = minOf(3, ranked.size)
+        // Preserve M04a's existing variation when no M02 projection is supplied. With evidence,
+        // a seed may vary only similarly scored choices; it must not promote a sustained close
+        // clash merely because it happens to be third in the otherwise legal pool.
+        val variationPool = if (context.melodyHarmonyAnalysis == null) {
+            ranked
+        } else {
+            val bestScore = selectionScore(context, window, rhythm, ranked.first(), previous)
+            ranked.takeWhile { candidate ->
+                selectionScore(context, window, rhythm, candidate, previous) <= bestScore + MAX_SEED_VARIATION_COST
+            }
+        }
+        val variationCount = minOf(MAX_SEED_VARIATIONS, variationPool.size)
         val variation = Math.floorMod(context.seed + windowIndex.toLong(), variationCount.toLong()).toInt()
-        return ranked[variation].pitches
+        return variationPool[variation].pitches
+    }
+
+    private fun selectionScore(
+        context: MidiCoreGenerationContext,
+        window: app.melotrail.structure.MidiCoreResolvedChordWindow,
+        rhythm: List<RhythmWindow>,
+        candidate: MidiCorePianoVoicingCandidate,
+        previous: List<Int>?,
+    ): Long = melodyEvidenceScore(context, window, rhythm, candidate.pitches) +
+        voiceLeadingScore(context, candidate.pitches, previous) + candidate.kind.selectionPenalty
+
+    /**
+     * Rank only from M02's immutable observations. A close note costs more when M02 identifies
+     * it as tension, then only according to its overlap and metrical accent. Passing tension
+     * remains legal and deliberately receives a much smaller multiplier than sustained tension;
+     * ordinary consonant melody overlap is not recast as a clash. Low melody register pressure
+     * remains independent of chord-tone classification.
+     */
+    private fun melodyEvidenceScore(
+        context: MidiCoreGenerationContext,
+        window: app.melotrail.structure.MidiCoreResolvedChordWindow,
+        rhythm: List<RhythmWindow>,
+        voicing: List<Int>,
+    ): Long {
+        val evidence = context.melodyHarmonyAnalysis?.windows?.singleOrNull { it.chordEventId == window.event.id } ?: return 0L
+        val findingByNoteId = evidence.findings.groupBy(MidiCoreHarmonyTensionFinding::noteId)
+        val lowRegisterCeiling = evidence.activity.register
+            ?.takeIf { it.lowestPitch <= LOW_MELODY_REGISTER_THRESHOLD }
+            ?.lowestPitch
+            ?.plus(LOW_MELODY_REGISTER_CLEARANCE)
+
+        return rhythm.sumOf { attack ->
+            val generatedEnd = noteEnd(context, attack)
+            voicing.sumOf { chordPitch ->
+                evidence.activity.soundingNotes.sumOf { melody ->
+                    val overlap = minOf(generatedEnd, melody.soundingEndTick) - maxOf(attack.startTick, melody.startTick)
+                    if (overlap <= 0L) {
+                        0L
+                    } else {
+                        val durationUnits = (overlap / context.tickGrid.ticksPerSubdivision).coerceAtLeast(1L)
+                        val tensionFindings = findingByNoteId[melody.id].orEmpty()
+                        val closeIntervalCost = if (tensionFindings.any { it.cause != MidiCoreHarmonyTensionCause.PITCH_BEND_RANGE_UNKNOWN }) {
+                            closeIntervalCost(abs(chordPitch - melody.pitch))
+                        } else {
+                            0L
+                        }
+                        val tensionMultiplier = tensionMultiplier(tensionFindings)
+                        val prominenceMultiplier = findingProminenceMultiplier(tensionFindings)
+                        val registerCost = if (lowRegisterCeiling != null && chordPitch <= lowRegisterCeiling) {
+                            LOW_MELODY_REGISTER_PENALTY
+                        } else {
+                            0L
+                        }
+                        durationUnits * (closeIntervalCost * tensionMultiplier * prominenceMultiplier + registerCost)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun closeIntervalCost(interval: Int): Long = when (interval) {
+        0 -> 40L
+        1 -> 32L
+        2 -> 24L
+        3, 4, 5 -> 12L
+        else -> 0L
+    }
+
+    private fun tensionMultiplier(findings: List<MidiCoreHarmonyTensionFinding>): Long = when {
+        findings.any { it.cause == MidiCoreHarmonyTensionCause.SUSTAINED_ACCENTED_TENSION } -> SUSTAINED_TENSION_MULTIPLIER
+        findings.any { it.cause == MidiCoreHarmonyTensionCause.HELD_SUSPENSION } -> HELD_TENSION_MULTIPLIER
+        findings.any { it.cause == MidiCoreHarmonyTensionCause.PASSING_OR_NEIGHBOR_TONE } -> PASSING_TENSION_MULTIPLIER
+        else -> 1L
+    }
+
+    /** M02 reports the strongest metrical point inside each overlap, including notes held across a chord boundary. */
+    internal fun findingProminenceMultiplier(findings: List<MidiCoreHarmonyTensionFinding>): Long {
+        val prominence = findings
+            .filter { it.cause != MidiCoreHarmonyTensionCause.PITCH_BEND_RANGE_UNKNOWN }
+            .maxOfOrNull(MidiCoreHarmonyTensionFinding::beatProminence)
+            ?: return UNACCENTED_PROMINENCE_MULTIPLIER
+        return when {
+            prominence >= DOWNBEAT_PROMINENCE -> DOWNBEAT_PROMINENCE_MULTIPLIER
+            prominence >= GROUP_ACCENT_PROMINENCE -> GROUP_ACCENT_PROMINENCE_MULTIPLIER
+            else -> UNACCENTED_PROMINENCE_MULTIPLIER
+        }
     }
 
     /**
@@ -430,6 +530,19 @@ object MidiCoreChordGenerator {
     private const val ENERGY_REGISTER_SPAN = 10.0
     private const val PHRASE_ACCENT = 3
     private const val SEED_STEP = 7_919L
+    private const val MAX_SEED_VARIATIONS = 3
+    private const val MAX_SEED_VARIATION_COST = 16L
+    private const val DOWNBEAT_PROMINENCE = 1.0
+    private const val GROUP_ACCENT_PROMINENCE = 0.75
+    private const val DOWNBEAT_PROMINENCE_MULTIPLIER = 3L
+    private const val GROUP_ACCENT_PROMINENCE_MULTIPLIER = 2L
+    private const val UNACCENTED_PROMINENCE_MULTIPLIER = 1L
+    private const val SUSTAINED_TENSION_MULTIPLIER = 4L
+    private const val HELD_TENSION_MULTIPLIER = 2L
+    private const val PASSING_TENSION_MULTIPLIER = 1L
+    private const val LOW_MELODY_REGISTER_THRESHOLD = 55
+    private const val LOW_MELODY_REGISTER_CLEARANCE = 12
+    private const val LOW_MELODY_REGISTER_PENALTY = 18L
 
     private val VOICE_MOVEMENT_ORDER = compareBy<VoiceMovement> {
         it.totalDistance + it.unmatchedVoices.toLong() * VOICE_COUNT_PENALTY

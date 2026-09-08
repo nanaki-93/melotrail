@@ -1,7 +1,17 @@
 package app.melotrail.arrangement.core
 
+import app.melotrail.midi.domain.MidiEventOrderingKey
+import app.melotrail.midi.domain.MidiMelodySelection
+import app.melotrail.midi.domain.MidiNoteEvent
 import app.melotrail.midi.domain.MidiPpq
+import app.melotrail.midi.domain.MidiProtectedMelodySelector
+import app.melotrail.midi.domain.MidiProtectedMelodyView
+import app.melotrail.midi.domain.MidiSemanticEventKind
+import app.melotrail.midi.domain.MidiSourceEventIdentity
+import app.melotrail.midi.domain.MidiSourceIdentity
 import app.melotrail.midi.domain.MidiTrackSummary
+import app.melotrail.midi.domain.SemanticMidiSequence
+import app.melotrail.midi.domain.SemanticMidiTrack
 import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectScaleMode
@@ -126,6 +136,87 @@ class MidiCoreChordGeneratorTest {
         assertTrue(result.accepted, "Expected space-aware candidate, got ${result.validation.report.findings}")
         assertFalse(notes.any { it.pitch == 60 })
         assertTrue(notes.all { note -> abs(note.pitch - 55) > 5 })
+    }
+
+    @Test
+    fun `ranks sustained accented close melody clashes below passing tension without blocking either`() {
+        val melody = protectedNote(65, anchor = false)
+        val base = context(protectedMelodyNotes = listOf(melody))
+        val sustainedContext = base.copy(
+            melodyHarmonyAnalysis = melodyEvidence(
+                base,
+                melody,
+                MidiCoreHarmonyTensionCause.SUSTAINED_ACCENTED_TENSION,
+                accented = true,
+            ),
+        )
+        val sustained = MidiCoreChordGenerator.generate(sustainedContext)
+        val passingMelody = melody.copy(endTick = 120)
+        val passingBase = context(protectedMelodyNotes = listOf(passingMelody))
+        val passing = MidiCoreChordGenerator.generate(passingBase.copy(
+            melodyHarmonyAnalysis = melodyEvidence(
+                passingBase,
+                passingMelody,
+                MidiCoreHarmonyTensionCause.PASSING_OR_NEIGHBOR_TONE,
+                accented = false,
+            ),
+        ))
+
+        assertTrue(sustained.accepted, sustained.validation.report.findings.toString())
+        assertTrue(passing.accepted, passing.validation.report.findings.toString())
+        assertFalse(base.contextSha256 == sustainedContext.contextSha256)
+        assertTrue(closestDistance(passing, melody.pitch) < closestDistance(sustained, melody.pitch))
+        assertEquals(sustained, MidiCoreChordGenerator.generate(sustained.context))
+        assertEquals(passing, MidiCoreChordGenerator.generate(passing.context))
+    }
+
+    @Test
+    fun `weights a real M02 suspension held across a chord boundary by its downbeat prominence`() {
+        val protectedMelody = protectedMelodyView(startTick = 1_440, endTick = 2_400, pitch = 65)
+        val chordEvents = listOf(
+            AuthoritativeChordEvent("before", "verse-1", "Bb", 0, 1_920),
+            AuthoritativeChordEvent("after", "verse-1", "C", 1_920, 3_840),
+        )
+        val project = project(
+            chordEvents = chordEvents,
+            sourceSha256 = protectedMelody.sourceSha256,
+            melodyIdentitySha256 = protectedMelody.identitySha256,
+        )
+        val context = MidiCoreGenerationContext.from(
+            project = project,
+            role = CandidateRole.CHORDS,
+            occurrenceId = "verse-1",
+            performanceProfile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.CHORDS, "chords.sustained"),
+            patternId = MidiCoreChordRhythmPatternId.SUSTAINED.id,
+            generator = MidiCoreGeneratorInput("test-generator", "test-v1", MidiCoreChordRhythmPatternId.SUSTAINED.id, 17),
+            protectedMelody = protectedMelody,
+        )
+
+        val evidence = requireNotNull(context.melodyHarmonyAnalysis)
+        val afterWindow = evidence.windows.single { it.chordEventId == "after" }
+        val suspension = afterWindow.findings.single()
+        assertTrue(afterWindow.accentedNoteIds.isEmpty(), "Held notes are intentionally absent from the onset-only accent projection")
+        assertEquals(MidiCoreHarmonyTensionCause.HELD_SUSPENSION, suspension.cause)
+        assertEquals(1.0, suspension.beatProminence)
+        assertEquals(3L, MidiCoreChordGenerator.findingProminenceMultiplier(afterWindow.findings))
+
+        val result = MidiCoreChordGenerator.generate(context)
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(result, MidiCoreChordGenerator.generate(context))
+    }
+
+    @Test
+    fun `moves piano above low protected melody register pressure`() {
+        val melody = protectedNote(54, anchor = false)
+        val base = context(protectedMelodyNotes = listOf(melody))
+        val result = MidiCoreChordGenerator.generate(base.copy(
+            melodyHarmonyAnalysis = melodyEvidence(base, melody, MidiCoreHarmonyTensionCause.NON_CHORD_TONE, accented = false),
+        ))
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertTrue(notes.all { it.pitch > melody.pitch + 12 }, "Expected piano above low melody register: $notes")
+        assertEquals(result, MidiCoreChordGenerator.generate(result.context))
     }
 
     @Test
@@ -382,31 +473,121 @@ class MidiCoreChordGeneratorTest {
         anchor = anchor,
     )
 
+    private fun protectedMelodyView(startTick: Long, endTick: Long, pitch: Int): MidiProtectedMelodyView =
+        MidiProtectedMelodySelector().select(
+            SemanticMidiSequence(
+                MidiSourceIdentity("a".repeat(64), "source.mid", 1, MidiPpq(480)),
+                listOf(SemanticMidiTrack(0, listOf(MidiNoteEvent(
+                    orderingKey = MidiEventOrderingKey(
+                        startTick,
+                        MidiSemanticEventKind.NOTE,
+                        sourceEvent = MidiSourceEventIdentity(0, 0),
+                    ),
+                    endTick = endTick,
+                    channel = 0,
+                    pitch = pitch,
+                    velocity = 90,
+                )))),
+            ),
+            MidiMelodySelection(0, 0),
+        )
+
+    private fun closestDistance(result: MidiCoreChordGenerationResult, melodyPitch: Int): Int = result.candidate.events
+        .filterIsInstance<MidiCoreCandidateEvent.Note>()
+        .minOf { note -> abs(note.pitch - melodyPitch) }
+
+    private fun melodyEvidence(
+        context: MidiCoreGenerationContext,
+        melody: MidiCoreProtectedMelodyNote,
+        cause: MidiCoreHarmonyTensionCause,
+        accented: Boolean,
+    ): MidiCoreMelodyHarmonyAnalysis {
+        val note = MidiCoreMelodyNoteContext(
+            id = melody.id,
+            startTick = melody.startTick,
+            keyReleaseTick = melody.endTick,
+            soundingEndTick = melody.endTick,
+            pitch = melody.pitch,
+            velocity = melody.velocity,
+            anchor = melody.anchor,
+        )
+        val window = context.chordWindows.single()
+        val location = MidiCoreMelodyLocation(barNumber = 1, beatNumber = 1, tickIntoBeat = 0, pickup = false)
+        val finding = MidiCoreHarmonyTensionFinding(
+            cause = cause,
+            confidence = if (cause == MidiCoreHarmonyTensionCause.SUSTAINED_ACCENTED_TENSION) {
+                MidiCoreHarmonyTensionConfidence.HIGH
+            } else {
+                MidiCoreHarmonyTensionConfidence.MEDIUM
+            },
+            occurrenceId = context.occurrence.id,
+            chordEventId = window.event.id,
+            noteId = note.id,
+            startTick = note.startTick,
+            endTick = note.soundingEndTick,
+            location = location,
+            overlapTicks = note.soundingEndTick - note.startTick,
+            beatProminence = if (accented) 1.0 else 0.5,
+            intervalAboveRootSemitones = 5,
+            nearestChordToneDistanceSemitones = 1,
+            message = "Test-only read-only melody evidence.",
+        )
+        return MidiCoreMelodyHarmonyAnalysis(
+            version = MidiCoreMelodyHarmonyAnalyzer.ANALYSIS_VERSION,
+            authorityHash = context.authority.authorityHash,
+            melodySha256 = context.authority.melodySha256,
+            notes = listOf(note),
+            beats = emptyList(),
+            bars = emptyList(),
+            phrases = emptyList(),
+            windows = listOf(MidiCoreMelodyHarmonyWindowContext(
+                chordEventId = window.event.id,
+                occurrenceId = context.occurrence.id,
+                chordSymbol = window.chord.canonicalSymbol,
+                startTick = window.startTick,
+                endTick = window.endTick,
+                location = location,
+                activity = MidiCoreMelodyActivity(
+                    activeNotes = listOf(note),
+                    soundingNotes = listOf(note),
+                    rests = emptyList(),
+                    register = MidiCoreMelodyRegister(note.pitch, note.pitch),
+                ),
+                accentedNoteIds = if (accented) listOf(note.id) else emptyList(),
+                phraseHints = emptyList(),
+                findings = listOf(finding),
+            )),
+            findings = listOf(finding),
+        )
+    }
+
     private fun project(
         chordSymbol: String = "C",
         chordEvents: List<AuthoritativeChordEvent> = listOf(
             AuthoritativeChordEvent("verse-chord", "verse-1", chordSymbol, 0, 1_920),
         ),
+        sourceSha256: String = "a".repeat(64),
+        melodyIdentitySha256: String = "c".repeat(64),
     ): MidiCoreProject = MidiCoreProject(
         id = ProjectId("chord-generator-project"),
         metadata = ProjectMetadata("Chord generator", "2026-08-27T00:00:00Z"),
         sourceMidi = SourceMidiRecord(
             originalFilename = "source.mid",
-            sha256 = "a".repeat(64),
+            sha256 = sourceSha256,
             format = 1,
             ppq = 480,
-            original = ProjectArtifact(ProjectRelativePath("source/original.mid"), "a".repeat(64)),
+            original = ProjectArtifact(ProjectRelativePath("source/original.mid"), sourceSha256),
             importReport = ProjectArtifact(ProjectRelativePath("reports/import.json"), "b".repeat(64)),
             trackSummaries = listOf(MidiTrackSummary(0, "Melody", emptyList())),
-            sourceEndTick = 1_920,
+            sourceEndTick = chordEvents.maxOf(AuthoritativeChordEvent::endTick),
         ),
-        selectedMelody = SelectedMelodyTrack(0, 0, "c".repeat(64)),
+        selectedMelody = SelectedMelodyTrack(0, 0, melodyIdentitySha256),
         authority = ProjectAuthority(
             key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
             tempo = ProjectTempo(500_000),
             meter = ProjectMeter(4, 2),
             sectionDefinitions = listOf(ProjectSectionDefinition("verse", "Verse")),
-            occurrences = listOf(ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, 1_920)),
+            occurrences = listOf(ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, chordEvents.maxOf(AuthoritativeChordEvent::endTick))),
             chordEvents = chordEvents,
         ),
     )

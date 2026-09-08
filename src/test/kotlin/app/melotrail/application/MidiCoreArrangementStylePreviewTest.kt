@@ -30,7 +30,7 @@ class MidiCoreArrangementStylePreviewTest {
     fun `catalog has stable readable all-role bundles`() {
         val styles = MidiCoreArrangementStyleCatalog.styles
 
-        assertEquals(2, MidiCoreArrangementStyleCatalog.VERSION)
+        assertEquals(3, MidiCoreArrangementStyleCatalog.VERSION)
         assertEquals(listOf("open-sky", "late-night", "steady-road", "rising-room", "wide-bridge"), styles.map { it.id })
         styles.forEach { style ->
             assertEquals(app.melotrail.project.CandidateRole.entries, style.roles.map { it.role })

@@ -35,7 +35,7 @@ class MidiCoreComparisonHarnessTest {
         assertTrue(form.contains("___ / 10"))
         assertFalse(form.contains("8/10"))
         assertTrue(form.contains("Baseline: steady-road / seed 901 / `midi-core-style-v1` / style catalog 1"))
-        assertTrue(form.contains("Candidate: steady-road / seed 901 / `midi-core-style-v2` / style catalog 2"))
+        assertTrue(form.contains("Candidate: steady-road / seed 901 / `midi-core-style-v3` / style catalog 3"))
         review.baseline.filterIsInstance<M01ComparisonCapture.Published>().forEach { capture ->
             assertTrue(capture.sourceUnchanged, capture.case.id)
             assertEquals(setOf("complete-song.mid", "melody.mid", "chords.mid", "bass.mid", "drums.mid"), capture.midiSha256.keys)
@@ -127,30 +127,30 @@ class MidiCoreComparisonHarnessTest {
     }
 
     @Test
-    fun `v1 baseline remains loadable and reports simulated v2 candidate engine inputs`() {
+    fun `v1 baseline remains loadable and reports simulated v3 candidate engine inputs`() {
         val case = M01ComparisonFixtures.cases.first()
         val harness = MidiCoreComparisonHarness(root.resolve("work"))
         val baseline = assertIs<M01ComparisonCapture.Published>(
             harness.loadBaseline(case, root.resolve("output")),
         )
-        val v2Inputs = baseline.engineInputs.copy(
-            styleCatalogVersion = 2,
+        val v3Inputs = baseline.engineInputs.copy(
+            styleCatalogVersion = 3,
             patternCatalogVersion = 2,
             performanceProfileCatalogVersion = 2,
-            engineId = "midi-core-style-v2",
+            engineId = "midi-core-style-v3",
         )
-        val simulatedV2Candidate = baseline.copy(
-            engineInputs = v2Inputs,
+        val simulatedV3Candidate = baseline.copy(
+            engineInputs = v3Inputs,
             frozenInputsSha256 = m01FrozenInputsSha256(
                 baseline.sourceSha256,
                 baseline.authoritySha256,
-                v2Inputs,
+                v3Inputs,
             ),
         )
 
         assertEquals(1L, baseline.engineInputs.styleCatalogVersion)
         assertEquals("midi-core-style-v1", baseline.engineInputs.engineId)
-        val comparison = harness.compare(baseline, simulatedV2Candidate)
+        val comparison = harness.compare(baseline, simulatedV3Candidate)
         assertFalse(comparison.equivalent)
         assertEquals(listOf("Frozen style, seed, or engine inputs differ."), comparison.differences)
     }
@@ -249,7 +249,7 @@ class MidiCoreComparisonHarnessTest {
         assertEquals(candidatePublished.authoritySha256, baselinePublished.authoritySha256)
         assertFalse(candidatePublished.frozenInputsSha256 == baselinePublished.frozenInputsSha256)
         assertTrue(harness.compare(baseline, candidate).differences.contains("Frozen style, seed, or engine inputs differ."))
-        // Isolate corruption checks from the intentional v1-to-v2 engine change.
+        // Isolate corruption checks from the intentional v1-to-v3 engine change.
         // Package location alone must not change the comparison result.
         val sameEngine = candidatePublished.copy(packageDirectory = baselinePublished.packageDirectory)
         assertTrue(harness.compare(sameEngine, candidate).equivalent)

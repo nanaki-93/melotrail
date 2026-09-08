@@ -325,6 +325,8 @@ data class MidiCoreGenerationContext(
     val generator: MidiCoreGeneratorInput,
     val sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(),
     val tickGrid: MidiCoreTickGrid = MidiCoreTickGrid(authority.ppq, authority.meter),
+    /** Read-only M02 evidence used by melody-aware role ranking; it never changes authority or protected notes. */
+    val melodyHarmonyAnalysis: MidiCoreMelodyHarmonyAnalysis? = null,
 ) {
     init {
         require(authority.occurrence(occurrence.id) == occurrence) { "Generation occurrence is not in the authority snapshot" }
@@ -356,6 +358,10 @@ data class MidiCoreGenerationContext(
         require(tickGrid.ppq == authority.ppq && tickGrid.meter == authority.meter) {
             "Generation tick grid must match authority timing"
         }
+        require(melodyHarmonyAnalysis == null || (
+            melodyHarmonyAnalysis.authorityHash == authority.authorityHash &&
+                melodyHarmonyAnalysis.melodySha256 == authority.melodySha256
+            )) { "Melody/harmony evidence must match generation authority and melody identity" }
         authority.fingerprint.scope(occurrence.id, role)
     }
 
@@ -406,6 +412,9 @@ data class MidiCoreGenerationContext(
                 "generator" to generator.canonicalSerialization,
                 "section" to sectionPolicy.canonicalSerialization,
                 "grid" to listOf(tickGrid.ppq.value, tickGrid.meter.numerator, tickGrid.meter.denominatorExponent, tickGrid.subdivisionsPerQuarter).joinToString("|"),
+                "melody-harmony-evidence" to melodyHarmonyAnalysis?.let { analysis ->
+                    "${analysis.version}|${analysis.analysisSha256}"
+                }.orEmpty(),
             ),
         )
 
@@ -430,6 +439,7 @@ data class MidiCoreGenerationContext(
             acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
             sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(),
             tickGrid: MidiCoreTickGrid = MidiCoreTickGrid(authority.ppq, authority.meter),
+            melodyHarmonyAnalysis: MidiCoreMelodyHarmonyAnalysis? = null,
         ): MidiCoreGenerationContext {
             val occurrence = authority.occurrence(occurrenceId)
             return MidiCoreGenerationContext(
@@ -447,6 +457,7 @@ data class MidiCoreGenerationContext(
                 generator = generator,
                 sectionPolicy = sectionPolicy,
                 tickGrid = tickGrid,
+                melodyHarmonyAnalysis = melodyHarmonyAnalysis,
             )
         }
 
@@ -485,6 +496,9 @@ data class MidiCoreGenerationContext(
                     )
                 }
             }.orEmpty()
+            val analysis = protectedMelody?.let { view ->
+                MidiCoreMelodyHarmonyAnalyzer.analyze(authority, view)
+            }
             return forOccurrence(
                 authority,
                 role,
@@ -495,6 +509,7 @@ data class MidiCoreGenerationContext(
                 notes,
                 acceptedDependencies,
                 sectionPolicy,
+                melodyHarmonyAnalysis = analysis,
             )
         }
     }

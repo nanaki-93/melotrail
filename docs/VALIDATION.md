@@ -146,8 +146,10 @@ its last note, and an explicitly padded arrangement end. These fixtures are
 prepared by automated contract coverage only; no Logic import/playback/reopen
 result is claimed until a reviewer records it below.
 
-M04a prepares frozen v1/current v2 MIDI pairs in `build/m01-comparison` via
-`MidiCoreComparisonHarnessTest`. For Q02, import the complete and aligned role
+M04b prepares frozen v1/current v3 MIDI pairs in `build/m01-comparison` via
+`MidiCoreComparisonHarnessTest`. Engine v3 ranks the bounded M04a voicing pool
+using M02 overlap, register and per-finding metrical prominence, including
+held suspensions crossing onto a new chord’s downbeat. For Q02, import the complete and aligned role
 files for repeated-chorus/bridge, 3/4 and 6/8; verify protected melody, chord
 boundaries and final notes, then compare the listed piano/melody loops with
 identical Logic instruments and levels. The unscored `review.md` records hashes
