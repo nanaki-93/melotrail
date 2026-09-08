@@ -2,6 +2,7 @@ package app.melotrail.desktop
 
 import app.melotrail.application.MidiCoreAcceptedSongAssembly
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
+import app.melotrail.application.MidiCoreArrangementPlanProposalUseCase
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateReview
 import app.melotrail.application.MidiCoreMidiPackageExporter
@@ -33,6 +34,7 @@ class MidiCoreDesktopCompositionTest {
         assertIs<MidiCoreMusicalAuthority>(services.authority)
         assertIs<MidiCoreStructureTimeline>(services.structure)
         assertIs<MidiCoreAuthoritativeHarmony>(services.harmony)
+        assertIs<MidiCoreArrangementPlanProposalUseCase>(services.arrangementPlan)
         assertIs<MidiCoreCandidateGeneration>(services.generation)
         assertIs<MidiCoreCandidateReview>(services.review)
         assertIs<MidiCoreAcceptedSongAssembly>(services.assembly)

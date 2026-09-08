@@ -153,10 +153,13 @@ occurrence in order. Its purpose, phrase/repeat identities, energy, role activit
 density/register settings, shared groove and entry/exit intent are exact
 authority inputs. The canonical per-role plan inputs are included in scoped
 fingerprints; no label supplies a purpose and no plan record rewrites protected
-MIDI, candidates, acceptances or exports. Proposal/confirmation workflow and
-bounded neighbor dependency resolution remain later M06/M07 work. This is the
-current project schema version; older project schemas are rejected before writes,
-with no automatic migration.
+MIDI, candidates, acceptances or exports. M06b derives a deterministic,
+session-only proposal from a current style and occurrence order; propose and
+cancel make no project or artifact writes. Only explicit confirmation persists
+the plan, after matching the proposal's authority snapshot. Bounded neighbor
+dependency resolution remains M07 work. This is the current project schema
+version; older project schemas are rejected before writes, with no automatic
+migration.
 
 The remaining requirements for M07 are not claims of shipped support:
 - **Planned rests:** each scope is a validated candidate or an explicit plan

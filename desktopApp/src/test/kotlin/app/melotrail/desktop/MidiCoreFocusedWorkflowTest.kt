@@ -200,6 +200,29 @@ class MidiCoreFocusedWorkflowTest {
             navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
             onNodeWithTag(MidiCoreArrangePageTags.style("late-night")).performScrollTo().performClick()
             awaitWorkspaceSuccess("preview selected arrangement style")
+            val sourceBeforePlan = checkNotNull(workspace.state.value.project?.sourceMidi)
+            val draftsBeforePlan = workspace.state.value.project?.arrangementDrafts.orEmpty()
+            onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).performScrollTo().performClick()
+            awaitWorkspaceSuccess("propose session-only arrangement plan")
+            assertEquals(null, workspace.state.value.project?.arrangementPlan)
+            assertEquals(sourceBeforePlan, workspace.state.value.project?.sourceMidi)
+            assertEquals(draftsBeforePlan, workspace.state.value.project?.arrangementDrafts)
+            onNodeWithTag(MidiCoreArrangePageTags.CONFIRM_PLAN).performScrollTo().assertIsEnabled().assertIsDisplayed()
+            captureFixture("arrange-proposal")
+            onNodeWithTag(MidiCoreArrangePageTags.CANCEL_PLAN).performClick()
+            awaitWorkspaceSuccess("cancel unsaved arrangement plan")
+            assertEquals(null, workspace.state.value.project?.arrangementPlan)
+            assertEquals(sourceBeforePlan, workspace.state.value.project?.sourceMidi)
+            assertEquals(draftsBeforePlan, workspace.state.value.project?.arrangementDrafts)
+            onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).performScrollTo().performClick()
+            awaitWorkspaceSuccess("re-propose arrangement plan after cancellation")
+            onNodeWithTag(MidiCoreArrangePageTags.CONFIRM_PLAN).performClick()
+            awaitWorkspaceSuccess("explicitly confirm arrangement plan")
+            onNodeWithTag(MidiCoreArrangePageTags.CONFIRMED_PLAN).performScrollTo().assertIsDisplayed()
+            onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).assertDoesNotExist()
+            assertNotNull(workspace.state.value.project?.arrangementPlan)
+            assertEquals(sourceBeforePlan, workspace.state.value.project?.sourceMidi)
+            assertEquals(draftsBeforePlan, workspace.state.value.project?.arrangementDrafts)
             onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().assertIsEnabled().performClick()
             awaitWorkspaceSuccess("create complete arrangement draft")
             assertEquals(1, workspace.state.value.project?.arrangementDrafts?.size)
@@ -238,6 +261,12 @@ class MidiCoreFocusedWorkflowTest {
             val reopened = checkNotNull(workspace.state.value.project)
             assertEquals(CandidateRole.entries.size, reopened.acceptances.size)
             assertTrue(reopened.authority?.chordEvents?.isNotEmpty() == true)
+            assertNotNull(reopened.arrangementPlan)
+            assertEquals(sourceBeforePlan, reopened.sourceMidi)
+            assertEquals(1, reopened.arrangementDrafts.size)
+            navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
+            onNodeWithTag(MidiCoreArrangePageTags.CONFIRMED_PLAN).performScrollTo().assertIsDisplayed()
+            onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).assertDoesNotExist()
 
             navigateTo(MidiCoreWorkspaceDestination.EXPORT)
             captureFixture("export")
@@ -249,7 +278,7 @@ class MidiCoreFocusedWorkflowTest {
             assertTrue(Files.isRegularFile(packageDirectory.resolve("manifest.json")))
 
             assertEquals(
-                listOf("arrange", "arrange-top", "export", "midi", "project", "review", "review-top", "structure-harmony"),
+                listOf("arrange", "arrange-proposal", "arrange-top", "export", "midi", "project", "review", "review-top", "structure-harmony"),
                 capturedFixtureNames(fixtureSet),
             )
         } finally {
@@ -326,6 +355,7 @@ private fun newWorkspace(
         arrangementExtent = app.melotrail.application.MidiCoreArrangementExtent(artifacts),
         structure = MidiCoreStructureTimeline(artifacts),
         harmony = MidiCoreAuthoritativeHarmony(artifacts),
+        arrangementPlan = app.melotrail.application.MidiCoreArrangementPlanProposalUseCase(artifacts),
         generation = generation,
         review = review,
         exporter = MidiCoreMidiPackageExporter(

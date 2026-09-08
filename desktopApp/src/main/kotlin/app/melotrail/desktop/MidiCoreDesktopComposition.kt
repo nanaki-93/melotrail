@@ -10,6 +10,7 @@ import androidx.compose.ui.window.rememberWindowState
 import app.melotrail.application.MidiCoreAcceptedSongAssembly
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreArrangementExtent
+import app.melotrail.application.MidiCoreArrangementPlanProposalUseCase
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
 import app.melotrail.application.MidiCoreArrangementStylePreview
@@ -46,6 +47,7 @@ data class MidiCoreDesktopServices(
     val authority: MidiCoreMusicalAuthority,
     val structure: MidiCoreStructureTimeline,
     val harmony: MidiCoreAuthoritativeHarmony,
+    val arrangementPlan: MidiCoreArrangementPlanProposalUseCase,
     val generation: MidiCoreCandidateGeneration,
     val draftGeneration: MidiCoreArrangementDraftGeneration,
     val review: MidiCoreCandidateReview,
@@ -74,6 +76,7 @@ object MidiCoreDesktopComposition {
         val arrangementExtent = MidiCoreArrangementExtent(artifacts)
         val structure = MidiCoreStructureTimeline(artifacts)
         val harmony = MidiCoreAuthoritativeHarmony(artifacts)
+        val arrangementPlan = MidiCoreArrangementPlanProposalUseCase(artifacts)
         val candidateLifecycle = MidiCoreCandidateLifecycle(artifacts)
         val generation = MidiCoreCandidateGeneration(artifacts = artifacts, lifecycle = candidateLifecycle)
         val draftGeneration = MidiCoreArrangementDraftGeneration(artifacts = artifacts, candidates = generation)
@@ -97,6 +100,7 @@ object MidiCoreDesktopComposition {
             arrangementExtent = arrangementExtent,
             structure = structure,
             harmony = harmony,
+            arrangementPlan = arrangementPlan,
             generation = generation,
             draftGeneration = draftGeneration,
             review = review,
@@ -114,6 +118,7 @@ object MidiCoreDesktopComposition {
             authority = authority,
             structure = structure,
             harmony = harmony,
+            arrangementPlan = arrangementPlan,
             generation = generation,
             draftGeneration = draftGeneration,
             review = review,

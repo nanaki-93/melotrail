@@ -187,6 +187,17 @@ class MidiCoreArrangePageTest {
     }
 
     @Test
+    fun `selected style exposes an explicit session-only song-plan proposal action`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent { MelotrailTheme { MidiCoreArrangePage(arrangeState(styleId = "late-night"), intents::add, {}) } }
+
+        onNodeWithTag(MidiCoreArrangePageTags.PLAN_PROPOSAL).performScrollTo().assertExists()
+        onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).performClick()
+
+        assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night")), intents)
+    }
+
+    @Test
     fun `draft progress supports cancellation and exact retry without hiding selected section`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         val retry = MidiCoreWorkspaceIntent.CreateArrangementDraft("late-night", 1L, "draft-retry")

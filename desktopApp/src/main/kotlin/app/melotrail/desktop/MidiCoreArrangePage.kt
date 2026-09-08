@@ -49,6 +49,11 @@ internal object MidiCoreArrangePageTags {
     const val STYLES = "midi-core-arrange-styles"
     const val STYLE_PREFIX = "midi-core-arrange-style-"
     const val DRAFT = "midi-core-arrange-draft"
+    const val PLAN_PROPOSAL = "midi-core-arrange-plan-proposal"
+    const val PROPOSE_PLAN = "midi-core-arrange-propose-plan"
+    const val CONFIRM_PLAN = "midi-core-arrange-confirm-plan"
+    const val CANCEL_PLAN = "midi-core-arrange-cancel-plan"
+    const val CONFIRMED_PLAN = "midi-core-arrange-confirmed-plan"
     const val CREATE_DRAFT = "midi-core-arrange-create-draft"
     const val CANCEL = "midi-core-arrange-cancel"
     const val RETRY_DRAFT = "midi-core-arrange-retry-draft"
@@ -153,6 +158,9 @@ internal fun MidiCoreArrangePage(
             onDraft = { onIntent(MidiCoreWorkspaceIntent.CreateArrangementDraft(requireNotNull(state.stylePreview.selectedStyleId), state.arrangement.rootSeed)) },
             onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
             onRetry = { retry -> onIntent(retry) },
+            onProposePlan = { styleId -> onIntent(MidiCoreWorkspaceIntent.ProposeArrangementPlan(styleId)) },
+            onConfirmPlan = { onIntent(MidiCoreWorkspaceIntent.ConfirmArrangementPlan) },
+            onCancelPlan = { onIntent(MidiCoreWorkspaceIntent.CancelArrangementPlan) },
         )
         if (showSelectedSectionInspector) MidiCoreArrangeSelectedSectionInspector(state, onIntent)
         ArrangeAdvancedRoleAdjustment(advancedOpen, { advancedOpen = it }) {
@@ -224,6 +232,9 @@ private fun ArrangeStyleGallery(
     onDraft: () -> Unit,
     onCancel: () -> Unit,
     onRetry: (MidiCoreWorkspaceIntent.CreateArrangementDraft) -> Unit,
+    onProposePlan: (String) -> Unit,
+    onConfirmPlan: () -> Unit,
+    onCancelPlan: () -> Unit,
 ) {
     val previewBusy = state.operation.active && state.operation.kind == MidiCoreWorkspaceOperationKind.AUDITION &&
         state.operation.retry is MidiCoreWorkspaceIntent.PreviewArrangementStyle
@@ -233,10 +244,12 @@ private fun ArrangeStyleGallery(
         when {
             generating -> ArrangeDraftProgress(state, onCancel)
             retry != null -> ArrangeDraftRetry(state, retry, onRetry)
-            else -> Row(
-                Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.DRAFT },
-                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
-            ) {
+            else -> {
+                val styleId = state.stylePreview.selectedStyleId
+                Row(
+                    Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.DRAFT },
+                    horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
+                ) {
                 Text(
                     state.stylePreview.cacheStatus?.let { "Preview ${it.name.lowercase()}" } ?: "Preview a style",
                     modifier = Modifier.weight(0.4f),
@@ -256,7 +269,6 @@ private fun ArrangeStyleGallery(
                         },
                     ) { Text(style.displayName, maxLines = 1) }
                 }
-                val styleId = state.stylePreview.selectedStyleId
                 Button(
                     onClick = onDraft,
                     enabled = styleId != null && !state.busy,
@@ -268,6 +280,76 @@ private fun ArrangeStyleGallery(
                             ?: "Choose a style before creating a full arrangement draft"
                     },
                 ) { Text("Create full draft", maxLines = 1) }
+            }
+                ArrangementPlanProposalCard(state, onProposePlan, onConfirmPlan, onCancelPlan)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArrangementPlanProposalCard(
+    state: MidiCoreWorkspaceState,
+    onPropose: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val proposal = state.arrangementPlanProposal.proposal
+    val confirmed = state.project?.arrangementPlan
+    val plan = confirmed ?: proposal?.plan
+    val selectedStyleId = state.stylePreview.selectedStyleId
+    Column(
+        Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.PLAN_PROPOSAL },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+    ) {
+        if (plan == null) {
+            Text("Song plan is not saved yet. A style proposal stays in this session until you explicitly confirm it.", color = MusicWorkspaceTokens.TextSecondary)
+            OutlinedButton(
+                onClick = { selectedStyleId?.let(onPropose) },
+                enabled = selectedStyleId != null && !state.busy,
+                shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    testTag = MidiCoreArrangePageTags.PROPOSE_PLAN
+                    contentDescription = selectedStyleId?.let { "Propose a ${arrangementStyleDisplayName(it)} whole-song plan" }
+                        ?: "Preview a style before proposing a whole-song plan"
+                },
+            ) { Text("Propose song plan") }
+        } else {
+            if (confirmed != null) {
+                Text("Confirmed song plan", style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.semantics { testTag = MidiCoreArrangePageTags.CONFIRMED_PLAN })
+            } else {
+                Text("Proposed ${arrangementStyleDisplayName(requireNotNull(proposal).styleId)} plan · not saved", style = MaterialTheme.typography.titleSmall)
+            }
+            Text("Groove: ${plan.sharedGroove.feel.name.lowercase().replace('_', ' ')} · ${plan.sharedGroove.subdivision.name.lowercase()} · ${plan.sharedGroove.drive.name.lowercase()}",
+                style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+            plan.occurrences.forEach { occurrence ->
+                val roles = occurrence.roleSettings.joinToString(" · ") { "${it.role.displayName}: ${it.activity.name.lowercase()}, density ${it.density}%, ${it.registerPreference.name.lowercase()} register" }
+                val occurrenceLabel = state.project?.authority?.occurrences
+                    ?.singleOrNull { it.id == occurrence.occurrenceId }?.label ?: "Selected occurrence"
+                Text("$occurrenceLabel: ${occurrence.purpose.name.lowercase().replace('_', ' ')} · energy ${occurrence.energy}%", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+                Text(roles, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+                Text("Entry: ${occurrence.entryIntent.name.lowercase().replace('_', ' ')} · Exit: ${occurrence.exitIntent.name.lowercase().replace('_', ' ')}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+            }
+            if (confirmed == null) Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                Button(
+                    onClick = onConfirm,
+                    enabled = !state.busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreArrangePageTags.CONFIRM_PLAN
+                        contentDescription = "Confirm and save the proposed whole-song arrangement plan"
+                    },
+                ) { Text("Confirm plan") }
+                OutlinedButton(
+                    onClick = onCancel,
+                    enabled = !state.busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreArrangePageTags.CANCEL_PLAN
+                        contentDescription = "Cancel the unsaved whole-song arrangement proposal"
+                    },
+                ) { Text("Cancel proposal") }
             }
         }
     }

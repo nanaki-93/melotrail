@@ -176,6 +176,47 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `arrangement-plan proposal stays session-only until one explicit confirmation and clears on cancel and close`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+        val before = requireNotNull(viewModel.state.value.project)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+        advanceUntilIdle()
+        assertEquals(1, fake.proposeArrangementPlanRequests.size)
+        assertEquals(before, viewModel.state.value.project)
+        assertNotNull(viewModel.state.value.arrangementPlanProposal.proposal)
+
+        fake.advanceRevisionWithoutReplacingSession()
+        viewModel.accept(MidiCoreWorkspaceIntent.ReloadProject)
+        advanceUntilIdle()
+        assertNull(viewModel.state.value.arrangementPlanProposal.proposal)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.CancelArrangementPlan)
+        advanceUntilIdle()
+        assertEquals(1, fake.cancelArrangementPlanRequests.size)
+        assertEquals(fake.persistedSession().project, viewModel.state.value.project)
+        assertNull(viewModel.state.value.arrangementPlanProposal.proposal)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmArrangementPlan)
+        advanceUntilIdle()
+        assertEquals(1, fake.confirmArrangementPlanRequests.size)
+        assertNotNull(viewModel.state.value.project?.arrangementPlan)
+        assertNull(viewModel.state.value.arrangementPlanProposal.proposal)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.CloseProject)
+        assertNull(viewModel.state.value.arrangementPlanProposal.proposal)
+        viewModel.close()
+    }
+
+    @Test
     fun `real position observation updates only while playing and stops after pause`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
@@ -688,6 +729,9 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     val stylePreviewRequests = mutableListOf<app.melotrail.application.PrepareMidiCoreArrangementStylePreview>()
     var stylePreviewResult: app.melotrail.application.MidiCoreArrangementStylePreviewResult = fakeStylePreviewResult()
     var confirmAuthorityCalls = 0
+    val proposeArrangementPlanRequests = mutableListOf<app.melotrail.application.ProposeMidiCoreArrangementPlan>()
+    val confirmArrangementPlanRequests = mutableListOf<app.melotrail.application.ConfirmMidiCoreArrangementPlanProposal>()
+    val cancelArrangementPlanRequests = mutableListOf<app.melotrail.application.CancelMidiCoreArrangementPlanProposal>()
     val arrangementExtentRequests = mutableListOf<ConfirmMidiCoreArrangementExtent>()
     var occurrenceAuditionCalls = 0
     var closeCalls = 0
@@ -768,6 +812,51 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
             app.melotrail.midi.domain.MidiImportValidationResult(emptyList()),
             invalidation,
         )
+    }
+
+    override fun proposeArrangementPlan(
+        request: app.melotrail.application.ProposeMidiCoreArrangementPlan,
+    ): app.melotrail.application.MidiCoreArrangementPlanProposalResult {
+        proposeArrangementPlanRequests += request
+        val authority = requireNotNull(request.session.project.authority)
+        val plan = app.melotrail.project.MidiCoreArrangementPlan(
+            version = 1,
+            sharedGroove = app.melotrail.project.MidiCoreSharedGrooveIntent(
+                app.melotrail.project.MidiCoreGrooveFeel.STRAIGHT,
+                app.melotrail.project.MidiCoreGrooveSubdivision.EIGHTH,
+                app.melotrail.project.MidiCoreGrooveDrive.STEADY,
+            ),
+            occurrences = authority.occurrences.map { occurrence ->
+                app.melotrail.project.MidiCoreOccurrenceArrangementPlan(
+                    occurrence.id, app.melotrail.project.MidiCoreArrangementPurpose.VERSE,
+                    "phrase-${occurrence.id}", "repeat-${occurrence.id}", 1, 50,
+                    CandidateRole.entries.map { role -> app.melotrail.project.MidiCoreRolePlanSettings(role, app.melotrail.project.MidiCoreRoleActivity.SUPPORTING, 50, app.melotrail.project.MidiCoreRegisterPreference.MID) },
+                    app.melotrail.project.MidiCoreBoundaryIntent.NONE, app.melotrail.project.MidiCoreBoundaryIntent.NONE,
+                )
+            },
+        )
+        return app.melotrail.application.MidiCoreArrangementPlanProposalResult.Proposed(
+            request.session,
+            app.melotrail.application.MidiCoreArrangementPlanProposal(request.styleId, 1, "d".repeat(64), plan),
+        )
+    }
+
+    override fun confirmArrangementPlan(
+        request: app.melotrail.application.ConfirmMidiCoreArrangementPlanProposal,
+    ): app.melotrail.application.MidiCoreArrangementPlanProposalResult {
+        confirmArrangementPlanRequests += request
+        currentSession = MidiCoreProjectSession(
+            currentSession.root,
+            currentSession.project.copy(arrangementPlan = request.proposal.plan, revision = currentSession.project.revision + 1L),
+        )
+        return app.melotrail.application.MidiCoreArrangementPlanProposalResult.Confirmed(currentSession, request.proposal.plan)
+    }
+
+    override fun cancelArrangementPlan(
+        request: app.melotrail.application.CancelMidiCoreArrangementPlanProposal,
+    ): app.melotrail.application.MidiCoreArrangementPlanProposalResult {
+        cancelArrangementPlanRequests += request
+        return app.melotrail.application.MidiCoreArrangementPlanProposalResult.Cancelled(request.proposal)
     }
 
     override fun confirmArrangementExtent(
