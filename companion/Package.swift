@@ -1,0 +1,17 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "MelotrailTABICompanion",
+    platforms: [.macOS(.v14)],
+    products: [
+        .library(name: "MelotrailTABICompanion", targets: ["MelotrailTABICompanion"]),
+        .executable(name: "melotrail-tabi-spike", targets: ["MelotrailTABISpike"]),
+        .executable(name: "melotrail-tabi-regression", targets: ["MelotrailTABIRegression"]),
+    ],
+    targets: [
+        .target(name: "MelotrailTABICompanion"),
+        .executableTarget(name: "MelotrailTABISpike", dependencies: ["MelotrailTABICompanion"]),
+        .executableTarget(name: "MelotrailTABIRegression", dependencies: ["MelotrailTABICompanion"]),
+    ]
+)

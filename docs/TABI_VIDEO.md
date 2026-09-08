@@ -224,3 +224,39 @@ Record actual spend/retries, output hashes/technical checks, source ownership,
 remaining disclosure/credits decisions and the user's review. Confirm the MIDI
 app still installs and exports with the companion absent. Only then consider
 long compilations, larger libraries, new providers or additional aspect ratios.
+
+
+## Verified companion spike — 2026-09-08
+
+`companion/` is an independent Swift package with no third-party dependencies
+or Gradle/MIDI consumer. Its README owns the build/run commands. Host checks on
+macOS 26.6.2 (25G83), Swift 6.3.3, prove Apple AVFoundation ProRes 422 (`apcn`)
+encoding and passthrough MOV muxing: 320×180, 30fps, exactly one second of video
+and mono 44.1kHz PCM. The probe decodes frames at 0, 0.5 and 29/30 seconds,
+checks their actual timestamps against the audio timeline, and compares all
+44,100 soundtrack samples byte-for-byte with the generated owned WAV. It saves
+those preview PNGs alongside the MOV in a fresh companion-owned temporary
+directory. No caller-supplied input/output paths are accepted; repeated runs
+preserve earlier outputs.
+This is timestamp/decoded-media proof; real interactive playback belongs to V05a.
+The earlier worker `Cannot Encode` failure did not reproduce on the host.
+
+The codec is supplied by the OS framework, with no separately versioned or
+redistributed encoder binary in this repository. FFmpeg/ffprobe are absent from
+PATH and are not selected. Apple SDK use is governed by the
+[Apple developer agreements](https://developer.apple.com/support/terms/);
+this spike makes no open-source codec or future app redistribution-rights claim.
+Production codec/preset selection and signed native packaging remain V01/V06 work.
+
+Read-only provider research: Runway documents `POST /v1/image_to_video` with
+`gen4.5`, `promptImage` URL/data URI, text, a `1280:720` five-second example,
+bearer authentication and `X-Runway-Version: 2024-11-06`. Submission returns a
+task ID for polling. A future adapter sends only an approved still; the finished
+Logic soundtrack stays local. [Runway API guide](https://docs.dev.runwayml.com/guides/using-the-api/).
+Its current base rate is 12 credits/second at US$0.01/credit: a five-second clip
+is US$0.60 before tax and optional output-format surcharges.
+[Runway pricing](https://docs.dev.runwayml.com/guides/pricing/).
+No credentials, uploads, generation requests or spending were used in this proof.
+V01 still owns the bounded paid-pilot proposal, source rights, current provider
+terms/privacy/account limits and distribution decisions; V03 owns persisted jobs,
+secure credentials, cancellation, budget admission and quarantined downloads.

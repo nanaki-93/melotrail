@@ -92,7 +92,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | Q02 | Run the current Logic Pro matrix | Q02a | TODO | |
 | Q03a | Prove clean native build and startup | F06, U06 | TODO | |
 | Q03 | Prove clean install and obtain MIDI release decision | Q03a, U07, Q01, Q02 | TODO | |
-| V01a | Prove an independently built companion boundary | F01 | BLOCKED | No usable local video encoder is available in this sandbox: ffmpeg/ffprobe are absent; AVFoundation H.264, HEVC, Motion JPEG, and ProRes 422 writers all fail at startWriting (Cannot Encode/operation error).; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-08T00-12-54-658Z-V01a |
+| V01a | Prove an independently built companion boundary | F01 | DONE | Host ProRes/PCM encode, decoded preview timestamps and byte-preserved soundtrack proven; temporary-only outputs. Focused checks, Swift release build, 363 MIDI tests, absent-companion build/tests and fresh Terra review PASS. Evidence ~/.codex/melotrail-terra/v01a-repair-evidence. |
 | V01 | Prove the isolated video/media boundary | V01a | TODO | Selected for unpaid implementation; human/budget gates remain. |
 | V02a | Implement immutable asset manifest and validation | V01a | TODO | |
 | V02b | Import and inspect the pilot asset kit | V02a | TODO | |
