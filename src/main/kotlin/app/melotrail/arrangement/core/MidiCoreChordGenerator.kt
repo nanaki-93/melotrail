@@ -123,7 +123,7 @@ object MidiCoreChordGenerator {
         }
     }
 
-    /** Select a bounded inversion using voice continuity, melody/bass space, and an explicit seed tie-break. */
+    /** Select a bounded legal voicing using voice continuity, melody/bass space, and an explicit seed tie-break. */
     private fun selectVoicing(
         context: MidiCoreGenerationContext,
         window: app.melotrail.structure.MidiCoreResolvedChordWindow,
@@ -131,51 +131,131 @@ object MidiCoreChordGenerator {
         previous: List<Int>?,
         windowIndex: Int,
     ): List<Int>? {
-        val all = voicingCandidates(context, window)
+        val all = legalVoicingCandidates(context, window)
         if (all.isEmpty()) return null
-        val completeSpaceSafe = all.filter { voicing ->
-            !hasAnchorCollision(context, voicing, rhythm) && !hasBassCollision(context, voicing, rhythm)
+        // Reduced choices share the bounded pool, so they remain available when complete
+        // spellings collide without a second, differently constrained fallback search.
+        val safeCandidates = all.filter { candidate ->
+            !hasAnchorCollision(context, candidate.pitches, rhythm) && !hasBassCollision(context, candidate.pitches, rhythm)
         }
-        val usesReducedVoicing = completeSpaceSafe.isEmpty()
-        val spaceSafe = completeSpaceSafe.ifEmpty {
-            all.flatMap { voicing -> reducedVoicings(voicing, retainLowestVoice = window.chord.bass != null) }
-                .distinct()
-                .filter { voicing ->
-                    !hasAnchorCollision(context, voicing, rhythm) && !hasBassCollision(context, voicing, rhythm)
-                }
-        }
-        if (spaceSafe.isEmpty()) return null
+        if (safeCandidates.isEmpty()) return null
         val movementSafe = previous?.let { prior ->
-            spaceSafe.filter { voicing -> voiceMovement(prior, voicing).maximumDistance <= MAX_VOICE_MOVEMENT }
+            safeCandidates.filter { candidate -> voiceMovement(prior, candidate.pitches).maximumDistance <= MAX_VOICE_MOVEMENT }
         }.orEmpty()
-        val pool = movementSafe.ifEmpty { spaceSafe }
+        val pool = movementSafe.ifEmpty { safeCandidates }
         val ranked = pool.sortedWith(
-            compareBy<List<Int>> { if (usesReducedVoicing) -it.size else 0 }
-                .thenBy { voiceLeadingScore(context, it, previous) }
-                .thenBy { it.joinToString(",") },
+            compareBy<MidiCorePianoVoicingCandidate> { voiceLeadingScore(context, it.pitches, previous) + it.kind.selectionPenalty }
+                .thenBy { it.kind.ordinal }
+                .thenBy { it.pitches.joinToString(",") },
         )
         val variationCount = minOf(3, ranked.size)
         val variation = Math.floorMod(context.seed + windowIndex.toLong(), variationCount.toLong()).toInt()
-        return ranked[variation]
+        return ranked[variation].pitches
     }
 
     /**
-     * Retain a musically useful subset when every complete spelling would double a protected
-     * melody anchor. The generator first prefers every chord tone; this fallback is only for a
-     * collision-free two-or-more-voice guide built from the same authoritative chord tones.
+     * Enumerate a small, stable pool before any melody-aware ranking. Complete inversions,
+     * open shapes, guide tones, and other reduced spellings all retain authoritative chord
+     * identity; reduced choices are therefore available before collision fallback.
      */
-    private fun reducedVoicings(voicing: List<Int>, retainLowestVoice: Boolean): List<List<Int>> = buildList {
+    internal fun legalVoicingCandidates(
+        context: MidiCoreGenerationContext,
+        window: app.melotrail.structure.MidiCoreResolvedChordWindow,
+    ): List<MidiCorePianoVoicingCandidate> {
+        val closed = completeVoicingCandidates(context, window)
+        val guideClasses = guideTonePitchClasses(window)
+        val rootMayBeOmitted = bassSuppliesRoot(context, window)
+        val requiredClasses = requiredPitchClasses(window, guideClasses, rootMayBeOmitted)
+        val guideCandidateClasses = if (rootMayBeOmitted) requiredClasses else guideClasses
+        val candidatesByKind = linkedMapOf(
+            MidiCorePianoVoicingKind.CLOSED to closed,
+            MidiCorePianoVoicingKind.OPEN to closed.flatMap(::openVoicings),
+            MidiCorePianoVoicingKind.GUIDE_TONE to closed.flatMap { voicing ->
+                subsets(voicing).filter { candidate ->
+                    candidate.size >= 2 && candidate.pitchClasses() == guideCandidateClasses && candidate.containsPitchClasses(requiredClasses)
+                }
+            },
+            MidiCorePianoVoicingKind.REDUCED to closed.flatMap { voicing ->
+                subsets(voicing).filter { candidate ->
+                    candidate.size in 2 until voicing.size && candidate.pitchClasses() != guideClasses &&
+                        candidate.containsPitchClasses(requiredClasses)
+                }
+            },
+        )
+        return candidatesByKind.flatMap { (kind, pitches) ->
+            pitches.asSequence()
+                .filter { isLegalVoicing(context, it, kind) }
+                .distinct()
+                .sortedWith(compareBy<List<Int>> { registerDistance(context, it) }.thenBy { it.joinToString(",") })
+                .take(MAX_VOICINGS_PER_KIND)
+                .map { MidiCorePianoVoicingCandidate(it, kind) }
+                .toList()
+        }.distinctBy(MidiCorePianoVoicingCandidate::pitches)
+            .take(MAX_PIANO_VOICING_CANDIDATES)
+    }
+
+    /** Build open positions by moving one upper voice by an octave while preserving voice order. */
+    private fun openVoicings(voicing: List<Int>): List<List<Int>> = voicing.drop(1).map { voice ->
+        (voicing.filterNot { it == voice } + (voice + OCTAVE)).sorted()
+    }.filter { candidate -> candidate.last() - candidate.first() >= MIN_OPEN_VOICING_SPAN }
+
+    /** Enumerate proper two-or-more-voice subsets in stable mask order. */
+    private fun subsets(voicing: List<Int>): List<List<Int>> = buildList {
         for (mask in 1 until (1 shl voicing.size) - 1) {
-            val candidate = voicing.filterIndexed { index, _ -> mask and (1 shl index) != 0 }
-            if ((!retainLowestVoice || candidate.first() == voicing.first()) && candidate.size >= 2 &&
-                candidate.zipWithNext().all { (low, high) -> high - low <= MAX_VOICE_SPACING }) {
-                add(candidate)
-            }
+            voicing.filterIndexed { index, _ -> mask and (1 shl index) != 0 }.takeIf { it.size >= 2 }?.let(::add)
         }
     }
 
+    /** Retain the root, defining tones, and every extension; only the neutral fifth may be omitted. */
+    private fun guideTonePitchClasses(window: app.melotrail.structure.MidiCoreResolvedChordWindow): Set<Int> {
+        return window.chord.quality.intervals
+            .filter { interval -> Math.floorMod(interval, 12) != PERFECT_FIFTH }
+            .map { interval -> Math.floorMod(window.chord.rootPitchClass + interval, 12) }
+            .toSet()
+    }
+
+    /** Slash bass is always retained; root omission is legal only when an accepted bass supplies it. */
+    private fun requiredPitchClasses(
+        window: app.melotrail.structure.MidiCoreResolvedChordWindow,
+        guideClasses: Set<Int>,
+        rootMayBeOmitted: Boolean,
+    ): Set<Int> = buildSet {
+        addAll(guideClasses)
+        if (rootMayBeOmitted) remove(window.chord.rootPitchClass)
+        window.chord.bass?.let { add(window.chord.bassPitchClass) }
+    }
+
+    /** One voicing serves the whole window, so root omission needs continuous bass-root coverage. */
+    private fun bassSuppliesRoot(
+        context: MidiCoreGenerationContext,
+        window: app.melotrail.structure.MidiCoreResolvedChordWindow,
+    ): Boolean {
+        val roots = context.dependency(CandidateRole.BASS)?.notes.orEmpty()
+            .filter { it.pitch % 12 == window.chord.rootPitchClass && it.startTick < window.endTick && it.endTick > window.startTick }
+            .sortedBy { it.startTick }
+        var coveredUntil = window.startTick
+        for (bass in roots) {
+            if (bass.startTick > coveredUntil) return false
+            coveredUntil = maxOf(coveredUntil, bass.endTick)
+            if (coveredUntil >= window.endTick) return true
+        }
+        return false
+    }
+
+    /** Keep every candidate in range, strictly ordered, and inside compact/open spacing limits. */
+    private fun isLegalVoicing(
+        context: MidiCoreGenerationContext,
+        pitches: List<Int>,
+        kind: MidiCorePianoVoicingKind,
+    ): Boolean = pitches.size >= 2 && pitches.all(context.performanceProfile.register::contains) &&
+        pitches.zipWithNext().all { (low, high) -> high > low && high - low <= kind.maximumAdjacentSpacing }
+
+    private fun List<Int>.pitchClasses(): Set<Int> = map { Math.floorMod(it, 12) }.toSet()
+
+    private fun List<Int>.containsPitchClasses(required: Set<Int>): Boolean = pitchClasses().containsAll(required)
+
     /** Enumerate all complete chord-tone inversions that fit the selected performance register. */
-    private fun voicingCandidates(
+    private fun completeVoicingCandidates(
         context: MidiCoreGenerationContext,
         window: app.melotrail.structure.MidiCoreResolvedChordWindow,
     ): List<List<Int>> {
@@ -193,12 +273,13 @@ object MidiCoreChordGenerator {
                 order.drop(1).forEach { pitchClass ->
                     voices += nextAtOrAbove(voices.last() + 1, pitchClass)
                 }
-                voices.takeIf { candidate ->
-                    candidate.last() <= range.last && candidate.zipWithNext().all { (low, high) -> high - low in 1..MAX_VOICE_SPACING }
-                }
+                voices.takeIf { candidate -> candidate.last() <= range.last && candidate.zipWithNext().all { (low, high) -> high - low in 1..MAX_VOICE_SPACING } }
             }
         }
     }
+
+    private fun registerDistance(context: MidiCoreGenerationContext, pitches: List<Int>): Long =
+        pitches.sumOf { pitch -> abs(pitch - preferredRegisterCenter(context)).toLong() }
 
     /** Score a voicing against its bounded voice movement, retained common tones, and section-aware register target. */
     private fun voiceLeadingScore(
@@ -298,6 +379,23 @@ object MidiCoreChordGenerator {
         val phraseBoundary: Boolean,
     )
 
+    /** Candidate kind is internal to the generator so later ranking can remain explainable. */
+    internal enum class MidiCorePianoVoicingKind(
+        val selectionPenalty: Long,
+        val maximumAdjacentSpacing: Int,
+    ) {
+        CLOSED(selectionPenalty = 0, maximumAdjacentSpacing = MAX_VOICE_SPACING),
+        OPEN(selectionPenalty = OPEN_VOICING_PENALTY, maximumAdjacentSpacing = MAX_OPEN_VOICE_SPACING),
+        GUIDE_TONE(selectionPenalty = REDUCED_VOICING_PENALTY, maximumAdjacentSpacing = MAX_VOICE_SPACING),
+        REDUCED(selectionPenalty = REDUCED_VOICING_PENALTY, maximumAdjacentSpacing = MAX_VOICE_SPACING),
+    }
+
+    /** An immutable legal candidate; generated notes expose only its selected pitches. */
+    internal data class MidiCorePianoVoicingCandidate(
+        val pitches: List<Int>,
+        val kind: MidiCorePianoVoicingKind,
+    )
+
     private data class VoiceMovement(
         val totalDistance: Long = 0,
         val maximumDistance: Int = 0,
@@ -316,10 +414,18 @@ object MidiCoreChordGenerator {
     }
 
     private const val MAX_VOICE_SPACING = 12
+    private const val MAX_OPEN_VOICE_SPACING = 19
+    private const val MIN_OPEN_VOICING_SPAN = 15
     private const val MAX_VOICE_MOVEMENT = 12
     private const val VOICE_COUNT_PENALTY = 24L
     private const val COMMON_TONE_BONUS = 10L
     private const val BASS_SPACE_SEMITONES = 5
+    private const val OCTAVE = 12
+    private const val PERFECT_FIFTH = 7
+    private const val OPEN_VOICING_PENALTY = 16L
+    private const val REDUCED_VOICING_PENALTY = 24L
+    internal const val MAX_PIANO_VOICING_CANDIDATES = 48
+    private const val MAX_VOICINGS_PER_KIND = 12
     private const val ENERGY_VELOCITY_SPAN = 16.0
     private const val ENERGY_REGISTER_SPAN = 10.0
     private const val PHRASE_ACCENT = 3

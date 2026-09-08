@@ -158,6 +158,48 @@ class MidiCoreArrangementDraftTest {
     }
 
     @Test
+    fun `retry preserves but does not reuse a retained candidate from an older generator version`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val session = readySession(store)
+        val cancellation = AtomicBoolean(false)
+        val cancelled = assertIs<MidiCoreArrangementDraftGenerationResult.Cancelled>(
+            MidiCoreArrangementDraftGeneration(artifacts = store).generate(
+                GenerateMidiCoreArrangementDraft(
+                    session = session,
+                    styleId = "open-sky",
+                    rootSeed = 13L,
+                    draftId = "draft-version-retry",
+                    cancellation = MidiCoreGenerationCancellation { cancellation.get() },
+                    onProgress = { progress -> if (progress.completedCount == 1) cancellation.set(true) },
+                ),
+            ),
+        )
+        val retained = cancelled.session.project.candidates.single()
+        val withOlderCandidate = cancelled.session.project.copy(
+            candidates = listOf(retained.copy(generatorVersion = "midi-core-style-v1")),
+            revision = cancelled.session.project.revision + 1L,
+        )
+        store.saveProject(cancelled.session.root, withOlderCandidate)
+
+        val retried = assertIs<MidiCoreArrangementDraftGenerationResult.Completed>(
+            MidiCoreArrangementDraftGeneration(artifacts = store).generate(
+                GenerateMidiCoreArrangementDraft(
+                    MidiCoreProjectSession(cancelled.session.root, withOlderCandidate),
+                    "open-sky",
+                    13L,
+                    draftId = cancelled.draftId,
+                ),
+            ),
+        )
+
+        assertEquals(4, retried.session.project.candidates.size)
+        assertTrue(retried.session.project.candidates.any { it.id == retained.id && it.generatorVersion == "midi-core-style-v1" })
+        val currentChord = retried.session.project.candidates.single { it.id == retried.draft.candidateReferences.first().candidateId }
+        assertTrue(currentChord.id != retained.id)
+        assertEquals("midi-core-style-v2", currentChord.generatorVersion)
+    }
+
+    @Test
     fun `invalid style does not mutate project or publish a partial draft`() = runBlocking {
         val store = MidiCoreArtifactStore()
         val session = readySession(store)

@@ -210,10 +210,11 @@ class MidiCoreArrangementDraftGeneration(
                 ))
             }
             val seed = derivedSeed(request.rootSeed, scope)
+            val generatorVersion = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}"
             var attempt = 0
             var candidateId = candidateId(draftId, scopeHash, scope, attempt)
             var existing = session.project.candidates.singleOrNull { it.id == candidateId }
-            while (existing != null && !validExisting(existing, scope, scopeHash, seed, choice.performanceProfileId, choice.patternId, dependencies, session.root)) {
+            while (existing != null && !validExisting(existing, scope, scopeHash, seed, generatorVersion, choice.performanceProfileId, choice.patternId, dependencies, session.root)) {
                 attempt += 1
                 if (attempt > MAXIMUM_SCOPE_ATTEMPTS) return incomplete(session, draftId, orderedScopes.size, completed, problem(
                     MidiCoreArrangementDraftProblemCode.CANDIDATE_FAILURE,
@@ -224,7 +225,7 @@ class MidiCoreArrangementDraftGeneration(
                 candidateId = candidateId(draftId, scopeHash, scope, attempt)
                 existing = session.project.candidates.singleOrNull { it.id == candidateId }
             }
-            val candidate = if (existing != null && validExisting(existing, scope, scopeHash, seed, choice.performanceProfileId, choice.patternId, dependencies, session.root)) {
+            val candidate = if (existing != null && validExisting(existing, scope, scopeHash, seed, generatorVersion, choice.performanceProfileId, choice.patternId, dependencies, session.root)) {
                 existing
             } else {
                 when (val generated = candidates.generate(
@@ -236,7 +237,7 @@ class MidiCoreArrangementDraftGeneration(
                         patternId = choice.patternId,
                         generator = MidiCoreGeneratorInput(
                             generatorId = "midi-core-style",
-                            generatorVersion = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}",
+                            generatorVersion = generatorVersion,
                             patternId = choice.patternId,
                             seed = seed,
                         ),
@@ -313,12 +314,14 @@ class MidiCoreArrangementDraftGeneration(
         scope: MidiCoreArrangementDraftScope,
         authorityHash: String,
         seed: Long,
+        generatorVersion: String,
         profileId: String,
         patternId: String,
         dependencies: List<String>,
         root: Path,
     ): Boolean = candidate.role == scope.role && candidate.occurrenceId == scope.occurrenceId &&
-        candidate.authorityHash == authorityHash && candidate.seed == seed && candidate.profileId == profileId &&
+        candidate.authorityHash == authorityHash && candidate.seed == seed && candidate.generatorVersion == generatorVersion &&
+        candidate.profileId == profileId &&
         candidate.patternId == patternId && candidate.draftDependencyIds == dependencies &&
         candidate.status !in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE) &&
         runCatching {

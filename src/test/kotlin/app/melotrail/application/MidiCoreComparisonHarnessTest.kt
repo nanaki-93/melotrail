@@ -26,14 +26,16 @@ class MidiCoreComparisonHarnessTest {
         assertEquals(M01ComparisonFixtures.cases.size, review.baseline.size)
         assertTrue(review.baseline.all { it is M01ComparisonCapture.Published })
         assertTrue(review.candidate.all { it is M01ComparisonCapture.Published })
-        assertTrue(review.comparisons.all(M01SemanticComparison::equivalent))
+        assertTrue(review.comparisons.all { comparison ->
+            !comparison.equivalent && comparison.differences.any { it == "Frozen style, seed, or engine inputs differ." }
+        })
         assertTrue(Files.isRegularFile(review.reviewForm))
         val form = Files.readString(review.reviewForm)
         assertTrue(form.contains("5/10 average"))
         assertTrue(form.contains("___ / 10"))
         assertFalse(form.contains("8/10"))
         assertTrue(form.contains("Baseline: steady-road / seed 901 / `midi-core-style-v1` / style catalog 1"))
-        assertTrue(form.contains("Candidate: steady-road / seed 901 / `midi-core-style-v1` / style catalog 1"))
+        assertTrue(form.contains("Candidate: steady-road / seed 901 / `midi-core-style-v2` / style catalog 2"))
         review.baseline.filterIsInstance<M01ComparisonCapture.Published>().forEach { capture ->
             assertTrue(capture.sourceUnchanged, capture.case.id)
             assertEquals(setOf("complete-song.mid", "melody.mid", "chords.mid", "bass.mid", "drums.mid"), capture.midiSha256.keys)
@@ -245,19 +247,23 @@ class MidiCoreComparisonHarnessTest {
         assertTrue(Files.readString(baselinePublished.packageDirectory.resolve("comparison.json")).contains(fixture.baselineAuthoritySha256))
         assertFalse(baselinePublished.authoritySha256 == fixture.baselineAuthoritySha256)
         assertEquals(candidatePublished.authoritySha256, baselinePublished.authoritySha256)
-        assertEquals(candidatePublished.frozenInputsSha256, baselinePublished.frozenInputsSha256)
-        assertTrue(harness.compare(baseline, candidate).equivalent)
-        val changedSource = baselinePublished.copy(sourceSha256 = "0".repeat(64))
+        assertFalse(candidatePublished.frozenInputsSha256 == baselinePublished.frozenInputsSha256)
+        assertTrue(harness.compare(baseline, candidate).differences.contains("Frozen style, seed, or engine inputs differ."))
+        // Isolate corruption checks from the intentional v1-to-v2 engine change.
+        // Package location alone must not change the comparison result.
+        val sameEngine = candidatePublished.copy(packageDirectory = baselinePublished.packageDirectory)
+        assertTrue(harness.compare(sameEngine, candidate).equivalent)
+        val changedSource = sameEngine.copy(sourceSha256 = "0".repeat(64))
         val comparison = harness.compare(changedSource, candidate)
         assertFalse(comparison.equivalent)
         assertTrue(comparison.differences.single().contains("Protected source"))
 
-        val changedInputs = baseline.copy(frozenInputsSha256 = "0".repeat(64))
+        val changedInputs = sameEngine.copy(frozenInputsSha256 = "0".repeat(64))
         val inputComparison = harness.compare(changedInputs, candidate)
         assertFalse(inputComparison.equivalent)
         assertTrue(inputComparison.differences.single().contains("Frozen style"))
 
-        val changedSemanticMidi = baseline.copy(semanticSha256 = baseline.semanticSha256 + ("complete-song.mid" to "0".repeat(64)))
+        val changedSemanticMidi = sameEngine.copy(semanticSha256 = sameEngine.semanticSha256 + ("complete-song.mid" to "0".repeat(64)))
         val semanticComparison = harness.compare(changedSemanticMidi, candidate)
         assertFalse(semanticComparison.equivalent)
         assertTrue(semanticComparison.differences.single().contains("Re-imported semantic MIDI"))

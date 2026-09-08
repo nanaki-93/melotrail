@@ -32,15 +32,15 @@ class MidiCoreChordDevelopmentFixtureTest {
         val expectedCandidateHashes = mapOf(
             "simple-diatonic-4-4" to listOf(
                 "e2c507647338097ba284c01899deecec8980baef1a05bd5e286fd4ff8d880691",
-                "d9357f07482573e9d131388c0812a0a578764d548bcb0b424558f2385a21f494",
+                "d05f0c6845c608c5eaf284c03f8c008f9fab443de3c9adc5f1778e26dea9349d",
             ),
             "pickup-and-sub-bar-changes" to listOf(
                 "9f5bfa092d988655f379a9bff97b9089083e6ae19a7833a9b09b85e185896e60",
-                "146025a93333be4d161da047b5d5295125d860f1d2fd642947ece3454837be3d",
+                "fbcdae8ce66505667803e6902d0336e9923076211ac38653640ab787146788d2",
             ),
             "chromatic-expressive-controller-source" to listOf(
-                "311ac3d1c71794113bbbdaef43cfa33ca0b5b858657bdc2a6f8165b39a416025",
-                "fb5d5b34f8ebb2bf2dc6fa447eebc5d2b47818ea359be2d1186f8f1b9da29284",
+                "d007f68c730c890b1dcafc7f3bc567ee36e74408e1c729ab8de679ab49e2c541",
+                "ddcd5070c2c667c79b07bafe0e18833550d14818f723e7672ed3a80564e08166",
             ),
         )
         developmentFixtures().forEach { fixture ->

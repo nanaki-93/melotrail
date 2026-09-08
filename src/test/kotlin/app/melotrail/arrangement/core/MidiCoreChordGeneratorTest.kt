@@ -140,15 +140,20 @@ class MidiCoreChordGeneratorTest {
                 anchor = true,
             )
         }
-        val result = MidiCoreChordGenerator.generate(
-            context(
-                chordSymbol = "Cmaj9",
-                profileId = "chords.pulsed",
-                patternId = MidiCoreChordRhythmPatternId.BRIDGE_HALF_TIME.id,
-                density = 0.5,
-                protectedMelodyNotes = melodyAnchors,
+        val generationContext = context(
+            chordSymbol = "Cmaj9",
+            profileId = "chords.pulsed",
+            patternId = MidiCoreChordRhythmPatternId.BRIDGE_HALF_TIME.id,
+            density = 0.5,
+            protectedMelodyNotes = melodyAnchors,
+            acceptedDependencies = listOf(
+                MidiCoreAcceptedDependencyContext(
+                    MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-root", "e".repeat(64)),
+                    listOf(MidiCoreGenerationNote(0, 1_920, 36, 80)),
+                ),
             ),
         )
+        val result = MidiCoreChordGenerator.generate(generationContext)
         val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
 
         assertTrue(result.accepted, "Expected an anchor-safe partial voicing, got ${result.validation.report.findings}")
@@ -156,6 +161,52 @@ class MidiCoreChordGeneratorTest {
         assertEquals(2, notes.map { it.startTick }.distinct().size)
         assertFalse(notes.any { it.pitch in melodyAnchors.map(MidiCoreProtectedMelodyNote::pitch) })
         assertFalse(result.validation.report.findings.any { it.code == MidiCoreRoleFindingCode.DENSITY_EXCEEDED })
+        assertEquals(result, MidiCoreChordGenerator.generate(generationContext), "Rootless selection must remain deterministic")
+    }
+
+    @Test
+    fun `rejects rootless selection when bass does not supply the root`() {
+        val melodyAnchors = listOf(48, 60, 72, 84).mapIndexed { index, pitch ->
+            MidiCoreProtectedMelodyNote("pmn-" + index.toString(16).repeat(64), 0, 1_920, pitch, 90, anchor = true)
+        }
+        val generationContext = context(chordSymbol = "Cmaj9", protectedMelodyNotes = melodyAnchors)
+        val result = MidiCoreChordGenerator.generate(generationContext)
+        assertFalse(result.accepted)
+        assertTrue(result.candidate.events.isEmpty())
+        assertEquals(result, MidiCoreChordGenerator.generate(generationContext))
+    }
+
+    @Test
+    fun `root omission requires continuous bass coverage in the pool and actual generation`() {
+        val anchors = listOf(48, 60, 72, 84).mapIndexed { index, pitch ->
+            MidiCoreProtectedMelodyNote("pmn-" + index.toString(16).repeat(64), 0, 1_920, pitch, 90, anchor = true)
+        }
+        val cases = listOf(
+            false to listOf(MidiCoreGenerationNote(0, 480, 36, 80)),
+            false to listOf(MidiCoreGenerationNote(0, 480, 36, 80), MidiCoreGenerationNote(960, 1_920, 36, 80)),
+            false to listOf(MidiCoreGenerationNote(0, 480, 36, 80), MidiCoreGenerationNote(480, 1_920, 43, 80)),
+            true to listOf(
+                MidiCoreGenerationNote(960, 1_920, 36, 80),
+                MidiCoreGenerationNote(0, 720, 36, 80),
+                MidiCoreGenerationNote(480, 960, 36, 80),
+            ),
+        )
+        cases.forEach { (supported, bassNotes) ->
+            val generationContext = context(
+                chordSymbol = "Cmaj9",
+                protectedMelodyNotes = anchors,
+                acceptedDependencies = listOf(MidiCoreAcceptedDependencyContext(
+                    MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-root", "e".repeat(64)),
+                    bassNotes,
+                )),
+            )
+            val pool = MidiCoreChordGenerator.legalVoicingCandidates(generationContext, generationContext.chordWindows.single())
+            assertEquals(supported, pool.any { candidate -> candidate.pitches.none { it % 12 == 0 } }, "$bassNotes")
+            val result = MidiCoreChordGenerator.generate(generationContext)
+            assertEquals(supported, result.accepted, "$bassNotes: ${result.validation.report.findings}")
+            if (!supported) assertTrue(result.candidate.events.isEmpty())
+            assertEquals(result, MidiCoreChordGenerator.generate(generationContext))
+        }
     }
 
     @Test
@@ -170,6 +221,12 @@ class MidiCoreChordGeneratorTest {
                 patternId = MidiCoreChordRhythmPatternId.BRIDGE_HALF_TIME.id,
                 density = 0.5,
                 protectedMelodyNotes = melodyAnchors,
+                acceptedDependencies = listOf(
+                    MidiCoreAcceptedDependencyContext(
+                        MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-root", "e".repeat(64)),
+                        listOf(MidiCoreGenerationNote(0, 1_920, 36, 80)),
+                    ),
+                ),
             ),
         )
 
@@ -178,6 +235,70 @@ class MidiCoreChordGeneratorTest {
             .groupBy(MidiCoreCandidateEvent.Note::startTick)
             .values
             .forEach { voicing -> assertEquals(4, voicing.minOf(MidiCoreCandidateEvent.Note::pitch) % 12) }
+    }
+
+    @Test
+    fun `builds a bounded legal pool with open guide tone and reduced piano choices`() {
+        val generationContext = context(
+            chordSymbol = "Cmaj9",
+            density = 1.0,
+            acceptedDependencies = listOf(
+                MidiCoreAcceptedDependencyContext(
+                    MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-root", "e".repeat(64)),
+                    listOf(MidiCoreGenerationNote(0, 1_920, 36, 80)),
+                ),
+            ),
+        )
+        val candidates = MidiCoreChordGenerator.legalVoicingCandidates(
+            generationContext,
+            generationContext.chordWindows.single(),
+        )
+
+        assertTrue(candidates.size <= MidiCoreChordGenerator.MAX_PIANO_VOICING_CANDIDATES)
+        assertTrue(
+            MidiCoreChordGenerator.MidiCorePianoVoicingKind.entries.all { kind -> candidates.any { it.kind == kind } },
+            "Expected compact, open, guide-tone, and reduced choices: $candidates",
+        )
+        assertTrue(candidates.all { candidate ->
+            candidate.pitches.all { it in 48..84 } && candidate.pitches.zipWithNext().all { (low, high) -> low < high }
+        })
+        assertTrue(candidates.filter { it.kind in setOf(
+            MidiCoreChordGenerator.MidiCorePianoVoicingKind.CLOSED,
+            MidiCoreChordGenerator.MidiCorePianoVoicingKind.OPEN,
+        ) }.all { it.pitches.map { pitch -> pitch % 12 }.toSet() == setOf(0, 2, 4, 7, 11) })
+        assertTrue(candidates.filter { it.kind == MidiCoreChordGenerator.MidiCorePianoVoicingKind.GUIDE_TONE }.all {
+            it.pitches.map { pitch -> pitch % 12 }.toSet() == setOf(2, 4, 11)
+        })
+        assertTrue(candidates.filter { it.kind == MidiCoreChordGenerator.MidiCorePianoVoicingKind.REDUCED }.all {
+            it.pitches.map { pitch -> pitch % 12 }.toSet().containsAll(setOf(2, 4, 11))
+        })
+        val noBassContext = context(chordSymbol = "Cmaj9", density = 1.0)
+        val noBassCandidates = MidiCoreChordGenerator.legalVoicingCandidates(noBassContext, noBassContext.chordWindows.single())
+        assertTrue(noBassCandidates.all { candidate -> candidate.pitches.any { pitch -> pitch % 12 == 0 } })
+    }
+
+    @Test
+    fun `keeps slash identity and bass space with the bounded candidate pool`() {
+        val generationContext = context(
+            chordSymbol = "Cmaj9/E",
+            acceptedDependencies = listOf(
+                MidiCoreAcceptedDependencyContext(
+                    MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "d".repeat(64)),
+                    listOf(MidiCoreGenerationNote(0, 1_920, 36, 80)),
+                ),
+            ),
+        )
+        val pool = MidiCoreChordGenerator.legalVoicingCandidates(generationContext, generationContext.chordWindows.single())
+        val result = MidiCoreChordGenerator.generate(generationContext)
+        val selected = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(pool.isNotEmpty())
+        assertTrue(pool.all { candidate -> candidate.pitches.first() % 12 == 4 })
+        assertTrue(result.accepted, "Expected bounded slash-bass candidate, got ${result.validation.report.findings}")
+        assertTrue(selected.isNotEmpty())
+        assertEquals(4, selected.minOf(MidiCoreCandidateEvent.Note::pitch) % 12)
+        assertTrue(selected.all { note -> abs(note.pitch - 36) > 5 })
+        assertEquals(result, MidiCoreChordGenerator.generate(generationContext))
     }
 
     @Test

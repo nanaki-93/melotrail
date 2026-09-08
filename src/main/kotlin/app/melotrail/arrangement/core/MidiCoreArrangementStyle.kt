@@ -50,7 +50,7 @@ data class MidiCoreArrangementStyleRole(
 /** Stable curated style catalog used by instant previews and later draft generation. */
 object MidiCoreArrangementStyleCatalog {
     /** Increment only when a bundle's meaning or ordering intentionally changes. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     /** Catalog order is intentional: calm foundations first, then more energetic choices. */
     val styles: List<MidiCoreArrangementStyle> = listOf(
