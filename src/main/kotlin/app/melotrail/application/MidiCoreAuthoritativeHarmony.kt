@@ -66,7 +66,7 @@ class MidiCoreAuthoritativeHarmony(private val artifacts: MidiCoreArtifactStore 
             MidiCoreAuthorityHasher.from(current),
             MidiCoreAuthorityHasher.from(updated),
             current.candidates.map { candidate ->
-                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash, candidate.acceptedDependencyIds)
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash, candidate.acceptedDependencyIds, candidate.draftDependencyRests)
             },
             current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
         )

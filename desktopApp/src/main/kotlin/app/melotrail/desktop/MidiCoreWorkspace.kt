@@ -1362,9 +1362,17 @@ class MidiCoreWorkspaceViewModel(
         startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_GENERATION, "Regenerating selected section…", intent) { cancellation ->
             var working = current
             val dependencies = mutableListOf<String>()
+            val rests = mutableListOf<app.melotrail.project.MidiCorePlannedRest>()
             CandidateRole.entries.forEachIndexed { index, role ->
                 if (cancellation.get()) return@startOperation cancelled(working)
                 publishSectionProgress(index, role)
+                val activity = working.project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == intent.occurrenceId }
+                    ?.roleSettings?.singleOrNull { it.role == role }?.activity
+                if (activity == app.melotrail.project.MidiCoreRoleActivity.INACTIVE) {
+                    rests += app.melotrail.project.MidiCorePlannedRest(intent.occurrenceId, role,
+                        app.melotrail.project.MidiCoreAuthorityHasher.from(working.project).scopeHash(intent.occurrenceId, role))
+                    return@forEachIndexed
+                }
                 val choice = style.role(role)
                 when (val result = useCases.generateCandidate(
                     GenerateMidiCoreCandidate(
@@ -1383,7 +1391,9 @@ class MidiCoreWorkspaceViewModel(
                             seed = intent.rootSeed + index,
                         ),
                         sectionPolicy = choice.sectionPolicy,
+                        useDraftDependencies = true,
                         draftDependencyIds = dependencies.toList(),
+                        draftDependencyRests = rests.toList(),
                         cancellation = app.melotrail.application.MidiCoreGenerationCancellation { cancellation.get() },
                     ),
                 )) {

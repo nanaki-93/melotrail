@@ -10,7 +10,9 @@ import app.melotrail.project.MidiCoreAuthoritySettings
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCoreExportSnapshot
+import app.melotrail.project.MidiCorePlannedRest
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.ExportedSnapshotFile
 import app.melotrail.project.adapter.MidiCoreArtifactCollisionException
 import app.melotrail.project.adapter.MidiCoreArtifactStore
@@ -72,6 +74,7 @@ class MidiCoreCandidateLifecycle(
             request.acceptedDependencyIds.any { !SAFE_ID.matches(it) } ||
             request.draftDependencyIds != request.draftDependencyIds.distinct() ||
             request.draftDependencyIds.any { !SAFE_ID.matches(it) } ||
+            request.draftDependencyRests.map { it.occurrenceId to it.role }.distinct().size != request.draftDependencyRests.size ||
             request.draftDependencyIds.intersect(request.acceptedDependencyIds.toSet()).isNotEmpty() ||
             (request.boundarySummarySha256 != null &&
                 (request.role != CandidateRole.CHORDS || !HASH.matches(request.boundarySummarySha256)))) {
@@ -93,6 +96,15 @@ class MidiCoreCandidateLifecycle(
         if (!HASH.matches(request.authorityHash) || request.authorityHash != expectedAuthorityHash) {
             return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "The candidate was generated against an older or different authority scope.", "Regenerate the selected role and occurrence from the current authority.")
         }
+        val fingerprint = MidiCoreAuthorityHasher.from(current)
+        if (request.draftDependencyRests.any { rest ->
+                rest.occurrenceId != request.occurrenceId || rest.role.ordinal >= request.role.ordinal ||
+                    current.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == rest.occurrenceId }?.roleSettings
+                        ?.singleOrNull { it.role == rest.role }?.activity != app.melotrail.project.MidiCoreRoleActivity.INACTIVE ||
+                    rest.authorityHash != fingerprint.scopeHash(rest.occurrenceId, rest.role)
+            }) {
+            return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "A planned-rest draft dependency no longer matches current authority.", "Regenerate the complete draft from the confirmed plan.")
+        }
         val dependencies = current.candidates.associateBy(MidiCoreCandidate::id)
         request.acceptedDependencyIds.forEach { dependencyId ->
             val dependency = dependencies[dependencyId]
@@ -108,7 +120,9 @@ class MidiCoreCandidateLifecycle(
                     "The draft dependency is missing from the project.",
                     "Regenerate the required upstream draft scope before publishing this candidate.",
                 )
-            if (dependency.occurrenceId != request.occurrenceId || dependency.role.ordinal >= request.role.ordinal ||
+            if (current.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == dependency.occurrenceId }
+                    ?.roleSettings?.singleOrNull { it.role == dependency.role }?.activity == MidiCoreRoleActivity.INACTIVE ||
+                dependency.occurrenceId != request.occurrenceId || dependency.role.ordinal >= request.role.ordinal ||
                 dependency.status in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE)) {
                 return rejected(
                     MidiCoreCandidateProblemCode.INVALID_STATE,
@@ -161,6 +175,7 @@ class MidiCoreCandidateLifecycle(
                 profileId = request.profileId,
                 patternId = request.patternId,
                 draftDependencyIds = request.draftDependencyIds,
+                draftDependencyRests = request.draftDependencyRests,
                 acceptedDependencyIds = request.acceptedDependencyIds,
                 boundarySummarySha256 = request.boundarySummarySha256,
             )
@@ -203,6 +218,10 @@ class MidiCoreCandidateLifecycle(
             ?: return rejected(MidiCoreCandidateProblemCode.CANDIDATE_NOT_FOUND, "The candidate does not exist in this project.", "Choose an inspectable candidate and retry.")
         ensureAcceptable(loaded.root, current, candidate)?.let { return it }
         val existing = current.acceptances.singleOrNull { it.occurrenceId == candidate.occurrenceId && it.role == candidate.role }
+        val existingRest = current.acceptedPlannedRests.singleOrNull { it.occurrenceId == candidate.occurrenceId && it.role == candidate.role }
+        if (existingRest?.locked == true) {
+            return rejected(MidiCoreCandidateProblemCode.LOCKED, "The planned rest is locked for this occurrence and role.", "Explicitly unlock the scoped rest before choosing a candidate.")
+        }
         if (existing?.candidateId == candidate.id && existing.locked && candidate.status != MidiCoreCandidateStatus.ACCEPTED) {
             return rejected(MidiCoreCandidateProblemCode.LOCKED, "The accepted candidate is locked for this occurrence and role.", "Explicitly unlock the current acceptance before changing it.")
         }
@@ -217,7 +236,7 @@ class MidiCoreCandidateLifecycle(
         if (existing?.locked == true && existing.candidateId != candidate.id) {
             return rejected(MidiCoreCandidateProblemCode.LOCKED, "The accepted candidate is locked for this occurrence and role.", "Explicitly unlock the current acceptance before choosing another candidate.")
         }
-        val action = if (existing == null) MidiCoreAcceptanceAction.ACCEPTED else MidiCoreAcceptanceAction.REPLACED
+        val action = if (existing == null && existingRest == null) MidiCoreAcceptanceAction.ACCEPTED else MidiCoreAcceptanceAction.REPLACED
         val acceptance = CandidateAcceptance(candidate.occurrenceId, candidate.role, candidate.id, request.locked)
         val historyEntry = try {
             history(current, candidate, action)
@@ -233,6 +252,7 @@ class MidiCoreCandidateLifecycle(
                 }
             },
             acceptances = current.acceptances.filterNot { it.occurrenceId == candidate.occurrenceId && it.role == candidate.role } + acceptance,
+            acceptedPlannedRests = current.acceptedPlannedRests.filterNot { it.occurrenceId == candidate.occurrenceId && it.role == candidate.role },
             acceptanceHistory = current.acceptanceHistory + historyEntry,
         )
         return persistTransition(loaded.root, updated, candidate, acceptance)
@@ -286,6 +306,10 @@ class MidiCoreCandidateLifecycle(
             setLockLocked(request.session, request.candidateId, false, request.expectedRevision)
         }
 
+    /** Unlock an accepted planned rest by scope so a later mixed draft can replace it. */
+    fun unlock(request: UnlockMidiCorePlannedRest): MidiCorePlannedRestLockResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { unlockPlannedRestLocked(request) }
+
     fun restore(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
         MidiCoreProjectWriteCoordinator.withLock(request.session.root) { restoreLocked(request) }
 
@@ -308,11 +332,15 @@ class MidiCoreCandidateLifecycle(
             return rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "This candidate has no prior accepted reference to restore.", "Accept the candidate once before using restore.")
         }
         val existing = current.acceptances.singleOrNull { it.occurrenceId == request.occurrenceId && it.role == request.role }
+        val existingRest = current.acceptedPlannedRests.singleOrNull { it.occurrenceId == request.occurrenceId && it.role == request.role }
         if (existing?.candidateId == candidate.id && candidate.status == MidiCoreCandidateStatus.ACCEPTED) {
             return MidiCoreCandidateLifecycleResult.Updated(MidiCoreProjectSession(loaded.root, current), candidate, existing, null)
         }
         if (existing?.locked == true && existing.candidateId != candidate.id) {
             return rejected(MidiCoreCandidateProblemCode.LOCKED, "The current accepted candidate is locked for this occurrence and role.", "Explicitly unlock the current acceptance before restoring another candidate.")
+        }
+        if (existingRest?.locked == true) {
+            return rejected(MidiCoreCandidateProblemCode.LOCKED, "The planned rest is locked for this occurrence and role.", "Explicitly unlock the scoped rest before restoring a candidate.")
         }
         val acceptance = CandidateAcceptance(request.occurrenceId, request.role, candidate.id, request.locked)
         val historyEntry = try {
@@ -329,6 +357,7 @@ class MidiCoreCandidateLifecycle(
                 }
             },
             acceptances = current.acceptances.filterNot { it.occurrenceId == request.occurrenceId && it.role == request.role } + acceptance,
+            acceptedPlannedRests = current.acceptedPlannedRests.filterNot { it.occurrenceId == request.occurrenceId && it.role == request.role },
             acceptanceHistory = current.acceptanceHistory + historyEntry,
         )
         return persistTransition(loaded.root, updated, candidate, acceptance)
@@ -347,8 +376,10 @@ class MidiCoreCandidateLifecycle(
         val current = loaded.project
         val candidate = current.candidates.singleOrNull { it.id == candidateId }
             ?: return rejected(MidiCoreCandidateProblemCode.CANDIDATE_NOT_FOUND, "The candidate does not exist in this project.", "Choose an inspectable candidate and retry.")
-        ensureAcceptable(loaded.root, current, candidate)?.let { return it }
-        if (candidate.status != MidiCoreCandidateStatus.ACCEPTED) {
+        // Unlock only removes a guard from the current reference; it does not accept stale music.
+        if (locked) ensureAcceptable(loaded.root, current, candidate)?.let { return it }
+        if (candidate.status != MidiCoreCandidateStatus.ACCEPTED &&
+            (locked || candidate.status != MidiCoreCandidateStatus.STALE)) {
             return rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "Only the current accepted candidate can be locked or unlocked.", "Accept this candidate first, then change its lock state.")
         }
         val acceptance = current.acceptances.singleOrNull { it.candidateId == candidate.id }
@@ -384,6 +415,16 @@ class MidiCoreCandidateLifecycle(
         if (candidate.status == MidiCoreCandidateStatus.STALE) {
             return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "The candidate is stale for the current authority.", "Regenerate the affected role and occurrence before accepting it.")
         }
+        val planActivity = project.arrangementPlan?.occurrences
+            ?.singleOrNull { it.occurrenceId == candidate.occurrenceId }?.roleSettings
+            ?.singleOrNull { it.role == candidate.role }?.activity
+        if (planActivity == MidiCoreRoleActivity.INACTIVE) {
+            return rejected(
+                MidiCoreCandidateProblemCode.INVALID_STATE,
+                "An inactive plan scope cannot accept an audible candidate.",
+                "Create and use a complete draft with a planned rest for this occurrence and role.",
+            )
+        }
         val currentAuthorityHash = try {
             MidiCoreAuthorityHasher.from(project).scopeHash(candidate.occurrenceId, candidate.role)
         } catch (error: IllegalArgumentException) {
@@ -391,6 +432,14 @@ class MidiCoreCandidateLifecycle(
         }
         if (candidate.authorityHash != currentAuthorityHash) {
             return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "The candidate authority hash no longer matches current authority.", "Regenerate the affected role and occurrence before accepting it.")
+        }
+        val authority = MidiCoreAuthorityHasher.from(project)
+        if (candidate.draftDependencyRests.any { rest ->
+                project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == rest.occurrenceId }
+                    ?.roleSettings?.singleOrNull { it.role == rest.role }?.activity != MidiCoreRoleActivity.INACTIVE ||
+                    runCatching { authority.scopeHash(rest.occurrenceId, rest.role) }.getOrNull() != rest.authorityHash
+            }) {
+            return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "A planned-rest dependency no longer matches current authority.", "Regenerate this candidate from the confirmed plan before accepting it.")
         }
         try {
             artifacts.verify(root, candidate.midi)
@@ -403,6 +452,55 @@ class MidiCoreCandidateLifecycle(
             )
         }
         return null
+    }
+
+    private fun unlockPlannedRestLocked(request: UnlockMidiCorePlannedRest): MidiCorePlannedRestLockResult {
+        val loaded = when (val result = load(request.session, request.expectedRevision)) {
+            is CandidateLoad.Ready -> result
+            is CandidateLoad.Rejected -> return MidiCorePlannedRestLockResult.Rejected(result.result.problem)
+        }
+        val current = loaded.project
+        val rest = current.acceptedPlannedRests.singleOrNull {
+            it.occurrenceId == request.occurrenceId && it.role == request.role
+        } ?: return rejectedPlannedRest(
+            MidiCoreCandidateProblemCode.INVALID_STATE,
+            "There is no accepted planned rest for this occurrence and role.",
+            "Choose a scope whose current accepted selection is a planned rest.",
+        )
+        // A confirmed plan edit can make this rest stale before its replacement is usable.
+        // Unlocking changes only the guard, so it deliberately does not require currentness.
+        if (!rest.locked) {
+            return MidiCorePlannedRestLockResult.Updated(MidiCoreProjectSession(loaded.root, current), rest)
+        }
+        val unlocked = rest.copy(locked = false)
+        val next = try {
+            current.copy(
+                acceptedPlannedRests = current.acceptedPlannedRests.map { if (it == rest) unlocked else it },
+                revision = Math.addExact(current.revision, 1L),
+            )
+        } catch (_: ArithmeticException) {
+            return rejectedPlannedRest(
+                MidiCoreCandidateProblemCode.INVALID_STATE,
+                "The project revision cannot advance safely.",
+                "Save a new project copy before changing the planned-rest lock.",
+            )
+        }
+        return try {
+            save(loaded.root, next)
+            MidiCorePlannedRestLockResult.Updated(MidiCoreProjectSession(loaded.root, next), unlocked)
+        } catch (_: MidiCoreProjectSaveException) {
+            rejectedPlannedRest(
+                MidiCoreCandidateProblemCode.SAVE_FAILED,
+                "The planned-rest lock could not be saved safely.",
+                "Retry the transition; the last known-good project remains current.",
+            )
+        } catch (_: Exception) {
+            rejectedPlannedRest(
+                MidiCoreCandidateProblemCode.ARTIFACT_FAILURE,
+                "The planned-rest lock could not be persisted.",
+                "Check project artifacts and permissions, then retry.",
+            )
+        }
     }
 
     private fun history(
@@ -491,6 +589,13 @@ class MidiCoreCandidateLifecycle(
         nextAction: String,
     ): MidiCoreCandidateLifecycleResult.Rejected =
         MidiCoreCandidateLifecycleResult.Rejected(MidiCoreCandidateProblem(code, message, nextAction))
+
+    private fun rejectedPlannedRest(
+        code: MidiCoreCandidateProblemCode,
+        message: String,
+        nextAction: String,
+    ): MidiCorePlannedRestLockResult.Rejected =
+        MidiCorePlannedRestLockResult.Rejected(MidiCoreCandidateProblem(code, message, nextAction))
 
     private sealed interface CandidateLoad {
         data class Ready(val root: Path, val project: MidiCoreProject) : CandidateLoad
@@ -643,6 +748,8 @@ data class PublishMidiCoreCandidate(
     val patternId: String = "unspecified",
     /** Current, validated upstream draft scopes consumed before they are accepted. */
     val draftDependencyIds: List<String> = emptyList(),
+    /** Current upstream scopes intentionally selected as silence by the complete draft. */
+    val draftDependencyRests: List<app.melotrail.project.MidiCorePlannedRest> = emptyList(),
     val acceptedDependencyIds: List<String> = emptyList(),
     /** Digest of the explicit immutable preceding-piano boundary actually consumed by generation. */
     val boundarySummarySha256: String? = null,
@@ -672,6 +779,16 @@ data class UnlockMidiCoreCandidate(
     val candidateId: String,
     val expectedRevision: Long? = null,
 )
+data class UnlockMidiCorePlannedRest(
+    val session: MidiCoreProjectSession,
+    val occurrenceId: String,
+    val role: CandidateRole,
+    val expectedRevision: Long? = session.project.revision,
+) {
+    init {
+        require(SAFE_ID.matches(occurrenceId)) { "Planned-rest scope identifier is invalid" }
+    }
+}
 data class RestoreMidiCoreCandidate(
     val session: MidiCoreProjectSession,
     val occurrenceId: String,
@@ -704,6 +821,15 @@ sealed interface MidiCoreCandidateLifecycleResult {
         val history: CandidateAcceptanceHistory?,
     ) : MidiCoreCandidateLifecycleResult
     data class Rejected(val problem: MidiCoreCandidateProblem) : MidiCoreCandidateLifecycleResult
+}
+
+sealed interface MidiCorePlannedRestLockResult {
+    data class Updated(
+        val session: MidiCoreProjectSession,
+        val rest: MidiCorePlannedRest,
+    ) : MidiCorePlannedRestLockResult
+
+    data class Rejected(val problem: MidiCoreCandidateProblem) : MidiCorePlannedRestLockResult
 }
 
 data class MidiCoreCandidateProblem(val code: MidiCoreCandidateProblemCode, val message: String, val nextAction: String)

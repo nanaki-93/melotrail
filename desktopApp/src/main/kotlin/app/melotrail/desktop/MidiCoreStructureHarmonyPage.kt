@@ -982,7 +982,7 @@ private fun buildPreviewAuthority(
     }.getOrNull()
 }
 
-private fun previewInvalidation(
+internal fun previewInvalidation(
     project: app.melotrail.project.MidiCoreProject?,
     updatedAuthority: ProjectAuthority?,
 ): MidiCoreInvalidationPreview? {
@@ -993,7 +993,7 @@ private fun previewInvalidation(
             MidiCoreAuthorityHasher.from(project),
             MidiCoreAuthorityHasher.from(updated),
             project.candidates.map { candidate ->
-                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash, candidate.acceptedDependencyIds)
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash, candidate.acceptedDependencyIds, candidate.draftDependencyRests)
             },
             project.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
         )

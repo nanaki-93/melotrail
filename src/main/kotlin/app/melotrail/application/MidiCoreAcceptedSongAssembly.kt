@@ -191,7 +191,21 @@ class MidiCoreAcceptedSongAssembly(
         val acceptedCandidates = mutableListOf<MidiCoreAcceptedSongCandidate>()
         val roleNotes = roles.associateWith { mutableListOf<MidiCoreReviewNote>() }
         roles.sortedBy(CandidateRole::ordinal).forEach { role ->
-            authority.occurrences.forEach { occurrence ->
+            authority.occurrences.forEach occurrenceLoop@ { occurrence ->
+                selection.rest(project, occurrence, role)?.let { rest ->
+                    val isCurrentRest = project.arrangementPlan?.occurrences
+                        ?.singleOrNull { it.occurrenceId == occurrence.id }?.roleSettings
+                        ?.singleOrNull { it.role == role }?.activity == app.melotrail.project.MidiCoreRoleActivity.INACTIVE &&
+                        rest.authorityHash == authorityFingerprint.scopeHash(occurrence.id, role)
+                    if (!isCurrentRest) return rejected(
+                        MidiCoreSongAssemblyProblemCode.CANDIDATE_STALE,
+                        "The planned rest for ${role.name.lowercase()} occurrence '${occurrence.id}' no longer matches current authority.",
+                        "Confirm the current plan and create or accept a new complete draft for this scope.",
+                        occurrenceId = occurrence.id,
+                        role = role,
+                    )
+                    return@occurrenceLoop
+                }
                 val candidateId = selection.candidateId(project, occurrence, role)
                     ?: return rejected(
                         if (selection == CandidateSelection.Accepted) MidiCoreSongAssemblyProblemCode.MISSING_ACCEPTANCE else MidiCoreSongAssemblyProblemCode.MISSING_DRAFT_SCOPE,
@@ -264,6 +278,21 @@ class MidiCoreAcceptedSongAssembly(
                         MidiCoreSongAssemblyProblemCode.CANDIDATE_STALE,
                         "Candidate '${candidate.id}' was generated against a different authority scope.",
                         "Regenerate and explicitly accept a current candidate for this scope.",
+                        occurrenceId = occurrence.id,
+                        role = role,
+                        candidateId = candidate.id,
+                    )
+                }
+                if (candidate.draftDependencyRests.any { rest ->
+                        rest.occurrenceId != occurrence.id ||
+                            project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == occurrence.id }?.roleSettings
+                                ?.singleOrNull { it.role == rest.role }?.activity != app.melotrail.project.MidiCoreRoleActivity.INACTIVE ||
+                            rest.authorityHash != authorityFingerprint.scopeHash(occurrence.id, rest.role)
+                    }) {
+                    return rejected(
+                        MidiCoreSongAssemblyProblemCode.CANDIDATE_STALE,
+                        "Candidate '${candidate.id}' depends on a planned rest that no longer matches current authority.",
+                        "Regenerate and explicitly accept the affected draft scope.",
                         occurrenceId = occurrence.id,
                         role = role,
                         candidateId = candidate.id,
@@ -530,15 +559,20 @@ class MidiCoreAcceptedSongAssembly(
 
     private sealed interface CandidateSelection {
         fun candidateId(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole): String?
+        fun rest(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole): app.melotrail.project.MidiCorePlannedRest?
 
         data object Accepted : CandidateSelection {
             override fun candidateId(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole): String? =
                 project.acceptances.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }?.candidateId
+            override fun rest(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole) =
+                project.acceptedPlannedRests.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }
         }
 
         data class Draft(val draft: app.melotrail.project.MidiCoreArrangementDraft) : CandidateSelection {
             override fun candidateId(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole): String? =
                 draft.candidateReferences.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }?.candidateId
+            override fun rest(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole) =
+                draft.plannedRests.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }
         }
     }
 }

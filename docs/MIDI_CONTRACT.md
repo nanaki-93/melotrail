@@ -77,6 +77,23 @@ acceptance changes pointers. Locked/stale/missing/rejected work cannot be silent
 admitted by a full-draft operation. A complete draft can be auditioned before use;
 only currently accepted scopes may be exported.
 
+## Planned rests in drafts and acceptance
+
+Project schema version 4 records an intentional inactive role/occurrence as a
+typed planned-rest selection containing its exact scoped authority hash. A
+complete draft selects exactly one validated candidate or planned rest for
+every generated-role scope. Failed, missing, stale, or digest-mismatched output
+cannot be converted to a rest. Draft audition assembles planned rests as silence
+at their original song position while retaining the common song origin and end.
+
+Whole-draft Use atomically applies mixed candidate/rest selections, and guarded
+Undo restores the prior candidate/rest selection for every affected scope or
+changes none. Locked candidates and locked rests block a different batch
+selection. Downstream Bass/Drums candidates record any same-draft upstream rests
+they consumed and revalidate those rest hashes against the confirmed plan.
+A whole-occurrence Chords rest breaks piano-boundary continuity; the next active
+Chords scope starts without a boundary inherited across that silence.
+
 ## Validation categories
 
 Blocking: unreadable/unsupported SMF, unsafe pairing, invalid timing, authority
@@ -193,11 +210,10 @@ write is rejected rather than being overwritten. Bounded neighbor dependency
 resolution remains M07 work. This is the current project schema version; older
 project schemas are rejected before writes, with no automatic migration.
 
-The remaining requirements for M07 are not claims of shipped support:
-- **Planned rests:** each scope is a validated candidate or an explicit plan
-  rest. Assembly and atomic use/undo preserve that distinction. Export silence
-  in inactive sections while retaining global origin/end. Omit a generated role
-  inactive for the entire song and list it as inactive in the manifest; Melody
+The remaining export requirements for M07 are not claims of shipped support:
+- **Rest-aware export:** export silence in inactive sections while retaining
+  global origin/end. Omit a generated role inactive for the entire song and list
+  it as inactive in the manifest; Melody
   always remains. An active scope missing valid output blocks export. Never
   write a placeholder to hide failure. Test changed track counts and role-file
   omission in Q02 before claiming compatibility for this extension.

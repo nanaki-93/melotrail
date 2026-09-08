@@ -21,6 +21,8 @@ import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.MidiCorePlannedRest
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.ProjectSectionOccurrence
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
@@ -186,6 +188,7 @@ class MidiCoreArrangementDraftGeneration(
         }
         val completed = mutableListOf<MidiCoreArrangementDraftScope>()
         val selected = linkedMapOf<MidiCoreArrangementDraftScope, MidiCoreCandidate>()
+        val plannedRests = mutableListOf<MidiCorePlannedRest>()
         // This is deliberately an in-flight summary of the current draft's own
         // immutable Chords scopes, never a lookup of accepted project work.
         var pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null
@@ -194,14 +197,27 @@ class MidiCoreArrangementDraftGeneration(
             val active = MidiCoreArrangementDraftProgress(draftId, orderedScopes.size, completed.toList(), scope)
             request.onProgress(active)
             val choice = style.role(scope.role)
-            val dependencies = CandidateRole.entries.take(scope.role.ordinal).map { dependencyRole ->
-                selected[MidiCoreArrangementDraftScope(scope.occurrenceId, dependencyRole)]?.id
-                    ?: return incomplete(session, draftId, orderedScopes.size, completed, problem(
-                        MidiCoreArrangementDraftProblemCode.CANDIDATE_FAILURE,
-                        "The ${dependencyRole.name.lowercase()} draft dependency is unavailable for '${scope.occurrenceId}'.",
-                        "Retry the incomplete draft; completed valid scopes will be retained.",
-                        scope,
-                    ))
+            val scopeHash = try {
+                MidiCoreAuthorityHasher.from(session.project).scopeHash(scope.occurrenceId, scope.role)
+            } catch (_: IllegalArgumentException) {
+                return incomplete(session, draftId, orderedScopes.size, completed, problem(MidiCoreArrangementDraftProblemCode.AUTHORITY_REQUIRED, "The draft scope is no longer part of current authority.", "Restore the occurrence and harmony, then retry the draft.", scope))
+            }
+            val inactive = session.project.arrangementPlan!!.occurrences
+                .single { it.occurrenceId == scope.occurrenceId }.roleSettings
+                .single { it.role == scope.role }.activity == MidiCoreRoleActivity.INACTIVE
+            if (inactive) {
+                plannedRests += MidiCorePlannedRest(scope.occurrenceId, scope.role, scopeHash)
+                if (scope.role == CandidateRole.CHORDS) pianoVoicingBoundary = null
+                completed += scope
+                request.onProgress(MidiCoreArrangementDraftProgress(draftId, orderedScopes.size, completed.toList()))
+                return@forEach
+            }
+            val upstreamScopes = CandidateRole.entries.take(scope.role.ordinal).map { dependencyRole ->
+                MidiCoreArrangementDraftScope(scope.occurrenceId, dependencyRole)
+            }
+            val dependencies = upstreamScopes.mapNotNull { selected[it]?.id }
+            val dependencyRests = upstreamScopes.mapNotNull { upstream ->
+                plannedRests.singleOrNull { it.occurrenceId == upstream.occurrenceId && it.role == upstream.role }
             }
             val currentAuthority = try {
                 MidiCoreAuthorityHasher.from(session.project)
@@ -213,7 +229,7 @@ class MidiCoreArrangementDraftGeneration(
                     scope,
                 ))
             }
-            val scopeHash = try {
+            val currentScopeHash = try {
                 currentAuthority.scopeHash(scope.occurrenceId, scope.role)
             } catch (_: IllegalArgumentException) {
                 return incomplete(session, draftId, orderedScopes.size, completed, problem(
@@ -223,6 +239,7 @@ class MidiCoreArrangementDraftGeneration(
                     scope,
                 ))
             }
+            if (currentScopeHash != scopeHash) return incomplete(session, draftId, orderedScopes.size, completed, problem(MidiCoreArrangementDraftProblemCode.DRAFT_STALE, "The plan changed while this scope was being prepared.", "Reload and retry the incomplete draft.", scope))
             val seed = derivedSeed(request.rootSeed, scope)
             val generatorVersion = MidiCoreChordCompingPhrasePatterns.generatorVersion(
                 "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
@@ -241,6 +258,7 @@ class MidiCoreArrangementDraftGeneration(
                     choice.performanceProfileId,
                     choice.patternId,
                     dependencies,
+                    dependencyRests,
                     consumedBoundarySha256,
                     session.root,
                 )) {
@@ -263,6 +281,7 @@ class MidiCoreArrangementDraftGeneration(
                     choice.performanceProfileId,
                     choice.patternId,
                     dependencies,
+                    dependencyRests,
                     consumedBoundarySha256,
                     session.root,
                 )) {
@@ -284,7 +303,9 @@ class MidiCoreArrangementDraftGeneration(
                         sectionPolicy = choice.sectionPolicy,
                         pianoVoicingBoundary = if (scope.role == CandidateRole.CHORDS) pianoVoicingBoundary else null,
                         candidateId = candidateId,
+                        useDraftDependencies = true,
                         draftDependencyIds = dependencies,
+                        draftDependencyRests = dependencyRests,
                         cancellation = request.cancellation,
                     ),
                 )) {
@@ -331,8 +352,8 @@ class MidiCoreArrangementDraftGeneration(
             completed += scope
             request.onProgress(MidiCoreArrangementDraftProgress(draftId, orderedScopes.size, completed.toList()))
         }
-        val references = referenceScopes.map { scope -> reference(requireNotNull(selected[scope])) }
-        val summary = validationSummary(session.root, references, session.project)
+        val references = referenceScopes.mapNotNull { scope -> selected[scope]?.let(::reference) }
+        val summary = validationSummary(session.root, references, plannedRests, session.project)
             ?: return incomplete(session, draftId, orderedScopes.size, completed, problem(
                 MidiCoreArrangementDraftProblemCode.DRAFT_INVALID,
                 "One generated draft candidate no longer has readable passing validation evidence.",
@@ -345,6 +366,7 @@ class MidiCoreArrangementDraftGeneration(
             authorityHash = MidiCoreAuthorityHasher.from(session.project).sha256,
             rootSeed = request.rootSeed,
             candidateReferences = references,
+            plannedRests = plannedRests,
             validation = summary,
             createdAt = Instant.now().toString(),
         )
@@ -379,12 +401,13 @@ class MidiCoreArrangementDraftGeneration(
         profileId: String,
         patternId: String,
         dependencies: List<String>,
+        dependencyRests: List<MidiCorePlannedRest>,
         boundarySummarySha256: String?,
         root: Path,
     ): Boolean = candidate.role == scope.role && candidate.occurrenceId == scope.occurrenceId &&
         candidate.authorityHash == authorityHash && candidate.seed == seed && candidate.generatorVersion == generatorVersion &&
         candidate.profileId == profileId &&
-        candidate.patternId == patternId && candidate.draftDependencyIds == dependencies &&
+        candidate.patternId == patternId && candidate.draftDependencyIds == dependencies && candidate.draftDependencyRests == dependencyRests &&
         candidate.boundarySummarySha256 == boundarySummarySha256 &&
         candidate.status !in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE) &&
         runCatching {
@@ -517,24 +540,29 @@ class MidiCoreArrangementDraftAcceptance(
         val candidates = project.candidates.associateBy(MidiCoreCandidate::id)
         val selected = draft.candidateReferences.map { reference -> requireNotNull(candidates[reference.candidateId]) }
         val existing = project.acceptances.associateBy { it.occurrenceId to it.role }
-        val locked = selected.firstOrNull { candidate ->
-            existing[candidate.occurrenceId to candidate.role]?.let { it.locked && it.candidateId != candidate.id } == true
+        val existingRests = project.acceptedPlannedRests.associateBy { it.occurrenceId to it.role }
+        val lockedScope = (selected.map { it.occurrenceId to it.role } + draft.plannedRests.map { it.occurrenceId to it.role }).firstOrNull { scope ->
+            existing[scope]?.locked == true && selected.none { it.occurrenceId to it.role == scope && existing[scope]?.candidateId == it.id } ||
+                existingRests[scope]?.locked == true && draft.plannedRests.none { it.occurrenceId to it.role == scope && it.authorityHash == existingRests[scope]?.authorityHash }
         }
-        if (locked != null) return rejected(
+        if (lockedScope != null) return rejected(
             MidiCoreArrangementDraftProblemCode.LOCKED,
-            "A locked acceptance prevents using this complete draft at '${locked.occurrenceId}' ${locked.role.name.lowercase()}.",
+            "A locked acceptance prevents using this complete draft at '${lockedScope.first}' ${lockedScope.second.name.lowercase()}.",
             "Explicitly unlock that scoped acceptance before using the draft.",
-            MidiCoreArrangementDraftScope(locked.occurrenceId, locked.role),
+            MidiCoreArrangementDraftScope(lockedScope.first, lockedScope.second),
         )
         val applied = selected.map { candidate ->
             existing[candidate.occurrenceId to candidate.role]
                 ?.takeIf { it.candidateId == candidate.id && it.locked }
                 ?: CandidateAcceptance(candidate.occurrenceId, candidate.role, candidate.id, request.locked)
         }
-        val prior = applied.mapNotNull { acceptance -> existing[acceptance.occurrenceId to acceptance.role] }
+        val appliedRests = draft.plannedRests.map { rest -> existingRests[rest.occurrenceId to rest.role]?.takeIf { it.locked } ?: rest.copy(locked = request.locked) }
+        val changedScopes = (applied.map { it.occurrenceId to it.role } + appliedRests.map { it.occurrenceId to it.role }).toSet()
+        val prior = project.acceptances.filter { it.occurrenceId to it.role in changedScopes }
+        val priorRests = project.acceptedPlannedRests.filter { it.occurrenceId to it.role in changedScopes }
         val now = Instant.now(clock).toString()
         val batch = try {
-            MidiCoreArrangementDraftAcceptanceHistory(idFactory(), draft.id, prior, applied, now)
+            MidiCoreArrangementDraftAcceptanceHistory(idFactory(), draft.id, prior, applied, now, priorRests, appliedRests)
         } catch (_: Exception) {
             return rejected(MidiCoreArrangementDraftProblemCode.DRAFT_INVALID, "A unique batch acceptance history identifier could not be created.", "Retry without changing the draft.")
         }
@@ -566,7 +594,7 @@ class MidiCoreArrangementDraftAcceptance(
         val selectedIds = selected.map(MidiCoreCandidate::id).toSet()
         val replacedIds = prior.map(CandidateAcceptance::candidateId).toSet() - selectedIds
         val nextAcceptances = (project.acceptances.filterNot { acceptance ->
-            acceptance.occurrenceId to acceptance.role in applied.map { it.occurrenceId to it.role }.toSet()
+            acceptance.occurrenceId to acceptance.role in changedScopes
         } + applied).sortedWith(compareBy<CandidateAcceptance> { acceptance ->
             project.authority!!.occurrences.indexOfFirst { it.id == acceptance.occurrenceId }
         }.thenBy { it.role.ordinal })
@@ -580,6 +608,7 @@ class MidiCoreArrangementDraftAcceptance(
                     }
                 },
                 acceptances = nextAcceptances,
+                acceptedPlannedRests = (project.acceptedPlannedRests.filterNot { it.occurrenceId to it.role in changedScopes } + appliedRests),
                 acceptanceHistory = project.acceptanceHistory + individual,
                 arrangementDraftAcceptanceHistory = project.arrangementDraftAcceptanceHistory + batch,
                 revision = Math.addExact(project.revision, 1L),
@@ -642,6 +671,7 @@ class MidiCoreArrangementDraftAcceptanceUndo(
             return rejected(MidiCoreArrangementDraftProblemCode.REVISION_CONFLICT, "A newer complete-draft acceptance is now the latest change.", "Review the current acceptance and use its undo action instead.")
         }
         val currentByScope = project.acceptances.associateBy { it.occurrenceId to it.role }
+        val currentRestsByScope = project.acceptedPlannedRests.associateBy { it.occurrenceId to it.role }
         val changed = batch.appliedAcceptances.firstOrNull { applied ->
             currentByScope[applied.occurrenceId to applied.role] != applied
         }
@@ -651,7 +681,9 @@ class MidiCoreArrangementDraftAcceptanceUndo(
             "Keep the current scoped decision or explicitly choose a new complete draft.",
             MidiCoreArrangementDraftScope(changed.occurrenceId, changed.role),
         )
-        val restoredScopes = batch.appliedAcceptances.map { it.occurrenceId to it.role }.toSet()
+        val changedRest = batch.appliedPlannedRests.firstOrNull { applied -> currentRestsByScope[applied.occurrenceId to applied.role] != applied }
+        if (changedRest != null) return rejected(MidiCoreArrangementDraftProblemCode.REVISION_CONFLICT, "The latest draft acceptance cannot be undone because '${changedRest.occurrenceId}' ${changedRest.role.name.lowercase()} changed afterward.", "Keep the current scoped decision or explicitly choose a new complete draft.", MidiCoreArrangementDraftScope(changedRest.occurrenceId, changedRest.role))
+        val restoredScopes = (batch.appliedAcceptances.map { it.occurrenceId to it.role } + batch.appliedPlannedRests.map { it.occurrenceId to it.role }).toSet()
         val nextAcceptances = (project.acceptances.filterNot { it.occurrenceId to it.role in restoredScopes } + batch.previousAcceptances)
             .sortedWith(compareBy<CandidateAcceptance> { acceptance ->
                 project.authority!!.occurrences.indexOfFirst { it.id == acceptance.occurrenceId }
@@ -682,13 +714,15 @@ class MidiCoreArrangementDraftAcceptanceUndo(
             project.copy(
                 candidates = project.candidates.map { candidate ->
                     when {
-                        candidate.id in restoredIds -> candidate.copy(status = MidiCoreCandidateStatus.ACCEPTED, rejectionReason = null)
+                        candidate.id in restoredIds && candidate.status != MidiCoreCandidateStatus.STALE ->
+                            candidate.copy(status = MidiCoreCandidateStatus.ACCEPTED, rejectionReason = null)
                         candidate.id in appliedIds && candidate.id !in retainedAcceptedIds && candidate.status == MidiCoreCandidateStatus.ACCEPTED ->
                             candidate.copy(status = MidiCoreCandidateStatus.CURRENT)
                         else -> candidate
                     }
                 },
                 acceptances = nextAcceptances,
+                acceptedPlannedRests = (project.acceptedPlannedRests.filterNot { it.occurrenceId to it.role in restoredScopes } + batch.previousPlannedRests),
                 acceptanceHistory = project.acceptanceHistory + restoredHistory,
                 arrangementDraftAcceptanceHistory = project.arrangementDraftAcceptanceHistory.dropLast(1),
                 revision = Math.addExact(project.revision, 1L),
@@ -747,13 +781,13 @@ internal fun validateDraft(
         "Create a new draft after reviewing the authority change.",
     )
     val expectedScopes = project.authority!!.occurrences.flatMap { occurrence -> CandidateRole.entries.map { occurrence.id to it } }
-    if (draft.candidateReferences.map { it.occurrenceId to it.role } != expectedScopes) return problem(
+    if (draft.selections.map { it.occurrenceId to it.role }.toSet() != expectedScopes.toSet()) return problem(
         MidiCoreArrangementDraftProblemCode.DRAFT_INVALID,
         "The draft no longer covers every current occurrence and role in order.",
         "Create a new complete draft from current authority.",
     )
     val candidates = project.candidates.associateBy(MidiCoreCandidate::id)
-    val summary = validationSummary(root, draft.candidateReferences, project, artifacts)
+    val summary = validationSummary(root, draft.candidateReferences, draft.plannedRests, project, artifacts)
         ?: return problem(MidiCoreArrangementDraftProblemCode.DIGEST_MISMATCH, "A draft candidate or validation report cannot be verified.", "Restore immutable candidate evidence or regenerate the affected scope.")
     if (summary != draft.validation) return problem(
         MidiCoreArrangementDraftProblemCode.DRAFT_INVALID,
@@ -768,6 +802,17 @@ internal fun validateDraft(
                 "Restore project state or create a new complete draft.",
                 MidiCoreArrangementDraftScope(reference.occurrenceId, reference.role),
             )
+        val planActivity = project.arrangementPlan?.occurrences
+            ?.singleOrNull { it.occurrenceId == candidate.occurrenceId }?.roleSettings
+            ?.singleOrNull { it.role == candidate.role }?.activity
+        if (planActivity == MidiCoreRoleActivity.INACTIVE) {
+            return problem(
+                MidiCoreArrangementDraftProblemCode.DRAFT_INVALID,
+                "An inactive plan scope cannot select an audible draft candidate.",
+                "Create a new complete draft that records this scope as a planned rest.",
+                MidiCoreArrangementDraftScope(reference.occurrenceId, reference.role),
+            )
+        }
         if (candidate.role != reference.role || candidate.occurrenceId != reference.occurrenceId ||
             candidate.midi.sha256 != reference.midiSha256 || candidate.validationReport.sha256 != reference.validationReportSha256 ||
             candidate.authorityHash != reference.authorityHash || candidate.status in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE) ||
@@ -779,11 +824,35 @@ internal fun validateDraft(
                 MidiCoreArrangementDraftScope(reference.occurrenceId, reference.role),
             )
         }
+        if (candidate.draftDependencyRests.any { rest ->
+                rest.occurrenceId != candidate.occurrenceId ||
+                    project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == rest.occurrenceId }?.roleSettings
+                        ?.singleOrNull { it.role == rest.role }?.activity != MidiCoreRoleActivity.INACTIVE ||
+                    rest.authorityHash != authority.scopeHash(rest.occurrenceId, rest.role)
+            }) {
+            return problem(
+                MidiCoreArrangementDraftProblemCode.DRAFT_STALE,
+                "A draft candidate depends on a planned rest that no longer matches authority.",
+                "Regenerate the affected scope from the confirmed plan.",
+                MidiCoreArrangementDraftScope(reference.occurrenceId, reference.role),
+            )
+        }
+    }
+    draft.plannedRests.forEach { rest ->
+        val planActivity = project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == rest.occurrenceId }
+            ?.roleSettings?.singleOrNull { it.role == rest.role }?.activity
+        if (planActivity != MidiCoreRoleActivity.INACTIVE || rest.authorityHash != authority.scopeHash(rest.occurrenceId, rest.role)) {
+            return problem(MidiCoreArrangementDraftProblemCode.DRAFT_STALE, "A planned rest no longer matches the confirmed inactive plan scope.", "Confirm the current plan and create a new complete draft.", MidiCoreArrangementDraftScope(rest.occurrenceId, rest.role))
+        }
     }
     var precedingPianoBoundary: MidiCorePianoVoicingBoundarySummary? = null
     requireNotNull(project.authority).occurrences.forEach { occurrence ->
-        val reference = draft.candidateReferences.single {
+        val reference = draft.candidateReferences.singleOrNull {
             it.occurrenceId == occurrence.id && it.role == CandidateRole.CHORDS
+        }
+        if (reference == null) {
+            precedingPianoBoundary = null
+            return@forEach
         }
         val candidate = requireNotNull(candidates[reference.candidateId])
         if (candidate.boundarySummarySha256 != precedingPianoBoundary?.sha256) {
@@ -811,6 +880,7 @@ internal fun validateDraft(
 internal fun validationSummary(
     root: Path,
     references: List<MidiCoreArrangementDraftCandidateReference>,
+    plannedRests: List<MidiCorePlannedRest> = emptyList(),
     project: MidiCoreProject,
     artifacts: MidiCoreArtifactStore = MidiCoreArtifactStore(),
 ): MidiCoreArrangementDraftValidationSummary? = runCatching {
@@ -823,10 +893,10 @@ internal fun validationSummary(
         report
     }
     MidiCoreArrangementDraftValidationSummary(
-        scopeCount = reports.size,
+        scopeCount = reports.size + plannedRests.size,
         noteCount = reports.sumOf { it.noteCount },
         allPassed = reports.all { it.passed },
-        reportDigestSha256 = sha256(references.joinToString("|") { it.validationReportSha256 }),
+        reportDigestSha256 = sha256((references.map { it.validationReportSha256 } + plannedRests.map { "rest:${it.occurrenceId}:${it.role}:${it.authorityHash}" }).joinToString("|")),
     )
 }.getOrNull()
 

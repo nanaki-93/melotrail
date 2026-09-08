@@ -26,6 +26,8 @@ import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.MidiCorePlannedRest
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import java.nio.file.Files
@@ -72,6 +74,10 @@ data class GenerateMidiCoreCandidate(
     val candidateId: String? = null,
     /** Explicit current upstream draft scopes; they are validated but need not be accepted. */
     val draftDependencyIds: List<String> = emptyList(),
+    /** Explicit upstream scopes intentionally selected as rests by the same draft. */
+    val draftDependencyRests: List<MidiCorePlannedRest> = emptyList(),
+    /** A draft starts Chords with zero upstream roles; that is not accepted-track fallback. */
+    val useDraftDependencies: Boolean = false,
     val cancellation: MidiCoreGenerationCancellation = MidiCoreGenerationCancellation.NONE,
     val hooks: MidiCoreGenerationHooks = MidiCoreGenerationHooks(),
 )
@@ -218,7 +224,8 @@ class MidiCoreCandidateGeneration(
                         profileId = context.performanceProfile.id,
                         patternId = context.patternId,
                         draftDependencyIds = request.draftDependencyIds,
-                        acceptedDependencyIds = if (request.draftDependencyIds.isEmpty()) {
+                        draftDependencyRests = request.draftDependencyRests,
+                        acceptedDependencyIds = if (!request.useDraftDependencies && request.draftDependencyIds.isEmpty() && request.draftDependencyRests.isEmpty()) {
                             context.acceptedDependencies.map { it.dependency.candidateId }
                         } else {
                             emptyList()
@@ -416,7 +423,7 @@ class MidiCoreCandidateGeneration(
         project: MidiCoreProject,
         root: Path,
         request: GenerateMidiCoreCandidate,
-    ): DependencyLoad = if (request.draftDependencyIds.isEmpty()) acceptedDependencies(project, root, request) else draftDependencies(project, root, request)
+    ): DependencyLoad = if (!request.useDraftDependencies && request.draftDependencyIds.isEmpty() && request.draftDependencyRests.isEmpty()) acceptedDependencies(project, root, request) else draftDependencies(project, root, request)
 
     private fun acceptedDependencies(
         project: MidiCoreProject,
@@ -514,8 +521,23 @@ class MidiCoreCandidateGeneration(
                 ),
             )
         }
-        if (dependencies.map(MidiCoreCandidate::role) != expectedRoles ||
-            dependencies.any { it.occurrenceId != request.occurrenceId || it.status in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE) }) {
+        val restByRole = request.draftDependencyRests.associateBy(MidiCorePlannedRest::role)
+        val dependencyRoles = (dependencies.map(MidiCoreCandidate::role) + restByRole.keys).sortedBy(CandidateRole::ordinal)
+        val authority = try { app.melotrail.project.MidiCoreAuthorityHasher.from(project) } catch (error: IllegalArgumentException) {
+            return DependencyLoad.Rejected(problem(MidiCoreCandidateProblemCode.AUTHORITY_REQUIRED, "Current authority is required before reading draft dependencies.", "Restore musical authority and regenerate the affected draft scopes."))
+        }
+        if (dependencyRoles != expectedRoles || restByRole.size != request.draftDependencyRests.size ||
+            request.draftDependencyRests.any { rest ->
+                rest.occurrenceId != request.occurrenceId ||
+                    project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == request.occurrenceId }?.roleSettings
+                        ?.singleOrNull { it.role == rest.role }?.activity != MidiCoreRoleActivity.INACTIVE ||
+                    rest.authorityHash != authority.scopeHash(request.occurrenceId, rest.role)
+            } ||
+            dependencies.any { dependency ->
+                project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == dependency.occurrenceId }
+                    ?.roleSettings?.singleOrNull { it.role == dependency.role }?.activity == MidiCoreRoleActivity.INACTIVE ||
+                    dependency.occurrenceId != request.occurrenceId || dependency.status in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE)
+            }) {
             return DependencyLoad.Rejected(
                 problem(
                     MidiCoreCandidateProblemCode.INVALID_STATE,
@@ -524,17 +546,7 @@ class MidiCoreCandidateGeneration(
                 ),
             )
         }
-        val fingerprint = try {
-            app.melotrail.project.MidiCoreAuthorityHasher.from(project)
-        } catch (_: IllegalArgumentException) {
-            return DependencyLoad.Rejected(
-                problem(
-                    MidiCoreCandidateProblemCode.AUTHORITY_REQUIRED,
-                    "Current authority is required before reading draft dependencies.",
-                    "Restore musical authority and regenerate the affected draft scopes.",
-                ),
-            )
-        }
+        val fingerprint = authority
         val contexts = mutableListOf<MidiCoreAcceptedDependencyContext>()
         dependencies.forEach { candidate ->
             if (candidate.authorityHash != fingerprint.scopeHash(candidate.occurrenceId, candidate.role)) {

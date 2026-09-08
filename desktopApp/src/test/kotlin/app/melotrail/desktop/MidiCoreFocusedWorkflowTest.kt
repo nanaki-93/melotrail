@@ -288,6 +288,43 @@ class MidiCoreFocusedWorkflowTest {
             assertTrue(Files.isRegularFile(packageDirectory.resolve("complete-song.mid")))
             assertTrue(Files.isRegularFile(packageDirectory.resolve("manifest.json")))
 
+            // Repair uses explicit rest dependencies, and UI preview reports their downstream invalidation.
+            workspace.accept(MidiCoreWorkspaceIntent.CloseProject)
+            var restCloseAttempts = 0
+            while (workspace.state.value.project != null && restCloseAttempts++ < 100) Thread.sleep(10)
+            assertEquals(null, workspace.state.value.project)
+            val store = MidiCoreArtifactStore()
+            val current = store.openProject(projectRoot)
+            val originalPlan = checkNotNull(current.arrangementPlan)
+            val restingPlan = originalPlan.copy(occurrences = originalPlan.occurrences.map { occurrence ->
+                occurrence.copy(roleSettings = occurrence.roleSettings.map {
+                    if (it.role == CandidateRole.BASS) it.copy(activity = app.melotrail.project.MidiCoreRoleActivity.INACTIVE, density = 0) else it
+                })
+            })
+            kotlin.test.assertIs<app.melotrail.application.MidiCoreArrangementPlanEditResult.Confirmed>(
+                app.melotrail.application.MidiCoreArrangementPlanEdit(store).confirm(
+                    app.melotrail.application.ConfirmMidiCoreArrangementPlanEdit(
+                        app.melotrail.application.MidiCoreProjectSession(projectRoot, current), restingPlan),
+                ),
+            )
+            workspace.accept(MidiCoreWorkspaceIntent.OpenProject(projectRoot))
+            awaitWorkspaceSuccess("reopen rest repair fixture")
+            val beforeRestRepair = checkNotNull(workspace.state.value.project).candidates.map { it.id }.toSet()
+            workspace.accept(MidiCoreWorkspaceIntent.RegenerateArrangementSection("verse-1", "late-night", 84L))
+            awaitWorkspaceSuccess("repair inactive Bass with active Drums")
+            val repairedProject = checkNotNull(workspace.state.value.project)
+            val repaired = repairedProject.candidates.filterNot { it.id in beforeRestRepair }
+            assertEquals(listOf(CandidateRole.CHORDS, CandidateRole.DRUMS), repaired.map { it.role })
+            val drums = repaired.single { it.role == CandidateRole.DRUMS }
+            assertEquals(listOf(CandidateRole.BASS), drums.draftDependencyRests.map { it.role })
+            val updatedAuthority = checkNotNull(repairedProject.authority).let { authority ->
+                authority.copy(chordEvents = authority.chordEvents.map { it.copy(symbol = "Dm") })
+            }
+            val preview = assertNotNull(previewInvalidation(repairedProject, updatedAuthority))
+            assertTrue(drums.id in preview.staleCandidateIds)
+            assertTrue(app.melotrail.arrangement.core.MidiCoreInvalidationReason.PLANNED_REST_DEPENDENCY_CHANGED in
+                preview.staleTargets.single { it.id == drums.id }.reasons)
+
             assertEquals(
                 listOf("arrange", "arrange-proposal", "arrange-top", "export", "midi", "project", "review", "review-top", "structure-harmony"),
                 capturedFixtureNames(fixtureSet),

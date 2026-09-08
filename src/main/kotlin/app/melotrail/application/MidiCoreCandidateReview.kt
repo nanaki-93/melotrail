@@ -113,6 +113,10 @@ class MidiCoreCandidateReview(
     fun unlock(request: UnlockMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
         lifecycle.unlock(request.withDefaultRevision())
 
+    /** Explicitly unlock the accepted planned rest selected for one scope. */
+    fun unlock(request: UnlockMidiCorePlannedRest): MidiCorePlannedRestLockResult =
+        lifecycle.unlock(request.withDefaultRevision())
+
     /** Restore a previously accepted candidate after revalidating its authority and artifact digests. */
     fun restore(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
         lifecycle.restore(request.withDefaultRevision())
@@ -258,6 +262,9 @@ class MidiCoreCandidateReview(
         if (expectedRevision == null) copy(expectedRevision = session.project.revision) else this
 
     private fun UnlockMidiCoreCandidate.withDefaultRevision(): UnlockMidiCoreCandidate =
+        if (expectedRevision == null) copy(expectedRevision = session.project.revision) else this
+
+    private fun UnlockMidiCorePlannedRest.withDefaultRevision(): UnlockMidiCorePlannedRest =
         if (expectedRevision == null) copy(expectedRevision = session.project.revision) else this
 
     private fun RestoreMidiCoreCandidate.withDefaultRevision(): RestoreMidiCoreCandidate =

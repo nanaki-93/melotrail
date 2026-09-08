@@ -1,5 +1,6 @@
 package app.melotrail.arrangement.core
 
+import app.melotrail.project.MidiCorePlannedRest
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAuthorityDimension
 import app.melotrail.project.MidiCoreAuthorityFingerprint
@@ -17,6 +18,7 @@ enum class MidiCoreInvalidationReason {
     ARRANGEMENT_PLAN_CHANGED,
     SETTINGS_CHANGED,
     ACCEPTED_DEPENDENCY_CHANGED,
+    PLANNED_REST_DEPENDENCY_CHANGED,
 }
 
 /** Minimal candidate dependency information needed for a pure invalidation preview. */
@@ -26,6 +28,7 @@ data class MidiCoreCandidateDependency(
     val occurrenceId: String,
     val authorityHash: String,
     val acceptedDependencyIds: List<String> = emptyList(),
+    val draftDependencyRests: List<MidiCorePlannedRest> = emptyList(),
 ) {
     init {
         require(id.matches(SAFE_ID) && occurrenceId.matches(SAFE_ID)) { "Candidate dependency identity is invalid" }
@@ -113,6 +116,12 @@ object MidiCoreInvalidationPlanner {
             val afterScope = afterScopes[candidate.scope]
             val wasCurrent = beforeScope?.sha256 == candidate.authorityHash
             val remainsCurrent = afterScope?.sha256 == candidate.authorityHash
+            if (before.sha256 != after.sha256 && wasCurrent && candidate.draftDependencyRests.any { rest ->
+                    afterScopes[MidiCoreAuthorityScopeKey(rest.occurrenceId, rest.role)]?.sha256 != rest.authorityHash
+                }) {
+                targetCandidates[candidate.id] = candidate
+                targetReasons.getOrPut(candidate.id) { linkedSetOf() }.add(MidiCoreInvalidationReason.PLANNED_REST_DEPENDENCY_CHANGED)
+            }
             if (before.sha256 != after.sha256 && wasCurrent && !remainsCurrent) {
                 targetCandidates[candidate.id] = candidate
                 targetReasons.getOrPut(candidate.id) { linkedSetOf() }.addAll(scopeReasons(before, after, beforeScope, afterScope))

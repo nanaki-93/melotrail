@@ -18,7 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /** Versioned JSON boundary for the target MIDI Core project. DTOs remain private to this file. */
 object MidiCoreProjectSchema {
     const val SCHEMA = "melotrail-midi-core"
-    const val VERSION = 3
+    const val VERSION = 4
 
     private val json = Json {
         prettyPrint = true
@@ -87,6 +87,7 @@ private data class ProjectDto(
     val candidates: List<CandidateDto> = emptyList(),
     val arrangementDrafts: List<ArrangementDraftDto> = emptyList(),
     val acceptances: List<AcceptanceDto> = emptyList(),
+    val acceptedPlannedRests: List<PlannedRestDto> = emptyList(),
     val acceptanceHistory: List<AcceptanceHistoryDto> = emptyList(),
     val arrangementDraftAcceptanceHistory: List<ArrangementDraftAcceptanceHistoryDto> = emptyList(),
     val exportSnapshots: List<ExportSnapshotDto> = emptyList(),
@@ -209,6 +210,7 @@ private data class CandidateDto(
     val status: MidiCoreCandidateStatus = MidiCoreCandidateStatus.CURRENT,
     val rejectionReason: String? = null,
     val draftDependencyIds: List<String> = emptyList(),
+    val draftDependencyRests: List<PlannedRestDto> = emptyList(),
     val acceptedDependencyIds: List<String> = emptyList(),
     val boundarySummarySha256: String? = null,
 )
@@ -241,10 +243,13 @@ private data class ArrangementDraftDto(
     val candidateReferences: List<ArrangementDraftReferenceDto>,
     val validation: ArrangementDraftValidationDto,
     val createdAt: String,
+    val plannedRests: List<PlannedRestDto> = emptyList(),
 )
 
 @Serializable
 private data class AcceptanceDto(val occurrenceId: String, val role: CandidateRole, val candidateId: String, val locked: Boolean)
+@Serializable
+private data class PlannedRestDto(val occurrenceId: String, val role: CandidateRole, val authorityHash: String, val locked: Boolean = false)
 
 @Serializable
 private data class AcceptanceHistoryDto(
@@ -263,6 +268,8 @@ private data class ArrangementDraftAcceptanceHistoryDto(
     val previousAcceptances: List<AcceptanceDto>,
     val appliedAcceptances: List<AcceptanceDto>,
     val recordedAt: String,
+    val previousPlannedRests: List<PlannedRestDto> = emptyList(),
+    val appliedPlannedRests: List<PlannedRestDto> = emptyList(),
 )
 
 @Serializable
@@ -305,6 +312,7 @@ private fun MidiCoreProject.toDto() = ProjectDto(
     candidates = candidates.map(MidiCoreCandidate::toDto),
     arrangementDrafts = arrangementDrafts.map(MidiCoreArrangementDraft::toDto),
     acceptances = acceptances.map(CandidateAcceptance::toDto),
+    acceptedPlannedRests = acceptedPlannedRests.map(MidiCorePlannedRest::toDto),
     acceptanceHistory = acceptanceHistory.map(CandidateAcceptanceHistory::toDto),
     arrangementDraftAcceptanceHistory = arrangementDraftAcceptanceHistory.map(MidiCoreArrangementDraftAcceptanceHistory::toDto),
     exportSnapshots = exportSnapshots.map(MidiCoreExportSnapshot::toDto),
@@ -321,6 +329,7 @@ private fun ProjectDto.toDomain() = MidiCoreProject(
     candidates = candidates.map(CandidateDto::toDomain),
     arrangementDrafts = arrangementDrafts.map(ArrangementDraftDto::toDomain),
     acceptances = acceptances.map(AcceptanceDto::toDomain),
+    acceptedPlannedRests = acceptedPlannedRests.map(PlannedRestDto::toDomain),
     acceptanceHistory = acceptanceHistory.map(AcceptanceHistoryDto::toDomain),
     arrangementDraftAcceptanceHistory = arrangementDraftAcceptanceHistory.map(ArrangementDraftAcceptanceHistoryDto::toDomain),
     exportSnapshots = exportSnapshots.map(ExportSnapshotDto::toDomain),
@@ -396,17 +405,17 @@ private fun MidiCoreRolePlanSettings.toDto() = RolePlanSettingsDto(role, activit
 private fun RolePlanSettingsDto.toDomain() = MidiCoreRolePlanSettings(role, activity, density, registerPreference)
 private fun MidiCoreCandidate.toDto() = CandidateDto(
     id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDto(), validationReport.toDto(), createdAt,
-    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds, boundarySummarySha256,
+    profileId, patternId, status, rejectionReason, draftDependencyIds, draftDependencyRests.map(MidiCorePlannedRest::toDto), acceptedDependencyIds, boundarySummarySha256,
 )
 private fun CandidateDto.toDomain() = MidiCoreCandidate(
     id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDomain(), validationReport.toDomain(), createdAt,
-    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds, boundarySummarySha256,
+    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds, boundarySummarySha256, draftDependencyRests.map(PlannedRestDto::toDomain),
 )
 private fun MidiCoreArrangementDraft.toDto() = ArrangementDraftDto(
-    id, styleId, styleVersion, authorityHash, rootSeed, candidateReferences.map(MidiCoreArrangementDraftCandidateReference::toDto), validation.toDto(), createdAt,
+    id, styleId, styleVersion, authorityHash, rootSeed, candidateReferences.map(MidiCoreArrangementDraftCandidateReference::toDto), validation.toDto(), createdAt, plannedRests.map(MidiCorePlannedRest::toDto),
 )
 private fun ArrangementDraftDto.toDomain() = MidiCoreArrangementDraft(
-    id, styleId, styleVersion, authorityHash, rootSeed, candidateReferences.map(ArrangementDraftReferenceDto::toDomain), validation.toDomain(), createdAt,
+    id, styleId, styleVersion, authorityHash, rootSeed, candidateReferences.map(ArrangementDraftReferenceDto::toDomain), validation.toDomain(), createdAt, plannedRests.map(PlannedRestDto::toDomain),
 )
 private fun MidiCoreArrangementDraftCandidateReference.toDto() = ArrangementDraftReferenceDto(
     occurrenceId, role, candidateId, midiSha256, validationReportSha256, authorityHash,
@@ -422,13 +431,15 @@ private fun ArrangementDraftValidationDto.toDomain() = MidiCoreArrangementDraftV
 )
 private fun CandidateAcceptance.toDto() = AcceptanceDto(occurrenceId, role, candidateId, locked)
 private fun AcceptanceDto.toDomain() = CandidateAcceptance(occurrenceId, role, candidateId, locked)
+private fun MidiCorePlannedRest.toDto() = PlannedRestDto(occurrenceId, role, authorityHash, locked)
+private fun PlannedRestDto.toDomain() = MidiCorePlannedRest(occurrenceId, role, authorityHash, locked)
 private fun CandidateAcceptanceHistory.toDto() = AcceptanceHistoryDto(id, occurrenceId, role, candidateId, action, recordedAt)
 private fun AcceptanceHistoryDto.toDomain() = CandidateAcceptanceHistory(id, occurrenceId, role, candidateId, action, recordedAt)
 private fun MidiCoreArrangementDraftAcceptanceHistory.toDto() = ArrangementDraftAcceptanceHistoryDto(
-    id, draftId, previousAcceptances.map(CandidateAcceptance::toDto), appliedAcceptances.map(CandidateAcceptance::toDto), recordedAt,
+    id, draftId, previousAcceptances.map(CandidateAcceptance::toDto), appliedAcceptances.map(CandidateAcceptance::toDto), recordedAt, previousPlannedRests.map(MidiCorePlannedRest::toDto), appliedPlannedRests.map(MidiCorePlannedRest::toDto),
 )
 private fun ArrangementDraftAcceptanceHistoryDto.toDomain() = MidiCoreArrangementDraftAcceptanceHistory(
-    id, draftId, previousAcceptances.map(AcceptanceDto::toDomain), appliedAcceptances.map(AcceptanceDto::toDomain), recordedAt,
+    id, draftId, previousAcceptances.map(AcceptanceDto::toDomain), appliedAcceptances.map(AcceptanceDto::toDomain), recordedAt, previousPlannedRests.map(PlannedRestDto::toDomain), appliedPlannedRests.map(PlannedRestDto::toDomain),
 )
 private fun MidiCoreExportSnapshot.toDto() = ExportSnapshotDto(
     id, sourceSha256, authorityHash, files.map(ExportedSnapshotFile::toDto), createdAt,

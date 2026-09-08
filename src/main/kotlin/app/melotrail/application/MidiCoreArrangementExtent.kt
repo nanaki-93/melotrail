@@ -64,7 +64,7 @@ class MidiCoreArrangementExtent(private val artifacts: MidiCoreArtifactStore = M
         val updated = current.copy(authority = authority.copy(arrangementEndTick = end), revision = current.revision + 1L)
         val invalidation = MidiCoreInvalidationPlanner.preview(
             before, MidiCoreAuthorityHasher.from(updated),
-            current.candidates.map { MidiCoreCandidateDependency(it.id, it.role, it.occurrenceId, it.authorityHash, it.acceptedDependencyIds) },
+            current.candidates.map { MidiCoreCandidateDependency(it.id, it.role, it.occurrenceId, it.authorityHash, it.acceptedDependencyIds, it.draftDependencyRests) },
             current.exportSnapshots.map { MidiCoreExportDependency(it.id, it.authorityHash) },
         )
         val persisted = updated.withInvalidatedCandidates(invalidation.staleCandidateIds)

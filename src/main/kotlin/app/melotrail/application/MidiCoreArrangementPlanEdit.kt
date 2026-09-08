@@ -140,6 +140,7 @@ class MidiCoreArrangementPlanEdit(
                         candidate.occurrenceId,
                         candidate.authorityHash,
                         candidate.acceptedDependencyIds,
+                        candidate.draftDependencyRests,
                     )
                 },
                 current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },

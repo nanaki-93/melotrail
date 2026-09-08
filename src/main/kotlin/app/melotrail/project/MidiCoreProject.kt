@@ -25,19 +25,21 @@ data class MidiCoreProject(
     val arrangementDraftAcceptanceHistory: List<MidiCoreArrangementDraftAcceptanceHistory> = emptyList(),
     /** Explicit, confirmed whole-song intent; unconfirmed style proposals are session state. */
     val arrangementPlan: MidiCoreArrangementPlan? = null,
+    /** Explicit accepted silence. This is never a substitute for a missing candidate. */
+    val acceptedPlannedRests: List<MidiCorePlannedRest> = emptyList(),
 ) {
     init {
         require(revision >= 0L) { "Project revision must not be negative" }
         require((sourceMidi == null) == (selectedMelody == null)) {
             "Source MIDI and its automatically protected melody identity must be bound atomically"
         }
-        require(sourceMidi != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
+        require(sourceMidi != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && acceptedPlannedRests.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
             "Arrangement plans, candidates, drafts, acceptances, and exports require an imported source MIDI record"
         }
-        require(selectedMelody != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
+        require(selectedMelody != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && acceptedPlannedRests.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
             "Arrangement plans, candidates, drafts, acceptances, and exports require a selected melody"
         }
-        require(authority != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
+        require(authority != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && acceptedPlannedRests.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
             "Arrangement plans, candidates, drafts, acceptances, and exports require musical authority"
         }
         require(candidates.map(MidiCoreCandidate::id).distinct().size == candidates.size) {
@@ -53,6 +55,10 @@ data class MidiCoreProject(
         require(acceptances.map { it.occurrenceId to it.role }.distinct().size == acceptances.size) {
             "A role may have one acceptance per occurrence"
         }
+        require(acceptedPlannedRests.map { it.occurrenceId to it.role }.distinct().size == acceptedPlannedRests.size &&
+            acceptedPlannedRests.none { rest -> rest.occurrenceId to rest.role in acceptances.map { it.occurrenceId to it.role }.toSet() }) {
+            "A scope must select exactly one candidate or planned rest"
+        }
         acceptances.forEach { acceptance ->
             val candidate = candidates.singleOrNull { it.id == acceptance.candidateId }
             require(candidate != null && candidate.role == acceptance.role && candidate.occurrenceId == acceptance.occurrenceId) {
@@ -65,6 +71,12 @@ data class MidiCoreProject(
         authority?.let { currentAuthority ->
             arrangementPlan?.requireMatches(currentAuthority)
             val occurrenceIds = currentAuthority.occurrences.map(ProjectSectionOccurrence::id).toSet()
+            val currentAuthorityHash = runCatching { MidiCoreAuthorityHasher.from(this) }.getOrNull()
+            // Accepted selections survive authority edits for inspection just as immutable
+            // candidates do. Audition and assembly revalidate current rest evidence.
+            require(acceptedPlannedRests.all { it.occurrenceId in occurrenceIds }) {
+                "Accepted planned rests must reference an authoritative occurrence"
+            }
             require(candidates.all { it.status == MidiCoreCandidateStatus.STALE || it.occurrenceId in occurrenceIds }) {
                 "Candidate references an unknown occurrence"
             }
@@ -72,13 +84,13 @@ data class MidiCoreProject(
                 "Arrangement draft IDs must be unique"
             }
             val candidateById = candidates.associateBy(MidiCoreCandidate::id)
-            val currentAuthorityHash = runCatching { MidiCoreAuthorityHasher.from(this).sha256 }.getOrNull()
+            val currentAuthoritySha256 = currentAuthorityHash?.sha256
             arrangementDrafts.forEach { draft ->
                 val expectedScopes = currentAuthority.occurrences.flatMap { occurrence ->
                     CandidateRole.entries.map { role -> occurrence.id to role }
                 }
-                require(draft.authorityHash != currentAuthorityHash || draft.candidateReferences.map { it.occurrenceId to it.role } == expectedScopes) {
-                    "Arrangement draft references must cover every occurrence and role in authoritative order"
+                require(draft.authorityHash != currentAuthoritySha256 || draft.selections.map { it.occurrenceId to it.role }.toSet() == expectedScopes.toSet()) {
+                    "Arrangement draft selections must cover every occurrence and role in authoritative order"
                 }
                 draft.candidateReferences.forEach { reference ->
                     val candidate = candidateById[reference.candidateId]
@@ -128,14 +140,11 @@ data class MidiCoreProject(
         arrangementDraftAcceptanceHistory.forEach { history ->
             val draft = arrangementDrafts.singleOrNull { it.id == history.draftId }
             require(draft != null) { "Arrangement draft acceptance history must reference a persisted draft" }
-            require(history.appliedAcceptances.map { it.occurrenceId to it.role } == draft.candidateReferences.map { it.occurrenceId to it.role }) {
+            require(history.appliedScopes.map { it.occurrenceId to it.role }.toSet() == draft.selections.map { it.occurrenceId to it.role }.toSet()) {
                 "Arrangement draft acceptance history must retain every applied draft scope"
             }
-            require(history.appliedAcceptances.map { it.candidateId } == draft.candidateReferences.map { it.candidateId }) {
-                "Arrangement draft acceptance history must retain the selected draft candidates"
-            }
-            require(history.previousAcceptances.all { previous ->
-                previous.occurrenceId to previous.role in draft.candidateReferences.map { it.occurrenceId to it.role }.toSet()
+            require(history.previousScopes.all { previous ->
+                previous.occurrenceId to previous.role in draft.selections.map { it.occurrenceId to it.role }.toSet()
             }) { "Arrangement draft history may only restore scopes from its draft" }
         }
         sourceMidi?.let { source ->
@@ -507,6 +516,8 @@ data class MidiCoreCandidate(
     val acceptedDependencyIds: List<String> = emptyList(),
     /** Immutable digest of the explicit preceding piano boundary consumed by Chords generation. */
     val boundarySummarySha256: String? = null,
+    /** Explicit inactive upstream draft scopes consumed as silence, never as missing output. */
+    val draftDependencyRests: List<MidiCorePlannedRest> = emptyList(),
 ) {
     init {
         require(SAFE_ID.matches(id) && SAFE_ID.matches(occurrenceId)) { "Candidate identity is invalid" }
@@ -527,6 +538,10 @@ data class MidiCoreCandidate(
         require(draftDependencyIds == draftDependencyIds.distinct() && draftDependencyIds.all(SAFE_ID::matches) &&
             draftDependencyIds.none { it == id } && draftDependencyIds.intersect(acceptedDependencyIds.toSet()).isEmpty()) {
             "Candidate draft dependency IDs must be distinct safe non-accepted identifiers"
+        }
+        require(draftDependencyRests.map { it.occurrenceId to it.role }.distinct().size == draftDependencyRests.size &&
+            draftDependencyRests.all { it.occurrenceId == occurrenceId && it.role.ordinal < role.ordinal }) {
+            "Candidate planned-rest dependencies must select distinct scopes"
         }
         require(boundarySummarySha256 == null ||
             (role == CandidateRole.CHORDS && SHA_256.matches(boundarySummarySha256))) {
@@ -576,17 +591,33 @@ data class MidiCoreArrangementDraft(
     val candidateReferences: List<MidiCoreArrangementDraftCandidateReference>,
     val validation: MidiCoreArrangementDraftValidationSummary,
     val createdAt: String,
+    val plannedRests: List<MidiCorePlannedRest> = emptyList(),
 ) {
     init {
         require(SAFE_ID.matches(id) && STYLE_ID.matches(styleId) && styleVersion > 0 && SHA_256.matches(authorityHash)) {
             "Arrangement draft identity is invalid"
         }
-        require(candidateReferences.map { it.occurrenceId to it.role }.distinct().size == candidateReferences.size &&
-            candidateReferences.size == validation.scopeCount) {
-            "Arrangement draft references must be unique and match validation scope count"
+        require(selections.map { it.occurrenceId to it.role }.distinct().size == selections.size &&
+            selections.size == validation.scopeCount) {
+            "Arrangement draft selections must be unique and match validation scope count"
         }
         require(createdAt.matches(ISO_INSTANT)) { "Arrangement draft timestamp must be an ISO-8601 UTC instant" }
     }
+    val selections: List<MidiCoreDraftSelection> get() = candidateReferences.map { MidiCoreDraftSelection.Candidate(it) } + plannedRests.map { MidiCoreDraftSelection.Rest(it) }
+}
+
+sealed interface MidiCoreDraftSelection { val occurrenceId: String; val role: CandidateRole
+    data class Candidate(val reference: MidiCoreArrangementDraftCandidateReference) : MidiCoreDraftSelection { override val occurrenceId get() = reference.occurrenceId; override val role get() = reference.role }
+    data class Rest(val rest: MidiCorePlannedRest) : MidiCoreDraftSelection { override val occurrenceId get() = rest.occurrenceId; override val role get() = rest.role }
+}
+
+/** Immutable evidence that the confirmed plan deliberately leaves one scope silent. */
+data class MidiCorePlannedRest(val occurrenceId: String, val role: CandidateRole, val authorityHash: String, val locked: Boolean = false) {
+    init { require(SAFE_ID.matches(occurrenceId) && SHA_256.matches(authorityHash)) { "Planned rest identity is invalid" } }
+}
+
+data class MidiCoreArrangementScope(val occurrenceId: String, val role: CandidateRole) {
+    init { require(SAFE_ID.matches(occurrenceId)) { "Arrangement scope identity is invalid" } }
 }
 
 /** One atomic whole-draft acceptance's before/after references, retained for safe restoration. */
@@ -596,16 +627,22 @@ data class MidiCoreArrangementDraftAcceptanceHistory(
     val previousAcceptances: List<CandidateAcceptance>,
     val appliedAcceptances: List<CandidateAcceptance>,
     val recordedAt: String,
+    val previousPlannedRests: List<MidiCorePlannedRest> = emptyList(),
+    val appliedPlannedRests: List<MidiCorePlannedRest> = emptyList(),
 ) {
     init {
         require(SAFE_ID.matches(id) && SAFE_ID.matches(draftId)) { "Arrangement draft acceptance history identity is invalid" }
-        require(appliedAcceptances.isNotEmpty() &&
+        require((appliedAcceptances.isNotEmpty() || appliedPlannedRests.isNotEmpty()) &&
             previousAcceptances.map { it.occurrenceId to it.role }.distinct().size == previousAcceptances.size &&
-            appliedAcceptances.map { it.occurrenceId to it.role }.distinct().size == appliedAcceptances.size) {
+            appliedAcceptances.map { it.occurrenceId to it.role }.distinct().size == appliedAcceptances.size &&
+            (previousAcceptances.map { it.occurrenceId to it.role } + previousPlannedRests.map { it.occurrenceId to it.role }).distinct().size == previousAcceptances.size + previousPlannedRests.size &&
+            (appliedAcceptances.map { it.occurrenceId to it.role } + appliedPlannedRests.map { it.occurrenceId to it.role }).distinct().size == appliedAcceptances.size + appliedPlannedRests.size) {
             "Arrangement draft acceptance history scopes are invalid"
         }
         require(recordedAt.matches(ISO_INSTANT)) { "Arrangement draft acceptance history timestamp must be an ISO-8601 UTC instant" }
     }
+    val previousScopes: List<MidiCoreArrangementScope> get() = previousAcceptances.map { MidiCoreArrangementScope(it.occurrenceId, it.role) } + previousPlannedRests.map { MidiCoreArrangementScope(it.occurrenceId, it.role) }
+    val appliedScopes: List<MidiCoreArrangementScope> get() = appliedAcceptances.map { MidiCoreArrangementScope(it.occurrenceId, it.role) } + appliedPlannedRests.map { MidiCoreArrangementScope(it.occurrenceId, it.role) }
 }
 
 data class CandidateAcceptance(val occurrenceId: String, val role: CandidateRole, val candidateId: String, val locked: Boolean) {

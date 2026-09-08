@@ -189,6 +189,15 @@ This does not count as a musical or Logic pass for that style.
 Timing/note/channel/role corruption is always a failure. A screenshot alone does
 not establish full playback or reopen; a real reviewer report is needed.
 
+M07b automated fixtures cover mixed candidate/rest draft audition, atomic Use/Undo,
+revision-guarded unlock in both candidate/rest directions after plan edits,
+stale-state preservation on Undo, locked-rest authority replacement, downstream
+rest-dependency invalidation and acceptance guards, desktop section repair and
+preview at three fixture sizes, cancellation/retry and piano-boundary reset
+across an inactive occurrence. Schema v4 rejects prior schema versions before writes. Current Logic
+playback evidence remains pending; M07 owns complete rest-aware export and Q02
+owns its Logic matrix.
+
 ## Retained historical Logic evidence
 
 **2026-08-28: PASS**, user report for Logic Pro **12.3.1** on macOS **26.6.2

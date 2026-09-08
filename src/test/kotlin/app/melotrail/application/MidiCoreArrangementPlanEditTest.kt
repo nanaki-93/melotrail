@@ -40,6 +40,21 @@ class MidiCoreArrangementPlanEditTest {
     fun `a confirmed plan edit previews and invalidates only affected locked work without rewriting evidence`() {
         val store = MidiCoreArtifactStore()
         var session = confirmedSession(store)
+        // This test locks audible Bass work; the intro proposal initially leaves Bass inactive.
+        val activeBassPlan = requireNotNull(session.project.arrangementPlan).let { plan ->
+            plan.copy(occurrences = plan.occurrences.map { occurrence ->
+                if (occurrence.occurrenceId != "verse-1") occurrence else occurrence.copy(
+                    roleSettings = occurrence.roleSettings.map { setting ->
+                        if (setting.role == CandidateRole.BASS) setting.copy(
+                            activity = app.melotrail.project.MidiCoreRoleActivity.SUPPORTING, density = 30,
+                        ) else setting
+                    },
+                )
+            })
+        }
+        session = assertIs<MidiCoreArrangementPlanEditResult.Confirmed>(
+            MidiCoreArrangementPlanEdit(store).confirm(ConfirmMidiCoreArrangementPlanEdit(session, activeBassPlan)),
+        ).session
         session = publish(store, session, CandidateRole.BASS, "verse-locked", "verse-1")
         val lockedMidi = session.project.candidates.single { it.id == "verse-locked" }.midi
         val lockedBytes = Files.readAllBytes(store.verify(session.root, lockedMidi))
