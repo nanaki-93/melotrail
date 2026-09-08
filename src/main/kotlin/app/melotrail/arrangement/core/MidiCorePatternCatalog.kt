@@ -30,6 +30,54 @@ enum class MidiCoreChordRhythmPatternId(val id: String) {
     BRIDGE_HALF_TIME("chords.rhythm.bridge-half-time"),
 }
 
+/** Phrase-aware realization selected for a meter-aligned chord-rhythm pattern. */
+enum class MidiCoreChordCompingUse {
+    SUPPORT,
+    ANSWER,
+    REST,
+}
+
+/** Complete meter-authored support, answer, and rest phrase patterns. */
+object MidiCoreChordCompingPhrasePatterns {
+    /** Increment when the timing or meaning of a phrase-aware realization changes. */
+    const val VERSION = 1
+
+    private val support = mapOf(
+        "4/4" to listOf(MidiCoreChordRhythmStep(0, 16, 0)),
+        "3/4" to listOf(MidiCoreChordRhythmStep(0, 12, 0)),
+        "6/8" to listOf(MidiCoreChordRhythmStep(0, 12, 0)),
+    )
+
+    /** Bind the phrase-rule version only to generators whose Chords output consumes it. */
+    fun generatorVersion(baseVersion: String, role: CandidateRole): String {
+        require(baseVersion.isNotBlank()) { "Generator version must not be blank" }
+        return baseVersion + if (role == CandidateRole.CHORDS) "-comping-v$VERSION" else ""
+    }
+
+    /** The support shape is explicitly authored for every supported meter. */
+    fun supportFor(meter: ProjectMeter): List<MidiCoreChordRhythmStep> = support.getValue(meterKey(meter))
+
+    /** An answer is the selected complete rhythm; a phrase-terminal rest is complete silence. */
+    fun stepsFor(
+        meter: ProjectMeter,
+        use: MidiCoreChordCompingUse,
+        answer: List<MidiCoreChordRhythmStep>,
+    ): List<MidiCoreChordRhythmStep> = when (use) {
+        MidiCoreChordCompingUse.SUPPORT -> supportFor(meter)
+        MidiCoreChordCompingUse.ANSWER -> answer
+        MidiCoreChordCompingUse.REST -> emptyList()
+    }
+
+    private fun meterKey(meter: ProjectMeter): String = when {
+        meter.numerator == 4 && meter.denominator == 4L -> "4/4"
+        meter.numerator == 3 && meter.denominator == 4L -> "3/4"
+        meter.numerator == 6 && meter.denominator == 8L -> "6/8"
+        else -> throw IllegalArgumentException(
+            "Piano comping does not support ${meter.numerator}/${meter.denominator}; authored meters are 4/4, 3/4 and 6/8.",
+        )
+    }
+}
+
 /** The bounded complete groove vocabulary consumed by the MIDI Core drum generator. */
 enum class MidiCoreDrumGroovePatternId(val id: String) {
     DUSTY_STRAIGHT("drums.dusty-straight"),

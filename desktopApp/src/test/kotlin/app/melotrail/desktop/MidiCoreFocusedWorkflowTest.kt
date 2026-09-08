@@ -234,10 +234,13 @@ class MidiCoreFocusedWorkflowTest {
             onNodeWithTag(MidiCoreArrangePageTags.REGENERATE_SECTION).performScrollTo().assertIsEnabled().performClick()
             awaitWorkspaceSuccess("regenerate selected section")
             val repairCandidates = workspace.state.value.project?.candidates.orEmpty().filterNot { it.id in candidateIdsBeforeRepair }
-            val expectedRepairGeneratorVersion =
-                "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}"
             assertEquals(CandidateRole.entries, repairCandidates.map { it.role })
-            assertTrue(repairCandidates.all { it.generatorVersion == expectedRepairGeneratorVersion })
+            repairCandidates.forEach { candidate ->
+                val expectedRepairGeneratorVersion =
+                    "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}" +
+                        if (candidate.role == CandidateRole.CHORDS) "-comping-v1" else ""
+                assertEquals(expectedRepairGeneratorVersion, candidate.generatorVersion)
+            }
             captureFixture("arrange")
 
             navigateTo(MidiCoreWorkspaceDestination.REVIEW)

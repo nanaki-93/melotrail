@@ -49,7 +49,7 @@ object MidiCoreChordGenerator {
         )
         val validation = MidiCoreRoleValidator.validate(context, candidate)
         val boundary = if (validation is MidiCoreRoleValidationResult.Accepted) {
-            plan?.voicings?.lastOrNull()?.let { pitches ->
+            plan?.voicings?.lastOrNull { it.isNotEmpty() }?.let { pitches ->
                 MidiCorePianoVoicingBoundarySummary(
                     context.occurrence.id,
                     context.occurrence.endTick,
@@ -96,14 +96,20 @@ object MidiCoreChordGenerator {
      */
     internal fun pianoVoicingPlan(context: MidiCoreGenerationContext): MidiCorePianoVoicingPlan? {
         if (context.sectionPolicy.density == 0.0) return MidiCorePianoVoicingPlan(emptyList(), emptyList(), emptyList())
-        val rhythms = context.chordWindows.map { window -> rhythmWindows(context, window) }
-        if (rhythms.any { it.isEmpty() }) return null
+        val expansions = context.chordWindows.map { window -> rhythmWindows(context, window) }
+        if (expansions.any { it.attacks.isEmpty() && !it.intentionalRest }) return null
+        val rhythms = expansions.map { it.attacks }
         if (context.chordWindows.size == 1) {
             return singleWindowPlan(context, context.chordWindows.single(), rhythms.single())
         }
         var beam = listOf(VoicingPath(0L, context.pianoVoicingBoundary?.pitches, emptyList()))
         val widths = mutableListOf<Int>()
         context.chordWindows.forEachIndexed { windowIndex, window ->
+            if (expansions[windowIndex].intentionalRest) {
+                beam = beam.map { it.copy(voicings = it.voicings + listOf(emptyList())) }
+                widths += beam.size
+                return@forEachIndexed
+            }
             val safe = legalVoicingCandidates(context, window).filter { candidate ->
                 !hasAnchorCollision(context, candidate.pitches, rhythms[windowIndex]) &&
                     !hasBassCollision(context, candidate.pitches, rhythms[windowIndex])
@@ -198,29 +204,140 @@ object MidiCoreChordGenerator {
     private fun rhythmWindows(
         context: MidiCoreGenerationContext,
         window: app.melotrail.structure.MidiCoreResolvedChordWindow,
-    ): List<RhythmWindow> {
+    ): RhythmExpansion {
         val pattern = MidiCorePatternCatalog.chordRhythm(context.patternId)
         val stepTicks = context.tickGrid.ticksPerSubdivision
         val barTicks = context.tickGrid.ticksPerBar
         val pickupTicks = context.authority.pickupTicks
         val steps = pattern.stepsFor(context.authority.meter)
-        return buildList {
+        var intentionalRest = true
+        val attacks = buildList {
             var barStart = metricalBarStart(window.startTick, pickupTicks, barTicks)
             while (barStart < window.endTick) {
                 val barEnd = if (barStart < pickupTicks) pickupTicks else barStart + barTicks
-                steps.forEach { step ->
+                val use = compingUse(
+                    context,
+                    pattern,
+                    maxOf(context.occurrence.startTick, barStart),
+                    minOf(context.occurrence.endTick, barEnd),
+                )
+                intentionalRest = intentionalRest && use == MidiCoreChordCompingUse.REST
+                MidiCoreChordCompingPhrasePatterns.stepsFor(context.authority.meter, use, steps).forEach { step ->
                     val metricalStart = barStart + step.sixteenth.toLong() * stepTicks
-                    val start = if (pattern.id == MidiCoreChordRhythmPatternId.SUSTAINED) {
+                    val start = if (
+                        use == MidiCoreChordCompingUse.SUPPORT || pattern.id == MidiCoreChordRhythmPatternId.SUSTAINED
+                    ) {
                         maxOf(window.startTick, metricalStart)
                     } else metricalStart
                     val end = minOf(window.endTick, barEnd, metricalStart + step.durationSixteenths.toLong() * stepTicks)
-                    if (start >= window.startTick && start < minOf(window.endTick, barEnd) && end > start) {
-                        add(RhythmWindow(start, end, step.velocityOffset, phraseBoundary = start == barStart))
+                    if (start >= window.startTick && start < minOf(window.endTick, barEnd) && end > start &&
+                        (use == MidiCoreChordCompingUse.SUPPORT || !isPhraseTerminalRest(context, start)) &&
+                        (use != MidiCoreChordCompingUse.ANSWER || melodyOccupiedTicks(context, start, end) == 0L)
+                    ) {
+                        add(
+                            RhythmWindow(
+                                start,
+                                end,
+                                step.velocityOffset,
+                                phraseBoundary = start == barStart,
+                                support = use == MidiCoreChordCompingUse.SUPPORT,
+                            ),
+                        )
                     }
                 }
                 barStart = barEnd
             }
         }
+        return RhythmExpansion(attacks, intentionalRest)
+    }
+
+    private data class RhythmExpansion(val attacks: List<RhythmWindow>, val intentionalRest: Boolean)
+
+    /** Resolve one complete comping use per metrical bar fragment from immutable melody activity. */
+    private fun compingUse(
+        context: MidiCoreGenerationContext,
+        pattern: MidiCoreChordRhythmPattern,
+        startTick: Long,
+        endTick: Long,
+    ): MidiCoreChordCompingUse = when {
+        startTick >= endTick -> MidiCoreChordCompingUse.REST
+        isInterPhraseBreath(context, startTick, endTick) -> MidiCoreChordCompingUse.REST
+        pattern.id == MidiCoreChordRhythmPatternId.SUSTAINED && melodyOccupiedTicks(context, startTick, endTick) > 0L ->
+            MidiCoreChordCompingUse.SUPPORT
+        isDenseMelody(context, startTick, endTick) -> MidiCoreChordCompingUse.SUPPORT
+        else -> MidiCoreChordCompingUse.ANSWER
+    }
+
+    /** Leave the first empty bar after a phrase as breathing room when another phrase follows. */
+    private fun isInterPhraseBreath(context: MidiCoreGenerationContext, startTick: Long, endTick: Long): Boolean {
+        if (melodyOccupiedTicks(context, startTick, endTick) != 0L) return false
+        val phraseJustEnded = phraseEndTicks(context).any { end ->
+            end <= startTick && startTick - end < context.tickGrid.ticksPerBar
+        }
+        val nextPhrase = context.melodyHarmonyAnalysis?.notes?.any { it.startTick >= endTick }
+            ?: context.protectedMelodyNotes.any { it.startTick >= endTick }
+        return phraseJustEnded && nextPhrase
+    }
+
+    /** A phrase ending owns its final beat; a new pulsed answer there would erase the melodic breath. */
+    private fun isPhraseTerminalRest(context: MidiCoreGenerationContext, attackStartTick: Long): Boolean {
+        val beat = phraseRestTicks(context)
+        return phraseEndTicks(context).any { phraseEnd ->
+            attackStartTick >= phraseEnd - beat && attackStartTick < phraseEnd
+        }
+    }
+
+    /** In 6/8 the audible pulse is a dotted quarter, not one isolated eighth-note denominator unit. */
+    private fun phraseRestTicks(context: MidiCoreGenerationContext): Long =
+        if (context.authority.meter.numerator == 6 && context.authority.meter.denominator == 8L) {
+            Math.multiplyExact(context.tickGrid.ticksPerBeat, 3L)
+        } else {
+            context.tickGrid.ticksPerBeat
+        }
+
+    /** Prefer M02's sustain-aware phrase hints; direct contexts derive the same one-beat rest rule. */
+    private fun phraseEndTicks(context: MidiCoreGenerationContext): List<Long> {
+        val analyzed = context.melodyHarmonyAnalysis?.phrases.orEmpty().map(MidiCoreMelodyPhraseHint::endTick)
+        if (analyzed.isNotEmpty()) return analyzed
+        val notes = context.protectedMelodyNotes.sortedBy(MidiCoreProtectedMelodyNote::startTick)
+        if (notes.isEmpty()) return emptyList()
+        val ends = mutableListOf<Long>()
+        var phraseEnd = notes.first().endTick
+        notes.drop(1).forEach { note ->
+            if (note.startTick - phraseEnd >= context.tickGrid.ticksPerBeat) ends += phraseEnd
+            phraseEnd = maxOf(phraseEnd, note.endTick)
+        }
+        ends += phraseEnd
+        return ends
+    }
+
+    /** Treat coverage of two thirds of a bar fragment as busy, avoiding pulse-for-pulse crowding. */
+    private fun isDenseMelody(context: MidiCoreGenerationContext, startTick: Long, endTick: Long): Boolean {
+        val span = endTick - startTick
+        return span > 0L && melodyOccupiedTicks(context, startTick, endTick) * DENSE_MELODY_DENOMINATOR >=
+            span * DENSE_MELODY_NUMERATOR
+    }
+
+    /** Measure union coverage so polyphony cannot inflate activity; M02 sounding ends include supported CC64. */
+    private fun melodyOccupiedTicks(context: MidiCoreGenerationContext, startTick: Long, endTick: Long): Long {
+        val soundingSpans = context.melodyHarmonyAnalysis?.notes?.map { note ->
+            note.startTick to note.soundingEndTick
+        } ?: context.protectedMelodyNotes.map { note ->
+            note.startTick to note.endTick
+        }
+        val overlaps = soundingSpans.mapNotNull { (noteStart, noteEnd) ->
+            val overlapStart = maxOf(startTick, noteStart)
+            val overlapEnd = minOf(endTick, noteEnd)
+            (overlapStart to overlapEnd).takeIf { (start, end) -> end > start }
+        }.sortedBy { it.first }
+        var occupied = 0L
+        var coveredUntil = Long.MIN_VALUE
+        overlaps.forEach { (overlapStart, overlapEnd) ->
+            val uncoveredStart = maxOf(overlapStart, coveredUntil)
+            if (overlapEnd > uncoveredStart) occupied += overlapEnd - uncoveredStart
+            coveredUntil = maxOf(coveredUntil, overlapEnd)
+        }
+        return occupied
     }
 
     /** The pickup is a partial leading bar; regular meter bars begin at its exact endpoint. */
@@ -519,6 +636,7 @@ object MidiCoreChordGenerator {
     /** Apply the profile's MIDI-only note-length intent to an authored rhythm window. */
     private fun noteEnd(context: MidiCoreGenerationContext, attack: RhythmWindow): Long {
         val duration = attack.endTick - attack.startTick
+        if (attack.support) return attack.endTick
         val profile = context.performanceProfile
         val scaled = Math.multiplyExact(duration, profile.noteLengthNumerator.toLong()) / profile.noteLengthDenominator
         val grid = context.tickGrid.ticksPerSubdivision
@@ -539,6 +657,7 @@ object MidiCoreChordGenerator {
         val endTick: Long,
         val velocityOffset: Int,
         val phraseBoundary: Boolean,
+        val support: Boolean = false,
     )
 
     /** A fully selected bounded lookahead path, exposed to focused engine regressions only. */
@@ -628,6 +747,8 @@ object MidiCoreChordGenerator {
     private const val LOW_MELODY_REGISTER_THRESHOLD = 55
     private const val LOW_MELODY_REGISTER_CLEARANCE = 12
     private const val LOW_MELODY_REGISTER_PENALTY = 18L
+    private const val DENSE_MELODY_NUMERATOR = 2L
+    private const val DENSE_MELODY_DENOMINATOR = 3L
 
     private val VOICE_MOVEMENT_ORDER = compareBy<VoiceMovement> {
         it.totalDistance + it.unmatchedVoices.toLong() * VOICE_COUNT_PENALTY

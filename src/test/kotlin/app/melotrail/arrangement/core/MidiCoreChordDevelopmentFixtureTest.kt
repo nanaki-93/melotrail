@@ -29,20 +29,11 @@ import org.junit.jupiter.api.Test
 class MidiCoreChordDevelopmentFixtureTest {
     @Test
     fun `three development fixtures yield two valid distinct chord alternatives with exact harmony`() {
-        // Meter-aware phase changes the semantic events at sub-bar harmony boundaries; pin the new legal alternatives.
+        // Pin intentional M05 phrase-aware MIDI changes as well as deterministic replay.
         val expectedCandidateHashes = mapOf(
-            "simple-diatonic-4-4" to listOf(
-                "4356bac849c24754aea47538ae69b9a2dda6b740eb96a07c2d5eab992abc617e",
-                "d6c6c06c34eb7de6a53d54efdb7211573b71a96f5ccb41d3414b64fd3952e7dc",
-            ),
-            "pickup-and-sub-bar-changes" to listOf(
-                "1a66539a6e9c1673d2c804b86e2c1a0dc85aa4123c7721fb94077620e6811937",
-                "92fe0607887496850303da388974cf7d4b95548a02ebcbdf94c0eb5be13aed70",
-            ),
-            "chromatic-expressive-controller-source" to listOf(
-                "cba7739689e26cb31a99c471d063676bf2e907180b26406b68b4a57ae1cf1dce",
-                "ce21aab8ab8af947d04c1c8cf64bb02a840488b58bef5b3a1308ca3c76c49bae",
-            ),
+            "simple-diatonic-4-4" to listOf("bdfcfbcbe46321b378a388089f1e05b215cab62f774e26ac6cd309bf51825091", "6b3baa1e94dd1f9733c3023a420be86c9c94fbe4c01d8fbf8cbf001c360b4924"),
+            "pickup-and-sub-bar-changes" to listOf("0ec7ad8d4ab01b82499cc1af85039e06e24b5f7907144c8d651d9e2ad5eb0e5a", "98bfaba143d8e72cfa67b3c2824a51cdaacf7f347adfa31c6c3c033c288729fb"),
+            "chromatic-expressive-controller-source" to listOf("10ec61740e3ecc808f9661ba227df45ff056f654c49782cc8a73952ddec4097b", "1798c71aca639e29ef11bcb7cb508e9dbeba39a0d118c11c0dc42be2f482323e"),
         )
         developmentFixtures().forEach { fixture ->
             val alternatives = MidiCoreChordGenerator.generateAlternatives(fixture.context, count = 2)
@@ -88,6 +79,26 @@ class MidiCoreChordDevelopmentFixtureTest {
                 pattern.stepsFor(ProjectMeter(3, 2)) == pattern.threeFourSteps &&
                 pattern.stepsFor(ProjectMeter(6, 3)) == pattern.sixEightSteps
         })
+        assertEquals(1, MidiCoreChordCompingPhrasePatterns.VERSION)
+        assertEquals(
+            "engine-v5-comping-v1",
+            MidiCoreChordCompingPhrasePatterns.generatorVersion("engine-v5", CandidateRole.CHORDS),
+        )
+        assertEquals(
+            "engine-v5",
+            MidiCoreChordCompingPhrasePatterns.generatorVersion("engine-v5", CandidateRole.BASS),
+        )
+        assertEquals(listOf(MidiCoreChordRhythmStep(0, 16, 0)), MidiCoreChordCompingPhrasePatterns.supportFor(ProjectMeter(4, 2)))
+        assertEquals(listOf(MidiCoreChordRhythmStep(0, 12, 0)), MidiCoreChordCompingPhrasePatterns.supportFor(ProjectMeter(3, 2)))
+        assertEquals(listOf(MidiCoreChordRhythmStep(0, 12, 0)), MidiCoreChordCompingPhrasePatterns.supportFor(ProjectMeter(6, 3)))
+        assertEquals(
+            emptyList<MidiCoreChordRhythmStep>(),
+            MidiCoreChordCompingPhrasePatterns.stepsFor(
+                ProjectMeter(4, 2),
+                MidiCoreChordCompingUse.REST,
+                patterns.first().steps,
+            ),
+        )
     }
 
     @Test

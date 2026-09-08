@@ -44,6 +44,39 @@ class MidiCoreCandidateGenerationTest {
     @TempDir lateinit var root: Path
 
     @Test
+    fun `published comping preserves a complete inter-phrase rest and immutable source on replay`() = runBlocking {
+        val sequence = javax.sound.midi.Sequence(javax.sound.midi.Sequence.PPQ, 480)
+        val track = sequence.createTrack()
+        listOf(Triple(0L, 480L, 84), Triple(3_840L, 5_760L, 86)).forEach { (start, end, pitch) ->
+            track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_ON, 0, pitch, 90), start))
+            track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, pitch, 0), end))
+        }
+        val source = root.resolve("phrase-breath.mid")
+        javax.sound.midi.MidiSystem.write(sequence, 0, source.toFile())
+        val sourceBytes = Files.readAllBytes(source)
+        val store = MidiCoreArtifactStore()
+        val session = readySession(store, root.resolve("phrase-project"), source, bars = 3)
+        val service = MidiCoreCandidateGeneration(artifacts = store)
+        val first = assertIs<MidiCoreCandidateGenerationResult.Published>(service.generate(
+            request(session, CandidateRole.CHORDS, "phrase-first"),
+        ))
+        val midi = store.verify(session.root, first.candidate.midi)
+        val bytes = Files.readAllBytes(midi)
+        val notes = JdkMidiReader().inspect(midi).sequence.tracks.flatMap { it.events }
+            .filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>()
+        assertEquals(listOf(0L, 3_840L), notes.map { it.orderingKey.tick }.distinct())
+        assertTrue(notes.all { it.endTick <= 1_920L || it.orderingKey.tick >= 3_840L })
+        val reopened = first.session.copy(project = store.openProject(session.root))
+        val second = assertIs<MidiCoreCandidateGenerationResult.Published>(service.generate(
+            request(reopened, CandidateRole.CHORDS, "phrase-second"),
+        ))
+        assertContentEquals(bytes, Files.readAllBytes(store.verify(session.root, second.candidate.midi)))
+        assertContentEquals(bytes, Files.readAllBytes(midi))
+        assertContentEquals(sourceBytes, Files.readAllBytes(store.verify(session.root, requireNotNull(session.project.sourceMidi).original)))
+        assertEquals(session.project.authority, second.session.project.authority)
+    }
+
+    @Test
     fun `publishes one deterministic immutable candidate for every core role`() {
         listOf(CandidateRole.CHORDS, CandidateRole.BASS, CandidateRole.DRUMS).forEach { role ->
             val store = MidiCoreArtifactStore()
@@ -295,11 +328,11 @@ class MidiCoreCandidateGenerationTest {
         assertEquals(4, store.openProject(session.root).candidates.size)
     }
 
-    private fun readySession(store: MidiCoreArtifactStore, projectRoot: Path): MidiCoreProjectSession {
+    private fun readySession(store: MidiCoreArtifactStore, projectRoot: Path, sourceOverride: Path? = null, bars: Int = 1): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             projectLifecycle(store).create(CreateMidiCoreProject(projectRoot, "Generation Test", "generation-project")),
         ).session
-        val source = OwnedMidiFixtures.writeAll(root.resolve("fixtures-${projectRoot.fileName}"))
+        val source = sourceOverride ?: OwnedMidiFixtures.writeAll(root.resolve("fixtures-${projectRoot.fileName}"))
             .single { it.fileName.toString() == "whole-song-one-bar.mid" }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
@@ -319,7 +352,7 @@ class MidiCoreCandidateGenerationTest {
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", bars)),
                 ),
             ),
         ).session
@@ -327,7 +360,7 @@ class MidiCoreCandidateGenerationTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     structured,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1920)),
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, bars * 1920L)),
                 ),
             ),
         ).session

@@ -146,15 +146,22 @@ its last note, and an explicitly padded arrangement end. These fixtures are
 prepared by automated contract coverage only; no Logic import/playback/reopen
 result is claimed until a reviewer records it below.
 
-M05a prepares frozen v1/current v5 MIDI pairs in `build/m01-comparison` via
-`MidiCoreComparisonHarnessTest`. Engine v5 retains M04 ranking of the bounded M04a voicing pool
+M05 prepares frozen v1/current v5+comping-v1 MIDI pairs in
+`build/m01-comparison` via `MidiCoreComparisonHarnessTest`. Engine
+v5+comping-v1 retains M04 ranking of the bounded M04a voicing pool
 with M02 overlap, register, per-finding metrical prominence, bounded phrase
 lookahead, and an explicit authority-bound piano boundary input. It includes
-held suspensions crossing onto a new chord’s downbeat. M05a adds meter-anchored, harmony-clipped comping, authored 3/4 and 6/8
-patterns and explicit unsupported-meter rejection. The generated `review.md`
-is the short baseline/new listening pack; use identical MIDI instruments and
-levels for each listed piano+melody and full-arrangement loop. For Q02, import the complete and aligned role
-files for repeated-chorus/bridge, 3/4 and 6/8; verify protected melody, chord
+held suspensions crossing onto a new chord’s downbeat. M05a adds meter-anchored,
+harmony-clipped comping, authored 3/4 and 6/8 patterns and explicit
+unsupported-meter rejection. M05 adds versioned phrase-aware support/answer/
+inter-phrase whole-bar rests and final-beat suppression from protected melody
+activity. Automated checks publish and reopen a three-bar candidate with a
+silent middle bar, verify deterministic replay and unchanged source bytes,
+and cover rest-only harmonic windows plus 3/4 and 6/8 bar phase. The generated
+`review.md` is the short baseline/new listening pack; use identical MIDI
+instruments and levels for each listed piano+melody and full-arrangement loop.
+For Q02, import the complete and aligned role files for repeated-chorus/bridge,
+3/4 and 6/8; verify protected melody, chord
 boundaries and final notes, then compare the listed piano/melody loops with
 identical Logic instruments and levels. The unscored `review.md` records hashes
 and loop ranges. Listening scores and Logic results remain pending human evidence.

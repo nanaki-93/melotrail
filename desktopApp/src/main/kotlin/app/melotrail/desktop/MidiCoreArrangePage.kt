@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.testTag
 import app.melotrail.application.MidiCoreCandidateReviewItem
 import app.melotrail.arrangement.core.MidiCoreArrangementStyle
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
+import app.melotrail.arrangement.core.MidiCoreChordCompingPhrasePatterns
 import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
 import app.melotrail.arrangement.core.MidiCoreRoleFindingSeverity
@@ -541,7 +542,21 @@ internal fun ArrangeCard(tag: String, title: String, content: @Composable Column
 }
 
 private fun generationIntent(role: CandidateRole, occurrenceId: String, profileId: String, patternId: String, seed: Long) =
-    MidiCoreWorkspaceIntent.GenerateCandidate(role, occurrenceId, profileId, patternId, MidiCoreGeneratorInput("midi-core-desktop", "midi-core-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}", patternId, seed))
+    MidiCoreWorkspaceIntent.GenerateCandidate(
+        role,
+        occurrenceId,
+        profileId,
+        patternId,
+        MidiCoreGeneratorInput(
+            "midi-core-desktop",
+            MidiCoreChordCompingPhrasePatterns.generatorVersion(
+                "midi-core-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+                role,
+            ),
+            patternId,
+            seed,
+        ),
+    )
 
 internal fun friendlyToken(value: String): String = value.substringAfterLast('.').replace('-', ' ').replace('_', ' ').replaceFirstChar(Char::uppercaseChar)
 

@@ -1,8 +1,9 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
-import app.melotrail.arrangement.core.MidiCorePatternCatalog
+import app.melotrail.arrangement.core.MidiCoreChordCompingPhrasePatterns
 import app.melotrail.arrangement.core.MidiCoreChordGenerator
+import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary
 import app.melotrail.arrangement.core.MidiCoreRoleValidationReportJson
 import app.melotrail.midi.adapter.JdkMidiReader
@@ -218,7 +219,10 @@ class MidiCoreArrangementDraftGeneration(
                 ))
             }
             val seed = derivedSeed(request.rootSeed, scope)
-            val generatorVersion = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}"
+            val generatorVersion = MidiCoreChordCompingPhrasePatterns.generatorVersion(
+                "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+                scope.role,
+            )
             val consumedBoundarySha256 = if (scope.role == CandidateRole.CHORDS) pianoVoicingBoundary?.sha256 else null
             var attempt = 0
             var candidateId = candidateId(draftId, scopeHash, scope, attempt)

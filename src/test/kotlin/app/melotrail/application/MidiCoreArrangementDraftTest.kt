@@ -198,7 +198,7 @@ class MidiCoreArrangementDraftTest {
         assertTrue(retried.session.project.candidates.any { it.id == retained.id && it.generatorVersion == "midi-core-style-v1" })
         val currentChord = retried.session.project.candidates.single { it.id == retried.draft.candidateReferences.first().candidateId }
         assertTrue(currentChord.id != retained.id)
-        assertEquals("midi-core-style-v5-patterns-v2", currentChord.generatorVersion)
+        assertEquals("midi-core-style-v5-patterns-v2-comping-v1", currentChord.generatorVersion)
     }
 
     @Test

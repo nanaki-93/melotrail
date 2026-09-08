@@ -35,7 +35,7 @@ class MidiCoreComparisonHarnessTest {
         assertTrue(form.contains("___ / 10"))
         assertFalse(form.contains("8/10"))
         assertTrue(form.contains("Baseline: steady-road / seed 901 / `midi-core-style-v1` / style catalog 1"))
-        assertTrue(form.contains("Candidate: steady-road / seed 901 / `midi-core-style-v5-patterns-v2` / style catalog 5"))
+        assertTrue(form.contains("Candidate: steady-road / seed 901 / `midi-core-style-v5-patterns-v2-comping-v1` / style catalog 5"))
         review.baseline.filterIsInstance<M01ComparisonCapture.Published>().forEach { capture ->
             assertTrue(capture.sourceUnchanged, capture.case.id)
             assertEquals(setOf("complete-song.mid", "melody.mid", "chords.mid", "bass.mid", "drums.mid"), capture.midiSha256.keys)

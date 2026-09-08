@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
+import app.melotrail.arrangement.core.MidiCoreChordCompingPhrasePatterns
 import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
 import app.melotrail.midi.adapter.JdkMidiReader
@@ -9,6 +10,7 @@ import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
+import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
@@ -566,7 +568,10 @@ internal data class M01EngineInputs(
             patternCatalogVersion = MidiCorePatternCatalog.VERSION.toLong(),
             performanceProfileCatalogVersion = MidiCorePerformanceProfileCatalog.VERSION.toLong(),
             seed = case.seed,
-            engineId = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+            engineId = MidiCoreChordCompingPhrasePatterns.generatorVersion(
+                "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+                CandidateRole.CHORDS,
+            ),
         )
     }
 }

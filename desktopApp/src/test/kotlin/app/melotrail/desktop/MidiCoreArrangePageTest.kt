@@ -75,7 +75,7 @@ class MidiCoreArrangePageTest {
         onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().assertIsEnabled().performClick()
         val request = kotlin.test.assertIs<MidiCoreWorkspaceIntent.GenerateCandidate>(intents.single())
         assertEquals("midi-core-desktop", request.generator.generatorId)
-        assertEquals("midi-core-v5-patterns-v2", request.generator.generatorVersion)
+        assertEquals("midi-core-v5-patterns-v2-comping-v1", request.generator.generatorVersion)
         assertEquals(request.patternId, request.generator.patternId)
     }
 

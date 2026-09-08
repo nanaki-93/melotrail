@@ -201,8 +201,17 @@ rating; a changed export policy requires fresh relevant Logic evidence. Stored
 old artifacts remain inspectable and unchanged even when no longer current.
 
 Piano comping uses authored 4/4, 3/4 and 6/8 patterns on the song meter grid,
-clipped at exact chord boundaries. Sustained support changes voicing at an offbeat
-chord boundary and retains the next bar attack; pulsed patterns keep their authored
-attacks and may leave a rest after a chord change. Other meters remain valid musical authority
-and import data, but Chords generation and style preview reject them explicitly
+clipped at exact chord boundaries. Phrase-aware comping rule v1 adds: dense
+protected-melody bar fragments (including CC64-supported sounding duration) and
+an active sustained choice select one held support shape for the whole metrical
+fragment, selected pulsed patterns answer only in an unoccupied melody span, and
+the first fully empty metrical bar immediately after a phrase rests when another
+phrase follows. This explicit rest preserves the preceding voicing for subsequent
+harmony; it does not turn failed generation into a rest. Additionally,
+a phrase's final beat suppresses a pulsed answer attack (the final dotted-quarter
+pulse in 6/8). Support changes voicing
+at an offbeat chord boundary and retains the next bar attack; pulsed patterns keep
+their authored attacks and may leave a rest after a chord change. Other meters
+remain valid musical authority and import data, but Chords generation and style
+preview reject them explicitly
 until authored comping is available; they never substitute a 4/4 pattern.

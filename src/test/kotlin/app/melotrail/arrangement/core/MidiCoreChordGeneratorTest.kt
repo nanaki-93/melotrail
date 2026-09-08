@@ -189,6 +189,184 @@ class MidiCoreChordGeneratorTest {
     }
 
     @Test
+    fun `phrase breath selects a complete silent bar across its own harmony window`() {
+        val chords = listOf(
+            AuthoritativeChordEvent("c", "verse-1", "C", 0, 1_920),
+            AuthoritativeChordEvent("f", "verse-1", "F", 1_920, 3_840),
+            AuthoritativeChordEvent("g", "verse-1", "G", 3_840, 5_760),
+        )
+        val melody = listOf(protectedNote(84, 0, 1_920), protectedNote(86, 3_840, 5_760))
+        val input = context(project = project(chordEvents = chords), protectedMelodyNotes = melody)
+        val result = MidiCoreChordGenerator.generate(input)
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L, 3_840L), starts(result))
+        assertTrue(result.candidate.events.all { it.endTick <= 1_920L || it.startTick >= 3_840L })
+        assertEquals(result, MidiCoreChordGenerator.generate(input))
+        assertEquals(melody, result.context.protectedMelodyNotes)
+        assertTrue(requireNotNull(result.outgoingPianoVoicingBoundary).pitches.isNotEmpty())
+        val withoutPhrases = MidiCoreChordGenerator.generate(context(project = project(chordEvents = chords)))
+        assertTrue(withoutPhrases.accepted)
+        assertTrue(1_920L in starts(withoutPhrases), "Silence must come from phrase selection, not an empty rhythm pattern")
+    }
+
+    @Test
+    fun `triple and compound meters leave a full inter-phrase bar without shifting the next attack`() {
+        listOf(ProjectMeter(3, 2), ProjectMeter(6, 3)).forEach { meter ->
+            val result = MidiCoreChordGenerator.generate(context(
+                project = project(meter = meter, chordEvents = listOf(
+                    AuthoritativeChordEvent("c", "verse-1", "C", 0, 4_320),
+                )),
+                protectedMelodyNotes = listOf(protectedNote(84, 0, 480), protectedNote(86, 2_880, 4_320)),
+            ))
+            assertTrue(result.accepted, result.validation.report.findings.toString())
+            assertEquals(listOf(0L, 2_880L), starts(result))
+            assertTrue(result.candidate.events.all { it.endTick <= 1_440L || it.startTick >= 2_880L })
+        }
+    }
+
+    @Test
+    fun `dense protected melody selects one held support shape instead of pulsing through it`() {
+        val melody = listOf(
+            protectedNote(72, 0, 480), protectedNote(74, 480, 960),
+            protectedNote(76, 960, 1_440), protectedNote(77, 1_440, 1_920),
+        )
+        val before = melody.toList()
+        val result = MidiCoreChordGenerator.generate(context(
+            patternId = MidiCoreChordRhythmPatternId.LAID_BACK_QUARTERS.id,
+            profileId = "chords.pulsed",
+            protectedMelodyNotes = melody,
+        ))
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L), starts(result))
+        assertTrue(notes.all { it.endTick == 1_920L }, "Dense melody needs held support, not a shortened pulse: $notes")
+        assertEquals(before, melody, "Comping must never mutate protected source timing")
+    }
+
+    @Test
+    fun `dense support has explicit three-four and compound six-eight bar realizations`() {
+        listOf(
+            ProjectMeter(3, 2) to (480 to 1_440L),
+            ProjectMeter(6, 3) to (500 to 1_500L),
+        ).forEach { (meter, timing) ->
+            val (ppq, endTick) = timing
+            val result = MidiCoreChordGenerator.generate(context(
+                project = project(
+                    chordEvents = listOf(AuthoritativeChordEvent("c", "verse-1", "C", 0, endTick)),
+                    ppq = ppq,
+                    meter = meter,
+                ),
+                patternId = MidiCoreChordRhythmPatternId.DUSTY_OFFBEATS.id,
+                profileId = "chords.pulsed",
+                protectedMelodyNotes = listOf(protectedNote(72, 0, endTick)),
+            ))
+            val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+            assertTrue(result.accepted, "$meter: ${result.validation.report.findings}")
+            assertEquals(listOf(0L), starts(result), "$meter")
+            assertTrue(notes.all { it.endTick == endTick }, "$meter: $notes")
+        }
+    }
+
+    @Test
+    fun `dense bar keeps support use across an offbeat chord change`() {
+        val result = MidiCoreChordGenerator.generate(context(
+            project = project(chordEvents = listOf(
+                AuthoritativeChordEvent("c", "verse-1", "C", 0, 720),
+                AuthoritativeChordEvent("f", "verse-1", "F", 720, 1_920),
+            )),
+            patternId = MidiCoreChordRhythmPatternId.LAID_BACK_QUARTERS.id,
+            profileId = "chords.pulsed",
+            protectedMelodyNotes = listOf(protectedNote(72, 0, 1_440)),
+        ))
+        val spans = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+            .map { it.startTick to it.endTick }
+            .distinct()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L to 720L, 720L to 1_920L), spans)
+        assertEquals(result, MidiCoreChordGenerator.generate(result.context))
+    }
+
+    @Test
+    fun `sustain-aware activity keeps answer attacks out of a pedaled melody span`() {
+        val melody = protectedNote(72, 0, 240)
+        val base = context(
+            patternId = MidiCoreChordRhythmPatternId.LAID_BACK_QUARTERS.id,
+            profileId = "chords.pulsed",
+            protectedMelodyNotes = listOf(melody),
+        )
+        val keyHeldEvidence = melodyEvidence(
+            base,
+            melody,
+            MidiCoreHarmonyTensionCause.NON_CHORD_TONE,
+            accented = false,
+        )
+        val sounding = keyHeldEvidence.notes.single().copy(soundingEndTick = 1_920)
+        val evidence = keyHeldEvidence.copy(
+            notes = listOf(sounding),
+            windows = keyHeldEvidence.windows.map { window ->
+                window.copy(activity = window.activity.copy(soundingNotes = listOf(sounding)))
+            },
+            findings = keyHeldEvidence.findings.map { finding ->
+                finding.copy(endTick = 1_920, overlapTicks = 1_920)
+            },
+        )
+        val result = MidiCoreChordGenerator.generate(base.copy(melodyHarmonyAnalysis = evidence))
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L), starts(result))
+        assertTrue(notes.all { it.endTick == 1_920L }, "Pedaled melody should select held support: $notes")
+        assertEquals(240L, melody.endTick, "Comping analysis must not rewrite the protected key release")
+    }
+
+    @Test
+    fun `answer attacks wait for melody space and a phrase ending keeps its final beat clear`() {
+        val melody = listOf(
+            protectedNote(72, 0, 960),
+            protectedNote(74, 1_320, 1_440),
+        )
+        val result = MidiCoreChordGenerator.generate(context(
+            project = project(chordEvents = listOf(AuthoritativeChordEvent("c", "verse-1", "C", 0, 3_840))),
+            patternId = MidiCoreChordRhythmPatternId.LAID_BACK_QUARTERS.id,
+            profileId = "chords.pulsed",
+            protectedMelodyNotes = melody,
+        ))
+        val starts = starts(result)
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertFalse(960L in starts, "An otherwise empty attack in the phrase's final beat must remain a rest: $starts")
+        assertTrue(1_440L in starts, "The following melody rest should receive the selected answer pattern: $starts")
+        assertTrue(result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().none { note ->
+            melody.any { source -> source.overlaps(note.startTick, note.endTick) && note.startTick in 0L..959L }
+        })
+    }
+
+    @Test
+    fun `six-eight phrase ending rests the final compound pulse`() {
+        val result = MidiCoreChordGenerator.generate(context(
+            project = project(
+                chordEvents = listOf(AuthoritativeChordEvent("c", "verse-1", "C", 0, 1_500)),
+                ppq = 500,
+                meter = ProjectMeter(6, 3),
+            ),
+            patternId = MidiCoreChordRhythmPatternId.BROKEN_SYNCOPATION.id,
+            profileId = "chords.pulsed",
+            protectedMelodyNotes = listOf(
+                protectedNote(72, 250, 500),
+                protectedNote(74, 1_375, 1_500),
+            ),
+        ))
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(625L), starts(result))
+        assertFalse(1_125L in starts(result), "The final dotted-quarter pulse must remain clear")
+        assertTrue(result.candidate.events.all { it.endTick <= 750L }, "The terminal compound pulse must be an actual rest")
+    }
+
+    @Test
     fun `honors slash-bass inversion and carries nearby voice leading across sub-bar changes`() {
         val result = MidiCoreChordGenerator.generate(
             context(
@@ -350,7 +528,7 @@ class MidiCoreChordGeneratorTest {
 
         assertTrue(result.accepted, "Expected an anchor-safe partial voicing, got ${result.validation.report.findings}")
         assertTrue(notes.map { it.pitch % 12 }.toSet().let { it.size >= 2 && it.all { pitchClass -> pitchClass in setOf(2, 4, 7, 11) } })
-        assertEquals(2, notes.map { it.startTick }.distinct().size)
+        assertEquals(1, notes.map { it.startTick }.distinct().size, "Dense melody should receive one held support attack")
         assertFalse(notes.any { it.pitch in melodyAnchors.map(MidiCoreProtectedMelodyNote::pitch) })
         assertFalse(result.validation.report.findings.any { it.code == MidiCoreRoleFindingCode.DENSITY_EXCEEDED })
         assertEquals(result, MidiCoreChordGenerator.generate(generationContext), "Rootless selection must remain deterministic")
@@ -622,10 +800,17 @@ class MidiCoreChordGeneratorTest {
         pianoVoicingBoundary = pianoVoicingBoundary,
     )
 
-    private fun protectedNote(pitch: Int, anchor: Boolean): MidiCoreProtectedMelodyNote = MidiCoreProtectedMelodyNote(
-        id = "pmn-" + (if (anchor) "a" else "b").repeat(64),
-        startTick = 0,
-        endTick = 1_920,
+    private fun protectedNote(pitch: Int, anchor: Boolean): MidiCoreProtectedMelodyNote = protectedNote(pitch, 0, 1_920, anchor)
+
+    private fun protectedNote(
+        pitch: Int,
+        startTick: Long,
+        endTick: Long,
+        anchor: Boolean = false,
+    ): MidiCoreProtectedMelodyNote = MidiCoreProtectedMelodyNote(
+        id = "pmn-" + "${pitch.toString(16)}${startTick.toString(16)}${endTick.toString(16)}".padStart(64, if (anchor) 'a' else 'b'),
+        startTick = startTick,
+        endTick = endTick,
         pitch = pitch,
         velocity = 90,
         anchor = anchor,
