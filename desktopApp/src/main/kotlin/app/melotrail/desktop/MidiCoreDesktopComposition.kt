@@ -11,6 +11,7 @@ import app.melotrail.application.MidiCoreAcceptedSongAssembly
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreArrangementExtent
 import app.melotrail.application.MidiCoreArrangementPlanProposalUseCase
+import app.melotrail.application.MidiCoreArrangementPlanEdit
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
 import app.melotrail.application.MidiCoreArrangementStylePreview
@@ -77,6 +78,7 @@ object MidiCoreDesktopComposition {
         val structure = MidiCoreStructureTimeline(artifacts)
         val harmony = MidiCoreAuthoritativeHarmony(artifacts)
         val arrangementPlan = MidiCoreArrangementPlanProposalUseCase(artifacts)
+        val arrangementPlanEdit = MidiCoreArrangementPlanEdit(artifacts)
         val candidateLifecycle = MidiCoreCandidateLifecycle(artifacts)
         val generation = MidiCoreCandidateGeneration(artifacts = artifacts, lifecycle = candidateLifecycle)
         val draftGeneration = MidiCoreArrangementDraftGeneration(artifacts = artifacts, candidates = generation)
@@ -101,6 +103,7 @@ object MidiCoreDesktopComposition {
             structure = structure,
             harmony = harmony,
             arrangementPlan = arrangementPlan,
+            arrangementPlanEdit = arrangementPlanEdit,
             generation = generation,
             draftGeneration = draftGeneration,
             review = review,

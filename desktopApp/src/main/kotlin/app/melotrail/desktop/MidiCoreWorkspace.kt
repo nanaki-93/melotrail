@@ -6,6 +6,7 @@ import app.melotrail.application.ConfirmMidiCoreArrangementExtent
 import app.melotrail.application.ConfirmMidiCoreAuthority
 import app.melotrail.application.ConfirmMidiCoreArrangementPlanProposal
 import app.melotrail.application.CancelMidiCoreArrangementPlanProposal
+import app.melotrail.application.ConfirmMidiCoreArrangementPlanEdit
 import app.melotrail.application.CreateMidiCoreProject
 import app.melotrail.application.GenerateMidiCoreCandidate
 import app.melotrail.application.GenerateMidiCoreArrangementDraft
@@ -17,6 +18,9 @@ import app.melotrail.application.MidiCoreArrangementExtent
 import app.melotrail.application.MidiCoreArrangementPlanProposalUseCase
 import app.melotrail.application.MidiCoreArrangementPlanProposalResult
 import app.melotrail.application.MidiCoreArrangementPlanProposal
+import app.melotrail.application.MidiCoreArrangementPlanEdit
+import app.melotrail.application.MidiCoreArrangementPlanEditResult
+import app.melotrail.application.PreviewMidiCoreArrangementPlanEdit
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateGenerationResult
 import app.melotrail.application.MidiCoreArrangementDraftGeneration
@@ -86,6 +90,7 @@ import app.melotrail.midi.domain.MidiTrackSummary
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreArrangementPlan
 import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.ProjectAuthority
@@ -146,6 +151,8 @@ interface MidiCoreWorkspaceUseCases {
     fun proposeArrangementPlan(request: ProposeMidiCoreArrangementPlan): MidiCoreArrangementPlanProposalResult
     fun confirmArrangementPlan(request: ConfirmMidiCoreArrangementPlanProposal): MidiCoreArrangementPlanProposalResult
     fun cancelArrangementPlan(request: CancelMidiCoreArrangementPlanProposal): MidiCoreArrangementPlanProposalResult
+    fun previewArrangementPlanEdit(request: PreviewMidiCoreArrangementPlanEdit): MidiCoreArrangementPlanEditResult
+    fun confirmArrangementPlanEdit(request: ConfirmMidiCoreArrangementPlanEdit): MidiCoreArrangementPlanEditResult
     fun confirmArrangementExtent(request: ConfirmMidiCoreArrangementExtent): app.melotrail.application.MidiCoreArrangementExtentResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
     fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
@@ -173,6 +180,7 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val structure: MidiCoreStructureTimeline,
     private val harmony: MidiCoreAuthoritativeHarmony,
     private val arrangementPlan: MidiCoreArrangementPlanProposalUseCase = MidiCoreArrangementPlanProposalUseCase(),
+    private val arrangementPlanEdit: MidiCoreArrangementPlanEdit = MidiCoreArrangementPlanEdit(),
     private val generation: MidiCoreCandidateGeneration,
     private val review: MidiCoreCandidateReview,
     private val exporter: MidiCoreMidiPackageExporter,
@@ -223,6 +231,10 @@ class DefaultMidiCoreWorkspaceUseCases(
     override fun confirmArrangementPlan(request: ConfirmMidiCoreArrangementPlanProposal): MidiCoreArrangementPlanProposalResult = arrangementPlan.confirm(request)
 
     override fun cancelArrangementPlan(request: CancelMidiCoreArrangementPlanProposal): MidiCoreArrangementPlanProposalResult = arrangementPlan.cancel(request)
+
+    override fun previewArrangementPlanEdit(request: PreviewMidiCoreArrangementPlanEdit): MidiCoreArrangementPlanEditResult = arrangementPlanEdit.preview(request)
+
+    override fun confirmArrangementPlanEdit(request: ConfirmMidiCoreArrangementPlanEdit): MidiCoreArrangementPlanEditResult = arrangementPlanEdit.confirm(request)
 
     override fun confirmArrangementExtent(request: ConfirmMidiCoreArrangementExtent) = arrangementExtent.confirm(request)
 
@@ -434,6 +446,8 @@ data class MidiCoreWorkspaceState(
     val stylePreview: MidiCoreArrangementStyleUiState = MidiCoreArrangementStyleUiState(),
     /** A style-derived suggestion is session-only until the musician confirms it. */
     val arrangementPlanProposal: MidiCoreArrangementPlanProposalUiState = MidiCoreArrangementPlanProposalUiState(),
+    /** A reviewed plan edit is session state until its separate explicit confirmation. */
+    val arrangementPlanEdit: MidiCoreArrangementPlanEditUiState = MidiCoreArrangementPlanEditUiState(),
     val arrangement: MidiCoreArrangementUiState = MidiCoreArrangementUiState(),
     /** Verified, immutable source/candidate/draft/accepted lane facts; Compose never reads artifacts itself. */
     val visualEvidence: MidiCoreVisualEvidenceProjection? = null,
@@ -462,6 +476,11 @@ data class MidiCoreArrangementStyleUiState(
 /** Kept only by the workspace so a suggestion cannot become project authority by display alone. */
 data class MidiCoreArrangementPlanProposalUiState(
     val proposal: MidiCoreArrangementPlanProposal? = null,
+)
+
+data class MidiCoreArrangementPlanEditUiState(
+    val plan: MidiCoreArrangementPlan? = null,
+    val invalidation: MidiCoreInvalidationPreview? = null,
 )
 
 /** Ephemeral selection and retry identity for the whole-song arrangement workspace. */
@@ -536,6 +555,9 @@ sealed interface MidiCoreWorkspaceIntent {
     data class ProposeArrangementPlan(val styleId: String) : MidiCoreWorkspaceIntent
     data object ConfirmArrangementPlan : MidiCoreWorkspaceIntent
     data object CancelArrangementPlan : MidiCoreWorkspaceIntent
+    data class PreviewArrangementPlanEdit(val plan: MidiCoreArrangementPlan) : MidiCoreWorkspaceIntent
+    data class ConfirmArrangementPlanEdit(val plan: MidiCoreArrangementPlan) : MidiCoreWorkspaceIntent
+    data object CancelArrangementPlanEdit : MidiCoreWorkspaceIntent
     data class SelectArrangementOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
     data class CreateArrangementDraft(
         val styleId: String,
@@ -635,6 +657,9 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.ProposeArrangementPlan -> proposeArrangementPlan(intent)
             MidiCoreWorkspaceIntent.ConfirmArrangementPlan -> confirmArrangementPlan()
             MidiCoreWorkspaceIntent.CancelArrangementPlan -> cancelArrangementPlan()
+            is MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit -> previewArrangementPlanEdit(intent)
+            is MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit -> confirmArrangementPlanEdit(intent)
+            MidiCoreWorkspaceIntent.CancelArrangementPlanEdit -> cancelArrangementPlanEdit()
             is MidiCoreWorkspaceIntent.SelectArrangementOccurrence -> selectArrangementOccurrence(intent)
             is MidiCoreWorkspaceIntent.CreateArrangementDraft -> generateArrangementDraft(intent)
             is MidiCoreWorkspaceIntent.RegenerateArrangementSection -> regenerateArrangementSection(intent)
@@ -1238,6 +1263,44 @@ class MidiCoreWorkspaceViewModel(
         }
     }
 
+    /** Review the exact stale scope before a confirmed arrangement purpose or phrase edit can be saved. */
+    private fun previewArrangementPlanEdit(intent: MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.ARRANGEMENT_PLAN, "Reviewing arrangement intent impact…", intent) { _ ->
+            when (val result = useCases.previewArrangementPlanEdit(PreviewMidiCoreArrangementPlanEdit(current, intent.plan))) {
+                is MidiCoreArrangementPlanEditResult.Previewed -> success("Review the affected work, then confirm the arrangement intent.") {
+                    _state.value = _state.value.copy(arrangementPlanEdit = MidiCoreArrangementPlanEditUiState(intent.plan, result.invalidation))
+                }
+                is MidiCoreArrangementPlanEditResult.Rejected -> failure(arrangementPlanEditBlocker(result.problem), intent)
+                else -> error("Arrangement-plan edit preview returned an unexpected result")
+            }
+        }
+    }
+
+    /** The reviewed plan must still exactly match the confirmation request; the use case performs the atomic write. */
+    private fun confirmArrangementPlanEdit(intent: MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit) {
+        val current = requireSessionOrBlock() ?: return
+        if (state.value.arrangementPlanEdit.plan != intent.plan) {
+            failImmediately(blocker(
+                MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT,
+                "Review this arrangement intent change before confirming it.",
+                "Preview its affected work, then confirm the unchanged edit.",
+            ))
+            return
+        }
+        startOperation(MidiCoreWorkspaceOperationKind.ARRANGEMENT_PLAN, "Confirming arrangement intent…", intent) { _ ->
+            when (val result = useCases.confirmArrangementPlanEdit(ConfirmMidiCoreArrangementPlanEdit(current, intent.plan))) {
+                is MidiCoreArrangementPlanEditResult.Confirmed -> success("Arrangement intent confirmed.", result.session)
+                is MidiCoreArrangementPlanEditResult.Rejected -> failure(arrangementPlanEditBlocker(result.problem), intent)
+                else -> error("Arrangement-plan edit confirmation returned an unexpected result")
+            }
+        }
+    }
+
+    private fun cancelArrangementPlanEdit() {
+        _state.value = _state.value.copy(arrangementPlanEdit = MidiCoreArrangementPlanEditUiState())
+    }
+
     /** Select one authoritative section without coupling the map to page-local candidate state. */
     private fun selectArrangementOccurrence(intent: MidiCoreWorkspaceIntent.SelectArrangementOccurrence) {
         val occurrence = state.value.project?.authority?.occurrences?.singleOrNull { it.id == intent.occurrenceId }
@@ -1799,6 +1862,7 @@ class MidiCoreWorkspaceViewModel(
             review = reviewScope,
             stylePreview = previewScope,
             arrangementPlanProposal = proposalScope,
+            arrangementPlanEdit = MidiCoreArrangementPlanEditUiState(),
             arrangement = arrangementScope,
             visualEvidence = null,
             audition = useCases.audition.state,
@@ -1903,6 +1967,19 @@ class MidiCoreWorkspaceViewModel(
             app.melotrail.application.MidiCoreArrangementPlanProposalProblemCode.STALE_PROJECT,
             app.melotrail.application.MidiCoreArrangementPlanProposalProblemCode.STALE_PROPOSAL,
             -> MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT
+            else -> MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE
+        },
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
+    private fun arrangementPlanEditBlocker(problem: app.melotrail.application.MidiCoreArrangementPlanEditProblem) = blocker(
+        when (problem.code) {
+            app.melotrail.application.MidiCoreArrangementPlanEditProblemCode.AUTHORITY_REQUIRED,
+            app.melotrail.application.MidiCoreArrangementPlanEditProblemCode.PLAN_REQUIRED,
+            -> MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED
+            app.melotrail.application.MidiCoreArrangementPlanEditProblemCode.STALE_PROJECT -> MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT
             else -> MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE
         },
         problem.message,

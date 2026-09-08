@@ -1,5 +1,9 @@
 package app.melotrail.desktop
 
+import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -35,7 +39,19 @@ import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
+import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
+import app.melotrail.project.MidiCoreBoundaryIntent
+import app.melotrail.project.MidiCoreGrooveDrive
+import app.melotrail.project.MidiCoreGrooveFeel
+import app.melotrail.project.MidiCoreGrooveSubdivision
+import app.melotrail.project.MidiCoreOccurrenceArrangementPlan
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
+import app.melotrail.project.MidiCoreRolePlanSettings
+import app.melotrail.project.MidiCoreSharedGrooveIntent
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.ProjectAuthority
@@ -254,6 +270,90 @@ class MidiCoreStructureHarmonyPageTest {
     }
 
     @Test
+    fun `section duplicate split move and remove controls retain identities and keyboard alternatives`() = runComposeUiTest {
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = authorityState(),
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.occurrenceBars(0))
+            .performScrollTo()
+            .performTextReplacement("2")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.duplicateSection(0))
+            .performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.section(3)).assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.splitSection(0))
+            .performScrollTo().assertIsEnabled().performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.section(4)).assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.moveEarlierSection(1))
+            .performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.removeSection(0))
+            .performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.section(4)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `purpose and phrase suggestions require impact review before confirmation`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = authorityStateWithConfirmedPlan(),
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.purpose(0)).performScrollTo().performClick()
+        onNodeWithText("Chorus purpose", useUnmergedTree = true).performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.phrase(0)).performTextReplacement("phrase-hook")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CONFIRM_ARRANGEMENT_INTENT).assertIsNotEnabled()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.PREVIEW_ARRANGEMENT_INTENT)
+            .performSemanticsAction(SemanticsActions.RequestFocus).assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+
+        val proposal = (intents.single() as MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit).plan
+        assertEquals(MidiCoreArrangementPurpose.CHORUS, proposal.occurrences.first().purpose)
+        assertEquals("phrase-hook", proposal.occurrences.first().phraseGroupId)
+    }
+
+    @Test
+    fun `invalid phrase text stays editable and cannot be reviewed`() = runComposeUiTest {
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(state = authorityStateWithConfirmedPlan(), initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY) } }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.phrase(0)).performScrollTo().performTextReplacement("")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.PREVIEW_ARRANGEMENT_INTENT).assertIsNotEnabled()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.phrase(0)).performTextReplacement("phrase with spaces")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CONFIRM_ARRANGEMENT_INTENT).assertIsNotEnabled()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.phrase(0)).performTextReplacement("valid-phrase")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.PREVIEW_ARRANGEMENT_INTENT).assertIsEnabled()
+    }
+
+    @Test
+    fun `section and purpose controls fit all supported sizes`() {
+        listOf(1536 to 1024, 1280 to 900, 720 to 900).forEach { (width, height) ->
+            androidx.compose.ui.test.v2.runSkikoComposeUiTest(size = androidx.compose.ui.geometry.Size(width.toFloat(), height.toFloat())) {
+                setContent { MelotrailTheme { MidiCoreWorkspaceShell(state = authorityStateWithConfirmedPlan(), initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY) } }
+                val folder = java.nio.file.Path.of("build/test-results/u04b-visual")
+                java.nio.file.Files.createDirectories(folder)
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.duplicateSection(0)).performScrollTo()
+                javax.imageio.ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", folder.resolve("${width}-sections.png").toFile())
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.removeSection(0)).assertIsDisplayed()
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.purpose(0)).performScrollTo()
+                javax.imageio.ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", folder.resolve("${width}-purpose.png").toFile())
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.phrase(0)).assertIsDisplayed()
+            }
+        }
+    }
+
+    @Test
     fun `tempo is edited as BPM and internal IDs and ticks are not musician-facing`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent {
@@ -417,6 +517,35 @@ class MidiCoreStructureHarmonyPageTest {
             source = base.source.copy(sourceEndTick = source.sourceEndTick, lastNoteEndTick = source.lastNoteEndTick),
             authority = base.authority.copy(confirmed = authority),
         )
+    }
+
+    private fun authorityStateWithConfirmedPlan(): MidiCoreWorkspaceState {
+        val base = authorityState()
+        val authority = requireNotNull(base.project?.authority)
+        val plan = MidiCoreArrangementPlan(
+            version = 1,
+            sharedGroove = MidiCoreSharedGrooveIntent(
+                MidiCoreGrooveFeel.STRAIGHT,
+                MidiCoreGrooveSubdivision.EIGHTH,
+                MidiCoreGrooveDrive.STEADY,
+            ),
+            occurrences = authority.occurrences.mapIndexed { index, occurrence ->
+                MidiCoreOccurrenceArrangementPlan(
+                    occurrence.id,
+                    MidiCoreArrangementPurpose.VERSE,
+                    "phrase-${index + 1}",
+                    "repeat-${index + 1}",
+                    1,
+                    50,
+                    CandidateRole.entries.map { role ->
+                        MidiCoreRolePlanSettings(role, MidiCoreRoleActivity.SUPPORTING, 50, MidiCoreRegisterPreference.MID)
+                    },
+                    MidiCoreBoundaryIntent.NONE,
+                    MidiCoreBoundaryIntent.NONE,
+                )
+            },
+        )
+        return base.copy(project = requireNotNull(base.project).copy(arrangementPlan = plan))
     }
 
     private fun sourceEvidence(): MidiCoreVisualEvidenceProjection {

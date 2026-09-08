@@ -52,6 +52,8 @@ import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
 import app.melotrail.project.ProjectAuthority
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionOccurrence
@@ -81,9 +83,19 @@ internal object MidiCoreStructureHarmonyPageTags {
     const val SECTION_NAME_PREFIX = "midi-core-structure-section-name-"
     const val SECTION_BARS_PREFIX = "midi-core-structure-section-bars-"
     const val DUPLICATE_SECTION_PREFIX = "midi-core-structure-section-duplicate-"
+    const val SPLIT_SECTION_PREFIX = "midi-core-structure-section-split-"
+    const val MOVE_EARLIER_SECTION_PREFIX = "midi-core-structure-section-earlier-"
+    const val MOVE_LATER_SECTION_PREFIX = "midi-core-structure-section-later-"
+    const val REMOVE_SECTION_PREFIX = "midi-core-structure-section-remove-"
     const val ADD_SECTION = "midi-core-structure-add-section"
     const val SAVE_STRUCTURE = "midi-core-structure-save"
     const val STRUCTURE_FINDINGS = "midi-core-structure-findings"
+    const val ARRANGEMENT_INTENT = "midi-core-arrangement-intent"
+    const val PURPOSE_PREFIX = "midi-core-arrangement-purpose-"
+    const val PHRASE_PREFIX = "midi-core-arrangement-phrase-"
+    const val PREVIEW_ARRANGEMENT_INTENT = "midi-core-arrangement-intent-preview"
+    const val CONFIRM_ARRANGEMENT_INTENT = "midi-core-arrangement-intent-confirm"
+    const val CANCEL_ARRANGEMENT_INTENT = "midi-core-arrangement-intent-cancel"
     const val HARMONY = "midi-core-harmony"
     const val SECTION_TABS = "midi-core-harmony-section-tabs"
     const val SECTION_TAB_PREFIX = "midi-core-harmony-section-tab-"
@@ -112,6 +124,12 @@ internal object MidiCoreStructureHarmonyPageTags {
     fun sectionName(index: Int) = SECTION_NAME_PREFIX + index
     fun occurrenceBars(index: Int) = SECTION_BARS_PREFIX + index
     fun duplicateSection(index: Int) = DUPLICATE_SECTION_PREFIX + index
+    fun splitSection(index: Int) = SPLIT_SECTION_PREFIX + index
+    fun moveEarlierSection(index: Int) = MOVE_EARLIER_SECTION_PREFIX + index
+    fun moveLaterSection(index: Int) = MOVE_LATER_SECTION_PREFIX + index
+    fun removeSection(index: Int) = REMOVE_SECTION_PREFIX + index
+    fun purpose(index: Int) = PURPOSE_PREFIX + index
+    fun phrase(index: Int) = PHRASE_PREFIX + index
     fun progression(index: Int) = PROGRESSION_PREFIX + index
     fun sectionTab(index: Int) = SECTION_TAB_PREFIX + index
     fun chordSymbol(sectionIndex: Int, rowIndex: Int) = "$CHORD_SYMBOL_PREFIX$sectionIndex-$rowIndex"
@@ -236,11 +254,13 @@ internal fun MidiCoreStructureHarmonyPage(
                 meter = meter,
                 expectedSongEndTick = expectedSongEndTick,
                 structureError = structureError,
+                structureDirty = structureDirty,
                 onSectionChanged = { index, section -> sections = sections.updated(index, section) },
                 onAddSection = {
                     sections = sections + MidiCoreAuthorityDrafting.nextSection(sections, expectedSongEndTick, ppq, meter)
                 },
                 onDuplicateSection = { index -> sections = MidiCoreAuthorityDrafting.duplicateSection(sections, index) },
+                onSplitSection = { index -> sections = MidiCoreAuthorityDrafting.splitSection(sections, index) },
                 onMoveSection = { index, delta -> sections = sections.reordered(index, delta) },
                 onRemoveSection = { index -> sections = sections.filterIndexed { current, _ -> current != index } },
                 onSave = {
@@ -249,6 +269,12 @@ internal fun MidiCoreStructureHarmonyPage(
                     }
                 },
                 enabled = !state.busy && state.authority.confirmed != null && parsedStructure != null && structureDirty,
+            )
+            ArrangementIntentCard(
+                state = state,
+                onPreview = { onIntent(MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit(it)) },
+                onConfirm = { onIntent(MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit(it)) },
+                onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelArrangementPlanEdit) },
             )
             HarmonyCard(
                 state = state,
@@ -457,9 +483,11 @@ private fun StructureCard(
     meter: ProjectMeter,
     expectedSongEndTick: Long?,
     structureError: String?,
+    structureDirty: Boolean,
     onSectionChanged: (Int, MidiCoreSectionDraft) -> Unit,
     onAddSection: () -> Unit,
     onDuplicateSection: (Int) -> Unit,
+    onSplitSection: (Int) -> Unit,
     onMoveSection: (Int, Int) -> Unit,
     onRemoveSection: (Int) -> Unit,
     onSave: () -> Unit,
@@ -468,7 +496,7 @@ private fun StructureCard(
     val requiredBars = MidiCoreAuthorityDrafting.sourceBarCount(expectedSongEndTick, ppq, meter)
     val enteredBars = sections.sumOf { it.barsText.toIntOrNull()?.coerceAtLeast(0) ?: 0 }
     AuthorityPanel(MidiCoreStructureHarmonyPageTags.STRUCTURE, "3 · Sections") {
-        Text("Build the song from top to bottom. Each row needs only a name and its length in whole bars.", color = MusicWorkspaceTokens.TextSecondary)
+        Text("Build the song from top to bottom. Each row needs only a name and its length in whole bars. Reordering changes accompaniment boundaries over the fixed melody timeline; it never moves the protected melody.", color = MusicWorkspaceTokens.TextSecondary)
         Card(
             Modifier.fillMaxWidth().semantics {
                 testTag = MidiCoreStructureHarmonyPageTags.BAR_SUMMARY
@@ -482,6 +510,9 @@ private fun StructureCard(
             }
         }
         if (sections.isEmpty()) Text("Add the first section to begin.", color = MusicWorkspaceTokens.Warning)
+        if (state.project?.arrangementPlan != null && structureDirty && structureError == null) {
+            Text("Changing section identity or order clears the confirmed arrangement plan; your protected source and existing MIDI remain available for review.", color = MusicWorkspaceTokens.Warning)
+        }
         sections.forEachIndexed { index, section ->
             SectionRow(
                 state = state,
@@ -489,6 +520,7 @@ private fun StructureCard(
                 section = section,
                 onChanged = { onSectionChanged(index, it) },
                 onDuplicate = { onDuplicateSection(index) },
+                onSplit = { onSplitSection(index) },
                 onMoveEarlier = { onMoveSection(index, -1) },
                 onMoveLater = { onMoveSection(index, 1) },
                 onRemove = { onRemoveSection(index) },
@@ -519,6 +551,7 @@ private fun SectionRow(
     section: MidiCoreSectionDraft,
     onChanged: (MidiCoreSectionDraft) -> Unit,
     onDuplicate: () -> Unit,
+    onSplit: () -> Unit,
     onMoveEarlier: () -> Unit,
     onMoveLater: () -> Unit,
     onRemove: () -> Unit,
@@ -553,18 +586,159 @@ private fun SectionRow(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                OutlinedButton(onClick = onMoveEarlier, enabled = !state.busy && index > 0) { Text("↑ Earlier") }
-                OutlinedButton(onClick = onMoveLater, enabled = !state.busy && index < lastIndex) { Text("↓ Later") }
+                OutlinedButton(
+                    onClick = onMoveEarlier,
+                    enabled = !state.busy && index > 0,
+                    modifier = Modifier.semantics { testTag = MidiCoreStructureHarmonyPageTags.moveEarlierSection(index) },
+                ) { Text("↑ Earlier") }
+                OutlinedButton(
+                    onClick = onMoveLater,
+                    enabled = !state.busy && index < lastIndex,
+                    modifier = Modifier.semantics { testTag = MidiCoreStructureHarmonyPageTags.moveLaterSection(index) },
+                ) { Text("↓ Later") }
                 OutlinedButton(
                     onClick = onDuplicate,
                     enabled = !state.busy,
                     modifier = Modifier.semantics { testTag = MidiCoreStructureHarmonyPageTags.duplicateSection(index) },
                 ) { Text("Duplicate") }
-                TextButton(onClick = onRemove, enabled = !state.busy) { Text("Remove") }
+                OutlinedButton(
+                    onClick = onSplit,
+                    enabled = !state.busy && (section.barsText.toIntOrNull() ?: 0) >= 2,
+                    modifier = Modifier.semantics { testTag = MidiCoreStructureHarmonyPageTags.splitSection(index) },
+                ) { Text("Split") }
+                TextButton(
+                    onClick = onRemove,
+                    enabled = !state.busy,
+                    modifier = Modifier.semantics { testTag = MidiCoreStructureHarmonyPageTags.removeSection(index) },
+                ) { Text("Remove") }
             }
         }
     }
 }
+
+/**
+ * Keeps purpose and phrase grouping visibly separate from section labels. These
+ * values are a proposed replacement for an already confirmed plan: reviewing
+ * and confirming them is required before they become authority.
+ */
+@Composable
+private fun ArrangementIntentCard(
+    state: MidiCoreWorkspaceState,
+    onPreview: (MidiCoreArrangementPlan) -> Unit,
+    onConfirm: (MidiCoreArrangementPlan) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val confirmed = state.project?.arrangementPlan
+    AuthorityPanel(MidiCoreStructureHarmonyPageTags.ARRANGEMENT_INTENT, "Arrangement purpose & phrases") {
+        if (confirmed == null) {
+            Text("Choose a style in Arrange and explicitly confirm its proposed plan before assigning section purposes or phrase groups.", color = MusicWorkspaceTokens.TextSecondary)
+            return@AuthorityPanel
+        }
+        var plan by remember(state.projectRevision) { mutableStateOf(confirmed) }
+        var phraseDrafts by remember(state.projectRevision) {
+            mutableStateOf(confirmed.occurrences.associate { it.occurrenceId to it.phraseGroupId })
+        }
+        var purposeMenuId by remember { mutableStateOf<String?>(null) }
+        val invalidPhrase = phraseDrafts.values.any { !SAFE_PLAN_ID.matches(it) }
+        val proposedPlan = plan.copy(occurrences = plan.occurrences.map { occurrence ->
+            occurrence.copy(phraseGroupId = phraseDrafts[occurrence.occurrenceId]?.takeIf(SAFE_PLAN_ID::matches) ?: occurrence.phraseGroupId)
+        })
+        val dirty = proposedPlan != confirmed
+        val reviewed = state.arrangementPlanEdit.plan == proposedPlan
+
+        Text("Suggestions are editable drafts. Review affected accepted work before the separate confirmation; this never changes the protected melody or stored MIDI artifacts.", color = MusicWorkspaceTokens.TextSecondary)
+        plan.occurrences.forEachIndexed { index, occurrence ->
+            val label = state.authority.confirmed?.occurrences?.singleOrNull { it.id == occurrence.occurrenceId }?.label ?: "Section ${index + 1}"
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface)) {
+                Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Text(label, style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                        Box {
+                            OutlinedButton(
+                                onClick = { purposeMenuId = occurrence.occurrenceId },
+                                enabled = !state.busy,
+                                modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                    testTag = MidiCoreStructureHarmonyPageTags.purpose(index)
+                                    contentDescription = "$label musical purpose ${purposeTitle(occurrence.purpose)}"
+                                },
+                            ) { Text("Purpose · ${purposeTitle(occurrence.purpose)}") }
+                            DropdownMenu(
+                                expanded = purposeMenuId == occurrence.occurrenceId,
+                                onDismissRequest = { purposeMenuId = null },
+                            ) {
+                                MidiCoreArrangementPurpose.entries.forEach { purpose ->
+                                    DropdownMenuItem(
+                                        text = { Text("${purposeTitle(purpose)} purpose") },
+                                        onClick = {
+                                            purposeMenuId = null
+                                            plan = plan.copy(occurrences = plan.occurrences.map { candidate ->
+                                                if (candidate.occurrenceId == occurrence.occurrenceId) candidate.copy(purpose = purpose) else candidate
+                                            })
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        OutlinedTextField(
+                            value = phraseDrafts[occurrence.occurrenceId].orEmpty(),
+                            onValueChange = { phraseDrafts = phraseDrafts + (occurrence.occurrenceId to it) },
+                            modifier = Modifier.weight(1f).semantics {
+                                testTag = MidiCoreStructureHarmonyPageTags.phrase(index)
+                                contentDescription = "$label phrase group"
+                            },
+                            label = { Text("Phrase group") },
+                            supportingText = { Text("Use letters, numbers, hyphens, or underscores") },
+                            isError = !SAFE_PLAN_ID.matches(phraseDrafts[occurrence.occurrenceId].orEmpty()),
+                            singleLine = true,
+                            enabled = !state.busy,
+                        )
+                    }
+                }
+            }
+        }
+        if (invalidPhrase) Text("Phrase groups need a safe non-empty identifier.", color = MusicWorkspaceTokens.Warning)
+        state.arrangementPlanEdit.invalidation?.takeIf { reviewed }?.let { preview ->
+            Text(
+                if (preview.hasImpact) "Review required · ${preview.staleTargets.size} generated scope${if (preview.staleTargets.size == 1) "" else "s"} will become stale."
+                else "No generated work will become stale.",
+                color = if (preview.hasImpact) MusicWorkspaceTokens.Warning else MusicWorkspaceTokens.Success,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            OutlinedButton(
+                onClick = { onPreview(proposedPlan) },
+                enabled = !state.busy && dirty && !invalidPhrase,
+                modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    testTag = MidiCoreStructureHarmonyPageTags.PREVIEW_ARRANGEMENT_INTENT
+                },
+            ) { Text("Review impact") }
+            Button(
+                onClick = { onConfirm(proposedPlan) },
+                enabled = !state.busy && dirty && !invalidPhrase && reviewed,
+                colors = workspacePrimaryButtonColors(),
+                modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    testTag = MidiCoreStructureHarmonyPageTags.CONFIRM_ARRANGEMENT_INTENT
+                },
+            ) { Text("Confirm intent") }
+            TextButton(
+                onClick = {
+                    plan = confirmed
+                    phraseDrafts = confirmed.occurrences.associate { it.occurrenceId to it.phraseGroupId }
+                    onCancel()
+                },
+                enabled = !state.busy && (dirty || state.arrangementPlanEdit.plan != null),
+                modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    testTag = MidiCoreStructureHarmonyPageTags.CANCEL_ARRANGEMENT_INTENT
+                },
+            ) { Text("Discard") }
+        }
+    }
+}
+
+private fun purposeTitle(purpose: MidiCoreArrangementPurpose): String =
+    purpose.name.lowercase().split('_').joinToString(" ") { it.replaceFirstChar(Char::uppercaseChar) }
+
+private val SAFE_PLAN_ID = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")
 
 @Composable
 private fun HarmonyCard(
@@ -987,7 +1161,10 @@ internal fun previewInvalidation(
     updatedAuthority: ProjectAuthority?,
 ): MidiCoreInvalidationPreview? {
     if (project == null || updatedAuthority == null || project.authority == null) return null
-    val updated = runCatching { project.copy(authority = updatedAuthority) }.getOrNull() ?: return null
+    val compatiblePlan = project.arrangementPlan?.takeIf { plan ->
+        plan.occurrences.map { it.occurrenceId } == updatedAuthority.occurrences.map { it.id }
+    }
+    val updated = runCatching { project.copy(authority = updatedAuthority, arrangementPlan = compatiblePlan) }.getOrNull() ?: return null
     return runCatching {
         MidiCoreInvalidationPlanner.preview(
             MidiCoreAuthorityHasher.from(project),

@@ -31,6 +31,20 @@ class MidiCoreAuthorityDraftingTest {
     }
 
     @Test
+    fun `duplicate and split retain the repeat family while assigning each occurrence a new identity`() {
+        val drafts = listOf(MidiCoreSectionDraft("verse-1", "verse", "Verse", "Verse", "4"))
+
+        val duplicated = MidiCoreAuthorityDrafting.duplicateSection(drafts, 0)
+        val split = MidiCoreAuthorityDrafting.splitSection(drafts, 0)
+
+        assertEquals(listOf("verse-1", "section-1"), duplicated.map(MidiCoreSectionDraft::occurrenceId))
+        assertEquals(listOf("verse", "verse"), duplicated.map(MidiCoreSectionDraft::definitionId))
+        assertEquals(listOf("verse-1", "section-1"), split.map(MidiCoreSectionDraft::occurrenceId))
+        assertEquals(listOf("2", "2"), split.map(MidiCoreSectionDraft::barsText))
+        assertEquals(listOf("verse", "verse"), split.map(MidiCoreSectionDraft::definitionId))
+    }
+
+    @Test
     fun `explicit 3 plus 1 plus 2 plus 2 beat rows derive deterministic gap-free windows`() {
         val authority = authority()
         val drafts = listOf(

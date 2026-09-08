@@ -197,6 +197,27 @@ internal object MidiCoreAuthorityDrafting {
         return drafts.toMutableList().also { it.add(index + 1, duplicate) }
     }
 
+    /**
+     * Splitting keeps the musical section family while assigning the new timeline
+     * occurrence its own identity. The caller still validates the complete song
+     * length before this draft can become authority.
+     */
+    fun splitSection(drafts: List<MidiCoreSectionDraft>, index: Int): List<MidiCoreSectionDraft> {
+        if (index !in drafts.indices) return drafts
+        val original = drafts[index]
+        val bars = original.barsText.toIntOrNull() ?: return drafts
+        if (bars < 2) return drafts
+        val firstBars = bars / 2
+        val second = original.copy(
+            occurrenceId = nextSafeId("section", drafts.map(MidiCoreSectionDraft::occurrenceId).toSet()),
+            barsText = (bars - firstBars).toString(),
+        )
+        return drafts.toMutableList().also {
+            it[index] = original.copy(barsText = firstBars.toString())
+            it.add(index + 1, second)
+        }
+    }
+
     /** Converts legacy shorthand only into editable explicit rows; it is never persisted as authority. */
     fun seedRowsFromShorthand(text: String, occurrence: ProjectSectionOccurrence, ppq: Int): List<MidiCoreChordRowDraft> {
         val symbols = text.trim().split(Regex("[|,\\s]+")).map(String::trim).filter(String::isNotEmpty)

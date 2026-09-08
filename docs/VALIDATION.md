@@ -198,6 +198,12 @@ across an inactive occurrence. Schema v4 rejects prior schema versions before wr
 playback evidence remains pending; M07 owns complete rest-aware export and Q02
 owns its Logic matrix.
 
+U04b automated checks cover section identity operations, explicit purpose/phrase
+review and confirmation, invalid phrase entry, concurrent section/plan saves,
+and source/candidate/accepted-rest preservation after section removal and reopen.
+Section/purpose controls were inspected at 1536×1024, 1280×900 and 720×900.
+Full page-density/shared-strip work remains U04; human visual/Logic gates remain pending.
+
 ## Retained historical Logic evidence
 
 **2026-08-28: PASS**, user report for Logic Pro **12.3.1** on macOS **26.6.2

@@ -217,6 +217,40 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `confirmed purpose and phrase edits require an impact preview before the workspace saves them`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmArrangementPlan)
+        advanceUntilIdle()
+        val confirmed = requireNotNull(viewModel.state.value.project?.arrangementPlan)
+        val changed = confirmed.copy(occurrences = confirmed.occurrences.map { occurrence ->
+            if (occurrence.occurrenceId == "verse-1") occurrence.copy(
+                purpose = app.melotrail.project.MidiCoreArrangementPurpose.BRIDGE,
+                phraseGroupId = "phrase-bridge",
+            ) else occurrence
+        })
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit(changed))
+        assertTrue(fake.confirmArrangementPlanEditRequests.isEmpty())
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit(changed))
+        advanceUntilIdle()
+        assertEquals(listOf(changed), fake.previewArrangementPlanEditRequests.map { it.plan })
+        assertEquals(changed, viewModel.state.value.arrangementPlanEdit.plan)
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit(changed))
+        advanceUntilIdle()
+
+        assertEquals(listOf(changed), fake.confirmArrangementPlanEditRequests.map { it.plan })
+        assertEquals(changed, viewModel.state.value.project?.arrangementPlan)
+        assertNull(viewModel.state.value.arrangementPlanEdit.plan)
+        viewModel.close()
+    }
+
+    @Test
     fun `real position observation updates only while playing and stops after pause`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
@@ -732,6 +766,8 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     val proposeArrangementPlanRequests = mutableListOf<app.melotrail.application.ProposeMidiCoreArrangementPlan>()
     val confirmArrangementPlanRequests = mutableListOf<app.melotrail.application.ConfirmMidiCoreArrangementPlanProposal>()
     val cancelArrangementPlanRequests = mutableListOf<app.melotrail.application.CancelMidiCoreArrangementPlanProposal>()
+    val previewArrangementPlanEditRequests = mutableListOf<app.melotrail.application.PreviewMidiCoreArrangementPlanEdit>()
+    val confirmArrangementPlanEditRequests = mutableListOf<app.melotrail.application.ConfirmMidiCoreArrangementPlanEdit>()
     val arrangementExtentRequests = mutableListOf<ConfirmMidiCoreArrangementExtent>()
     var occurrenceAuditionCalls = 0
     var closeCalls = 0
@@ -857,6 +893,36 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     ): app.melotrail.application.MidiCoreArrangementPlanProposalResult {
         cancelArrangementPlanRequests += request
         return app.melotrail.application.MidiCoreArrangementPlanProposalResult.Cancelled(request.proposal)
+    }
+
+    override fun previewArrangementPlanEdit(
+        request: app.melotrail.application.PreviewMidiCoreArrangementPlanEdit,
+    ): app.melotrail.application.MidiCoreArrangementPlanEditResult {
+        previewArrangementPlanEditRequests += request
+        return app.melotrail.application.MidiCoreArrangementPlanEditResult.Previewed(
+            MidiCoreInvalidationPlanner.preview(
+                app.melotrail.project.MidiCoreAuthorityHasher.from(request.session.project),
+                app.melotrail.project.MidiCoreAuthorityHasher.from(request.session.project.copy(arrangementPlan = request.plan)),
+            ),
+        )
+    }
+
+    override fun confirmArrangementPlanEdit(
+        request: app.melotrail.application.ConfirmMidiCoreArrangementPlanEdit,
+    ): app.melotrail.application.MidiCoreArrangementPlanEditResult {
+        confirmArrangementPlanEditRequests += request
+        currentSession = MidiCoreProjectSession(
+            currentSession.root,
+            currentSession.project.copy(arrangementPlan = request.plan, revision = currentSession.project.revision + 1L),
+        )
+        return app.melotrail.application.MidiCoreArrangementPlanEditResult.Confirmed(
+            currentSession,
+            request.plan,
+            MidiCoreInvalidationPlanner.preview(
+                app.melotrail.project.MidiCoreAuthorityHasher.from(request.session.project),
+                app.melotrail.project.MidiCoreAuthorityHasher.from(currentSession.project),
+            ),
+        )
     }
 
     override fun confirmArrangementExtent(

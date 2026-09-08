@@ -74,10 +74,9 @@ data class MidiCoreProject(
             val currentAuthorityHash = runCatching { MidiCoreAuthorityHasher.from(this) }.getOrNull()
             // Accepted selections survive authority edits for inspection just as immutable
             // candidates do. Audition and assembly revalidate current rest evidence.
-            require(acceptedPlannedRests.all { it.occurrenceId in occurrenceIds }) {
-                "Accepted planned rests must reference an authoritative occurrence"
-            }
-            require(candidates.all { it.status == MidiCoreCandidateStatus.STALE || it.occurrenceId in occurrenceIds }) {
+            // Removed scopes retain their immutable rest selection/hash for history.
+            // They are not current: assembly only admits current scopes and matching authority.
+            require(candidates.all { it.status in setOf(MidiCoreCandidateStatus.STALE, MidiCoreCandidateStatus.REJECTED) || it.occurrenceId in occurrenceIds }) {
                 "Candidate references an unknown occurrence"
             }
             require(arrangementDrafts.map(MidiCoreArrangementDraft::id).distinct().size == arrangementDrafts.size) {

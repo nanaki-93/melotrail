@@ -1,10 +1,15 @@
 package app.melotrail.application
 
+import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.midi.OwnedMidiFixtures
 import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
+import app.melotrail.project.CandidateRole
+import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreCandidate
+import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.AtomicWriteObserver
@@ -110,6 +115,76 @@ class MidiCoreStructureTimelineTest {
         )
 
         assertEquals("C", requireNotNull(result.session.project.authority).chordEvents.single().symbol)
+    }
+
+    @Test
+    fun `changing occurrence identity clears its plan and preserves source plus stale candidate evidence`() {
+        val store = MidiCoreArtifactStore()
+        val initial = assertIs<MidiCoreStructureTimelineResult.Updated>(
+            MidiCoreStructureTimeline(store).replace(
+                ReplaceMidiCoreStructure(
+                    authoritative(store),
+                    listOf(ProjectSectionDefinition("verse", "Verse")),
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 3)),
+                ),
+            ),
+        ).session
+        val plan = MidiCoreArrangementPlanProposalFactory.create(
+            requireNotNull(initial.project.authority),
+            MidiCoreArrangementStyleCatalog.require("steady-road"),
+        )
+        val restingPlan = plan.copy(occurrences = plan.occurrences.map { occurrence ->
+            occurrence.copy(roleSettings = occurrence.roleSettings.map {
+                if (it.role == CandidateRole.BASS) it.copy(activity = app.melotrail.project.MidiCoreRoleActivity.INACTIVE, density = 0) else it
+            })
+        })
+        val planned = initial.project.copy(arrangementPlan = restingPlan)
+        val rest = app.melotrail.project.MidiCorePlannedRest("verse-1", CandidateRole.BASS,
+            MidiCoreAuthorityHasher.from(planned).scopeHash("verse-1", CandidateRole.BASS), locked = true)
+        val withPlan = planned.copy(acceptedPlannedRests = listOf(rest))
+        val source = requireNotNull(withPlan.sourceMidi)
+        store.saveProject(initial.root, withPlan)
+        val published = assertIs<MidiCoreCandidateLifecycleResult.Published>(
+            MidiCoreCandidateLifecycle(store).publish(PublishMidiCoreCandidate(
+                session = MidiCoreProjectSession(initial.root, withPlan),
+                role = CandidateRole.CHORDS,
+                occurrenceId = "verse-1",
+                generatorVersion = "test-v1",
+                authorityHash = MidiCoreAuthorityHasher.from(withPlan).scopeHash("verse-1", CandidateRole.CHORDS),
+                seed = 1L,
+                midi = store.verify(initial.root, source.original),
+                validationReportJson = "{}",
+                candidateId = "verse-chords",
+            )),
+        )
+        val candidate = published.candidate
+        val current = assertIs<MidiCoreCandidateLifecycleResult.Updated>(
+            MidiCoreCandidateLifecycle(store).accept(AcceptMidiCoreCandidate(published.session, candidate.id, locked = true)),
+        ).session
+        val candidateBytes = Files.readAllBytes(store.verify(current.root, candidate.midi))
+        val sourceBytes = Files.readAllBytes(store.verify(current.root, source.original))
+
+        val updated = assertIs<MidiCoreStructureTimelineResult.Updated>(
+            MidiCoreStructureTimeline(store).replace(
+                ReplaceMidiCoreStructure(
+                    current,
+                    listOf(ProjectSectionDefinition("verse", "Verse")),
+                    listOf(
+                        MidiCoreBarOccurrencePlacement("section-1", "verse", "Verse A", 1),
+                        MidiCoreBarOccurrencePlacement("section-2", "verse", "Verse B", 2),
+                    ),
+                ),
+            ),
+        ).session
+
+        assertEquals(null, updated.project.arrangementPlan)
+        assertEquals(listOf(rest), updated.project.acceptedPlannedRests)
+        assertEquals(current.project.acceptances, updated.project.acceptances)
+        assertEquals(current.project.acceptanceHistory, updated.project.acceptanceHistory)
+        assertEquals(listOf(candidate.copy(status = MidiCoreCandidateStatus.STALE)), updated.project.candidates)
+        assertContentEquals(candidateBytes, Files.readAllBytes(store.verify(updated.root, candidate.midi)))
+        assertEquals(updated.project, store.openProject(updated.root))
+        assertContentEquals(sourceBytes, Files.readAllBytes(store.verify(updated.root, source.original)))
     }
 
     @Test

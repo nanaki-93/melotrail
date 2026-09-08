@@ -91,6 +91,9 @@ Undo restores the prior candidate/rest selection for every affected scope or
 changes none. Locked candidates and locked rests block a different batch
 selection. Downstream Bass/Drums candidates record any same-draft upstream rests
 they consumed and revalidate those rest hashes against the confirmed plan.
+Removing a section retains its prior candidate/rest selections and history as
+stale evidence; these cannot satisfy any current occurrence during assembly.
+Section saves and plan confirmations share one revision-checked write transaction.
 A whole-occurrence Chords rest breaks piano-boundary continuity; the next active
 Chords scope starts without a boundary inherited across that silence.
 

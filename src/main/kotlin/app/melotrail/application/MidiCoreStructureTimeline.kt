@@ -5,6 +5,7 @@ import app.melotrail.arrangement.core.MidiCoreExportDependency
 import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.midi.domain.MidiPpq
 import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
@@ -31,7 +32,10 @@ enum class MidiCoreStructureTimelineProblemCode { INVALID_PROJECT, STALE_PROJECT
 
 /** Atomically persists the sole target section-occurrence timeline. */
 class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = MidiCoreArtifactStore()) {
-    fun replace(request: ReplaceMidiCoreStructure): MidiCoreStructureTimelineResult {
+    fun replace(request: ReplaceMidiCoreStructure): MidiCoreStructureTimelineResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { replaceLocked(request) }
+
+    private fun replaceLocked(request: ReplaceMidiCoreStructure): MidiCoreStructureTimelineResult {
         val root = request.session.root.toAbsolutePath().normalize()
         val current = try { artifacts.openProject(root) } catch (_: Exception) {
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_PROJECT, "The project cannot be verified before changing structure.", "Open a valid MIDI Core project and retry.")
@@ -55,21 +59,26 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Review the structure and authoritative harmony before retrying.")
         }
+        // A plan is exact occurrence authority. Keep it only when the edited
+        // timeline still matches every referenced occurrence; never retarget a
+        // purpose/phrase record to a new or reordered section implicitly.
+        val compatiblePlan = current.arrangementPlan?.takeIf { plan ->
+            runCatching { plan.requireMatches(updatedAuthority) }.isSuccess
+        }
+        val survivingIds = updatedAuthority.occurrences.map { it.id }.toSet()
         val updatedProject = try {
-            current.copy(authority = updatedAuthority, revision = current.revision + 1L)
+            current.copy(
+                authority = updatedAuthority,
+                arrangementPlan = compatiblePlan,
+                revision = current.revision + 1L,
+                candidates = current.candidates.map { candidate ->
+                    if (candidate.occurrenceId !in survivingIds && candidate.status != MidiCoreCandidateStatus.REJECTED)
+                        candidate.copy(status = MidiCoreCandidateStatus.STALE)
+                    else candidate
+                },
+            )
         } catch (error: IllegalArgumentException) {
-            try {
-                // A removed occurrence makes its prior candidate evidence stale, not disposable.
-                current.copy(
-                    authority = updatedAuthority,
-                    revision = current.revision + 1L,
-                    candidates = emptyList(),
-                    acceptances = emptyList(),
-                    acceptanceHistory = emptyList(),
-                )
-            } catch (_: IllegalArgumentException) {
-                return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is incompatible with current authority.", "Update dependent authority windows before retrying.")
-            }
+            return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is incompatible with current authority.", "Update dependent authority windows before retrying.")
         }
         val invalidation = MidiCoreInvalidationPlanner.preview(
             MidiCoreAuthorityHasher.from(current),
@@ -79,15 +88,7 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
             },
             current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
         )
-        val persisted = if (updatedProject.candidates.isEmpty() && current.candidates.isNotEmpty()) {
-            updatedProject.copy(
-                candidates = current.candidates,
-                acceptances = current.acceptances,
-                acceptanceHistory = current.acceptanceHistory,
-            ).withInvalidatedCandidates(invalidation.staleCandidateIds)
-        } else {
-            updatedProject.withInvalidatedCandidates(invalidation.staleCandidateIds)
-        }
+        val persisted = updatedProject.withInvalidatedCandidates(invalidation.staleCandidateIds)
         return try {
             artifacts.saveProject(root, persisted)
             MidiCoreStructureTimelineResult.Updated(MidiCoreProjectSession(root, persisted), timeline.markerLabels(), invalidation)

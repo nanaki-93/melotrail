@@ -37,6 +37,28 @@ class MidiCoreArrangementPlanEditTest {
     @TempDir lateinit var root: Path
 
     @Test
+    fun `confirmed purpose and phrase edits preserve protected source bytes`() {
+        val store = MidiCoreArtifactStore()
+        val session = confirmedSession(store)
+        val source = requireNotNull(session.project.sourceMidi)
+        val beforeSource = Files.readAllBytes(store.verify(session.root, source.original))
+        val plan = requireNotNull(session.project.arrangementPlan)
+        val changed = plan.copy(occurrences = plan.occurrences.map { occurrence ->
+            if (occurrence.occurrenceId == "verse-1") occurrence.copy(
+                purpose = app.melotrail.project.MidiCoreArrangementPurpose.BRIDGE,
+                phraseGroupId = "phrase-bridge",
+            ) else occurrence
+        })
+
+        val result = assertIs<MidiCoreArrangementPlanEditResult.Confirmed>(
+            MidiCoreArrangementPlanEdit(store).confirm(ConfirmMidiCoreArrangementPlanEdit(session, changed)),
+        )
+
+        assertEquals(changed, result.session.project.arrangementPlan)
+        assertContentEquals(beforeSource, Files.readAllBytes(store.verify(session.root, source.original)))
+    }
+
+    @Test
     fun `a confirmed plan edit previews and invalidates only affected locked work without rewriting evidence`() {
         val store = MidiCoreArtifactStore()
         var session = confirmedSession(store)
@@ -125,6 +147,49 @@ class MidiCoreArrangementPlanEditTest {
         assertContentEquals(lockedBytes, Files.readAllBytes(store.verify(session.root, lockedMidi)))
         assertContentEquals(sourceBytes, Files.readAllBytes(store.verify(session.root, source.original)))
         assertEquals(confirmed.session.project, persisted)
+    }
+
+    @Test
+    fun `structure replacement waits for plan confirmation and rejects its stale session`() {
+        val blockSave = AtomicBoolean(false)
+        val saveStarted = CountDownLatch(1)
+        val releaseSave = CountDownLatch(1)
+        val store = MidiCoreArtifactStore(AtomicWriteObserver { _, target ->
+            if (target.fileName.toString() == MidiCoreArtifactStore.PROJECT_FILE && blockSave.compareAndSet(true, false)) {
+                saveStarted.countDown()
+                check(releaseSave.await(5, TimeUnit.SECONDS))
+            }
+        })
+        val session = confirmedSession(store)
+        val plan = requireNotNull(session.project.arrangementPlan)
+        val changed = plan.copy(occurrences = plan.occurrences.map { it.copy(phraseGroupId = "confirmed-phrase") })
+        val executor = Executors.newFixedThreadPool(2)
+        try {
+            blockSave.set(true)
+            val planFuture = executor.submit<MidiCoreArrangementPlanEditResult> {
+                MidiCoreArrangementPlanEdit(store).confirm(ConfirmMidiCoreArrangementPlanEdit(session, changed))
+            }
+            assertTrue(saveStarted.await(5, TimeUnit.SECONDS))
+            val structureStarted = CountDownLatch(1)
+            val structureFuture = executor.submit<MidiCoreStructureTimelineResult> {
+                structureStarted.countDown()
+                MidiCoreStructureTimeline(store).replace(ReplaceMidiCoreStructure(session,
+                    requireNotNull(session.project.authority).sectionDefinitions,
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Renamed verse", 1),
+                        MidiCoreBarOccurrencePlacement("chorus-1", "chorus", "Chorus", 2))))
+            }
+            assertTrue(structureStarted.await(5, TimeUnit.SECONDS))
+            kotlin.test.assertFailsWith<java.util.concurrent.TimeoutException> { structureFuture.get(150, TimeUnit.MILLISECONDS) }
+            releaseSave.countDown()
+            val confirmed = assertIs<MidiCoreArrangementPlanEditResult.Confirmed>(planFuture.get(5, TimeUnit.SECONDS))
+            val rejected = assertIs<MidiCoreStructureTimelineResult.Rejected>(structureFuture.get(5, TimeUnit.SECONDS))
+            assertEquals(MidiCoreStructureTimelineProblemCode.STALE_PROJECT, rejected.problem.code)
+            assertEquals(confirmed.session.project, store.openProject(session.root))
+            assertEquals(changed, store.openProject(session.root).arrangementPlan)
+        } finally {
+            releaseSave.countDown()
+            executor.shutdownNow()
+        }
     }
 
     @Test
