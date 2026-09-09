@@ -8,10 +8,12 @@ let package = Package(
         .library(name: "MelotrailTABICompanion", targets: ["MelotrailTABICompanion"]),
         .executable(name: "melotrail-tabi-spike", targets: ["MelotrailTABISpike"]),
         .executable(name: "melotrail-tabi-regression", targets: ["MelotrailTABIRegression"]),
+        .executable(name: "melotrail-tabi-assets", targets: ["MelotrailTABIAssets"]),
     ],
     targets: [
         .target(name: "MelotrailTABICompanion"),
         .executableTarget(name: "MelotrailTABISpike", dependencies: ["MelotrailTABICompanion"]),
         .executableTarget(name: "MelotrailTABIRegression", dependencies: ["MelotrailTABICompanion"]),
+        .executableTarget(name: "MelotrailTABIAssets", dependencies: ["MelotrailTABICompanion"]),
     ]
 )

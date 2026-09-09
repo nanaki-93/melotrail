@@ -126,7 +126,7 @@ defer { for directory in directories { try? FileManager.default.removeItem(at: d
 
 let fixtureDate = Date(timeIntervalSince1970: 1_700_000_000)
 
-func writeOwnedPNG(to url: URL, width: Int, height: Int) throws {
+func writeOwnedPNG(to url: URL, width: Int, height: Int, alpha: CGFloat = 0.5) throws {
     try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     guard let context = CGContext(
@@ -138,7 +138,7 @@ func writeOwnedPNG(to url: URL, width: Int, height: Int) throws {
         space: colorSpace,
         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ) else { throw AssetManifestError.unreadableManifest("cannot create owned PNG fixture") }
-    context.setFillColor(red: 0.2, green: 0.3, blue: 0.7, alpha: 0.5)
+    context.setFillColor(red: 0.2, green: 0.3, blue: 0.7, alpha: alpha)
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
     guard let image = context.makeImage(),
           let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
@@ -148,6 +148,20 @@ func writeOwnedPNG(to url: URL, width: Int, height: Int) throws {
     guard CGImageDestinationFinalize(destination) else {
         throw AssetManifestError.unreadableManifest("cannot finish owned PNG fixture")
     }
+}
+
+func withApproval(_ record: AssetRecord, _ state: AssetApprovalState) -> AssetRecord {
+    AssetRecord(
+        identity: record.identity,
+        kind: record.kind,
+        relativeMediaPath: record.relativeMediaPath,
+        sha256: record.sha256,
+        provenance: record.provenance,
+        rights: record.rights,
+        geometry: record.geometry,
+        approval: AssetApproval(state: state, decidedBy: "fixture-review", decidedAt: fixtureDate),
+        identityDifferences: record.identityDifferences
+    )
 }
 
 func fixtureRecord(identity: AssetIdentity, path: String, digest: String, width: Int = 2, height: Int = 3, approval: AssetApprovalState = .approved, frameRate: Double? = nil, duration: Double? = nil, uses: [String] = ["companion regression"]) -> AssetRecord {
@@ -588,5 +602,261 @@ do {
     print("asset-manifest-regression=PASS")
 } catch {
     fputs("asset-manifest-regression=FAIL: \(error.localizedDescription)\n", stderr)
+    exit(1)
+}
+
+do {
+    // Fail promptly if repository ancestry traversal regresses into an infinite loop.
+    alarm(30)
+    defer { alarm(0) }
+    let externalRoot = FileManager.default.temporaryDirectory.appending(path: "melotrail-tabi-external-\(UUID().uuidString)")
+    let libraryRoot = FileManager.default.temporaryDirectory.appending(path: "melotrail-tabi-imported-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: externalRoot, withIntermediateDirectories: false)
+    try FileManager.default.createDirectory(at: libraryRoot, withIntermediateDirectories: false)
+    directories.append(externalRoot)
+    directories.append(libraryRoot)
+
+    let maskSource = externalRoot.appending(path: "tabi-mask.png")
+    let characterSource = externalRoot.appending(path: "tabi-seat.png")
+    let layerSource = externalRoot.appending(path: "train-layer.png")
+    try writeOwnedPNG(to: maskSource, width: 2, height: 3)
+    try writeOwnedPNG(to: characterSource, width: 2, height: 3)
+    try writeOwnedPNG(to: layerSource, width: 2, height: 3, alpha: 1)
+    let characterOriginal = try Data(contentsOf: characterSource)
+    let provenance = AssetProvenance(
+        originalSource: "owned regression source",
+        creator: "Melotrail regression fixture",
+        creationMethod: .owned,
+        createdAt: fixtureDate
+    )
+    let rights = AssetRights(ownershipOrLicense: "owned fixture", permittedUses: ["companion regression"])
+    let maskIdentity = AssetIdentity(assetID: "tabi-seat-mask", version: "v1")
+    let characterIdentity = AssetIdentity(assetID: "tabi-seat", version: "v1")
+    let layerIdentity = AssetIdentity(assetID: "train-window-light", version: "v1")
+    let sharedImport = { (identity: AssetIdentity, kind: AssetKind, source: URL, mask: AssetIdentity?, pivot: AssetPoint?, differences: [AssetIdentityDifference]) in
+        AssetImportRequest(
+            identity: identity,
+            kind: kind,
+            sourceURL: source,
+            provenance: provenance,
+            rights: rights,
+            mask: mask,
+            pivot: pivot,
+            placementAnchors: ["seat": AssetPoint(x: 0.5, y: 1.0)],
+            compatibleSceneVersions: ["train-v1"],
+            compatibleIdentityVersions: ["tabi-v1"],
+            identityDifferences: differences,
+            importedBy: "fixture-import"
+        )
+    }
+    let importedMask = try AssetKitImporter.importOriginal(
+        sharedImport(maskIdentity, .mask, maskSource, nil, nil, []),
+        into: libraryRoot,
+        now: fixtureDate
+    )
+    let importedCharacter = try AssetKitImporter.importOriginal(
+        sharedImport(
+            characterIdentity,
+            .image,
+            characterSource,
+            maskIdentity,
+            AssetPoint(x: 0.5, y: 1),
+            [AssetIdentityDifference(
+                field: "forehead-star color",
+                referenceDescription: "character sheet has a pale star",
+                observedDescription: "train scene has a warm yellow star"
+            )]
+        ),
+        into: libraryRoot,
+        now: fixtureDate
+    )
+    let importedLayer = try AssetKitImporter.importOriginal(
+        sharedImport(layerIdentity, .layer, layerSource, nil, nil, []),
+        into: libraryRoot,
+        now: fixtureDate
+    )
+    let characterAfterImport = try Data(contentsOf: characterSource)
+    require(characterAfterImport == characterOriginal, "import must leave the selected original source unchanged")
+    require(importedCharacter.importedURL.path.hasPrefix(libraryRoot.path + "/originals/"), "imported originals must stay in the selected external library")
+    require(importedCharacter.record.geometry.width == 2 && importedCharacter.record.geometry.height == 3, "import must measure real dimensions")
+    require(importedCharacter.record.geometry.alpha == .present, "import must detect non-opaque image pixels")
+    require(importedLayer.record.geometry.alpha == .absent, "an opaque RGBA image must not be mislabeled as transparent")
+    require(importedCharacter.record.approval.state == .proposed, "import must not manufacture a human approval")
+
+    let importedManifest = AssetManifest(libraryID: "import-regression", assets: [
+        withApproval(importedMask.record, .approved),
+        withApproval(importedCharacter.record, .approved),
+        withApproval(importedLayer.record, .approved),
+    ])
+    let manifestURL = libraryRoot.appending(path: "pilot-kit.json")
+    try AssetManifestStore.save(importedManifest, to: manifestURL)
+    let importedLibrary = try AssetLibrary(manifestURL: manifestURL, libraryRoot: libraryRoot)
+    let report = AssetKitInspector.inspect(
+        importedLibrary,
+        request: AssetKitSceneRequest(sceneVersion: "train-v1", identityVersion: "tabi-v1", assetPins: [characterIdentity, maskIdentity, layerIdentity])
+    )
+    require(report.requiresHumanIdentityReview, "unresolved TABI identity differences must be exposed for review")
+    require(!report.isCompositionReady, "unresolved identity differences must prevent automatic composition readiness")
+    require(report.findings.contains(where: { $0.code == .unresolvedIdentityDifference && $0.identity == characterIdentity }), "identity finding must identify the affected asset")
+
+    let incompatibleReport = AssetKitInspector.inspect(
+        importedLibrary,
+        request: AssetKitSceneRequest(sceneVersion: "train-v2", identityVersion: "tabi-v1", assetPins: [characterIdentity, maskIdentity])
+    )
+    require(incompatibleReport.findings.contains(where: { $0.code == .sceneIncompatible }), "scene-incompatible layers must be reported before composition")
+
+    let opaqueAsTransparent = AssetRecord(
+        identity: importedLayer.record.identity,
+        kind: importedLayer.record.kind,
+        relativeMediaPath: importedLayer.record.relativeMediaPath,
+        sha256: importedLayer.record.sha256,
+        provenance: importedLayer.record.provenance,
+        rights: importedLayer.record.rights,
+        geometry: AssetGeometry(
+            width: 2,
+            height: 3,
+            alpha: .present,
+            compatibleSceneVersions: ["train-v1"],
+            compatibleIdentityVersions: ["tabi-v1"]
+        ),
+        approval: importedLayer.record.approval
+    )
+    require(hasIssue(AssetManifestValidator.validate(AssetManifest(libraryID: "opaque-alpha", assets: [opaqueAsTransparent]), libraryRoot: libraryRoot)) {
+        if case .alphaMismatch(let identity, .present, .absent) = $0 { return identity == layerIdentity }
+        return false
+    }, "declared alpha must match inspected pixels, not only an image channel")
+
+    let mismatchedMask = AssetRecord(
+        identity: importedMask.record.identity,
+        kind: importedMask.record.kind,
+        relativeMediaPath: importedMask.record.relativeMediaPath,
+        sha256: importedMask.record.sha256,
+        provenance: importedMask.record.provenance,
+        rights: importedMask.record.rights,
+        geometry: AssetGeometry(width: 3, height: 3, alpha: .present, compatibleSceneVersions: ["train-v1"], compatibleIdentityVersions: ["tabi-v1"]),
+        approval: importedMask.record.approval
+    )
+    require(hasIssue(AssetManifestValidator.validate(AssetManifest(libraryID: "bad-mask", assets: [mismatchedMask, importedCharacter.record]), libraryRoot: libraryRoot)) {
+        if case .invalidMask(let identity, let mask, let message) = $0 { return identity == characterIdentity && mask == maskIdentity && message.contains("dimensions") }
+        return false
+    }, "mask and masked asset dimensions must agree")
+
+    let nonMaskReference = AssetRecord(
+        identity: importedLayer.record.identity,
+        kind: .layer,
+        relativeMediaPath: importedLayer.record.relativeMediaPath,
+        sha256: importedLayer.record.sha256,
+        provenance: importedLayer.record.provenance,
+        rights: importedLayer.record.rights,
+        geometry: importedLayer.record.geometry,
+        approval: importedLayer.record.approval
+    )
+    let characterWithLayerMask = AssetRecord(
+        identity: importedCharacter.record.identity,
+        kind: importedCharacter.record.kind,
+        relativeMediaPath: importedCharacter.record.relativeMediaPath,
+        sha256: importedCharacter.record.sha256,
+        provenance: importedCharacter.record.provenance,
+        rights: importedCharacter.record.rights,
+        geometry: AssetGeometry(width: 2, height: 3, alpha: .present, mask: layerIdentity, compatibleSceneVersions: ["train-v1"], compatibleIdentityVersions: ["tabi-v1"]),
+        approval: importedCharacter.record.approval
+    )
+    require(hasIssue(AssetManifestValidator.validate(AssetManifest(libraryID: "wrong-mask-type", assets: [nonMaskReference, characterWithLayerMask]), libraryRoot: libraryRoot)) {
+        if case .invalidMask(let identity, let mask, let message) = $0 { return identity == characterIdentity && mask == layerIdentity && message.contains("not a mask") }
+        return false
+    }, "a layer cannot be passed off as a mask")
+
+    do {
+        _ = try AssetKitImporter.importOriginal(
+            sharedImport(AssetIdentity(assetID: "invalid-pivot", version: "v1"), .image, characterSource, nil, AssetPoint(x: 1.2, y: 1), []),
+            into: libraryRoot,
+            now: fixtureDate
+        )
+        require(false, "out-of-bounds pivot must reject before publication")
+    } catch AssetManifestError.invalidManifest { }
+    require(!FileManager.default.fileExists(atPath: libraryRoot.appending(path: "originals/invalid-pivot/v1/tabi-seat.png").path), "rejected import must not leave a published original")
+    do {
+        _ = try AssetKitImporter.importOriginal(
+            sharedImport(AssetIdentity(assetID: "unsafe-library", version: "v1"), .image, characterSource, nil, nil, []),
+            into: URL(fileURLWithPath: "/"),
+            now: fixtureDate
+        )
+        require(false, "filesystem root must not be accepted as an asset library")
+    } catch AssetManifestError.invalidManifest { }
+    let repositoryRoot = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+    let repositoryLibrary = repositoryRoot.appending(path: "companion/.build/rejected-asset-library-\(UUID().uuidString)")
+    do {
+        let unexpected = try AssetKitImporter.importOriginal(
+            sharedImport(AssetIdentity(assetID: "repository-library", version: "v1"), .image, characterSource, nil, nil, []),
+            into: repositoryLibrary,
+            now: fixtureDate
+        )
+        try? FileManager.default.removeItem(at: repositoryLibrary)
+        require(false, "a path inside the Git worktree must not be accepted as an asset library: \(unexpected.importedURL.path)")
+    } catch AssetManifestError.invalidManifest(let message) {
+        require(message.contains("outside Git"), "repository-contained import must explain the external-library boundary")
+    }
+    require(!FileManager.default.fileExists(atPath: repositoryLibrary.path), "rejected repository-contained import must not create a library")
+    // Both .git directories and linked-worktree .git files are boundaries,
+    // including an external-looking symlink followed by nonexistent children.
+    for markerIsDirectory in [false, true] {
+        let repository = externalRoot.appending(path: "owned-repository-\(markerIsDirectory)")
+        try FileManager.default.createDirectory(at: repository, withIntermediateDirectories: false)
+        let marker = repository.appending(path: ".git")
+        if markerIsDirectory {
+            try FileManager.default.createDirectory(at: marker, withIntermediateDirectories: false)
+        } else {
+            try Data("gitdir: owned-fixture".utf8).write(to: marker)
+        }
+        let alias = externalRoot.appending(path: "repository-alias-\(markerIsDirectory)")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: repository)
+        for base in [repository, alias] {
+            let rejectedRoot = base.appending(path: "missing/library")
+            do {
+                _ = try AssetKitImporter.importOriginal(
+                    sharedImport(AssetIdentity(assetID: "repository-alias", version: "v1"), .image, characterSource, nil, nil, []),
+                    into: rejectedRoot
+                )
+                require(false, "repository aliases and new descendants must reject")
+            } catch AssetManifestError.invalidManifest(let message) {
+                require(message.contains("outside Git"), "repository alias rejection must explain the boundary")
+            }
+            require(!FileManager.default.fileExists(atPath: rejectedRoot.path), "repository alias rejection must precede writes")
+        }
+    }
+    let bareRepository = externalRoot.appending(path: "owned-bare-repository")
+    try FileManager.default.createDirectory(at: bareRepository.appending(path: "objects"), withIntermediateDirectories: true)
+    try FileManager.default.createDirectory(at: bareRepository.appending(path: "refs"), withIntermediateDirectories: false)
+    try Data("ref: refs/heads/main\n".utf8).write(to: bareRepository.appending(path: "HEAD"))
+    for rejectedRoot in [bareRepository, bareRepository.appending(path: "new/library")] {
+        do {
+            _ = try AssetKitImporter.importOriginal(
+                sharedImport(AssetIdentity(assetID: "bare-repository", version: "v1"), .image, characterSource, nil, nil, []),
+                into: rejectedRoot
+            )
+            require(false, "bare Git repositories must reject asset imports")
+        } catch AssetManifestError.invalidManifest(let message) {
+            require(message.contains("outside Git"), "bare repository rejection must explain the boundary")
+        }
+        require(!FileManager.default.fileExists(atPath: rejectedRoot.appending(path: "originals").path), "bare repository rejection must precede writes")
+    }
+    let linkedLibrary = externalRoot.appending(path: "linked-library")
+    try FileManager.default.createDirectory(at: linkedLibrary, withIntermediateDirectories: false)
+    try FileManager.default.createSymbolicLink(at: linkedLibrary.appending(path: "originals"), withDestinationURL: externalRoot)
+    do {
+        _ = try AssetKitImporter.importOriginal(
+            sharedImport(AssetIdentity(assetID: "escape", version: "v1"), .image, characterSource, nil, nil, []),
+            into: linkedLibrary
+        )
+        require(false, "import must reject a symlinked originals directory")
+    } catch AssetManifestError.unsafeMediaPath { }
+    require(!FileManager.default.fileExists(atPath: externalRoot.appending(path: "escape").path), "symlink rejection must precede writes")
+    print("asset-kit-import-regression=PASS")
+} catch {
+    fputs("asset-kit-import-regression=FAIL: \(error.localizedDescription)\n", stderr)
     exit(1)
 }

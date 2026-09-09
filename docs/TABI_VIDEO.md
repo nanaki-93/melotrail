@@ -107,6 +107,24 @@ Melotrail MIDI project. The manifest records no production asset or human
 approval: V02b/V02 still own import, real geometry/identity inspection and the
 user's coherent-kit decision.
 
+### Local import and pilot-kit inspection (V02b)
+
+The companion imports a selected regular local file by copying it to a new
+`originals/<asset-id>/<version>/` path in the user-selected external library.
+It never alters that selected source, replaces an existing original, or mutates
+a manifest; the returned record remains **proposed**. Dimensions, timing and
+still-image alpha are measured from imported bytes. An alpha channel whose pixels
+are all opaque is reported as absent, so a declared cutout cannot pass on its
+container metadata alone. The companion validates mask identity/type/size,
+normalized pivots and anchors, and requested scene/identity-version compatibility
+before a kit can be ready for composition.
+
+An asset record may carry factual unresolved TABI identity differences (for
+example the sheet's versus train scene's forehead-star color). Kit inspection
+surfaces them with the affected asset and makes the kit non-ready; it does not
+average designs, promote an asset, or substitute a new version. The separate V02
+human approval/rights gate remains required for production media.
+
 Generate one asset or small coherent batch at a time. Inspect real transparency,
 edge matte, perspective, color, scale and character identity. A collage, opaque
 checkerboard or pretty but geometrically incompatible cutout does not pass.

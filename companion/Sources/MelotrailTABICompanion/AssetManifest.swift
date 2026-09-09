@@ -167,6 +167,25 @@ public struct AssetApproval: Codable, Hashable, Sendable {
     }
 }
 
+/**
+ * A concrete difference observed while comparing a source reference with a
+ * candidate TABI asset. These findings deliberately remain review evidence:
+ * recording one never approves or rewrites the candidate.
+ */
+public struct AssetIdentityDifference: Codable, Hashable, Sendable {
+    public let field: String
+    public let referenceDescription: String
+    public let observedDescription: String
+    public let resolved: Bool
+
+    public init(field: String, referenceDescription: String, observedDescription: String, resolved: Bool = false) {
+        self.field = field
+        self.referenceDescription = referenceDescription
+        self.observedDescription = observedDescription
+        self.resolved = resolved
+    }
+}
+
 public struct AssetRecord: Codable, Hashable, Sendable {
     public let identity: AssetIdentity
     public let kind: AssetKind
@@ -177,6 +196,8 @@ public struct AssetRecord: Codable, Hashable, Sendable {
     public let rights: AssetRights
     public let geometry: AssetGeometry
     public let approval: AssetApproval
+    /// Reference-versus-candidate observations that still require a human TABI decision.
+    public let identityDifferences: [AssetIdentityDifference]
 
     public init(
         identity: AssetIdentity,
@@ -186,7 +207,8 @@ public struct AssetRecord: Codable, Hashable, Sendable {
         provenance: AssetProvenance,
         rights: AssetRights,
         geometry: AssetGeometry,
-        approval: AssetApproval
+        approval: AssetApproval,
+        identityDifferences: [AssetIdentityDifference] = []
     ) {
         self.identity = identity
         self.kind = kind
@@ -196,6 +218,24 @@ public struct AssetRecord: Codable, Hashable, Sendable {
         self.rights = rights
         self.geometry = geometry
         self.approval = approval
+        self.identityDifferences = identityDifferences
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case identity, kind, relativeMediaPath, sha256, provenance, rights, geometry, approval, identityDifferences
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identity = try container.decode(AssetIdentity.self, forKey: .identity)
+        kind = try container.decode(AssetKind.self, forKey: .kind)
+        relativeMediaPath = try container.decode(String.self, forKey: .relativeMediaPath)
+        sha256 = try container.decode(String.self, forKey: .sha256)
+        provenance = try container.decode(AssetProvenance.self, forKey: .provenance)
+        rights = try container.decode(AssetRights.self, forKey: .rights)
+        geometry = try container.decode(AssetGeometry.self, forKey: .geometry)
+        approval = try container.decode(AssetApproval.self, forKey: .approval)
+        identityDifferences = try container.decodeIfPresent([AssetIdentityDifference].self, forKey: .identityDifferences) ?? []
     }
 }
 
@@ -223,6 +263,9 @@ public enum AssetManifestError: Error, Equatable, LocalizedError, Sendable {
     case digestMismatch(AssetIdentity, expected: String, actual: String)
     case dimensionMismatch(AssetIdentity, expectedWidth: Int, expectedHeight: Int, actualWidth: Int, actualHeight: Int)
     case metadataMismatch(AssetIdentity, String)
+    case alphaMismatch(AssetIdentity, declared: AssetAlpha, actual: AssetAlpha)
+    case missingMask(AssetIdentity, AssetIdentity)
+    case invalidMask(AssetIdentity, AssetIdentity, String)
     case assetNotFound(AssetIdentity)
     case assetNotApproved(AssetIdentity, AssetApprovalState)
 
@@ -237,6 +280,9 @@ public enum AssetManifestError: Error, Equatable, LocalizedError, Sendable {
         case .digestMismatch(let identity, let expected, let actual): "Digest mismatch for \(identity.assetID)@\(identity.version): expected \(expected), got \(actual)"
         case .dimensionMismatch(let identity, let expectedWidth, let expectedHeight, let actualWidth, let actualHeight): "Dimensions differ for \(identity.assetID)@\(identity.version): expected \(expectedWidth)x\(expectedHeight), got \(actualWidth)x\(actualHeight)"
         case .metadataMismatch(let identity, let message): "Media metadata differs for \(identity.assetID)@\(identity.version): \(message)"
+        case .alphaMismatch(let identity, let declared, let actual): "Transparency differs for \(identity.assetID)@\(identity.version): declared \(declared.rawValue), inspected \(actual.rawValue)"
+        case .missingMask(let identity, let mask): "Mask \(mask.assetID)@\(mask.version) for \(identity.assetID)@\(identity.version) is missing."
+        case .invalidMask(let identity, let mask, let message): "Mask \(mask.assetID)@\(mask.version) for \(identity.assetID)@\(identity.version) is invalid: \(message)"
         case .assetNotFound(let identity): "No asset exists for \(identity.assetID)@\(identity.version)."
         case .assetNotApproved(let identity, let state): "Asset \(identity.assetID)@\(identity.version) is \(state.rawValue), not approved."
         }
@@ -274,6 +320,91 @@ public enum AssetDigest {
             hasher.update(data: chunk)
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+/** Facts measured from the imported bytes, never inferred from a filename. */
+public struct AssetMediaFacts: Hashable, Sendable {
+    public let width: Int
+    public let height: Int
+    public let frameRate: Double?
+    public let durationSeconds: Double?
+    /// `present` means at least one decoded pixel is non-opaque, not merely that a PNG declares an alpha channel.
+    public let alpha: AssetAlpha
+
+    public init(width: Int, height: Int, frameRate: Double?, durationSeconds: Double?, alpha: AssetAlpha) {
+        self.width = width
+        self.height = height
+        self.frameRate = frameRate
+        self.durationSeconds = durationSeconds
+        self.alpha = alpha
+    }
+}
+
+public enum AssetMediaInspector {
+    public static func inspect(kind: AssetKind, url: URL) throws -> AssetMediaFacts {
+        if kind.usesVideoProbe {
+            let asset = AVURLAsset(url: url)
+            guard let videoTrack = asset.tracks(withMediaType: .video).first else {
+                throw AssetManifestError.unreadableManifest("no video track")
+            }
+            let size = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
+            // The current AVFoundation probe cannot truthfully establish a video alpha plane.
+            return AssetMediaFacts(
+                width: Int(abs(size.width.rounded())),
+                height: Int(abs(size.height.rounded())),
+                frameRate: Double(videoTrack.nominalFrameRate),
+                durationSeconds: asset.duration.seconds,
+                alpha: .unknown
+            )
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw AssetManifestError.unreadableManifest("not a readable still image")
+        }
+        let hasTransparency = try hasTransparentPixel(in: image)
+        return AssetMediaFacts(
+            width: image.width,
+            height: image.height,
+            frameRate: nil,
+            durationSeconds: nil,
+            alpha: hasTransparency ? .present : .absent
+        )
+    }
+
+    private static func hasTransparentPixel(in image: CGImage) throws -> Bool {
+        let alphaInfo = image.alphaInfo
+        guard alphaInfo != .none && alphaInfo != .noneSkipFirst && alphaInfo != .noneSkipLast else {
+            return false
+        }
+        let pixelCount = image.width.multipliedReportingOverflow(by: image.height)
+        guard !pixelCount.overflow, pixelCount.partialValue <= 100_000_000 else {
+            throw AssetManifestError.unreadableManifest("image is too large for bounded alpha inspection")
+        }
+        let byteCount = pixelCount.partialValue.multipliedReportingOverflow(by: 4)
+        guard !byteCount.overflow else {
+            throw AssetManifestError.unreadableManifest("image is too large for bounded alpha inspection")
+        }
+        let bytes = UnsafeMutableRawPointer.allocate(byteCount: byteCount.partialValue, alignment: MemoryLayout<UInt8>.alignment)
+        defer { bytes.deallocate() }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: bytes,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: image.width * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        ) else {
+            throw AssetManifestError.unreadableManifest("cannot decode alpha pixels")
+        }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        let alphaBytes = bytes.bindMemory(to: UInt8.self, capacity: byteCount.partialValue)
+        for index in stride(from: 3, to: byteCount.partialValue, by: 4) where alphaBytes[index] < UInt8.max {
+            return true
+        }
+        return false
     }
 }
 
@@ -328,6 +459,7 @@ public enum AssetManifestValidator {
             }
             issues.append(contentsOf: validateRecord(asset, libraryRoot: libraryRoot))
         }
+        issues.append(contentsOf: validateMasks(in: manifest))
         return AssetManifestValidation(issues: issues)
     }
 
@@ -370,18 +502,21 @@ public enum AssetManifestValidator {
         }
 
         do {
-            let dimensions = try mediaDimensions(for: asset.kind, url: mediaURL)
-            if dimensions.width != asset.geometry.width || dimensions.height != asset.geometry.height {
+            let facts = try AssetMediaInspector.inspect(kind: asset.kind, url: mediaURL)
+            if facts.width != asset.geometry.width || facts.height != asset.geometry.height {
                 issues.append(.dimensionMismatch(
                     asset.identity,
                     expectedWidth: asset.geometry.width,
                     expectedHeight: asset.geometry.height,
-                    actualWidth: dimensions.width,
-                    actualHeight: dimensions.height
+                    actualWidth: facts.width,
+                    actualHeight: facts.height
                 ))
             }
+            if asset.geometry.alpha != .unknown && facts.alpha != .unknown && asset.geometry.alpha != facts.alpha {
+                issues.append(.alphaMismatch(asset.identity, declared: asset.geometry.alpha, actual: facts.alpha))
+            }
             if let expectedFrameRate = asset.geometry.frameRate {
-                if let actualFrameRate = dimensions.frameRate {
+                if let actualFrameRate = facts.frameRate {
                     if abs(expectedFrameRate - actualFrameRate) > 0.001 {
                         issues.append(.metadataMismatch(asset.identity, "frame rate expected \(expectedFrameRate), got \(actualFrameRate)"))
                     }
@@ -390,7 +525,7 @@ public enum AssetManifestValidator {
                 }
             }
             if let expectedDuration = asset.geometry.durationSeconds {
-                if let actualDuration = dimensions.durationSeconds {
+                if let actualDuration = facts.durationSeconds {
                     if abs(expectedDuration - actualDuration) > 0.001 {
                         issues.append(.metadataMismatch(asset.identity, "duration expected \(expectedDuration), got \(actualDuration)"))
                     }
@@ -423,8 +558,8 @@ public enum AssetManifestValidator {
             issues.append(.invalidManifest("generated provider, model and prompt are required"))
         }
         let points = Array(asset.geometry.placementAnchors.values) + [asset.geometry.pivot].compactMap { $0 }
-        if points.contains(where: { !$0.x.isFinite || !$0.y.isFinite }) {
-            issues.append(.invalidManifest("pivot and anchor coordinates must be finite"))
+        if points.contains(where: { !$0.x.isFinite || !$0.y.isFinite || $0.x < 0 || $0.x > 1 || $0.y < 0 || $0.y > 1 }) {
+            issues.append(.invalidManifest("pivot and anchor coordinates must be finite normalized values"))
         }
         if asset.rights.ownershipOrLicense.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || asset.rights.permittedUses.isEmpty || asset.rights.permittedUses.contains(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
             issues.append(.invalidManifest("rights and permitted uses are required for \(asset.identity.assetID)@\(asset.identity.version)"))
@@ -434,6 +569,29 @@ public enum AssetManifestValidator {
         }
         if asset.approval.decidedBy.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             issues.append(.invalidManifest("approval provenance is required for \(asset.identity.assetID)@\(asset.identity.version)"))
+        }
+        return issues
+    }
+
+    private static func validateMasks(in manifest: AssetManifest) -> [AssetManifestError] {
+        var issues: [AssetManifestError] = []
+        for asset in manifest.assets {
+            guard let maskIdentity = asset.geometry.mask else { continue }
+            let matches = manifest.assets.filter { $0.identity == maskIdentity }
+            guard let mask = matches.first, matches.count == 1 else {
+                issues.append(.missingMask(asset.identity, maskIdentity))
+                continue
+            }
+            guard mask.kind == .mask else {
+                issues.append(.invalidMask(asset.identity, maskIdentity, "referenced asset is not a mask"))
+                continue
+            }
+            if mask.geometry.mask != nil {
+                issues.append(.invalidMask(asset.identity, maskIdentity, "a mask cannot itself depend on another mask"))
+            }
+            if mask.geometry.width != asset.geometry.width || mask.geometry.height != asset.geometry.height {
+                issues.append(.invalidMask(asset.identity, maskIdentity, "dimensions must match the masked asset"))
+            }
         }
         return issues
     }
@@ -451,23 +609,6 @@ public enum AssetManifestValidator {
         return candidate.path.hasPrefix(prefix) ? candidate : nil
     }
 
-    private static func mediaDimensions(for kind: AssetKind, url: URL) throws -> (width: Int, height: Int, frameRate: Double?, durationSeconds: Double?) {
-        if kind.usesVideoProbe {
-            let asset = AVURLAsset(url: url)
-            guard let videoTrack = asset.tracks(withMediaType: .video).first else {
-                throw AssetManifestError.unreadableManifest("no video track")
-            }
-            let size = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
-            return (Int(abs(size.width.rounded())), Int(abs(size.height.rounded())), Double(videoTrack.nominalFrameRate), asset.duration.seconds)
-        }
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
-              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue else {
-            throw AssetManifestError.unreadableManifest("not a readable still image")
-        }
-        return (width, height, nil, nil)
-    }
 }
 
 /** A caller-facing gate: validate the complete library, then resolve exact approved pins. */

@@ -37,6 +37,31 @@ does not import production assets or record a human TABI identity approval.
 
 Manifest snapshots publish to new paths atomically; existing snapshots are never overwritten.
 
+### Local pilot-kit import and inspection
+
+V02b adds a companion-only local import boundary. It copies a selected regular
+file into `originals/<asset-id>/<version>/` beneath a user-selected asset library
+and returns a proposed `AssetRecord` on standard output; it never changes the
+selected source, an existing original, or a manifest snapshot. The library must
+be outside this repository for real media. Publish the returned record only in a
+new immutable manifest after review.
+
+```sh
+swift run --package-path companion melotrail-tabi-assets import /path/to/library request.json
+swift run --package-path companion melotrail-tabi-assets inspect \
+  /path/to/library /path/to/library/pilot-kit.json train-v1 tabi-v1 \
+  tabi-seat@v1 tabi-seat-mask@v1 train-window-light@v1
+```
+
+The import request supplies provenance, rights, pivot/anchors, optional mask,
+scene/identity compatibility and any observed identity differences. Dimensions,
+duration/frame rate and actual still-image transparency are measured from the
+copied bytes. Inspection reports invalid media, mask-size/type mismatches,
+scene/identity incompatibility and unresolved TABI identity differences. An
+unresolved difference is deliberately not an approval: it returns a non-ready
+report for human review. No production media, paid generation, or identity
+approval is bundled with this package.
+
 ## Encoder process boundary
 
 V06a adds a companion-only process runner for trusted encoder adapters: argv
