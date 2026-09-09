@@ -103,7 +103,10 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | V04a | Plan deterministic soundtrack and scene timing | V03a | DONE | Recovered rational timing planner and fixed Swift assertions; validated decoded durations, pinned soundtrack changes, explicit alignment and CLI caller. Native debug/release regressions, 410 JVM tests, build and fresh Terra review passed. Evidence ~/.codex/melotrail-terra/v04a-repair-evidence. |
 | V04 | Implement deterministic scene composition | V04a | DONE | ecfa75607cdd; Repaired all five reported Swift compile errors by evaluating throwing scene-resolution, frame, and file-read operations before passing their results to the non-throwing assertion autoclosure. Regression semantics remain unchanged.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T12-00-00-939Z-V04 |
 | V05a | Build real scene preview and soundtrack transport | V04 | DONE | fb33495b7612; Repaired preview synchronization within V05a scope. Public current-frame rendering now derives from the sole AVPlayer’s actual time, the CLI caller uses that snapshot, and regression coverage plays across a scene boundary while checking advancing frame/time pairs and shared frame-rate mapping. Changes remain uncommitted; TASKS was not edited.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T12-16-36-129Z-V05a |
-| V05 | Build real video editor/preview | V05a | BLOCKED | FAIL: the new SceneEditorSession is only a library API exercised by the regression. No executable/UI invokes it: the animation CLI still exposes only import, planning, and one-frame preview commands. Thus users cannot access the reference-08 scene strip, inspector, edits, job/asset state, cancellation/reopen, or keyboard flow; no compact layout exists. Regression coverage also only asserts edited plan fields, not rendered crop/motion/transition parity or compact layout. Add a reachable companion editor surface/command with the required controls |
+| V05b | Open a real companion editor window | V05a | TODO | Recover only needed preserved V05 helpers; deliver a reachable window with real preview, scene strip and one soundtrack transport. |
+| V05c | Connect crop, motion and transition controls | V05b | TODO | Wire the selected-scene inspector to shared rendering; prove visible edits and unchanged soundtrack timing. |
+| V05d | Persist editor sessions and expose asset/job state | V05c | TODO | Reopen edits safely, show real approval/cost/failure state, and provide bounded preview cancellation. |
+| V05 | Validate the complete editor and compact keyboard flow | V05d | TODO | Supersedes failed monolithic attempt; finish reference-08 layout, keyboard/accessibility and full owned-media visual/transport evidence after children pass. |
 | V06a | Implement bounded encoder process and output staging | V01a | DONE | Recovered native encoder process; repaired Swift compile errors, pre-launch cancellation, isolated input snapshots, process-group teardown, bounded diagnostics/callbacks, redaction and cleanup. Owned process regressions, native release and MIDI test/build checked. Episode codec/parity remains V06. Evidence ~/.codex/melotrail-terra/video-recovery-evidence. |
 | V06 | Encode, validate and publish local video outputs | V06a, V05 | TODO | Selected for unpaid implementation; human/budget gates remain. |
 | V07a | Add capability-checked optional Export handoff | V06, U06 | TODO | |
@@ -825,20 +828,121 @@ is neither trimmed/stretched nor remastered silently.
 **Done:** this slice works through its real caller, focused regressions and required
 coordinator checks pass; leave later slices to their queue owners.
 
-### V05 — Build real video editor and preview
+### V05 recovery rules — shared by V05b, V05c, V05d and V05
 
-**Remaining parent slice:** Add reference 08 scene strip/inspector, supported motion/crop/transition edits, approval/progress/cancel/reopen and keyboard flow; prepare an actual owned-media preview.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
+The failed V05 candidate is preserved outside the checkout at
+`/Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T13-00-26-469Z-V05/worktree`.
+Inspect its diff against `5fecbdefa3bfcf2c6b2cb4dd3f1f5e0d25306173` for
+`companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
+`SceneComposition.swift`, `ScenePreview.swift` and the regression executable.
+Reuse only the helpers needed by the assigned slice, after inspecting their
+consumers and tests. Do not apply the entire candidate, change its preserved
+files, or replay the failed parent. The review failure was an unreachable editor
+and missing rendered/layout evidence, not permission to replace V04/V05a.
 
-**Work:** adapt reference 08: preview stage, scene thumbnail strip, selected-scene
-inspector, supported crop/motion/transition settings and one soundtrack player.
-Display asset approval, cost/progress and failures where actionable. Preview
-uses the same timing/geometry as output; no unsupported controls or fake progress.
-**Tests:** real playback/seek, A/V sync, scene-boundary/crop parity, changed
-soundtrack/assets, keyboard, compact layout and cancellation/reopen.
-**Done:** user can review an actual full-song pilot before encoding, including
-character consistency, loop seams and final scene/audio tail.
+Each slice must work through the actual companion window. A library API, JSON
+command, screenshot mock or test-only caller alone cannot satisfy an editor UI
+slice. Use native Swift/AppKit in the existing independent package; do not add
+an application framework, MIDI dependency, audio renderer or provider call.
+Use `docs/pictures/UI/08-video-preview.png`, `docs/UI_GUIDELINE.md` and
+`docs/TABI_VIDEO.md` as design inputs. Native adaptations must preserve the
+reference hierarchy, real preview and compact controls.
+
+All four tasks run `node tools/companion-check.mjs`, `make test`, `make build`
+and `git diff --check`, plus their focused verification below and fresh review.
+Use the configured JBR for JVM checks. Extend the existing native regression
+and check entrypoint for automated coverage; keep large captures/fixtures under
+ignored build output. No new plan, prompt or execution-log document. Owned test
+media permits engineering validation; production identity, rights and paid
+pilot approvals remain V02/V03/V07 and must not be fabricated.
+
+### V05b — Open a real companion editor window
+
+**Dependencies:** V05a.
+**Target files:** `companion/Package.swift` (new executable target),
+`companion/Sources/MelotrailTABIEditor/main.swift` (new native entrypoint),
+`companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift` (new window),
+`companion/Sources/MelotrailTABICompanion/SceneEditor.swift` (recover only needed
+session/selection helpers), `companion/Sources/MelotrailTABICompanion/ScenePreview.swift`,
+`companion/Sources/MelotrailTABIRegression/main.swift`, `companion/README.md`.
+**Work:** provide `melotrail-tabi-editor <composition-request.json>` using the
+existing SceneCompositionRequest. Open a visible resizable native window with
+real preview, rendered scene thumbnails, selection and play/pause/seek. Use
+V05a's sole AVPlayer clock; clean observers/player on close. Show honest loading
+and input errors. Establish the scene strip/preview/inspector layout with a
+read-only selected-scene inspector; editing belongs to V05c.
+**Verification:** launch the release executable with owned input, select a scene,
+play across a boundary and seek; verify real frame/time advancement and one
+soundtrack player, error handling and close cleanup. Capture the actual window.
+**Done:** another person can launch and operate the preview from the documented
+command; no inaccessible API counts as the delivered surface.
+
+### V05c — Connect crop, motion and transition controls
+
+**Dependencies:** V05b.
+**Target files:** `companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift`,
+`companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
+`companion/Sources/MelotrailTABICompanion/SceneComposition.swift`,
+`companion/Sources/MelotrailTABICompanion/ScenePreview.swift`,
+`companion/Sources/MelotrailTABIRegression/main.swift`.
+**Work:** connect selected-scene crop, supported layer motion and crossfade
+controls to the existing shared composition/frame resolver. Recover preserved
+edit helpers narrowly; reject invalid bounds visibly, retain prior valid edits,
+and refresh thumbnails/preview. Keep the soundtrack digest, duration, frame
+extent and sole player intact. Expose only effects the shared renderer supports.
+**Verification:** drive real window controls on owned contrasting geometry,
+assert rendered pixels/crop/motion at known frames and transition boundaries
+match the shared resolver, including first/last frames and invalid inputs.
+Checking only edited model fields is insufficient. Verify repeated edits do not
+add players or alter source/asset bytes; capture before/after preview images.
+**Done:** each visible control produces its intended rendered change and later
+preview/export consumers use the same edited composition plan.
+
+### V05d — Persist editor sessions and expose asset/job state
+
+**Dependencies:** V05c.
+**Target files:** `companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
+`companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift`,
+`companion/Sources/MelotrailTABICompanion/SceneEditorDocument.swift` (new current
+session persistence if needed), `companion/Sources/MelotrailTABIEditor/main.swift`,
+`companion/Sources/MelotrailTABIRegression/main.swift`, `companion/README.md`.
+**Work:** save/reopen the current editor request and edits with pinned inputs in
+companion-owned session storage, without overwriting soundtrack, MIDI projects,
+assets or accepted output. Define one current schema, no migration. Detect stale
+assets/soundtrack on reopen before playback. Surface real asset approval/identity
+and persisted animation job cost/state/failure from existing owners; unknown
+progress stays unknown. Provide preview cancel/restart and failure recovery in
+the window; distinguish stopping preview from cancelling a provider job. No new
+paid submission, provider cancel request or fabricated production approval.
+**Verification:** use the visible save/open/cancel actions; reopen identical edits
+and render matching frames, reject changed inputs and malformed sessions, recover
+a failed open, and verify cancellation stops callbacks/audio without losing the
+saved session. Owned ledger fixtures cover cost/failure/unknown progress labels.
+**Done:** the editor session survives reopen and displays truthful actionable
+state while preserving all musical and accepted artifacts.
+
+### V05 — Validate the complete editor and compact keyboard flow
+
+**Dependencies:** V05d. Reuse V05a–V05d; do not implement them again.
+**Target files:** `companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift`,
+`companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
+`companion/Sources/MelotrailTABIRegression/main.swift`,
+`companion/scripts/test.sh`, `docs/VALIDATION.md`, `docs/TABI_VIDEO.md`.
+**Work:** finish keyboard focus/shortcuts, accessibility labels and compact layout
+for the existing window, keeping text-field editing safe. Compare actual captures
+against reference 08 at the three sizes prescribed by the UI guideline/validation
+fixtures. Keep preview, scene strip and inspector reachable without clipped
+controls; preserve output geometry when resizing the window.
+**Verification:** automate real keyboard/selection/play/seek/edit/save/reopen paths,
+inspect actual window captures, and prepare a multi-scene owned-media preview
+that exercises crop, parallax, loops, transitions and exact final audio tail.
+Prove scene-boundary/frame/audio alignment and source digests; retain measurements
+and capture paths in `docs/VALIDATION.md`. An agent may validate technical UI
+behavior, but production character consistency and artistic approval remain human.
+**Done:** the complete reachable editor passes native/JVM checks and independent
+review with actual rendered/layout evidence. V06 then consumes the shared edited
+plan for encoding. No production pilot or paid generation is required to complete
+this engineering parent.
 
 ### V06a — Implement bounded encoder process and output staging
 
