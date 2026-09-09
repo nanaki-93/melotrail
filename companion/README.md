@@ -36,3 +36,13 @@ missing media, changed bytes, declared dimensions and approval selection. It
 does not import production assets or record a human TABI identity approval.
 
 Manifest snapshots publish to new paths atomically; existing snapshots are never overwritten.
+
+## Encoder process boundary
+
+V06a adds a companion-only process runner for trusted encoder adapters: argv
+arrays, bounded job-local input snapshots, coalesced progress, timeout/cancel,
+disk limits and atomic publication to a new collision-safe filename. Pre-cancelled
+jobs never launch; a dedicated process group contains ordinary child processes.
+Surviving children prevent publication and are stopped before job cleanup. Native
+regressions use a child fixture executable and owned MOV bytes. Actual episode
+encoding and stream/preview parity validation remain V06; no provider is called.

@@ -59,6 +59,14 @@ V02a native checks cover manifest reload, exact approved versions, missing/chang
 media, dimension mismatches, duplicate/missing pins, traversal/symlink escapes and
 no-overwrite manifest publication. Production rights/identity approval remains V02.
 
+V06a native regressions use real owned child processes: Unicode/spaced paths,
+collision and source preservation, crash/disk errors, output limits, empty output,
+timeout/cancel (including before launch), finite limits and staging cleanup.
+Input-mutating encoders cannot change originals; parent-exit/timeout/cancel
+fixtures stop real writing descendants. Noisy diagnostics/progress stay bounded,
+blocked callbacks cannot stall supervision, and credentials are redacted. This tests
+the process/publication boundary; V06 still owns episode codec/parity validation.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs

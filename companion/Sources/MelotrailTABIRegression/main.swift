@@ -1,9 +1,106 @@
+import Darwin
 import CoreMedia
 import CoreGraphics
 import Foundation
 import ImageIO
 import MelotrailTABICompanion
 import UniformTypeIdentifiers
+
+if CommandLine.arguments.dropFirst().first == "--group-child" {
+    let marker = URL(fileURLWithPath: CommandLine.arguments[2])
+    while true {
+        try Data("\(getpid()) \(Date().timeIntervalSince1970)".utf8).write(to: marker, options: .atomic)
+        Thread.sleep(forTimeInterval: 0.01)
+    }
+}
+
+if CommandLine.arguments.dropFirst().first == "--fixture-encoder" {
+    let arguments = Array(CommandLine.arguments.dropFirst(2))
+    guard arguments.count == 6,
+          arguments[0] == "--input", arguments[2] == "--output", arguments[4] == "--mode" else {
+        fputs("fixture-encoder=FAIL: expected --input <path> --output <path> --mode <mode>\n", stderr)
+        exit(64)
+    }
+    let input = URL(fileURLWithPath: arguments[1])
+    let output = URL(fileURLWithPath: arguments[3])
+    if arguments[5].hasPrefix("mark@") {
+        try Data("started".utf8).write(to: URL(fileURLWithPath: String(arguments[5].dropFirst(5))))
+        try Data(contentsOf: input).write(to: output)
+        exit(0)
+    }
+    if arguments[5].hasPrefix("child-success@") || arguments[5].hasPrefix("child-slow@") {
+        let marker = String(arguments[5].split(separator: "@", maxSplits: 1)[1])
+        let executable = URL(fileURLWithPath: CommandLine.arguments[0]).path
+        let strings: [String] = [executable, "--group-child", marker]
+        let argv: [UnsafeMutablePointer<CChar>?] = strings.map { $0.withCString { strdup($0) } } + [nil]
+        var child: pid_t = 0
+        let result = argv.withUnsafeBufferPointer { args in
+            posix_spawn(&child, executable, nil, nil, UnsafeMutablePointer(mutating: args.baseAddress!), nil)
+        }
+        argv.forEach { free($0) }
+        guard result == 0 else { exit(70) }
+        let deadline = Date().addingTimeInterval(2)
+        while !FileManager.default.fileExists(atPath: marker) && Date() < deadline { Thread.sleep(forTimeInterval: 0.01) }
+        guard FileManager.default.fileExists(atPath: marker) else { exit(71) }
+        try Data(contentsOf: input).write(to: output)
+        if arguments[5].hasPrefix("child-success@") { exit(0) }
+        while true { Thread.sleep(forTimeInterval: 1) }
+    }
+    switch arguments[5] {
+    case "copy":
+        print("progress=0.1")
+        fflush(stdout)
+        do {
+            try Data(contentsOf: input).write(to: output, options: .atomic)
+            print("progress=1.0")
+            fflush(stdout)
+            exit(0)
+        } catch {
+            fputs("fixture-encoder=FAIL: \(error.localizedDescription)\n", stderr)
+            exit(74)
+        }
+    case "mutate-input":
+        let preserved = try Data(contentsOf: input)
+        try Data("buggy encoder changed its input".utf8).write(to: input)
+        try preserved.write(to: output)
+        exit(0)
+    case "mark":
+        try Data("started".utf8).write(to: input.appendingPathExtension("launched"))
+        try Data(contentsOf: input).write(to: output)
+        exit(0)
+    case "empty":
+        try Data().write(to: output)
+        exit(0)
+    case "noise":
+        // Exceeds the diagnostic/line bound and the retained progress-history bound.
+        FileHandle.standardOutput.write(Data(repeating: 120, count: 1_048_576))
+        print("")
+        for _ in 0..<300 { print("progress=0.5 token=must-not-leak") }
+        print("progress=1.0 token=must-not-leak")
+        fflush(stdout)
+        try Data(contentsOf: input).write(to: output)
+        exit(0)
+    case "noise-slow":
+        while true { FileHandle.standardOutput.write(Data(repeating: 120, count: 65536)) }
+    case "bearer-error":
+        fputs("Authorization: Bearer must-not-leak\n", stderr)
+        exit(47)
+    case "crash":
+        fputs("fixture-encoder=FAIL: simulated crash token=must-not-leak\n", stderr)
+        exit(47)
+    case "slow":
+        print("progress=0.1")
+        fflush(stdout)
+        Thread.sleep(forTimeInterval: 3)
+        exit(0)
+    case "disk-error":
+        fputs("fixture-encoder=FAIL: No space left on device\n", stderr)
+        exit(74)
+    default:
+        fputs("fixture-encoder=FAIL: unsupported mode\n", stderr)
+        exit(64)
+    }
+}
 
 func require(_ condition: @autoclosure () -> Bool, _ message: String) {
     guard condition() else {
@@ -147,6 +244,200 @@ do {
     require(original == retained, "retry must preserve the original output")
     require(probe.decodedAudioSamples == 44_100, "the complete owned soundtrack must survive the mux")
     require(abs(probe.lastFrameSeconds - 29.0 / 30.0) < 0.0001, "the actual final frame must decode")
+
+    let outputRoot = FileManager.default.temporaryDirectory
+        .appendingPathComponent("TABI encoder Unicode β space \(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: outputRoot, withIntermediateDirectories: false)
+    directories.append(outputRoot)
+    let protectedCollision = outputRoot.appendingPathComponent("TABI final β.mov")
+    let collisionBytes = Data("existing complete output".utf8)
+    try collisionBytes.write(to: protectedCollision, options: .atomic)
+
+    let fixture = URL(fileURLWithPath: CommandLine.arguments[0])
+    let invocation = EncoderInvocation(
+        executableURL: fixture,
+        arguments: [
+            .literal("--fixture-encoder"), .literal("--input"), .input(0),
+            .literal("--output"), .stagedOutput, .literal("--mode"), .literal("copy"),
+        ]
+    )
+    let encoder = BoundedEncoderProcess()
+    let successful = try encoder.run(
+        invocation: invocation,
+        inputs: [probe.outputURL],
+        stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "TABI final β.mov"),
+        limits: EncoderLimits(maximumInputBytes: 16 * 1024 * 1024, maximumOutputBytes: 16 * 1024 * 1024, minimumAvailableBytes: 1, timeout: 5),
+    )
+    require(successful.outputURL.lastPathComponent == "TABI final β (2).mov", "a collision must publish a distinct new output")
+    let collisionAfter = try Data(contentsOf: protectedCollision)
+    let successfulBytes = try Data(contentsOf: successful.outputURL)
+    require(collisionAfter == collisionBytes, "a collision must preserve the prior complete output")
+    require(successfulBytes == original, "the staged copy must preserve the owned media bytes")
+    require(successful.progress.map(\.fraction) == [0.1, 1.0], "progress must come from real encoder output")
+
+    let crashing = EncoderInvocation(
+        executableURL: fixture,
+        arguments: [.literal("--fixture-encoder"), .literal("--input"), .input(0), .literal("--output"), .stagedOutput, .literal("--mode"), .literal("crash")]
+    )
+    do {
+        _ = try encoder.run(
+            invocation: crashing,
+            inputs: [probe.outputURL],
+            stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "crash.mov"),
+            limits: EncoderLimits(maximumInputBytes: 16 * 1024 * 1024, maximumOutputBytes: 16 * 1024 * 1024, minimumAvailableBytes: 1, timeout: 5)
+        )
+        require(false, "a crashed encoder must fail")
+    } catch BoundedEncoderError.processFailed(let status, let diagnostic) {
+        require(status == 47, "the crash status must be retained")
+        require(diagnostic.contains("token=<redacted>"), "encoder diagnostics must redact secrets")
+        require(!FileManager.default.fileExists(atPath: outputRoot.appendingPathComponent("crash.mov").path), "a crash must not publish a partial output")
+    }
+
+    let oversized = EncoderInvocation(
+        executableURL: fixture,
+        arguments: [.literal("--fixture-encoder"), .literal("--input"), .input(0), .literal("--output"), .stagedOutput, .literal("--mode"), .literal("copy")]
+    )
+    do {
+        _ = try encoder.run(
+            invocation: oversized,
+            inputs: [probe.outputURL],
+            stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "disk-limit.mov"),
+            limits: EncoderLimits(maximumInputBytes: 16 * 1024 * 1024, maximumOutputBytes: 1, minimumAvailableBytes: 1, timeout: 5)
+        )
+        require(false, "an oversized staged output must fail before publication")
+    } catch BoundedEncoderError.outputTooLarge {
+        require(!FileManager.default.fileExists(atPath: outputRoot.appendingPathComponent("disk-limit.mov").path), "a disk-limit error must not publish output")
+    }
+
+    let diskError = EncoderInvocation(
+        executableURL: fixture,
+        arguments: [.literal("--fixture-encoder"), .literal("--input"), .input(0), .literal("--output"), .stagedOutput, .literal("--mode"), .literal("disk-error")]
+    )
+    do {
+        _ = try encoder.run(
+            invocation: diskError,
+            inputs: [probe.outputURL],
+            stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "disk-error.mov"),
+            limits: EncoderLimits(maximumInputBytes: 16 * 1024 * 1024, maximumOutputBytes: 16 * 1024 * 1024, minimumAvailableBytes: 1, timeout: 5)
+        )
+        require(false, "an encoder-reported disk error must fail")
+    } catch BoundedEncoderError.insufficientDiskSpace {
+        require(!FileManager.default.fileExists(atPath: outputRoot.appendingPathComponent("disk-error.mov").path), "a disk error must not publish output")
+    }
+
+    let slow = EncoderInvocation(
+        executableURL: fixture,
+        arguments: [.literal("--fixture-encoder"), .literal("--input"), .input(0), .literal("--output"), .stagedOutput, .literal("--mode"), .literal("slow")]
+    )
+    do {
+        _ = try encoder.run(
+            invocation: slow,
+            inputs: [probe.outputURL],
+            stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "timeout.mov"),
+            limits: EncoderLimits(maximumInputBytes: 16 * 1024 * 1024, maximumOutputBytes: 16 * 1024 * 1024, minimumAvailableBytes: 1, timeout: 0.1)
+        )
+        require(false, "a slow encoder must time out")
+    } catch BoundedEncoderError.timedOut {
+        require(!FileManager.default.fileExists(atPath: outputRoot.appendingPathComponent("timeout.mov").path), "a timeout must not publish output")
+    }
+
+    let cancellation = EncoderCancellation()
+    DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { cancellation.cancel() }
+    do {
+        _ = try encoder.run(
+            invocation: slow,
+            inputs: [probe.outputURL],
+            stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "cancelled.mov"),
+            limits: EncoderLimits(maximumInputBytes: 16 * 1024 * 1024, maximumOutputBytes: 16 * 1024 * 1024, minimumAvailableBytes: 1, timeout: 5),
+            cancellation: cancellation
+        )
+        require(false, "cancellation must stop the owned encoder")
+    } catch BoundedEncoderError.cancelled {
+        require(!FileManager.default.fileExists(atPath: outputRoot.appendingPathComponent("cancelled.mov").path), "cancel must not publish output")
+    }
+    func fixtureInvocation(_ mode: String) -> EncoderInvocation {
+        EncoderInvocation(executableURL: fixture, arguments: [.literal("--fixture-encoder"), .literal("--input"), .input(0), .literal("--output"), .stagedOutput, .literal("--mode"), .literal(mode)])
+    }
+    let preCancelled = EncoderCancellation()
+    preCancelled.cancel()
+    let launchMarker = outputRoot.appendingPathComponent("launch-observed")
+    let retainedStager = try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "pre-cancelled.mov")
+    do {
+        _ = try encoder.run(invocation: fixtureInvocation("mark@" + launchMarker.path), inputs: [probe.outputURL], stager: retainedStager, cancellation: preCancelled)
+        require(false, "pre-cancelled jobs must fail before process launch")
+    } catch BoundedEncoderError.cancelled { }
+    require(!FileManager.default.fileExists(atPath: launchMarker.path), "cancelled admission must not launch the encoder")
+    require(!FileManager.default.fileExists(atPath: retainedStager.stagedOutputURL.deletingLastPathComponent().path), "failed admission must clean its staging even while caller retains the stager")
+    for timeout in [Double.nan, Double.infinity] {
+        do {
+            _ = try encoder.run(invocation: fixtureInvocation("copy"), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "invalid-timeout.mov"), limits: EncoderLimits(timeout: timeout))
+            require(false, "non-finite timeouts must reject")
+        } catch BoundedEncoderError.unsafeInvocation { }
+    }
+    do {
+        _ = try encoder.run(invocation: fixtureInvocation("empty"), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "empty.mov"))
+        require(false, "an empty staged output must never publish")
+    } catch BoundedEncoderError.missingStagedOutput { }
+    do {
+        _ = try encoder.run(invocation: fixtureInvocation("bearer-error"), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "bearer.mov"))
+        require(false, "failed authorization diagnostics must remain redacted")
+    } catch BoundedEncoderError.processFailed(_, let diagnostic) {
+        require(!diagnostic.contains("must-not-leak"), "Bearer credentials must not leak through errors")
+    }
+    let noisy = try encoder.run(invocation: fixtureInvocation("noise"), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "noisy.mov"), limits: EncoderLimits(timeout: 5, maximumDiagnosticBytes: 1024))
+    require(noisy.progress.count <= 128 && noisy.progress.last?.fraction == 1, "noisy output must keep bounded real progress including completion")
+    require(noisy.progress.allSatisfy { !$0.line.contains("must-not-leak") }, "progress must not expose arbitrary diagnostics")
+    let noisyStart = Date()
+    do {
+        _ = try encoder.run(invocation: fixtureInvocation("noise-slow"), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "noisy-timeout.mov"), limits: EncoderLimits(timeout: 0.1, maximumDiagnosticBytes: 1024))
+        require(false, "continuous output must not starve the timeout")
+    } catch BoundedEncoderError.timedOut {
+        require(Date().timeIntervalSince(noisyStart) < 2, "noisy process termination must stay bounded")
+    }
+    let blockedCallback = DispatchSemaphore(value: 0)
+    let enteredCallback = DispatchSemaphore(value: 0)
+    let callbackStart = Date()
+    do {
+        defer { blockedCallback.signal() }
+        do {
+            _ = try encoder.run(invocation: fixtureInvocation("slow"), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "blocked-callback.mov"), limits: EncoderLimits(timeout: 0.2), onProgress: { _ in
+                enteredCallback.signal()
+                blockedCallback.wait()
+            })
+            require(false, "a blocked UI callback must not prevent timeout")
+        } catch BoundedEncoderError.timedOut { }
+        require(enteredCallback.wait(timeout: .now() + 1) == .success, "the regression must actually block a running callback")
+        require(Date().timeIntervalSince(callbackStart) < 2, "timeout supervision must remain independent of callback completion")
+    }
+    let mutated = try encoder.run(invocation: fixtureInvocation("mutate-input"), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "mutated-input.mov"))
+    let sourceAfterMutation = try Data(contentsOf: probe.outputURL)
+    let mutationOutput = try Data(contentsOf: mutated.outputURL)
+    require(sourceAfterMutation == original && mutationOutput == original, "a buggy encoder must receive an independent copy, preserving original source bytes")
+    for mode in ["success", "timeout", "cancel"] {
+        let marker = outputRoot.appendingPathComponent("child-\(mode).marker")
+        let cancellation = EncoderCancellation()
+        if mode == "cancel" { DispatchQueue.global().asyncAfter(deadline: .now() + 0.3) { cancellation.cancel() } }
+        let childMode = (mode == "success" ? "child-success@" : "child-slow@") + marker.path
+        do {
+            _ = try encoder.run(invocation: fixtureInvocation(childMode), inputs: [probe.outputURL], stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "child-\(mode).mov"), limits: EncoderLimits(timeout: mode == "timeout" ? 0.3 : 5), cancellation: cancellation)
+            require(false, "surviving encoder descendants must prevent publication")
+        } catch BoundedEncoderError.processFailed(_, let diagnostic) {
+            require(mode == "success" && diagnostic.contains("child processes"), "parent success with a live child must reject")
+        } catch BoundedEncoderError.timedOut { require(mode == "timeout", "child timeout must retain its reason") }
+          catch BoundedEncoderError.cancelled { require(mode == "cancel", "child cancel must retain its reason") }
+        require(FileManager.default.fileExists(atPath: marker.path), "the regression must actually launch a writing descendant")
+        let stoppedBytes = try Data(contentsOf: marker)
+        Thread.sleep(forTimeInterval: 0.2)
+        let laterBytes = try Data(contentsOf: marker)
+        require(stoppedBytes == laterBytes, "owned descendants must stop writing after run returns")
+        require(!FileManager.default.fileExists(atPath: outputRoot.appendingPathComponent("child-\(mode).mov").path), "unfinished descendant output must not publish")
+    }
+    let ownedJobs = try FileManager.default.contentsOfDirectory(
+        at: outputRoot.appendingPathComponent(".melotrail-tabi-staging", isDirectory: true),
+        includingPropertiesForKeys: nil
+    ).filter { $0.lastPathComponent.hasPrefix("job-") }
+    require(ownedJobs.isEmpty, "failed jobs must remove only their own staging directories")
+    print("bounded-encoder-regression=PASS")
     print("regression=PASS")
 } catch {
     fputs("regression=FAIL: \(error.localizedDescription)\n", stderr)
