@@ -3,12 +3,21 @@ import Foundation
 
 public enum SceneEditorError: Error, LocalizedError, Sendable {
     case invalidSceneIndex(Int)
+    case invalidLayerIndex(Int)
+    case invalidCrop
+    case finalSceneTransition
     case closed
 
     public var errorDescription: String? {
         switch self {
         case .invalidSceneIndex(let index):
             "Scene \(index + 1) is outside the immutable soundtrack plan."
+        case .invalidLayerIndex(let index):
+            "Motion layer \(index + 1) is outside the selected scene."
+        case .invalidCrop:
+            "Crop must stay inside the normalized source bounds."
+        case .finalSceneTransition:
+            "The final scene cannot transition beyond the soundtrack."
         case .closed:
             "The scene editor is closed."
         }
@@ -27,8 +36,6 @@ public struct SceneEditorThumbnail {
     public let image: CGImage
 }
 
-/// The V05b inspector is deliberately factual and read-only. Crop, motion,
-/// and transition mutations remain V05c work.
 public struct SceneEditorInspector: Equatable, Sendable {
     public let sceneID: String
     public let label: String
@@ -40,6 +47,8 @@ public struct SceneEditorInspector: Equatable, Sendable {
     public let windowMask: AssetIdentity
     public let parallaxLayerCount: Int
     public let actionClip: AssetIdentity?
+    public let crop: SceneCrop
+    public let parallaxLayers: [PlannedParallaxLayer]
     public let crossfadeToNextFrames: Int64
 }
 
@@ -61,6 +70,10 @@ public final class SceneEditorSession {
     public let geometry: PreviewOutputGeometry
 
     private let library: AssetLibrary
+    /// The editable request-side scene facts. They are re-resolved before
+    /// replacing the stage plan so an invalid edit leaves this valid state
+    /// untouched.
+    private var inputs: [SceneCompositionInput]
     private var selectedIndex = 0
     private var stage: ScenePreviewStage?
 
@@ -77,6 +90,7 @@ public final class SceneEditorSession {
         self.request = request
         self.geometry = geometry
         self.library = library
+        self.inputs = request.scenes
         self.stage = try ScenePreviewStage(
             composition: composition,
             library: library,
@@ -133,8 +147,16 @@ public final class SceneEditorSession {
             windowMask: scene.windowMask.identity,
             parallaxLayerCount: scene.parallaxLayers.count,
             actionClip: scene.actionLoop?.clip.identity,
+            crop: scene.crop,
+            parallaxLayers: scene.parallaxLayers,
             crossfadeToNextFrames: scene.crossfadeToNextFrames
         )
+    }
+
+    /// The currently edited resolver plan. Preview and future output consumers
+    /// receive this exact plan, rather than an editor-local crop/motion model.
+    public func compositionPlan() throws -> SceneCompositionPlan {
+        try openStage().composition
     }
 
     public func currentFrame() throws -> ScenePreviewFrame {
@@ -148,6 +170,61 @@ public final class SceneEditorSession {
         }
         selectedIndex = index
         stage.seek(toFrame: stage.composition.scenes[index].timing.startFrame, completion: completion)
+    }
+
+    public func setCrop(_ crop: SceneCrop) throws {
+        guard crop.x >= 0, crop.y >= 0, crop.width > 0, crop.height > 0,
+              crop.x <= 10_000, crop.y <= 10_000,
+              crop.width <= 10_000 - crop.x, crop.height <= 10_000 - crop.y else {
+            throw SceneEditorError.invalidCrop
+        }
+        try replaceSelected { input in
+            SceneCompositionInput(
+                timingSceneID: input.timingSceneID,
+                interior: input.interior,
+                windowMask: input.windowMask,
+                parallaxLayers: input.parallaxLayers,
+                actionLoop: input.actionLoop,
+                crop: crop,
+                crossfadeToNextFrames: input.crossfadeToNextFrames
+            )
+        }
+    }
+
+    public func setMotion(layer index: Int, pixelsPerFrame: Int64) throws {
+        guard inputs[selectedIndex].parallaxLayers.indices.contains(index) else {
+            throw SceneEditorError.invalidLayerIndex(index)
+        }
+        try replaceSelected { input in
+            var layers = input.parallaxLayers
+            layers[index] = ParallaxLayerInput(asset: layers[index].asset, pixelsPerFrame: pixelsPerFrame)
+            return SceneCompositionInput(
+                timingSceneID: input.timingSceneID,
+                interior: input.interior,
+                windowMask: input.windowMask,
+                parallaxLayers: layers,
+                actionLoop: input.actionLoop,
+                crop: input.crop,
+                crossfadeToNextFrames: input.crossfadeToNextFrames
+            )
+        }
+    }
+
+    public func setCrossfade(frames: Int64) throws {
+        if selectedIndex == inputs.count - 1, frames != 0 {
+            throw SceneEditorError.finalSceneTransition
+        }
+        try replaceSelected { input in
+            SceneCompositionInput(
+                timingSceneID: input.timingSceneID,
+                interior: input.interior,
+                windowMask: input.windowMask,
+                parallaxLayers: input.parallaxLayers,
+                actionLoop: input.actionLoop,
+                crop: input.crop,
+                crossfadeToNextFrames: frames
+            )
+        }
     }
 
     public func play() throws { try openStage().play() }
@@ -184,5 +261,27 @@ public final class SceneEditorSession {
     private func openStage() throws -> ScenePreviewStage {
         guard let stage else { throw SceneEditorError.closed }
         return stage
+    }
+
+    /// Resolves first, then swaps the plan into the existing stage. An invalid
+    /// edit cannot replace the prior valid inputs, player, or observer set.
+    private func replaceSelected(_ transform: (SceneCompositionInput) -> SceneCompositionInput) throws {
+        guard let stage else { throw SceneEditorError.closed }
+        var edited = inputs
+        edited[selectedIndex] = transform(edited[selectedIndex])
+        let composition = try SceneComposer.plan(
+            timing: request.timing.resolve(),
+            library: library,
+            request: SceneCompositionRequest(
+                timing: request.timing,
+                assetLibraryPath: request.assetLibraryPath,
+                assetManifestPath: request.assetManifestPath,
+                sceneVersion: request.sceneVersion,
+                identityVersion: request.identityVersion,
+                scenes: edited
+            )
+        )
+        try stage.updateComposition(composition)
+        inputs = edited
     }
 }

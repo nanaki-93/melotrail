@@ -110,6 +110,14 @@ this launch/close path covers the recovered release-only ownership crash.
 Evidence: `~/.codex/melotrail-terra/v05b-repair-evidence`; fixtures are technical
 media, not production TABI identity approval. V05c/d and final V05 remain pending.
 
+V05c exercises real crop/motion/crossfade controls and compares rendered pixels
+at boundaries against the shared renderer. An independent bitmap oracle proves
+crop moves the complete scene, including its mask, together. Minimum-window
+capture verifies the inspector viewport and scrolls every editing field/button
+fully into view. Before/after crop and motion PNGs are retained with the owned
+fixture. Invalid edits preserve the accepted plan, source bytes and sole player.
+Evidence: `~/.codex/melotrail-terra/v05c-repair-evidence`.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs

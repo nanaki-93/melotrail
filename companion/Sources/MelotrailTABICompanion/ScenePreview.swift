@@ -58,7 +58,7 @@ public struct ScenePreviewFrame {
  * output encoding, or project write in this type.
  */
 public final class ScenePreviewStage {
-    public let composition: SceneCompositionPlan
+    public private(set) var composition: SceneCompositionPlan
     public let geometry: PreviewOutputGeometry
     public let soundtrack: FinishedSoundtrack
 
@@ -128,6 +128,20 @@ public final class ScenePreviewStage {
         soundtrackPlayer.pause()
     }
 
+    /// Applies an edited plan without replacing the stage's one soundtrack
+    /// player or its registered observers. Editor controls may change only
+    /// resolver-backed scene facts; timing and pinned assets stay immutable.
+    public func updateComposition(_ updated: SceneCompositionPlan) throws {
+        guard updated.timing == composition.timing else {
+            throw ScenePreviewError.invalidGeometry("an editor edit cannot change soundtrack timing or frame extent")
+        }
+        guard updated.assetPins == composition.assetPins else {
+            throw ScenePreviewError.invalidGeometry("an editor edit cannot change approved asset pins")
+        }
+        try SceneComposer.validatePinnedAssets(updated, library: library)
+        composition = updated
+    }
+
     public var isPlaying: Bool { soundtrackPlayer.timeControlStatus == .playing }
 
     public var currentSoundtrackTime: CMTime { soundtrackPlayer.currentTime() }
@@ -191,7 +205,7 @@ public final class ScenePreviewStage {
     }
 
     /// Draws a real preview image from the immutable V04 scene facts. The
-    /// compositor uses an aspect-fill crop for every actual source image; no
+    /// compositor crops the completed scene once, before crossfade opacity; no
     /// source is stretched, substituted, or generated.
     public func render(frame: Int64) throws -> ScenePreviewFrame {
         guard frame >= 0, frame < composition.timing.frameCount else {
@@ -254,16 +268,17 @@ public final class ScenePreviewStage {
             drawTiled(scenery, phase: parallax.phasePixels, into: source, canvas: canvas)
         }
         source.restoreGState()
-        try drawAspectFill(image(for: layer.interior.identity), into: source, canvas: canvas)
+        try drawAspectFill(image(for: layer.interior.identity), crop: .fullFrame, into: source, canvas: canvas)
         if let action = layer.action {
-            try drawAspectFill(actionImage(for: action), into: source, canvas: canvas)
+            try drawAspectFill(actionImage(for: action), crop: .fullFrame, into: source, canvas: canvas)
         }
         guard let composed = source.makeImage() else {
             throw ScenePreviewError.invalidGeometry("cannot finalize a scene layer")
         }
         destination.saveGState()
         destination.setAlpha(CGFloat(layer.opacityNumerator) / CGFloat(layer.opacityDenominator))
-        destination.draw(composed, in: canvas)
+        // Crop the complete scene so the window mask and foreground stay aligned.
+        try drawAspectFill(composed, crop: layer.crop, into: destination, canvas: canvas)
         destination.restoreGState()
     }
 
@@ -326,15 +341,30 @@ public final class ScenePreviewStage {
         }
     }
 
-    private func drawAspectFill(_ image: CGImage, into context: CGContext, canvas: CGRect) throws {
+    private func drawAspectFill(_ image: CGImage, crop: SceneCrop, into context: CGContext, canvas: CGRect) throws {
         guard image.width > 0, image.height > 0 else {
             throw ScenePreviewError.invalidGeometry("an approved source image has zero dimensions")
         }
-        let scale = max(canvas.width / CGFloat(image.width), canvas.height / CGFloat(image.height))
-        let width = CGFloat(image.width) * scale
-        let height = CGFloat(image.height) * scale
+        guard crop.x >= 0, crop.y >= 0, crop.width > 0, crop.height > 0,
+              crop.x <= 10_000, crop.y <= 10_000,
+              crop.width <= 10_000 - crop.x, crop.height <= 10_000 - crop.y else {
+            throw ScenePreviewError.invalidGeometry("the scene crop is outside normalized source bounds")
+        }
+        let source = CGRect(
+            x: CGFloat(crop.x) * CGFloat(image.width) / 10_000,
+            y: CGFloat(crop.y) * CGFloat(image.height) / 10_000,
+            width: CGFloat(crop.width) * CGFloat(image.width) / 10_000,
+            height: CGFloat(crop.height) * CGFloat(image.height) / 10_000
+        ).integral
+        guard source.width > 0, source.height > 0,
+              let cropped = image.cropping(to: source) else {
+            throw ScenePreviewError.invalidGeometry("the scene crop selects no source pixels")
+        }
+        let scale = max(canvas.width / CGFloat(cropped.width), canvas.height / CGFloat(cropped.height))
+        let width = CGFloat(cropped.width) * scale
+        let height = CGFloat(cropped.height) * scale
         let rect = CGRect(x: canvas.midX - width / 2, y: canvas.midY - height / 2, width: width, height: height)
-        context.draw(image, in: rect)
+        context.draw(cropped, in: rect)
     }
 
     private func frameIndex(for time: CMTime) -> Int64? {

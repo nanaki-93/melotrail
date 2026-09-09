@@ -9,10 +9,14 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     private let previewImage = NSImageView()
     private let sceneStrip = NSStackView()
     private let inspector = NSStackView()
+    private let inspectorScroll = NSScrollView()
     private let playPauseButton = NSButton(title: "Play", target: nil, action: nil)
     private let timeLabel = NSTextField(labelWithString: "00:00.00")
     private let seekSlider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
     private let statusLabel = NSTextField(labelWithString: "Loading scene preview…")
+    private var cropFields: [NSTextField] = []
+    private var motionFields: [NSTextField] = []
+    private var crossfadeField: NSTextField?
     private var observerToken: Any?
     private var sceneButtons: [NSButton] = []
     private var frameRate = 30
@@ -71,7 +75,12 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
                 var minimumFrame = originalFrame
                 minimumFrame.size = window.minSize
                 window.setFrame(minimumFrame, display: true)
+                try verifyInspectorReachability()
                 try captureWindow(to: outputDirectory.appendingPathComponent("editor-minimum-window.png"))
+                if let field = crossfadeField {
+                    field.scrollToVisible(field.bounds)
+                    try captureWindow(to: outputDirectory.appendingPathComponent("editor-minimum-controls.png"))
+                }
                 window.setFrame(originalFrame, display: true)
             }
             let selected = scenes[1]
@@ -164,6 +173,7 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         title.textColor = .white
         statusLabel.textColor = NSColor(calibratedWhite: 0.72, alpha: 1)
         statusLabel.lineBreakMode = .byTruncatingMiddle
+        statusLabel.setAccessibilityLabel("Editor status")
         let header = NSStackView(views: [title, NSView(), statusLabel])
         header.orientation = .horizontal
         header.alignment = .centerY
@@ -193,7 +203,6 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         ])
 
         configureInspector()
-        let inspectorScroll = NSScrollView()
         inspectorScroll.documentView = inspector
         inspectorScroll.hasVerticalScroller = true
         inspectorScroll.drawsBackground = false
@@ -379,6 +388,7 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
             ("Window mask", assetLabel(details.windowMask)),
             ("Scenery layers", "\(details.parallaxLayerCount)"),
             ("Action", details.actionClip.map { assetLabel($0) } ?? "None"),
+            ("Crop", "x \(details.crop.x), y \(details.crop.y), \(details.crop.width) × \(details.crop.height)"),
             ("Crossfade", details.crossfadeToNextFrames == 0 ? "None" : "\(details.crossfadeToNextFrames) frames"),
         ]
         for (name, value) in facts {
@@ -388,6 +398,160 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
             label.maximumNumberOfLines = 2
             inspector.addArrangedSubview(label)
         }
+        addEditingControls(details)
+        inspector.layoutSubtreeIfNeeded()
+        inspector.setFrameSize(inspector.fittingSize)
+    }
+
+    /// These are deliberately the only editable values represented by the
+    /// shared composition resolver. The window never offers a transform,
+    /// effect, or timing control that preview/output could not consume.
+    private func addEditingControls(_ details: SceneEditorInspector) {
+        let divider = NSBox()
+        divider.boxType = .separator
+        inspector.addArrangedSubview(divider)
+
+        let editingHeading = NSTextField(labelWithString: "Composition controls")
+        editingHeading.font = .systemFont(ofSize: 13, weight: .semibold)
+        editingHeading.textColor = .white
+        inspector.addArrangedSubview(editingHeading)
+
+        let cropHeading = NSTextField(labelWithString: "Crop (normalized 0–10000)")
+        cropHeading.textColor = NSColor(calibratedWhite: 0.82, alpha: 1)
+        inspector.addArrangedSubview(cropHeading)
+        let cropValues = [details.crop.x, details.crop.y, details.crop.width, details.crop.height]
+        let cropNames = ["Crop X", "Crop Y", "Crop width", "Crop height"]
+        cropFields = zip(cropNames, cropValues).map { name, value in
+            makeIntegerField(value: Int64(value), accessibilityLabel: name)
+        }
+        let cropColumns = zip(["X", "Y", "Width", "Height"], cropFields).map { name, field in
+            let label = NSTextField(labelWithString: name)
+            label.font = .systemFont(ofSize: 10)
+            label.textColor = .white
+            let column = NSStackView(views: [label, field])
+            column.orientation = .vertical
+            column.alignment = .leading
+            column.spacing = 3
+            return column
+        }
+        let cropRow = NSStackView(views: cropColumns)
+        cropRow.orientation = .horizontal
+        cropRow.spacing = 4
+        inspector.addArrangedSubview(cropRow)
+        inspector.addArrangedSubview(makeButton(title: "Apply crop", action: #selector(applyCrop), accessibilityLabel: "Apply crop"))
+
+        let motionHeading = NSTextField(labelWithString: "Layer motion (pixels/frame)")
+        motionHeading.textColor = NSColor(calibratedWhite: 0.82, alpha: 1)
+        inspector.addArrangedSubview(motionHeading)
+        motionFields = details.parallaxLayers.enumerated().map { index, layer in
+            let field = makeIntegerField(value: layer.pixelsPerFrame, accessibilityLabel: "Layer \(index + 1) motion")
+            let apply = makeButton(title: "Apply", action: #selector(applyMotion(_:)), accessibilityLabel: "Apply layer \(index + 1) motion")
+            apply.tag = index
+            let row = NSStackView(views: [NSTextField(labelWithString: "Layer \(index + 1)"), field, apply])
+            row.orientation = .horizontal
+            row.spacing = 5
+            inspector.addArrangedSubview(row)
+            return field
+        }
+
+        let transitionHeading = NSTextField(labelWithString: "Outgoing crossfade (frames)")
+        transitionHeading.textColor = NSColor(calibratedWhite: 0.82, alpha: 1)
+        inspector.addArrangedSubview(transitionHeading)
+        let fade = makeIntegerField(value: details.crossfadeToNextFrames, accessibilityLabel: "Crossfade frames")
+        crossfadeField = fade
+        let fadeRow = NSStackView(views: [fade, makeButton(title: "Apply", action: #selector(applyCrossfade), accessibilityLabel: "Apply crossfade")])
+        fadeRow.orientation = .horizontal
+        fadeRow.spacing = 5
+        inspector.addArrangedSubview(fadeRow)
+    }
+
+    private func makeIntegerField(value: Int64, accessibilityLabel: String) -> NSTextField {
+        let field = NSTextField(string: String(value))
+        field.alignment = .right
+        field.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        field.setAccessibilityLabel(accessibilityLabel)
+        field.widthAnchor.constraint(equalToConstant: 54).isActive = true
+        return field
+    }
+
+    private func makeButton(title: String, action: Selector, accessibilityLabel: String) -> NSButton {
+        let button = NSButton(title: title, target: self, action: action)
+        button.bezelStyle = .rounded
+        button.controlSize = .small
+        button.setAccessibilityLabel(accessibilityLabel)
+        return button
+    }
+
+    @objc private func applyCrop() {
+        do {
+            guard cropFields.count == 4 else { throw SceneEditorControlError.missingControl("crop") }
+            let values = try cropFields.map { try integerValue(of: $0) }
+            guard values.allSatisfy({ $0 >= Int64(Int.min) && $0 <= Int64(Int.max) }) else {
+                throw SceneEditorControlError.invalidInteger("crop")
+            }
+            try session.setCrop(SceneCrop(x: Int(values[0]), y: Int(values[1]), width: Int(values[2]), height: Int(values[3])))
+            try refreshAfterEdit("Crop updated")
+        } catch {
+            show(error)
+        }
+    }
+
+    @objc private func applyMotion(_ sender: NSButton) {
+        do {
+            guard motionFields.indices.contains(sender.tag) else { throw SceneEditorControlError.missingControl("motion") }
+            try session.setMotion(layer: sender.tag, pixelsPerFrame: try integerValue(of: motionFields[sender.tag]))
+            try refreshAfterEdit("Layer \(sender.tag + 1) motion updated")
+        } catch {
+            show(error)
+        }
+    }
+
+    @objc private func applyCrossfade() {
+        do {
+            guard let crossfadeField else { throw SceneEditorControlError.missingControl("crossfade") }
+            try session.setCrossfade(frames: try integerValue(of: crossfadeField))
+            try refreshAfterEdit("Crossfade updated")
+        } catch {
+            show(error)
+        }
+    }
+
+    private func integerValue(of field: NSTextField) throws -> Int64 {
+        guard let value = Int64(field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            throw SceneEditorControlError.invalidInteger(field.accessibilityLabel() ?? "value")
+        }
+        return value
+    }
+
+    private func refreshAfterEdit(_ message: String) throws {
+        try refreshSceneStrip()
+        try refreshInspector()
+        try refreshCurrentFrame()
+        statusLabel.textColor = NSColor(calibratedRed: 0.55, green: 0.84, blue: 0.75, alpha: 1)
+        statusLabel.stringValue = "\(message) · shared scene plan refreshed"
+    }
+
+    private func refreshSceneStrip() throws {
+        for view in sceneStrip.arrangedSubviews {
+            sceneStrip.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+        sceneButtons.removeAll()
+        try populateSceneStrip()
+        sceneStrip.layoutSubtreeIfNeeded()
+        sceneStrip.setFrameSize(sceneStrip.fittingSize)
+    }
+
+    /// Captures the actual plan-rendered preview image, allowing native
+    /// validation to retain before/after evidence without a mock renderer.
+    public func capturePreviewImage(to url: URL) throws {
+        guard let image = previewImage.image,
+              let tiff = image.tiffRepresentation,
+              let representation = NSBitmapImageRep(data: tiff),
+              let png = representation.representation(using: .png, properties: [:]) else {
+            throw SceneEditorEvidenceError.captureFailed
+        }
+        try png.write(to: url, options: .withoutOverwriting)
     }
 
     private func applySelection(_ index: Int) {
@@ -442,13 +606,34 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         }
     }
 
+    private func verifyInspectorReachability() throws {
+        guard let content = window?.contentView else { throw SceneEditorEvidenceError.windowNotVisible }
+        content.layoutSubtreeIfNeeded()
+        func controls(in view: NSView) -> [NSView] {
+            let own = (view is NSButton || (view as? NSTextField)?.isEditable == true) ? [view] : []
+            return own + view.subviews.flatMap { controls(in: $0) }
+        }
+        let items = controls(in: inspector)
+        guard !items.isEmpty else { throw SceneEditorEvidenceError.captureFailed }
+        for control in items {
+            control.scrollToVisible(control.bounds)
+            content.layoutSubtreeIfNeeded()
+            let visible = control.visibleRect
+            guard visible.width >= control.bounds.width - 1,
+                  visible.height >= control.bounds.height - 1 else {
+                throw SceneEditorEvidenceError.captureFailed
+            }
+        }
+        if let heading = inspector.arrangedSubviews.first { heading.scrollToVisible(heading.bounds) }
+    }
+
     private func captureWindow(to url: URL) throws {
         guard let content = window?.contentView else {
             throw SceneEditorEvidenceError.windowNotVisible
         }
         window?.displayIfNeeded()
         content.layoutSubtreeIfNeeded()
-        for view in [inspector, sceneButtons[0], playPauseButton] {
+        for view in [inspectorScroll, sceneButtons[0], playPauseButton] {
             let rect = view.convert(view.bounds, to: content)
             guard content.bounds.contains(rect), rect.width > 0, rect.height > 0 else {
                 throw SceneEditorEvidenceError.captureFailed
@@ -503,6 +688,20 @@ private enum SceneEditorEvidenceError: Error, LocalizedError {
             "The real soundtrack transport stopped at frame \(frame)."
         case .captureFailed:
             "The native editor window could not be captured."
+        }
+    }
+}
+
+private enum SceneEditorControlError: Error, LocalizedError {
+    case missingControl(String)
+    case invalidInteger(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missingControl(let name):
+            "The \(name) control is unavailable. Select a scene and try again."
+        case .invalidInteger(let name):
+            "\(name) must be a whole number. The previous valid scene edit remains active."
         }
     }
 }

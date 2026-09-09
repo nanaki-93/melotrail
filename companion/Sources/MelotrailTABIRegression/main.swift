@@ -217,6 +217,39 @@ func writeOwnedHalfMaskPNG(to url: URL, width: Int, height: Int) throws {
     }
 }
 
+func writeOwnedSplitPNG(
+    to url: URL,
+    width: Int,
+    height: Int,
+    left: (red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat),
+    right: (red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat)
+) throws {
+    try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    guard let context = CGContext(
+        data: nil,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else { throw AssetManifestError.unreadableManifest("cannot create owned split PNG fixture") }
+    let midpoint = width / 2
+    context.setFillColor(red: left.red, green: left.green, blue: left.blue, alpha: left.alpha)
+    context.fill(CGRect(x: 0, y: 0, width: midpoint, height: height))
+    context.setFillColor(red: right.red, green: right.green, blue: right.blue, alpha: right.alpha)
+    context.fill(CGRect(x: midpoint, y: 0, width: width - midpoint, height: height))
+    guard let image = context.makeImage(),
+          let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
+        throw AssetManifestError.unreadableManifest("cannot write owned split PNG fixture")
+    }
+    CGImageDestinationAddImage(destination, image, nil)
+    guard CGImageDestinationFinalize(destination) else {
+        throw AssetManifestError.unreadableManifest("cannot finish owned split PNG fixture")
+    }
+}
+
 func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green: UInt8, blue: UInt8, alpha: UInt8) {
     guard x >= 0, x < image.width, y >= 0, y < image.height else {
         throw AssetManifestError.unreadableManifest("preview sample is outside the owned image")
@@ -235,6 +268,37 @@ func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green: UInt8,
     context.translateBy(x: CGFloat(-x), y: CGFloat(-y))
     context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
     return (bytes[0], bytes[1], bytes[2], bytes[3])
+}
+
+func imagesMatch(_ lhs: CGImage, _ rhs: CGImage) throws -> Bool {
+    guard lhs.width == rhs.width, lhs.height == rhs.height else { return false }
+    for y in 0..<lhs.height {
+        for x in 0..<lhs.width {
+            if try rgba(lhs, x: x, y: y) != rgba(rhs, x: x, y: y) {
+                return false
+            }
+        }
+    }
+    return true
+}
+
+func imageAt(_ url: URL) throws -> CGImage {
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+          let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+        throw AssetManifestError.unreadableManifest("cannot read captured preview image")
+    }
+    return image
+}
+
+func seekEditor(_ session: SceneEditorSession, to frame: Int64) throws -> ScenePreviewFrame {
+    let completion = DispatchSemaphore(value: 0)
+    var completed = false
+    session.seek(toFrame: frame) {
+        completed = $0
+        completion.signal()
+    }
+    require(completion.wait(timeout: .now() + 2) == .success && completed, "editor seek must complete through the sole soundtrack player")
+    return try session.currentFrame()
 }
 
 func withApproval(_ record: AssetRecord, _ state: AssetApprovalState) -> AssetRecord {
@@ -526,9 +590,17 @@ do {
     // These owned pixels give V05a a measurable crop boundary: only the left
     // half of the blue scenery may show through the actual alpha mask, while
     // the translucent red interior remains visible across the complete stage.
-    try writeOwnedPNG(to: interiorURL, width: 2, height: 3, red: 1, green: 0, blue: 0, alpha: 0.5)
+    try writeOwnedSplitPNG(
+        to: interiorURL, width: 2, height: 3,
+        left: (red: 1, green: 0, blue: 0, alpha: 0.5),
+        right: (red: 0, green: 1, blue: 0, alpha: 0.5)
+    )
     try writeOwnedHalfMaskPNG(to: maskURL, width: 2, height: 3)
-    try writeOwnedPNG(to: sceneryURL, width: 2, height: 3, red: 0, green: 0, blue: 1, alpha: 1)
+    try writeOwnedSplitPNG(
+        to: sceneryURL, width: 2, height: 3,
+        left: (red: 0, green: 0, blue: 1, alpha: 1),
+        right: (red: 0, green: 0, blue: 0.25, alpha: 1)
+    )
     let actionAURL = sceneLibrary.appendingPathComponent("action-a.mov")
     let actionBURL = sceneLibrary.appendingPathComponent("action-b.mov")
     try FileManager.default.copyItem(at: probe.outputURL, to: actionAURL)
@@ -638,17 +710,18 @@ do {
             crossfadeToNextFrames: $0.crossfadeToNextFrames
         )
     }
+    let previewCompositionRequest = SceneCompositionRequest(
+        timing: request,
+        assetLibraryPath: sceneLibrary.path,
+        assetManifestPath: sceneManifestURL.path,
+        sceneVersion: "train-v1",
+        identityVersion: "tabi-v1",
+        scenes: previewInputs
+    )
     let previewComposition = try SceneComposer.plan(
         timing: plan,
         library: library,
-        request: SceneCompositionRequest(
-            timing: request,
-            assetLibraryPath: sceneLibrary.path,
-            assetManifestPath: sceneManifestURL.path,
-            sceneVersion: "train-v1",
-            identityVersion: "tabi-v1",
-            scenes: previewInputs
-        )
+        request: previewCompositionRequest
     )
     let previewStage = try ScenePreviewStage(
         composition: previewComposition,
@@ -789,6 +862,191 @@ do {
         editorWindow.window?.close()
         require(windowSession.isClosed, "closing the native editor window must remove its frame observer and release the player stage")
         print("scene-editor-window-regression=PASS")
+    }
+
+    // V05c: use the visible selected-scene crop, supported parallax motion,
+    // and crossfade controls against contrasting owned pixels. Every asserted
+    // image is produced by the real editor window and compared with a fresh
+    // shared-resolver stage, not merely with edited model fields.
+    try MainActor.assumeIsolated {
+        let application = NSApplication.shared
+        application.setActivationPolicy(.regular)
+        let windowSession = try SceneEditorSession(
+            request: previewCompositionRequest,
+            geometry: try PreviewOutputGeometry(width: 2, height: 3)
+        )
+        let editorWindow = try SceneEditorWindowController(session: windowSession)
+        editorWindow.showEditor()
+        guard let editorContent = editorWindow.window?.contentView,
+              let cropWidth = findControl(withAccessibilityLabel: "Crop width", in: editorContent) as? NSTextField,
+              let cropApply = findControl(withAccessibilityLabel: "Apply crop", in: editorContent) as? NSButton else {
+            require(false, "native editor must expose selected-scene crop controls")
+            fatalError("unreachable")
+        }
+        let captureRoot = ProcessInfo.processInfo.environment["MELOTRAIL_TABI_EDITOR_FIXTURE_DIR"]
+            .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? timingRoot
+        let previewBefore = captureRoot.appendingPathComponent("editor-preview-before.png")
+        try editorWindow.capturePreviewImage(to: previewBefore)
+        let sourceDigestBefore = try AssetDigest.sha256(of: probe.outputURL)
+        let assetURLs = [interiorURL, maskURL, sceneryURL, actionAURL, actionBURL]
+        let assetDigestsBefore = try Dictionary(uniqueKeysWithValues: assetURLs.map { ($0.path, try AssetDigest.sha256(of: $0)) })
+
+        cropWidth.stringValue = "5000"
+        cropApply.performClick(nil)
+        let previewAfterCrop = captureRoot.appendingPathComponent("editor-preview-after-crop.png")
+        try editorWindow.capturePreviewImage(to: previewAfterCrop)
+        let beforeCropMatches = try imagesMatch(try imageAt(previewBefore), try imageAt(previewAfterCrop))
+        require(!beforeCropMatches, "visible crop controls must change actual preview pixels")
+
+        // Scene zero's original two-frame crossfade spans its complete two-frame
+        // duration, so its outgoing layer is fully transparent at frame one.
+        // Disable that fade through the real control while isolating the motion
+        // pixels, then restore the requested transition below for boundary checks.
+        guard let motionCrossfade = findControl(withAccessibilityLabel: "Crossfade frames", in: editorContent) as? NSTextField,
+              let motionCrossfadeApply = findControl(withAccessibilityLabel: "Apply crossfade", in: editorContent) as? NSButton else {
+            require(false, "native editor must expose outgoing crossfade controls")
+            fatalError("unreachable")
+        }
+        motionCrossfade.stringValue = "0"
+        motionCrossfadeApply.performClick(nil)
+        guard let seekControl = findControl(withAccessibilityLabel: "Seek soundtrack", in: editorContent) as? NSSlider else {
+            require(false, "native editor must retain the shared soundtrack seek control")
+            fatalError("unreachable")
+        }
+        seekControl.integerValue = 1
+        _ = seekControl.sendAction(seekControl.action, to: seekControl.target)
+        _ = try waitForEditorFrame(windowSession, matching: { $0 == 1 })
+        let previewBeforeMotion = captureRoot.appendingPathComponent("editor-preview-before-motion.png")
+        try editorWindow.capturePreviewImage(to: previewBeforeMotion)
+
+        guard let motion = findControl(withAccessibilityLabel: "Layer 1 motion", in: editorContent) as? NSTextField,
+              let motionApply = findControl(withAccessibilityLabel: "Apply layer 1 motion", in: editorContent) as? NSButton else {
+            require(false, "native editor must expose resolver-supported layer motion controls")
+            fatalError("unreachable")
+        }
+        motion.stringValue = "1"
+        motionApply.performClick(nil)
+        let previewAfterMotion = captureRoot.appendingPathComponent("editor-preview-after-motion.png")
+        try editorWindow.capturePreviewImage(to: previewAfterMotion)
+        let motionPixelsMatch = try imagesMatch(try imageAt(previewBeforeMotion), try imageAt(previewAfterMotion))
+        require(!motionPixelsMatch, "visible layer motion controls must change actual preview pixels at a known frame")
+
+        guard let crossfade = findControl(withAccessibilityLabel: "Crossfade frames", in: editorContent) as? NSTextField,
+              let crossfadeApply = findControl(withAccessibilityLabel: "Apply crossfade", in: editorContent) as? NSButton else {
+            require(false, "native editor must expose outgoing crossfade controls")
+            fatalError("unreachable")
+        }
+        crossfade.stringValue = "1"
+        crossfadeApply.performClick(nil)
+
+        var editedInputs = previewInputs
+        editedInputs[0] = SceneCompositionInput(
+            timingSceneID: previewInputs[0].timingSceneID,
+            interior: previewInputs[0].interior,
+            windowMask: previewInputs[0].windowMask,
+            parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 1)],
+            crop: SceneCrop(x: 0, y: 0, width: 5_000, height: 10_000),
+            crossfadeToNextFrames: 1
+        )
+        let expectedPlan = try SceneComposer.plan(
+            timing: plan,
+            library: library,
+            request: SceneCompositionRequest(
+                timing: request,
+                assetLibraryPath: sceneLibrary.path,
+                assetManifestPath: sceneManifestURL.path,
+                sceneVersion: "train-v1",
+                identityVersion: "tabi-v1",
+                scenes: editedInputs
+            )
+        )
+        // Independent geometry oracle: compose first without crop, then crop
+        // that bitmap. The window mask, scenery and interior must move together.
+        var uncroppedInputs = editedInputs
+        let selectedInput = editedInputs[0]
+        uncroppedInputs[0] = SceneCompositionInput(
+            timingSceneID: selectedInput.timingSceneID, interior: selectedInput.interior,
+            windowMask: selectedInput.windowMask, parallaxLayers: selectedInput.parallaxLayers,
+            actionLoop: selectedInput.actionLoop, crop: .fullFrame, crossfadeToNextFrames: 0
+        )
+        let uncroppedPlan = try SceneComposer.plan(timing: plan, library: library, request: SceneCompositionRequest(
+            timing: request, assetLibraryPath: sceneLibrary.path, assetManifestPath: sceneManifestURL.path,
+            sceneVersion: "train-v1", identityVersion: "tabi-v1", scenes: uncroppedInputs))
+        let uncroppedStage = try ScenePreviewStage(composition: uncroppedPlan, library: library,
+            soundtrack: soundtrack, geometry: PreviewOutputGeometry(width: 20, height: 30))
+        let whole = try uncroppedStage.render(frame: 0).image
+        let leftHalf = whole.cropping(to: CGRect(x: 0, y: 0, width: 10, height: 30))!
+        let oracle = CGContext(data: nil, width: 20, height: 30, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        oracle.draw(leftHalf, in: CGRect(x: 0, y: -15, width: 20, height: 60))
+        let croppedStage = try ScenePreviewStage(composition: expectedPlan, library: library,
+            soundtrack: soundtrack, geometry: PreviewOutputGeometry(width: 20, height: 30))
+        let croppedPixels = try croppedStage.render(frame: 0).image
+        let cropPreservesGeometry = try imagesMatch(croppedPixels, oracle.makeImage()!)
+        require(cropPreservesGeometry, "scene crop must transform the mask, scenery and foreground together")
+        let actualEditedPlan = try windowSession.compositionPlan()
+        require(actualEditedPlan == expectedPlan, "window controls must update the same composition plan used by consumers")
+        let playerCountAfterEdits = try windowSession.snapshot().soundtrackPlayerCount
+        require(playerCountAfterEdits == 1, "repeated visible edits must retain the sole soundtrack player")
+        let expectedStage = try ScenePreviewStage(
+            composition: expectedPlan,
+            library: library,
+            soundtrack: soundtrack,
+            geometry: try PreviewOutputGeometry(width: 2, height: 3)
+        )
+        let transitionFrame = expectedPlan.scenes[0].timing.endFrame - 1
+        let transitionLayers = try expectedPlan.frame(at: transitionFrame).layers
+        require(transitionLayers.count == 2, "crossfade controls must resolve to an explicit shared transition overlap")
+        let framesToCompare = [Int64(0), Int64(1), transitionFrame, expectedPlan.scenes[1].timing.startFrame, expectedPlan.timing.frameCount - 1]
+        for frame in framesToCompare {
+            let editorFrame = try seekEditor(windowSession, to: frame)
+            let resolverFrame = try expectedStage.render(frame: frame)
+            let pixelsMatch = try imagesMatch(editorFrame.image, resolverFrame.image)
+            require(pixelsMatch, "window preview pixels must match the shared resolver at frame \(frame)")
+        }
+
+        guard let invalidCropWidth = findControl(withAccessibilityLabel: "Crop width", in: editorContent) as? NSTextField,
+              let invalidCropApply = findControl(withAccessibilityLabel: "Apply crop", in: editorContent) as? NSButton,
+              let status = findControl(withAccessibilityLabel: "Editor status", in: editorContent) as? NSTextField else {
+            require(false, "native editor must retain visible crop validation controls")
+            fatalError("unreachable")
+        }
+        invalidCropWidth.stringValue = "10001"
+        invalidCropApply.performClick(nil)
+        require(status.stringValue.contains("Crop"), "invalid crop input must be visibly reported in the native editor")
+        let planAfterInvalidCrop = try windowSession.compositionPlan()
+        require(planAfterInvalidCrop == expectedPlan, "invalid crop input must retain the prior valid composition plan")
+        editorWindow.window?.sheets.forEach { editorWindow.window?.endSheet($0) }
+
+        guard let invalidMotion = findControl(withAccessibilityLabel: "Layer 1 motion", in: editorContent) as? NSTextField,
+              let invalidMotionApply = findControl(withAccessibilityLabel: "Apply layer 1 motion", in: editorContent) as? NSButton else {
+            require(false, "native editor must retain visible motion validation controls")
+            fatalError("unreachable")
+        }
+        invalidMotion.stringValue = "too-fast"
+        invalidMotionApply.performClick(nil)
+        let planAfterInvalidMotion = try windowSession.compositionPlan()
+        require(planAfterInvalidMotion == expectedPlan, "invalid motion input must retain the prior valid composition plan")
+        editorWindow.window?.sheets.forEach { editorWindow.window?.endSheet($0) }
+
+        guard let invalidCrossfade = findControl(withAccessibilityLabel: "Crossfade frames", in: editorContent) as? NSTextField,
+              let invalidCrossfadeApply = findControl(withAccessibilityLabel: "Apply crossfade", in: editorContent) as? NSButton else {
+            require(false, "native editor must retain visible crossfade validation controls")
+            fatalError("unreachable")
+        }
+        invalidCrossfade.stringValue = "999"
+        invalidCrossfadeApply.performClick(nil)
+        let planAfterInvalidCrossfade = try windowSession.compositionPlan()
+        require(planAfterInvalidCrossfade == expectedPlan, "invalid crossfade input must retain the prior valid composition plan")
+        editorWindow.window?.sheets.forEach { editorWindow.window?.endSheet($0) }
+
+        let sourceDigestAfter = try AssetDigest.sha256(of: probe.outputURL)
+        require(sourceDigestAfter == sourceDigestBefore, "editor edits must not alter soundtrack bytes")
+        let assetDigestsAfter = try Dictionary(uniqueKeysWithValues: assetURLs.map { ($0.path, try AssetDigest.sha256(of: $0)) })
+        require(assetDigestsAfter == assetDigestsBefore, "editor edits must not alter pinned asset bytes")
+        editorWindow.window?.close()
+        require(windowSession.isClosed && windowSession.soundtrackPlayerCount == 0, "closing an edited editor must release its sole player")
+        print("scene-editor-controls-regression=PASS")
     }
 
     var repetitive = sceneInputs

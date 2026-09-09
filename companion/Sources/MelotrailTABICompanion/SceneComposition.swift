@@ -61,6 +61,30 @@ public struct ActionLoopInput: Codable, Equatable, Hashable, Sendable {
     }
 }
 
+/// A normalized complete-scene rectangle expressed in ten-thousandths. Integer
+/// coordinates give preview and a future encoder one crop rounding policy.
+public struct SceneCrop: Codable, Equatable, Hashable, Sendable {
+    public static let fullFrame = SceneCrop(x: 0, y: 0, width: 10_000, height: 10_000)
+
+    public let x: Int
+    public let y: Int
+    public let width: Int
+    public let height: Int
+
+    public init(x: Int, y: Int, width: Int, height: Int) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+
+    fileprivate var isValid: Bool {
+        x >= 0 && y >= 0 && width > 0 && height > 0 &&
+            x <= 10_000 && y <= 10_000 &&
+            width <= 10_000 - x && height <= 10_000 - y
+    }
+}
+
 /// One requested visual treatment for exactly one V04a timing scene.
 public struct SceneCompositionInput: Codable, Equatable, Hashable, Sendable {
     public let timingSceneID: String
@@ -68,6 +92,7 @@ public struct SceneCompositionInput: Codable, Equatable, Hashable, Sendable {
     public let windowMask: AssetIdentity
     public let parallaxLayers: [ParallaxLayerInput]
     public let actionLoop: ActionLoopInput?
+    public let crop: SceneCrop
     /// The outgoing fade is rendered in the ending frames of this timing
     /// scene. The following scene is overlaid there; timing frame ranges do
     /// not move, so soundtrack duration can never be shortened.
@@ -79,6 +104,7 @@ public struct SceneCompositionInput: Codable, Equatable, Hashable, Sendable {
         windowMask: AssetIdentity,
         parallaxLayers: [ParallaxLayerInput],
         actionLoop: ActionLoopInput? = nil,
+        crop: SceneCrop = .fullFrame,
         crossfadeToNextFrames: Int64 = 0
     ) {
         self.timingSceneID = timingSceneID
@@ -86,7 +112,23 @@ public struct SceneCompositionInput: Codable, Equatable, Hashable, Sendable {
         self.windowMask = windowMask
         self.parallaxLayers = parallaxLayers
         self.actionLoop = actionLoop
+        self.crop = crop
         self.crossfadeToNextFrames = crossfadeToNextFrames
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case timingSceneID, interior, windowMask, parallaxLayers, actionLoop, crop, crossfadeToNextFrames
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        timingSceneID = try values.decode(String.self, forKey: .timingSceneID)
+        interior = try values.decode(AssetIdentity.self, forKey: .interior)
+        windowMask = try values.decode(AssetIdentity.self, forKey: .windowMask)
+        parallaxLayers = try values.decode([ParallaxLayerInput].self, forKey: .parallaxLayers)
+        actionLoop = try values.decodeIfPresent(ActionLoopInput.self, forKey: .actionLoop)
+        crop = try values.decodeIfPresent(SceneCrop.self, forKey: .crop) ?? .fullFrame
+        crossfadeToNextFrames = try values.decodeIfPresent(Int64.self, forKey: .crossfadeToNextFrames) ?? 0
     }
 }
 
@@ -161,6 +203,7 @@ public struct ComposedScene: Codable, Equatable, Hashable, Sendable {
     /// These layers are always composited behind `windowMask`.
     public let parallaxLayers: [PlannedParallaxLayer]
     public let actionLoop: PlannedActionLoop?
+    public let crop: SceneCrop
     public let crossfadeToNextFrames: Int64
 
     public init(
@@ -169,6 +212,7 @@ public struct ComposedScene: Codable, Equatable, Hashable, Sendable {
         windowMask: SceneAssetPin,
         parallaxLayers: [PlannedParallaxLayer],
         actionLoop: PlannedActionLoop?,
+        crop: SceneCrop,
         crossfadeToNextFrames: Int64
     ) {
         self.timing = timing
@@ -176,6 +220,7 @@ public struct ComposedScene: Codable, Equatable, Hashable, Sendable {
         self.windowMask = windowMask
         self.parallaxLayers = parallaxLayers
         self.actionLoop = actionLoop
+        self.crop = crop
         self.crossfadeToNextFrames = crossfadeToNextFrames
     }
 }
@@ -245,6 +290,7 @@ public struct SceneCompositionPlan: Codable, Equatable, Sendable {
             windowMask: scene.windowMask,
             parallax: parallax,
             action: action,
+            crop: scene.crop,
             opacityNumerator: 1,
             opacityDenominator: 1
         )
@@ -268,6 +314,7 @@ public struct SceneCompositionFrameLayer: Codable, Equatable, Hashable, Sendable
     public let windowMask: SceneAssetPin
     public let parallax: [SceneParallaxFrame]
     public let action: SceneActionFrame?
+    public let crop: SceneCrop
     public let opacityNumerator: Int64
     public let opacityDenominator: Int64
 
@@ -278,6 +325,7 @@ public struct SceneCompositionFrameLayer: Codable, Equatable, Hashable, Sendable
             windowMask: windowMask,
             parallax: parallax,
             action: action,
+            crop: crop,
             opacityNumerator: numerator,
             opacityDenominator: denominator
         )
@@ -322,6 +370,9 @@ public enum SceneComposer {
         var planned: [ComposedScene] = []
         for (index, input) in request.scenes.enumerated() {
             let timingScene = timing.scenes[index]
+            guard input.crop.isValid else {
+                throw SceneCompositionError.invalidRequest("crop must stay within the normalized source bounds")
+            }
             guard input.crossfadeToNextFrames >= 0 else {
                 throw SceneCompositionError.invalidRequest("crossfade frames cannot be negative")
             }
@@ -367,6 +418,7 @@ public enum SceneComposer {
                 windowMask: try pin(input.windowMask),
                 parallaxLayers: layers,
                 actionLoop: action,
+                crop: input.crop,
                 crossfadeToNextFrames: input.crossfadeToNextFrames
             ))
         }
