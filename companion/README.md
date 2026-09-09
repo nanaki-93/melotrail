@@ -24,6 +24,28 @@ This proves the local media boundary, not a video editor or generative TABI pilo
 Encoder facts, provider research and remaining decisions belong to
 [the TABI video contract](../docs/TABI_VIDEO.md#verified-companion-spike--2026-09-08).
 
+## Deterministic scene composition
+
+V04 extends V04a's digest-pinned soundtrack/frame plan with a declarative scene
+plan. One composition input is required for each timing scene in its exact
+order. It pins an approved interior, window mask, scrolling scenery layers and
+optional approved action clip. Scrolling layers explicitly name the window mask
+that clips them; action loops use bounded integer source-frame schedules; and
+adjacent scenes cannot select the same action episode. A crossfade is an
+explicit visual overlap in the outgoing timing frames, so it does not move a
+later scene or shorten/stretch the soundtrack.
+
+```sh
+swift run --package-path companion melotrail-tabi-animation plan-scenes request.json
+```
+
+The request contains a V04a `timing` request plus `assetLibraryPath`,
+`assetManifestPath`, `sceneVersion`, `identityVersion`, and a scene treatment
+for every returned timing-scene ID. The command only reads pinned inputs and
+prints JSON; preview and encoding remain later workstreams. Consumers must run
+`SceneComposer.validatePinnedAssets` before using a retained plan, which rejects
+changed asset bytes.
+
 ## Asset-library manifest
 
 V02a adds a versioned JSON manifest for a user-selected asset-library directory,

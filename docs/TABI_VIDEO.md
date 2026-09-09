@@ -278,6 +278,26 @@ frame ranges are contiguous and the last range ends at the one deterministic
 ceil-rounded soundtrack boundary. V04 composition, V05 preview, and V06 output
 must consume this plan rather than independently rounding timestamps.
 
+### Deterministic scene composition (V04)
+
+The companion's `plan-scenes` caller combines that timing plan with a selected
+external asset-library manifest. Every referenced asset must be an approved,
+digest-validated, scene/identity-compatible pin. Each timing scene names one
+interior, one window mask, one or more scrolling scenery layers, an optional
+approved action clip and its bounded source-frame loop schedule. Scenery layers
+carry the window-mask pin that clips them, so a renderer cannot place scrolling
+content over the train interior. Reusing a pinned clip is allowed, but two
+adjacent scenes may not select the same action episode.
+
+Crossfades are explicit visual overlaps in the ending frames of a timing scene;
+they never alter its rational boundaries, move later scenes or modify the
+soundtrack. The plan exposes renderer-neutral frame facts (asset pins, integer
+parallax phase, action source frame and rational opacity). Preview and encoding
+must revalidate pinned asset bytes and consume those facts rather than choose
+their own scene timing. This is only deterministic composition from approved
+assets; it does not approve real visuals, loops, identity, rights or an A/V
+pilot.
+
 Keep natural breathing, sparse gestures, varied scenery and a recognizable
 journey. A static still can be a fallback, but it does not fulfill the planned
 animated-pilot gate. A few repeated loops across one music video may suit the

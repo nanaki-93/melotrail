@@ -202,6 +202,35 @@ func fixtureRecord(identity: AssetIdentity, path: String, digest: String, width:
     )
 }
 
+func sceneFixtureRecord(identity: AssetIdentity, kind: AssetKind, path: String, url: URL) throws -> AssetRecord {
+    let facts = try AssetMediaInspector.inspect(kind: kind, url: url)
+    return AssetRecord(
+        identity: identity,
+        kind: kind,
+        relativeMediaPath: path,
+        sha256: try AssetDigest.sha256(of: url),
+        provenance: AssetProvenance(
+            originalSource: "owned V04 scene fixture",
+            creator: "Melotrail regression fixture",
+            creationMethod: .owned,
+            createdAt: fixtureDate
+        ),
+        rights: AssetRights(ownershipOrLicense: "owned fixture", permittedUses: ["companion regression"]),
+        geometry: AssetGeometry(
+            width: facts.width,
+            height: facts.height,
+            frameRate: facts.frameRate,
+            durationSeconds: facts.durationSeconds,
+            alpha: facts.alpha,
+            pivot: AssetPoint(x: 0.5, y: 1.0),
+            placementAnchors: ["window": AssetPoint(x: 0.5, y: 0.5)],
+            compatibleSceneVersions: ["train-v1"],
+            compatibleIdentityVersions: ["tabi-v1"]
+        ),
+        approval: AssetApproval(state: .approved, decidedBy: "fixture-review", decidedAt: fixtureDate)
+    )
+}
+
 func makeAssetLibrary() throws -> (root: URL, manifestURL: URL, approved: AssetIdentity, proposed: AssetIdentity) {
     let root = FileManager.default.temporaryDirectory.appending(path: "melotrail-tabi-assets-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
@@ -407,6 +436,100 @@ do {
         _ = try SoundtrackScenePlanner.plan(soundtrack: pinned, midiManifest: nil, alignment: BounceAlignment(leadIn: .zero, tail: .zero))
         require(false, "planning must reject a replaced soundtrack")
     } catch SoundtrackSceneTimingError.soundtrackDigestMismatch { }
+
+    // V04: compose V04a's immutable timing ranges with only approved,
+    // digest-pinned fixture assets. The returned frames are renderer-neutral
+    // facts: scrolling scenery is explicitly clipped by the window mask and
+    // crossfades overlap visual layers without moving soundtrack timing.
+    let sceneLibrary = timingRoot.appendingPathComponent("scene-library", isDirectory: true)
+    try FileManager.default.createDirectory(at: sceneLibrary, withIntermediateDirectories: false)
+    let interiorURL = sceneLibrary.appendingPathComponent("interior.png")
+    let maskURL = sceneLibrary.appendingPathComponent("window-mask.png")
+    let sceneryURL = sceneLibrary.appendingPathComponent("scenery.png")
+    try writeOwnedPNG(to: interiorURL, width: 2, height: 3)
+    try writeOwnedPNG(to: maskURL, width: 2, height: 3)
+    try writeOwnedPNG(to: sceneryURL, width: 2, height: 3)
+    let actionAURL = sceneLibrary.appendingPathComponent("action-a.mov")
+    let actionBURL = sceneLibrary.appendingPathComponent("action-b.mov")
+    try FileManager.default.copyItem(at: probe.outputURL, to: actionAURL)
+    try FileManager.default.copyItem(at: probe.outputURL, to: actionBURL)
+    let interior = AssetIdentity(assetID: "interior", version: "v1")
+    let windowMask = AssetIdentity(assetID: "window-mask", version: "v1")
+    let scenery = AssetIdentity(assetID: "scenery", version: "v1")
+    let actionA = AssetIdentity(assetID: "tabi-breathe", version: "v1")
+    let actionB = AssetIdentity(assetID: "tabi-glance", version: "v1")
+    let sceneManifest = AssetManifest(libraryID: "owned-v04-library", assets: [
+        try sceneFixtureRecord(identity: interior, kind: .image, path: "interior.png", url: interiorURL),
+        try sceneFixtureRecord(identity: windowMask, kind: .mask, path: "window-mask.png", url: maskURL),
+        try sceneFixtureRecord(identity: scenery, kind: .layer, path: "scenery.png", url: sceneryURL),
+        try sceneFixtureRecord(identity: actionA, kind: .animationClip, path: "action-a.mov", url: actionAURL),
+        try sceneFixtureRecord(identity: actionB, kind: .animationClip, path: "action-b.mov", url: actionBURL),
+    ])
+    let sceneManifestURL = sceneLibrary.appendingPathComponent("asset-manifest.json")
+    try AssetManifestStore.save(sceneManifest, to: sceneManifestURL)
+    let actionFrames: Int64 = 2
+    let sceneInputs = [
+        SceneCompositionInput(timingSceneID: plan.scenes[0].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 2)], actionLoop: ActionLoopInput(clip: actionA, clipFrames: actionFrames, maximumRepeats: 3), crossfadeToNextFrames: 2),
+        SceneCompositionInput(timingSceneID: plan.scenes[1].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 3)], actionLoop: ActionLoopInput(clip: actionB, clipFrames: actionFrames, maximumRepeats: 3), crossfadeToNextFrames: 2),
+        SceneCompositionInput(timingSceneID: plan.scenes[2].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 5)], actionLoop: ActionLoopInput(clip: actionA, clipFrames: actionFrames, maximumRepeats: 3), crossfadeToNextFrames: 2),
+        SceneCompositionInput(timingSceneID: plan.scenes[3].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 1)], actionLoop: ActionLoopInput(clip: actionB, clipFrames: actionFrames, maximumRepeats: 3)),
+    ]
+    let compositionRequest = SceneCompositionRequest(
+        timing: request,
+        assetLibraryPath: sceneLibrary.path,
+        assetManifestPath: sceneManifestURL.path,
+        sceneVersion: "train-v1",
+        identityVersion: "tabi-v1",
+        scenes: sceneInputs
+    )
+    let composition = try compositionRequest.resolve()
+    let encodedSceneInputs = try JSONEncoder().encode(sceneInputs)
+    let decodedSceneInputs = try JSONSerialization.jsonObject(with: encodedSceneInputs)
+    let compositionObject: [String: Any] = [
+        "timing": requestObject,
+        "assetLibraryPath": sceneLibrary.path,
+        "assetManifestPath": sceneManifestURL.path,
+        "sceneVersion": "train-v1",
+        "identityVersion": "tabi-v1",
+        "scenes": decodedSceneInputs,
+    ]
+    let decodedCompositionRequest = try JSONDecoder().decode(
+        SceneCompositionRequest.self,
+        from: JSONSerialization.data(withJSONObject: compositionObject)
+    )
+    let decodedComposition = try decodedCompositionRequest.resolve()
+    require(decodedComposition == composition, "the read-only plan-scenes request must resolve the shared scene plan")
+    let repeatedComposition = try compositionRequest.resolve()
+    require(composition == repeatedComposition, "identical accepted assets and job facts must produce identical composition plans")
+    require(composition.timing == plan && composition.timing.frameCount == 30, "composition must retain the exact immutable soundtrack frame plan")
+    let crossfadeFrame = try composition.frame(at: 1)
+    require(crossfadeFrame.layers.count == 2 && crossfadeFrame.layers.map(\.opacityDenominator) == [2, 2], "crossfades must be explicit visual overlaps")
+    let stableFrame = try composition.frame(at: 4)
+    require(stableFrame.layers.count == 1 && stableFrame.layers[0].parallax.allSatisfy { $0.clippedByWindowMask == windowMask }, "all layer scrolling must remain behind the pinned window mask")
+    require(stableFrame.layers[0].parallax[0].phasePixels == 1, "parallax phase must use the pinned tile width and integer frame policy")
+    require(stableFrame.layers[0].action?.sourceFrame == 1, "loop source frames must use deterministic bounded schedules")
+    let loopSeamFrame = try composition.frame(at: 13)
+    require(loopSeamFrame.layers[0].action?.sourceFrame == 0, "a loop seam must restart at the pinned clip's first frame without changing scene timing")
+    let library = try AssetLibrary(manifestURL: sceneManifestURL, libraryRoot: sceneLibrary)
+    try SceneComposer.validatePinnedAssets(composition, library: library)
+    var repetitive = sceneInputs
+    repetitive[1] = SceneCompositionInput(timingSceneID: plan.scenes[1].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 3)], actionLoop: ActionLoopInput(clip: actionA, clipFrames: actionFrames, maximumRepeats: 3), crossfadeToNextFrames: 2)
+    do {
+        _ = try SceneComposer.plan(timing: plan, library: library, request: SceneCompositionRequest(timing: request, assetLibraryPath: sceneLibrary.path, assetManifestPath: sceneManifestURL.path, sceneVersion: "train-v1", identityVersion: "tabi-v1", scenes: repetitive))
+        require(false, "adjacent scenes must not monotonously repeat the same action episode")
+    } catch SceneCompositionError.invalidRequest { }
+    try Data("stale scenery bytes".utf8).write(to: sceneryURL)
+    do {
+        try SceneComposer.validatePinnedAssets(composition, library: library)
+        require(false, "a changed pinned visual asset must reject before a frame is drawn")
+    } catch AssetManifestError.digestMismatch { }
+    let soundtrackAfterComposition = try Data(contentsOf: probe.outputURL)
+    let manifestAfterComposition = try Data(contentsOf: manifestURL)
+    let projectAfterComposition = try Data(contentsOf: projectURL)
+    require(soundtrackAfterComposition == soundtrackBefore, "scene composition must not alter the finished soundtrack")
+    require(manifestAfterComposition == manifestBefore, "scene composition must not alter the MIDI export manifest")
+    require(projectAfterComposition == projectData, "scene composition must not write a protected MIDI project")
+    print("scene-composition-regression=PASS")
     print("soundtrack-scene-timing-regression=PASS")
 
     let outputRoot = FileManager.default.temporaryDirectory
