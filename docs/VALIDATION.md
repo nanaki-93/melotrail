@@ -73,6 +73,12 @@ fixtures stop real writing descendants. Noisy diagnostics/progress stay bounded,
 blocked callbacks cannot stall supervision, and credentials are redacted. This tests
 the process/publication boundary; V06 still owns episode codec/parity validation.
 
+V03a uses fake providers only. Real concurrent processes and threads exercise identical
+requests, independent requests, in-flight/cost rejection, preserved provider IDs
+and directory aliases against one ledger; durable job and provider-call counts
+must agree. Sequential checks cover unknown quotes, retries, cancellation,
+uncertain submission and reopen. No paid request or production approval is made.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs

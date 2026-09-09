@@ -171,6 +171,36 @@ Limit concurrency and polling, back off rate limits, bound retries and support
 cancel without claiming a provider refunded work already started. Credentials
 stay in secure configuration, not project manifests or shareable logs.
 
+### Resumable job ledger (V03a)
+
+The companion now has a provider-neutral schema-v1 job ledger stored separately
+from the MIDI project and asset manifest. Each request freezes provider/model,
+options, prompt, approved reference pins, optional seed, estimated cost and
+attempt cap; its SHA-256 fingerprint supplies an attempt-specific idempotency
+key. A duplicate fingerprint returns the existing durable job rather than
+submitting again. A stable sibling lock serializes each ledger mutation and its
+provider call across coordinator instances and local processes, including
+symlinked directory aliases. Lock contention fails after five seconds without
+submitting; a caller may retry later. The OS releases ownership after exit, and
+the lock file remains in place so atomic ledger replacement cannot split locks.
+Provider adapters must bound their own call durations and must not reenter a
+mutation on the same ledger. Only the coordinator can publish ledger updates.
+
+Admission requires a known non-negative estimate in the budget currency and
+reserves every prior attempt at its actual cost when known (otherwise its
+estimate). A request that would exceed the immutable batch ceiling is rejected
+before the provider interface is called. Each immutable batch also has a bounded
+in-flight limit (one by default). The ledger records `submitting` before
+submission. If a provider does not return a job ID, it becomes
+`submissionUncertain`; restart recovery neither polls nor retries it. Jobs with
+an ID are polled in place with persisted rate-limit backoff; cancellation is
+recorded as a request and never claims a refund. Only a recorded failed or
+cancelled attempt may start the next bounded attempt.
+
+V03a supplies no provider adapter, credentials, network client or live request.
+Its contract is exercised with an owned fake provider. V03b owns a selected API,
+secure configuration, quarantined output download and manual clip import.
+
 Useful pilot measurements: accepted seconds per generated second, identity/loop
 reject rate, actual cost per accepted clip and per finished video, asset reuse,
 encoding time/disk use and human correction time. Choose an expansion budget

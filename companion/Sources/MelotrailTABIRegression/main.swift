@@ -6,6 +6,10 @@ import ImageIO
 import MelotrailTABICompanion
 import UniformTypeIdentifiers
 
+if CommandLine.arguments.dropFirst().first == "--animation-submit" {
+    runAnimationSubmissionChild()
+}
+
 if CommandLine.arguments.dropFirst().first == "--group-child" {
     let marker = URL(fileURLWithPath: CommandLine.arguments[2])
     while true {
@@ -858,5 +862,279 @@ do {
     print("asset-kit-import-regression=PASS")
 } catch {
     fputs("asset-kit-import-regression=FAIL: \(error.localizedDescription)\n", stderr)
+    exit(1)
+}
+
+final class FakeAnimationProvider: AnimationJobProvider, @unchecked Sendable {
+    let providerID = "owned-fake"
+    var submissions: [AnimationSubmissionIdentity] = []
+    var polls: [String] = []
+    var cancellations: [String] = []
+    var shouldLoseSubmissionResponse = false
+    var nextPoll = AnimationProviderPoll(state: .queued)
+    var cancelResult = AnimationProviderPoll(state: .cancelled)
+    var onSubmit: ((AnimationSubmissionIdentity) -> Void)?
+
+    func submit(request: AnimationRequest, identity: AnimationSubmissionIdentity) throws -> String {
+        submissions.append(identity)
+        onSubmit?(identity)
+        if shouldLoseSubmissionResponse { throw AssetManifestError.unreadableManifest("owned fake disconnected") }
+        return "fake-provider-job-\(identity.attempt)"
+    }
+
+    func poll(providerJobID: String) throws -> AnimationProviderPoll {
+        polls.append(providerJobID)
+        return nextPoll
+    }
+
+    func cancel(providerJobID: String) throws -> AnimationProviderPoll {
+        cancellations.append(providerJobID)
+        return cancelResult
+    }
+}
+
+func animationRequest(prompt: String = "TABI breathes calmly", cost: Int64? = 60, maximumAttempts: Int = 2, references: [AssetIdentity] = [AssetIdentity(assetID: "owned-tabi-still", version: "v1")]) -> AnimationRequest {
+    AnimationRequest(
+        providerID: "owned-fake",
+        model: "owned-model-v1",
+        options: ["duration": "5", "ratio": "1280:720"],
+        prompt: prompt,
+        referenceAssets: references,
+        seed: "fixture-seed",
+        estimatedCost: cost.map { AnimationCost(currency: "usd", amountCents: $0) },
+        maximumAttempts: maximumAttempts
+    )
+}
+
+do {
+    let root = FileManager.default.temporaryDirectory.appending(path: "melotrail-tabi-animation-jobs-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+    directories.append(root)
+    let ledgerURL = root.appending(path: "jobs.json")
+    let coordinator = AnimationJobCoordinator(ledgerURL: ledgerURL, pollBaseDelay: 2)
+    let provider = FakeAnimationProvider()
+    let budget = AnimationBudget(budgetID: "owned-pilot", maximumCost: AnimationCost(currency: "USD", amountCents: 200))
+    let now = Date(timeIntervalSince1970: 1_700_000_100)
+
+    do {
+        _ = try coordinator.submit(animationRequest(cost: nil), to: budget, provider: provider, now: now)
+        require(false, "unknown-cost animation requests must reject before provider submission")
+    } catch AnimationJobError.unknownCost { }
+    require(provider.submissions.isEmpty, "unknown-cost rejection must issue no provider request")
+    require(!FileManager.default.fileExists(atPath: ledgerURL.path), "unknown-cost rejection must not create a job ledger")
+
+    let assetLibraryFixture = try makeAssetLibrary()
+    directories.append(assetLibraryFixture.root)
+    let approvedLedger = root.appending(path: "approved-jobs.json")
+    let approvedCoordinator = AnimationJobCoordinator(ledgerURL: approvedLedger)
+    do {
+        _ = try approvedCoordinator.submitApproved(
+            animationRequest(prompt: "proposed asset must not submit", references: [assetLibraryFixture.proposed]),
+            to: budget,
+            assetLibrary: try AssetLibrary(manifestURL: assetLibraryFixture.manifestURL, libraryRoot: assetLibraryFixture.root),
+            provider: provider,
+            now: now
+        )
+        require(false, "provider admission must reject a proposed reference pin")
+    } catch AssetManifestError.assetNotApproved { }
+    require(provider.submissions.isEmpty, "unapproved asset rejection must issue no provider request")
+    let approvedSubmission = try approvedCoordinator.submitApproved(
+        animationRequest(prompt: "approved asset contract", references: [assetLibraryFixture.approved]),
+        to: budget,
+        assetLibrary: try AssetLibrary(manifestURL: assetLibraryFixture.manifestURL, libraryRoot: assetLibraryFixture.root),
+        provider: provider,
+        now: now
+    )
+    require(approvedSubmission.latestAttempt?.state == .submitted && provider.submissions.count == 1, "asset-aware admission must bind exact approved reference pins")
+    provider.onSubmit = { identity in
+        guard let duringSubmit = try? AnimationJobStore.load(from: ledgerURL),
+              let persisted = duringSubmit.jobs.first(where: { $0.requestFingerprint == identity.requestFingerprint }) else {
+            require(false, "submission must be recorded before the provider is called")
+            return
+        }
+        require(persisted.latestAttempt?.state == .submitting, "provider submission must observe the durable pre-poll submitting state")
+    }
+
+    let submitted = try coordinator.submit(animationRequest(), to: budget, provider: provider, now: now)
+    require(submitted.latestAttempt?.state == .submitted, "admitted request must persist its returned provider job ID")
+    require(provider.submissions.count == 2, "first admitted request must submit exactly once")
+    let reloaded = try AnimationJobStore.load(from: ledgerURL)
+    require(reloaded.jobs == [submitted], "submitted job must survive ledger reopen exactly")
+    require(reloaded.jobs[0].latestAttempt?.identity.idempotencyKey.contains(reloaded.jobs[0].requestFingerprint) == true, "submission identity must bind the persisted fingerprint")
+    do {
+        _ = try coordinator.submit(animationRequest(prompt: "parallel paid take", cost: 1), to: budget, provider: provider, now: now)
+        require(false, "budget admission must bound concurrent provider requests")
+    } catch AnimationJobError.concurrencyLimit { }
+    require(provider.submissions.count == 2, "concurrency rejection must issue no provider request")
+
+    let duplicate = try coordinator.submit(animationRequest(), to: budget, provider: provider, now: now.addingTimeInterval(1))
+    require(duplicate.jobID == submitted.jobID && provider.submissions.count == 2, "identical request must reuse its durable submission instead of spending again")
+
+    provider.nextPoll = AnimationProviderPoll(state: .rateLimited, retryAfter: 9)
+    let rateLimited = try coordinator.poll(jobID: submitted.jobID, provider: provider, now: now.addingTimeInterval(2))
+    require(rateLimited.latestAttempt?.state == .submitted && rateLimited.latestAttempt?.nextPollAt == now.addingTimeInterval(11), "rate limits must remain queryable and persist provider backoff")
+    _ = try coordinator.poll(jobID: submitted.jobID, provider: provider, now: now.addingTimeInterval(3))
+    require(provider.polls.count == 1, "persisted rate-limit backoff must prevent eager repeat polling")
+    provider.nextPoll = AnimationProviderPoll(state: .failed, actualCost: AnimationCost(currency: "USD", amountCents: 55), failure: "owned fixture failure")
+    let failed = try coordinator.recover(provider: provider, now: now.addingTimeInterval(12))
+    require(failed.count == 1 && failed[0].latestAttempt?.state == .failed, "restart recovery must query the existing provider job rather than submit anew")
+    require(provider.submissions.count == 2 && provider.polls == ["fake-provider-job-1", "fake-provider-job-1"], "polling/recovery must never resubmit an existing request")
+    require(failed[0].latestAttempt?.actualCost?.amountCents == 55, "actual provider cost must replace the reservation for future admission")
+
+    provider.nextPoll = AnimationProviderPoll(state: .queued)
+    let retried = try coordinator.restart(jobID: submitted.jobID, provider: provider, now: now.addingTimeInterval(13))
+    require(retried.attempts.count == 2 && retried.latestAttempt?.identity.attempt == 2 && provider.submissions.count == 3, "failed jobs must restart with a bounded new attempt identity")
+    do {
+        _ = try coordinator.restart(jobID: submitted.jobID, provider: provider, now: now.addingTimeInterval(14))
+        require(false, "in-flight jobs must not be blindly restarted")
+    } catch AnimationJobError.attemptNotRestartable { }
+
+    let cancelled = try coordinator.cancel(jobID: submitted.jobID, provider: provider, now: now.addingTimeInterval(15))
+    require(cancelled.latestAttempt?.state == .cancelled && provider.cancellations == ["fake-provider-job-2"], "cancel must target only the persisted provider job and record its terminal state")
+    do {
+        _ = try coordinator.restart(jobID: submitted.jobID, provider: provider, now: now.addingTimeInterval(16))
+        require(false, "retry limit must prevent a third paid attempt")
+    } catch AnimationJobError.attemptLimitReached { }
+
+    do {
+        _ = try coordinator.submit(animationRequest(prompt: "another paid take", cost: 146), to: budget, provider: provider, now: now)
+        require(false, "budget admission must include actual and reserved attempt costs")
+    } catch AnimationJobError.budgetExceeded { }
+    require(provider.submissions.count == 3, "budget rejection must issue no provider request")
+
+    let uncertainRoot = FileManager.default.temporaryDirectory.appending(path: "melotrail-tabi-animation-uncertain-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: uncertainRoot, withIntermediateDirectories: false)
+    directories.append(uncertainRoot)
+    let uncertainCoordinator = AnimationJobCoordinator(ledgerURL: uncertainRoot.appending(path: "jobs.json"))
+    let uncertainProvider = FakeAnimationProvider()
+    uncertainProvider.shouldLoseSubmissionResponse = true
+    let uncertain = try uncertainCoordinator.submit(animationRequest(prompt: "connection-loss take"), to: budget, provider: uncertainProvider, now: now)
+    require(uncertain.latestAttempt?.state == .submissionUncertain, "ambiguous submission must remain durable and visibly uncertain")
+    let uncertainRecovery = try uncertainCoordinator.recover(provider: uncertainProvider, now: now)
+    require(uncertainRecovery.isEmpty, "restart must not poll or resubmit an uncertain request without a provider ID")
+    let uncertainDuplicate = try uncertainCoordinator.submit(animationRequest(prompt: "connection-loss take"), to: budget, provider: uncertainProvider, now: now)
+    require(uncertainDuplicate.jobID == uncertain.jobID && uncertainProvider.submissions.count == 1, "uncertain paid submissions must never be blindly retried")
+    do {
+        _ = try uncertainCoordinator.restart(jobID: uncertain.jobID, provider: uncertainProvider, now: now)
+        require(false, "uncertain submissions must require provider reconciliation, not restart")
+    } catch AnimationJobError.attemptNotRestartable { }
+    print("animation-job-regression=PASS")
+} catch {
+    fputs("animation-job-regression=FAIL: \(error.localizedDescription)\n", stderr)
+    exit(1)
+}
+
+
+// Records every fake provider invocation separately so lost ledger updates or
+// duplicate submissions cannot hide behind an overwritten event file.
+final class ConcurrentAnimationProvider: AnimationJobProvider, Sendable {
+    let providerID = "owned-fake"
+    let events: URL
+    init(events: URL) { self.events = events }
+    func submit(request: AnimationRequest, identity: AnimationSubmissionIdentity) throws -> String {
+        try Data(identity.idempotencyKey.utf8).write(to: events.appendingPathComponent(UUID().uuidString), options: .withoutOverwriting)
+        Thread.sleep(forTimeInterval: 0.15)
+        return identity.idempotencyKey
+    }
+    func poll(providerJobID: String) throws -> AnimationProviderPoll { AnimationProviderPoll(state: .failed) }
+    func cancel(providerJobID: String) throws -> AnimationProviderPoll { AnimationProviderPoll(state: .cancelled) }
+}
+
+final class ConcurrentAnimationResults: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [Int] = []
+    func append(_ value: Int) { lock.lock(); defer { lock.unlock() }; values.append(value) }
+    var statuses: [Int] { lock.lock(); defer { lock.unlock() }; return values }
+}
+
+func runAnimationSubmissionChild() -> Never {
+    let args = CommandLine.arguments
+    guard args.count == 9 else { exit(64) }
+    let ledger = URL(fileURLWithPath: args[2]), events = URL(fileURLWithPath: args[3])
+    let gate = URL(fileURLWithPath: args[4])
+    do {
+        try Data().write(to: gate.deletingLastPathComponent().appendingPathComponent("ready-" + args[5]))
+        let deadline = ProcessInfo.processInfo.systemUptime + 10
+        while !FileManager.default.fileExists(atPath: gate.path) {
+            guard ProcessInfo.processInfo.systemUptime < deadline else { exit(70) }
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        let budget = AnimationBudget(budgetID: "concurrent", maximumCost: AnimationCost(currency: "USD", amountCents: Int64(args[7])!), maximumInFlight: Int(args[8])!)
+        _ = try AnimationJobCoordinator(ledgerURL: ledger).submit(animationRequest(prompt: args[6]), to: budget, provider: ConcurrentAnimationProvider(events: events))
+        exit(0)
+    } catch AnimationJobError.concurrencyLimit { exit(3) }
+      catch AnimationJobError.budgetExceeded { exit(3) }
+      catch { fputs("concurrent-child=FAIL: \(error)\n", stderr); exit(1) }
+}
+
+do {
+    alarm(60)
+    defer { alarm(0) }
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("melotrail-animation-concurrent-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+    defer { try? FileManager.default.removeItem(at: root) }
+    // Identical requests, distinct requests exceeding in-flight/cost limits,
+    // and two permitted jobs test both over-admission and lost updates.
+    for (name, prompts, cap, inFlight, expectedJobs) in [
+        ("identical", ["same", "same"], 120, 2, 1),
+        ("in-flight", ["one", "two"], 120, 1, 1),
+        ("cost", ["one", "two"], 60, 2, 1),
+        ("both", ["one", "two"], 120, 2, 2)
+    ] {
+        let folder = root.appendingPathComponent(name)
+        let events = folder.appendingPathComponent("events")
+        try FileManager.default.createDirectory(at: events, withIntermediateDirectories: true)
+        let ledger = folder.appendingPathComponent("jobs.json"), gate = folder.appendingPathComponent("go")
+        let alias = folder.appendingPathComponent("alias")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: folder)
+        var children: [Process] = []
+        defer { for child in children where child.isRunning { child.terminate(); child.waitUntilExit() } }
+        for (index, prompt) in prompts.enumerated() {
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+            // A directory alias must share the same lock as the canonical path.
+            let childLedger = index == 0 ? ledger : alias.appendingPathComponent("jobs.json")
+            child.arguments = ["--animation-submit", childLedger.path, events.path, gate.path, String(index), prompt, String(cap), String(inFlight)]
+            child.standardInput = FileHandle.nullDevice
+            try child.run(); children.append(child)
+        }
+        let deadline = ProcessInfo.processInfo.systemUptime + 10
+        while !(0..<2).allSatisfy({ FileManager.default.fileExists(atPath: folder.appendingPathComponent("ready-\($0)").path) }) {
+            require(ProcessInfo.processInfo.systemUptime < deadline, "concurrent children must reach the start barrier")
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        try Data().write(to: gate)
+        for child in children { child.waitUntilExit(); require([Int32(0), 3].contains(child.terminationStatus), "concurrent submission must complete without unexpected errors") }
+        let jobs = try AnimationJobStore.load(from: ledger).jobs
+        let calls = try FileManager.default.contentsOfDirectory(atPath: events.path)
+        require(jobs.count == expectedJobs && calls.count == expectedJobs, "\(name): durable jobs and provider calls must match admission exactly")
+        require(jobs.allSatisfy { $0.latestAttempt?.state == .submitted }, "concurrent completions must preserve every provider ID")
+        if name == "identical" { require(children.allSatisfy { $0.terminationStatus == 0 }, "duplicate caller must reuse the durable job") }
+
+        let threadEvents = folder.appendingPathComponent("thread-events")
+        try FileManager.default.createDirectory(at: threadEvents, withIntermediateDirectories: false)
+        let threadLedger = folder.appendingPathComponent("thread-jobs.json")
+        let results = ConcurrentAnimationResults()
+        DispatchQueue.concurrentPerform(iterations: 2) { index in
+            do {
+                _ = try AnimationJobCoordinator(ledgerURL: threadLedger).submit(
+                    animationRequest(prompt: prompts[index]),
+                    to: AnimationBudget(budgetID: "threads", maximumCost: AnimationCost(currency: "USD", amountCents: Int64(cap)), maximumInFlight: inFlight),
+                    provider: ConcurrentAnimationProvider(events: threadEvents)
+                )
+                results.append(0)
+            } catch AnimationJobError.concurrencyLimit { results.append(3) }
+              catch AnimationJobError.budgetExceeded { results.append(3) }
+              catch { results.append(1) }
+        }
+        let threadJobs = try AnimationJobStore.load(from: threadLedger).jobs
+        let threadCalls = try FileManager.default.contentsOfDirectory(atPath: threadEvents.path)
+        require(results.statuses.count == 2 && !results.statuses.contains(1), "threaded callers must finish without unexpected errors")
+        require(threadJobs.count == expectedJobs && threadCalls.count == expectedJobs, "\(name): threads must share the ledger lock")
+        require(threadJobs.allSatisfy { $0.latestAttempt?.state == .submitted }, "threaded completions must preserve every provider ID")
+    }
+    print("animation-concurrency-regression=PASS")
+} catch {
+    fputs("animation-concurrency-regression=FAIL: \(error)\n", stderr)
     exit(1)
 }
