@@ -42,9 +42,40 @@ swift run --package-path companion melotrail-tabi-animation plan-scenes request.
 The request contains a V04a `timing` request plus `assetLibraryPath`,
 `assetManifestPath`, `sceneVersion`, `identityVersion`, and a scene treatment
 for every returned timing-scene ID. The command only reads pinned inputs and
-prints JSON; preview and encoding remain later workstreams. Consumers must run
+prints JSON; encoding remains a later workstream. Consumers must run
 `SceneComposer.validatePinnedAssets` before using a retained plan, which rejects
 changed asset bytes.
+
+## Real scene preview and transport
+
+V05a adds `ScenePreviewStage`. It composites actual approved stills, masks and
+action-clip source frames from a `SceneCompositionPlan` at an explicit output
+geometry, and owns exactly one `AVPlayer` for the digest-pinned finished
+soundtrack. Seeking chooses a plan-owned output frame with zero tolerance;
+both public current-frame snapshots and optional playback observations derive
+from the player's real time using that same frame rate and frame ranges. It does
+not render MIDI, synthesize audio, encode video, or substitute placeholder frames.
+
+The read-only caller can render one real preview frame without publishing an
+image. Its JSON request wraps the existing scene request and the exact output
+geometry:
+
+```sh
+swift run --package-path companion melotrail-tabi-animation preview-frame preview-request.json 42
+```
+
+```json
+{
+  "composition": { "...": "the V04 plan-scenes request" },
+  "outputWidth": 1920,
+  "outputHeight": 1080
+}
+```
+
+It uses the one soundtrack player to seek to the selected frame, then prints
+that frame's soundtrack time, scene IDs and actual rendered dimensions. V05
+owns the editor controls; V06 will consume the same plan and output geometry
+for encoding.
 
 ## Asset-library manifest
 

@@ -136,7 +136,15 @@ defer { for directory in directories { try? FileManager.default.removeItem(at: d
 
 let fixtureDate = Date(timeIntervalSince1970: 1_700_000_000)
 
-func writeOwnedPNG(to url: URL, width: Int, height: Int, alpha: CGFloat = 0.5) throws {
+func writeOwnedPNG(
+    to url: URL,
+    width: Int,
+    height: Int,
+    red: CGFloat = 0.2,
+    green: CGFloat = 0.3,
+    blue: CGFloat = 0.7,
+    alpha: CGFloat = 0.5
+) throws {
     try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     guard let context = CGContext(
@@ -148,7 +156,7 @@ func writeOwnedPNG(to url: URL, width: Int, height: Int, alpha: CGFloat = 0.5) t
         space: colorSpace,
         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ) else { throw AssetManifestError.unreadableManifest("cannot create owned PNG fixture") }
-    context.setFillColor(red: 0.2, green: 0.3, blue: 0.7, alpha: alpha)
+    context.setFillColor(red: red, green: green, blue: blue, alpha: alpha)
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
     guard let image = context.makeImage(),
           let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
@@ -158,6 +166,51 @@ func writeOwnedPNG(to url: URL, width: Int, height: Int, alpha: CGFloat = 0.5) t
     guard CGImageDestinationFinalize(destination) else {
         throw AssetManifestError.unreadableManifest("cannot finish owned PNG fixture")
     }
+}
+
+func writeOwnedHalfMaskPNG(to url: URL, width: Int, height: Int) throws {
+    try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    guard let context = CGContext(
+        data: nil,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else { throw AssetManifestError.unreadableManifest("cannot create owned mask fixture") }
+    context.clear(CGRect(x: 0, y: 0, width: width, height: height))
+    context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
+    context.fill(CGRect(x: 0, y: 0, width: width / 2, height: height))
+    guard let image = context.makeImage(),
+          let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
+        throw AssetManifestError.unreadableManifest("cannot write owned mask fixture")
+    }
+    CGImageDestinationAddImage(destination, image, nil)
+    guard CGImageDestinationFinalize(destination) else {
+        throw AssetManifestError.unreadableManifest("cannot finish owned mask fixture")
+    }
+}
+
+func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green: UInt8, blue: UInt8, alpha: UInt8) {
+    guard x >= 0, x < image.width, y >= 0, y < image.height else {
+        throw AssetManifestError.unreadableManifest("preview sample is outside the owned image")
+    }
+    var bytes = [UInt8](repeating: 0, count: 4)
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    guard let context = CGContext(
+        data: &bytes,
+        width: 1,
+        height: 1,
+        bitsPerComponent: 8,
+        bytesPerRow: 4,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+    ) else { throw AssetManifestError.unreadableManifest("cannot read preview pixel") }
+    context.translateBy(x: CGFloat(-x), y: CGFloat(-y))
+    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    return (bytes[0], bytes[1], bytes[2], bytes[3])
 }
 
 func withApproval(_ record: AssetRecord, _ state: AssetApprovalState) -> AssetRecord {
@@ -446,9 +499,12 @@ do {
     let interiorURL = sceneLibrary.appendingPathComponent("interior.png")
     let maskURL = sceneLibrary.appendingPathComponent("window-mask.png")
     let sceneryURL = sceneLibrary.appendingPathComponent("scenery.png")
-    try writeOwnedPNG(to: interiorURL, width: 2, height: 3)
-    try writeOwnedPNG(to: maskURL, width: 2, height: 3)
-    try writeOwnedPNG(to: sceneryURL, width: 2, height: 3)
+    // These owned pixels give V05a a measurable crop boundary: only the left
+    // half of the blue scenery may show through the actual alpha mask, while
+    // the translucent red interior remains visible across the complete stage.
+    try writeOwnedPNG(to: interiorURL, width: 2, height: 3, red: 1, green: 0, blue: 0, alpha: 0.5)
+    try writeOwnedHalfMaskPNG(to: maskURL, width: 2, height: 3)
+    try writeOwnedPNG(to: sceneryURL, width: 2, height: 3, red: 0, green: 0, blue: 1, alpha: 1)
     let actionAURL = sceneLibrary.appendingPathComponent("action-a.mov")
     let actionBURL = sceneLibrary.appendingPathComponent("action-b.mov")
     try FileManager.default.copyItem(at: probe.outputURL, to: actionAURL)
@@ -512,16 +568,132 @@ do {
     require(loopSeamFrame.layers[0].action?.sourceFrame == 0, "a loop seam must restart at the pinned clip's first frame without changing scene timing")
     let library = try AssetLibrary(manifestURL: sceneManifestURL, libraryRoot: sceneLibrary)
     try SceneComposer.validatePinnedAssets(composition, library: library)
+
+    // V05a: preview consumes the same immutable composition frames and one
+    // actual AVFoundation soundtrack player. A no-action variant makes the
+    // real window-mask crop measurable; the normal plan below also decodes an
+    // approved action source frame rather than fabricating a video placeholder.
+    let previewInputs = sceneInputs.map {
+        SceneCompositionInput(
+            timingSceneID: $0.timingSceneID,
+            interior: $0.interior,
+            windowMask: $0.windowMask,
+            parallaxLayers: $0.parallaxLayers,
+            crossfadeToNextFrames: $0.crossfadeToNextFrames
+        )
+    }
+    let previewComposition = try SceneComposer.plan(
+        timing: plan,
+        library: library,
+        request: SceneCompositionRequest(
+            timing: request,
+            assetLibraryPath: sceneLibrary.path,
+            assetManifestPath: sceneManifestURL.path,
+            sceneVersion: "train-v1",
+            identityVersion: "tabi-v1",
+            scenes: previewInputs
+        )
+    )
+    let previewStage = try ScenePreviewStage(
+        composition: previewComposition,
+        library: library,
+        soundtrack: soundtrack,
+        geometry: try PreviewOutputGeometry(width: 2, height: 3)
+    )
+    let boundaryFrame = try previewStage.render(frame: plan.scenes[1].startFrame)
+    require(boundaryFrame.sceneIDs == [plan.scenes[1].id], "preview must enter the next scene at its shared half-open frame boundary")
+    let previewFrame = try previewStage.render(frame: 4)
+    require(previewFrame.frame == 4 && previewFrame.soundtrackTime == CMTime(value: 4, timescale: 30), "preview frame time must use the shared output frame rate")
+    require(previewFrame.sceneIDs == [plan.scenes[1].id], "preview scene selection must use the exact half-open timing boundaries")
+    require(previewFrame.image.width == 2 && previewFrame.image.height == 3, "preview must draw at the declared output geometry")
+    let maskedPixel = try rgba(previewFrame.image, x: 0, y: 1)
+    let unmaskedPixel = try rgba(previewFrame.image, x: 1, y: 1)
+    require(maskedPixel.blue > unmaskedPixel.blue && maskedPixel.alpha > unmaskedPixel.alpha, "preview must crop scrolling scenery to the approved window mask")
+    var seekCompleted = false
+    let seek = DispatchSemaphore(value: 0)
+    previewStage.seek(toFrame: 4) { completed in
+        seekCompleted = completed
+        seek.signal()
+    }
+    require(seek.wait(timeout: .now() + 2) == .success && seekCompleted, "real soundtrack seek must complete for a plan frame")
+    require(previewStage.currentFrameIndex == 4, "completed seek must update the player-derived preview frame")
+    require(abs(previewStage.currentSoundtrackTime.seconds - (4.0 / 30.0)) <= 1.0 / 30.0, "soundtrack seek must remain within one shared output frame")
+    let playbackSeek = DispatchSemaphore(value: 0)
+    previewStage.seek(toFrame: 0) { completed in
+        seekCompleted = completed
+        playbackSeek.signal()
+    }
+    require(playbackSeek.wait(timeout: .now() + 2) == .success && seekCompleted, "real playback must seek ahead of a scene boundary")
+    try previewStage.play()
+    var playbackFrames: [ScenePreviewFrame] = []
+    let playbackDeadline = Date().addingTimeInterval(2)
+    while Date() < playbackDeadline && !playbackFrames.contains(where: { $0.frame >= plan.scenes[1].startFrame }) {
+        let current = try previewStage.currentFrame()
+        if playbackFrames.last?.frame != current.frame {
+            playbackFrames.append(current)
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+    }
+    require(previewStage.isPlaying, "the preview must use a real finished-soundtrack player")
+    previewStage.pause()
+    require(!previewStage.isPlaying, "pausing the one soundtrack player must stop transport")
+    require(playbackFrames.count >= 2 && playbackFrames.last!.frame > playbackFrames.first!.frame, "polling the public current frame must advance with the real soundtrack player without registering an optional observer")
+    require(playbackFrames.allSatisfy { $0.soundtrackTime == CMTime(value: $0.frame, timescale: CMTimeScale(plan.frameRate)) }, "each advancing preview frame must use the soundtrack plan's shared frame-rate mapping")
+    require(playbackFrames.contains { $0.frame < plan.scenes[1].startFrame && $0.sceneIDs == [plan.scenes[0].id] }, "real playback must expose the outgoing scene before its shared boundary")
+    require(playbackFrames.contains { $0.frame >= plan.scenes[1].startFrame && $0.sceneIDs == [plan.scenes[1].id] }, "real playback must expose the incoming scene at its shared half-open boundary")
+    do {
+        let actionStage = try ScenePreviewStage(
+            composition: composition,
+            library: library,
+            soundtrack: soundtrack,
+            geometry: try PreviewOutputGeometry(width: 2, height: 3)
+        )
+        let actionFrame = try actionStage.render(frame: 4)
+        require(actionFrame.sceneIDs == [plan.scenes[1].id] && actionFrame.image.width == 2, "preview must decode the approved action clip for the selected scene")
+    }
+    do {
+        _ = try previewStage.render(frame: plan.frameCount)
+        require(false, "preview must reject the frame immediately after the soundtrack boundary")
+    } catch ScenePreviewError.invalidFrame { }
+    print("scene-preview-regression=PASS")
+
     var repetitive = sceneInputs
     repetitive[1] = SceneCompositionInput(timingSceneID: plan.scenes[1].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 3)], actionLoop: ActionLoopInput(clip: actionA, clipFrames: actionFrames, maximumRepeats: 3), crossfadeToNextFrames: 2)
     do {
         _ = try SceneComposer.plan(timing: plan, library: library, request: SceneCompositionRequest(timing: request, assetLibraryPath: sceneLibrary.path, assetManifestPath: sceneManifestURL.path, sceneVersion: "train-v1", identityVersion: "tabi-v1", scenes: repetitive))
         require(false, "adjacent scenes must not monotonously repeat the same action episode")
     } catch SceneCompositionError.invalidRequest { }
+    let replacedSoundtrackURL = timingRoot.appendingPathComponent("preview-replaced-soundtrack.mov")
+    try soundtrackBefore.write(to: replacedSoundtrackURL)
+    let replacement = try FinishedSoundtrack.open(url: replacedSoundtrackURL, expectedSHA256: soundtrack.sha256)
+    let replacementStage = try ScenePreviewStage(
+        composition: previewComposition,
+        library: library,
+        soundtrack: replacement,
+        geometry: try PreviewOutputGeometry(width: 2, height: 3)
+    )
+    try Data("changed preview soundtrack bytes".utf8).write(to: replacedSoundtrackURL)
+    do {
+        _ = try replacementStage.render(frame: 4)
+        require(false, "a retained preview stage must reject changed finished soundtrack bytes before drawing another frame")
+    } catch SoundtrackSceneTimingError.soundtrackDigestMismatch { }
     try Data("stale scenery bytes".utf8).write(to: sceneryURL)
     do {
         try SceneComposer.validatePinnedAssets(composition, library: library)
         require(false, "a changed pinned visual asset must reject before a frame is drawn")
+    } catch AssetManifestError.digestMismatch { }
+    do {
+        _ = try previewStage.render(frame: 4)
+        require(false, "a retained preview stage must reject changed asset bytes before drawing another frame")
+    } catch AssetManifestError.digestMismatch { }
+    do {
+        _ = try ScenePreviewStage(
+            composition: previewComposition,
+            library: library,
+            soundtrack: soundtrack,
+            geometry: try PreviewOutputGeometry(width: 2, height: 3)
+        )
+        require(false, "preview must reject changed approved asset bytes before creating a transport")
     } catch AssetManifestError.digestMismatch { }
     let soundtrackAfterComposition = try Data(contentsOf: probe.outputURL)
     let manifestAfterComposition = try Data(contentsOf: manifestURL)
