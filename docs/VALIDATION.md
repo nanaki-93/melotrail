@@ -55,6 +55,10 @@ master, stereo Logic bounce, H.264/AAC delivery, interactive playback, signed
 distribution, provider submission and final A/V pilot require their assigned
 V04–V07 evidence; no test substitutes for rights, budget or human visual review.
 
+V02a native checks cover manifest reload, exact approved versions, missing/changed
+media, dimension mismatches, duplicate/missing pins, traversal/symlink escapes and
+no-overwrite manifest publication. Production rights/identity approval remains V02.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs

@@ -94,6 +94,19 @@ changed media on reopen and before encoding. Large media lives in user-selected
 library storage outside the source repository; small owned test media may be
 checked in. A thumbnail is a cache, not the canonical asset.
 
+### Companion manifest boundary (V02a)
+
+The independently built `companion/` package now defines schema v1 records for
+asset ID/version, SHA-256-pinned relative media path, type, source/creator and
+creation provenance, rights/permitted uses, geometry (including alpha, mask,
+pivot, anchors and compatible scene/identity versions), and a proposed/approved/
+rejected decision record. The library validates each media file's presence,
+digest and declared dimensions before a caller can resolve exact approved pins.
+It rejects traversal outside the selected library; it never reads or writes a
+Melotrail MIDI project. The manifest records no production asset or human
+approval: V02b/V02 still own import, real geometry/identity inspection and the
+user's coherent-kit decision.
+
 Generate one asset or small coherent batch at a time. Inspect real transparency,
 edge matte, perspective, color, scale and character identity. A collage, opaque
 checkerboard or pretty but geometrically incompatible cutout does not pass.

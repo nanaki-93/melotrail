@@ -23,3 +23,16 @@ Build caches are ignored. The tone is a test fixture, not a MIDI audio renderer.
 This proves the local media boundary, not a video editor or generative TABI pilot.
 Encoder facts, provider research and remaining decisions belong to
 [the TABI video contract](../docs/TABI_VIDEO.md#verified-companion-spike--2026-09-08).
+
+## Asset-library manifest
+
+V02a adds a versioned JSON manifest for a user-selected asset-library directory,
+not the Melotrail MIDI project or this repository. Each relative media path is
+pinned by SHA-256 with provenance, rights, geometry, approval and exact
+asset-ID/version records. A caller opens `AssetLibrary`, validates every entry,
+then requests its exact approved pins; it never substitutes a newer or proposed
+version. The regression creates and removes tiny owned PNG fixtures and covers
+missing media, changed bytes, declared dimensions and approval selection. It
+does not import production assets or record a human TABI identity approval.
+
+Manifest snapshots publish to new paths atomically; existing snapshots are never overwritten.
