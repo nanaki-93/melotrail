@@ -5,13 +5,15 @@ import MelotrailTABICompanion
 @MainActor
 private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
     private let requestPath: String?
+    private let animationLedgerPath: String?
     private var loadingWindow: NSWindow?
     private var editorWindow: SceneEditorWindowController?
     private let evidenceDirectory: URL?
 
     override init() {
         let arguments = Array(CommandLine.arguments.dropFirst())
-        requestPath = arguments.count == 1 ? arguments[0] : nil
+        requestPath = (arguments.count == 1 || arguments.count == 2) ? arguments[0] : nil
+        animationLedgerPath = arguments.count == 2 ? arguments[1] : nil
         evidenceDirectory = ProcessInfo.processInfo.environment["MELOTRAIL_TABI_EDITOR_EVIDENCE_DIR"]
             .map { URL(fileURLWithPath: $0, isDirectory: true) }
         super.init()
@@ -66,7 +68,11 @@ private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
                 request: request,
                 geometry: PreviewOutputGeometry(width: 1_280, height: 720)
             )
-            let controller = try SceneEditorWindowController(session: session)
+            let controller = try SceneEditorWindowController(
+                session: session,
+                sessionDocumentURL: try SceneEditorDocumentStore.defaultURL(for: request),
+                animationLedgerURL: animationLedgerPath.map { URL(fileURLWithPath: $0) }
+            )
             editorWindow = controller
             controller.showEditor()
             loadingWindow?.close()
@@ -93,7 +99,7 @@ private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
         loadingWindow?.setContentSize(NSSize(width: 520, height: 270))
         guard let content = loadingWindow?.contentView else { return }
         content.subviews.forEach { $0.removeFromSuperview() }
-        let details = NSTextField(wrappingLabelWithString: "The companion could not open this composition request.\n\n\(message)\n\nUsage: melotrail-tabi-editor <composition-request.json>")
+        let details = NSTextField(wrappingLabelWithString: "The companion could not open this composition request.\n\n\(message)\n\nUsage: melotrail-tabi-editor <composition-request.json> [animation-jobs.json]")
         details.font = .systemFont(ofSize: 13)
         details.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(details)
@@ -170,7 +176,7 @@ private enum EditorLaunchError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .usage:
-            "Provide exactly one composition-request.json path."
+            "Provide a composition-request.json path and, optionally, a persisted animation-jobs.json ledger."
         case .notRegularFile(let path):
             "\(path) is not a regular local composition request file."
         case .invalidEvidenceDirectory:

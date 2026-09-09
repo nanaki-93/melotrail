@@ -87,15 +87,36 @@ request, the soundtrack, asset library, MIDI project, or an output video.
 ```sh
 swift build --package-path companion -c release
 "$(swift build --package-path companion -c release --show-bin-path)/melotrail-tabi-editor" \
-  /path/to/composition-request.json
+  /path/to/composition-request.json [animation-jobs.json]
 ```
 
 The window first reports loading or request errors, then shows rendered scene
-thumbnails, the real preview, a read-only selected-scene inspector, and
-play/pause/seek transport. Scene selection seeks the same sole V05a AVPlayer
-clock used by preview playback. Closing the window pauses transport and removes
-the frame observer/player; crop, parallax, and crossfade editing are not
-available until V05c.
+thumbnails, the real preview, a selected-scene inspector, and play/pause/seek
+transport. Scene selection seeks the same sole V05a AVPlayer clock used by
+preview playback. `Stop preview` and `Restart preview` affect that local player
+only; they never submit or cancel a provider job. Closing the window pauses
+transport and removes the frame observer/player.
+
+Pass an existing persisted animation ledger as an optional second argument to
+show its real latest attempt state, actual/estimated cost, failure, and an
+explicit `progress unknown` label for in-flight work. The editor makes no
+provider call, cancellation request, retry, paid submission, or approval.
+
+```sh
+swift run --package-path companion melotrail-tabi-editor \
+  /path/to/composition-request.json /path/to/animation-jobs.json
+```
+
+`Save session` writes the current request, selected scene, crop/motion/
+crossfade edits, exact asset-manifest digest, and resolved asset pins to the
+companion-owned Application Support session store. `Open saved session`
+revalidates those inputs and restores edits on the existing soundtrack player,
+keeping its current position; a changed soundtrack,
+manifest, asset byte, malformed document, or unsupported session schema is
+rejected while the active preview remains available. A failed refresh rolls back
+the edits before any visible controls change. The session store never
+writes the soundtrack, MIDI project/export, asset library, source request, or
+accepted video output.
 
 `./companion/scripts/test.sh` also launches that release executable with a fresh
 owned composition fixture. It drives the visible scene/play/seek controls across

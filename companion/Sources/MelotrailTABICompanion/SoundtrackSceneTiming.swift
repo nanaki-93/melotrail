@@ -353,7 +353,7 @@ private func digestFile(at url: URL) throws -> String {
 }
 
 /// Read-only CLI request: paths and expected digests are chosen explicitly by the caller.
-public struct SoundtrackTimingRequest: Decodable, Sendable {
+public struct SoundtrackTimingRequest: Codable, Sendable {
     public let soundtrackPath: String
     public let soundtrackSHA256: String
     public let manifestPath: String?

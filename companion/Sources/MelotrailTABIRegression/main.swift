@@ -1049,6 +1049,199 @@ do {
         print("scene-editor-controls-regression=PASS")
     }
 
+    // V05d: a saved editor document is companion-only state. Drive the native
+    // save/open/stop/restart controls, verify that the reopened plan renders
+    // identical pixels, and keep the active preview recoverable when a saved
+    // document or a pinned external input is no longer valid.
+    try MainActor.assumeIsolated {
+        let application = NSApplication.shared
+        application.setActivationPolicy(.regular)
+        let sessionRoot = timingRoot.appendingPathComponent("editor-session", isDirectory: true)
+        try FileManager.default.createDirectory(at: sessionRoot, withIntermediateDirectories: false)
+        let sessionURL = sessionRoot.appendingPathComponent("current.scene-editor.json")
+        let ledgerURL = sessionRoot.appendingPathComponent("animation-jobs.json")
+        let cost = AnimationCost(currency: "USD", amountCents: 60)
+        let budget = AnimationBudget(budgetID: "owned-editor-ledger", maximumCost: AnimationCost(currency: "USD", amountCents: 240))
+        let failedRequest = animationRequest(prompt: "failed owned fixture", cost: 60)
+        let unknownRequest = animationRequest(prompt: "unknown progress fixture", cost: 60)
+        let failedAttempt = AnimationJobAttempt(
+            identity: AnimationSubmissionIdentity(requestFingerprint: "failed-editor-fixture", attempt: 1),
+            state: .failed, providerJobID: "failed-provider-job", estimatedCost: cost,
+            actualCost: AnimationCost(currency: "USD", amountCents: 55), failure: "owned provider failure",
+            submittedAt: fixtureDate, updatedAt: fixtureDate
+        )
+        let unknownAttempt = AnimationJobAttempt(
+            identity: AnimationSubmissionIdentity(requestFingerprint: "unknown-editor-fixture", attempt: 1),
+            state: .submissionUncertain, providerJobID: nil, estimatedCost: cost,
+            submittedAt: fixtureDate, updatedAt: fixtureDate
+        )
+        let ledger = AnimationJobLedger(
+            budgets: [budget],
+            jobs: [
+                AnimationJob(jobID: "failed-editor-job", budgetID: budget.budgetID, request: failedRequest, requestFingerprint: "failed-editor-fixture", createdAt: fixtureDate, attempts: [failedAttempt]),
+                AnimationJob(jobID: "unknown-editor-job", budgetID: budget.budgetID, request: unknownRequest, requestFingerprint: "unknown-editor-fixture", createdAt: fixtureDate, attempts: [unknownAttempt]),
+            ]
+        )
+        let ledgerEncoder = JSONEncoder()
+        ledgerEncoder.dateEncodingStrategy = .iso8601
+        try ledgerEncoder.encode(ledger).write(to: ledgerURL, options: .withoutOverwriting)
+
+        let windowSession = try SceneEditorSession(
+            request: previewCompositionRequest,
+            geometry: try PreviewOutputGeometry(width: 20, height: 30)
+        )
+        let editorWindow = try SceneEditorWindowController(
+            session: windowSession,
+            sessionDocumentURL: sessionURL,
+            animationLedgerURL: ledgerURL
+        )
+        editorWindow.showEditor()
+        guard let content = editorWindow.window?.contentView,
+              let cropWidth = findControl(withAccessibilityLabel: "Crop width", in: content) as? NSTextField,
+              let cropApply = findControl(withAccessibilityLabel: "Apply crop", in: content) as? NSButton,
+              let save = findControl(withAccessibilityLabel: "Save editor session", in: content) as? NSButton,
+              let open = findControl(withAccessibilityLabel: "Open saved editor session", in: content) as? NSButton,
+              let stop = findControl(withAccessibilityLabel: "Stop local preview", in: content) as? NSButton,
+              let restart = findControl(withAccessibilityLabel: "Restart local preview", in: content) as? NSButton,
+              let play = findControl(withAccessibilityLabel: "Play soundtrack", in: content) as? NSButton,
+              let status = findControl(withAccessibilityLabel: "Editor status", in: content) as? NSTextField else {
+            require(false, "native editor must expose V05d session and local-preview controls")
+            fatalError("unreachable")
+        }
+        content.layoutSubtreeIfNeeded()
+        for control in [save, open, stop, restart] {
+            let rect = control.convert(control.bounds, to: content)
+            require(content.bounds.contains(rect) && rect.width > 0 && rect.height > 0, "native V05d save/open/preview controls must be visibly reachable")
+        }
+        @MainActor func textValues(in view: NSView) -> [String] {
+            let own = (view as? NSTextField).map { [$0.stringValue] } ?? []
+            return own + view.subviews.flatMap { textValues(in: $0) }
+        }
+        let initialLabels = textValues(in: content).joined(separator: "\n")
+        require(initialLabels.contains("failed") && initialLabels.contains("owned provider failure"), "persisted failed animation state and actual cost must be visible in the editor")
+        require(initialLabels.contains("actual cost: USD 55 cents") && initialLabels.contains("approved by fixture-review"), "persisted actual job cost and real approved asset identity must be visible in the editor")
+        require(initialLabels.contains("submissionUncertain · estimated cost: USD 60 cents · progress unknown"), "in-flight persisted animation state must label progress as unknown")
+
+        cropWidth.stringValue = "5000"
+        cropApply.performClick(nil)
+        let savedPreview = sessionRoot.appendingPathComponent("saved-preview.png")
+        try editorWindow.capturePreviewImage(to: savedPreview)
+        save.performClick(nil)
+        let savedDocument = try SceneEditorDocumentStore.load(from: sessionURL)
+        require(savedDocument.request.scenes[0].crop.width == 5_000, "visible save must persist the accepted crop edit")
+        let unrelated = sessionRoot.appendingPathComponent("unrelated.scene-editor.json")
+        let unrelatedBytes = Data("unrelated accepted artifact".utf8)
+        try unrelatedBytes.write(to: unrelated)
+        let alias = sessionRoot.appendingPathComponent("library-alias", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: sceneLibrary)
+        let linkedSession = sessionRoot.appendingPathComponent("linked.scene-editor.json")
+        try FileManager.default.createSymbolicLink(at: linkedSession, withDestinationURL: sessionURL)
+        for destination in [unrelated, probe.outputURL, sceneLibrary.appendingPathComponent("new.scene-editor.json"),
+                            alias.appendingPathComponent("new.scene-editor.json"), linkedSession] {
+            do {
+                try SceneEditorDocumentStore.save(savedDocument, to: destination)
+                require(false, "session persistence must refuse unrelated files, protected inputs and symlink aliases")
+            } catch is SceneEditorDocumentError { }
+        }
+        let preservedUnrelated = try Data(contentsOf: unrelated)
+        require(preservedUnrelated == unrelatedBytes, "rejected save must preserve unrelated bytes")
+        try SceneEditorDocumentStore.save(savedDocument, to: sessionURL)
+        enum RefreshFailure: Error { case injected }
+        try windowSession.setCrop(SceneCrop(x: 0, y: 0, width: 10_000, height: 10_000))
+        let beforeFailedRestore = try windowSession.compositionPlan()
+        do {
+            try windowSession.restore(savedDocument) { throw RefreshFailure.injected }
+            require(false, "refresh failure must propagate")
+        } catch RefreshFailure.injected { }
+        let afterFailedRestore = try windowSession.compositionPlan()
+        require(afterFailedRestore == beforeFailedRestore && !windowSession.isClosed,
+                "failed restore refresh must roll back edits and keep the existing player open")
+        try windowSession.restore(savedDocument)
+        let savedPins = try windowSession.compositionPlan().assetPins
+        require(savedDocument.assetPins == savedPins, "saved session must retain exact resolved asset pins")
+
+        play.performClick(nil)
+        _ = try waitForEditorFrame(windowSession, matching: { $0 > 0 })
+        stop.performClick(nil)
+        let stoppedSnapshot = try windowSession.snapshot()
+        require(!stoppedSnapshot.isPlaying, "stop preview must stop the sole local soundtrack player")
+        require(windowSession.soundtrackPlayerCount == 1, "stopping preview must retain the active session and saved document")
+        guard let time = findControl(withAccessibilityLabel: "Soundtrack time", in: content) as? NSTextField else {
+            fatalError("native soundtrack clock label missing")
+        }
+        let stoppedTime = time.stringValue
+        RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+        require(time.stringValue == stoppedTime, "stopped preview must not deliver visual callbacks")
+        play.performClick(nil)
+        let deadline = Date().addingTimeInterval(3)
+        while time.stringValue == stoppedTime && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.02))
+        }
+        require(time.stringValue != stoppedTime, "Play after Stop must restore visible frame callbacks")
+        stop.performClick(nil)
+        restart.performClick(nil)
+        _ = try waitForEditorFrame(windowSession, matching: { $0 > 0 })
+        let restartedSnapshot = try windowSession.snapshot()
+        require(restartedSnapshot.isPlaying, "restart preview must resume only the local soundtrack player")
+        stop.performClick(nil)
+
+        windowSession.seek(toFrame: 0) { _ in }
+        _ = try waitForEditorFrame(windowSession, matching: { $0 == 0 })
+        guard let currentCropWidth = findControl(withAccessibilityLabel: "Crop width", in: content) as? NSTextField,
+              let currentCropApply = findControl(withAccessibilityLabel: "Apply crop", in: content) as? NSButton else {
+            fatalError("refreshed crop controls missing")
+        }
+        currentCropWidth.stringValue = "10000"
+        currentCropApply.performClick(nil)
+        let unsavedPreview = sessionRoot.appendingPathComponent("unsaved-preview.png")
+        try editorWindow.capturePreviewImage(to: unsavedPreview)
+        let unsavedMatchesSaved = try imagesMatch(try imageAt(savedPreview), try imageAt(unsavedPreview))
+        require(!unsavedMatchesSaved, "unsaved visible edits must differ before opening the saved session")
+        open.performClick(nil)
+        require(!windowSession.isClosed && windowSession.soundtrackPlayerCount == 1, "reopen must reuse the original sole player")
+        let reopenedPreview = sessionRoot.appendingPathComponent("reopened-preview.png")
+        try editorWindow.capturePreviewImage(to: reopenedPreview)
+        let reopenedMatchesSaved = try imagesMatch(try imageAt(savedPreview), try imageAt(reopenedPreview))
+        require(reopenedMatchesSaved, "opening the saved editor session must restore matching rendered frames")
+
+        let validDocumentBytes = try Data(contentsOf: sessionURL)
+        try Data("{ malformed session".utf8).write(to: sessionURL, options: .atomic)
+        open.performClick(nil)
+        require(status.stringValue.contains("current preview remains available"), "a malformed saved session must fail visibly without closing the active preview")
+        let afterMalformedPreview = sessionRoot.appendingPathComponent("after-malformed-preview.png")
+        try editorWindow.capturePreviewImage(to: afterMalformedPreview)
+        let malformedMatchesReopened = try imagesMatch(try imageAt(reopenedPreview), try imageAt(afterMalformedPreview))
+        require(malformedMatchesReopened, "failed session open must retain the active rendered preview")
+        try validDocumentBytes.write(to: sessionURL, options: .atomic)
+
+        let originalSoundtrackBytes = try Data(contentsOf: probe.outputURL)
+        try Data("changed soundtrack input".utf8).write(to: probe.outputURL, options: .atomic)
+        do {
+            _ = try SceneEditorSession(document: savedDocument, geometry: try PreviewOutputGeometry(width: 2, height: 3))
+            require(false, "reopen must reject a changed pinned finished soundtrack before playback")
+        } catch SoundtrackSceneTimingError.soundtrackDigestMismatch { }
+        try originalSoundtrackBytes.write(to: probe.outputURL, options: .atomic)
+
+        let originalAssetBytes = try Data(contentsOf: sceneryURL)
+        try Data("changed approved asset input".utf8).write(to: sceneryURL, options: .atomic)
+        do {
+            _ = try SceneEditorSession(document: savedDocument, geometry: try PreviewOutputGeometry(width: 2, height: 3))
+            require(false, "reopen must reject a changed pinned asset before playback")
+        } catch SceneCompositionError.incompleteAssetKit(let message) {
+            require(message.contains("Digest mismatch"), "changed asset must fail the ready-kit digest validation")
+        }
+        try originalAssetBytes.write(to: sceneryURL, options: .atomic)
+
+        open.performClick(nil)
+        let recoveredPreview = sessionRoot.appendingPathComponent("recovered-preview.png")
+        try editorWindow.capturePreviewImage(to: recoveredPreview)
+        let recoveredMatchesSaved = try imagesMatch(try imageAt(savedPreview), try imageAt(recoveredPreview))
+        require(recoveredMatchesSaved, "a corrected external input must recover the saved editor session")
+        editorWindow.window?.close()
+        require(windowSession.isClosed, "closing after session cancellation/restart must release the original player")
+        print("scene-editor-session-regression=PASS")
+    }
+
     var repetitive = sceneInputs
     repetitive[1] = SceneCompositionInput(timingSceneID: plan.scenes[1].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 3)], actionLoop: ActionLoopInput(clip: actionA, clipFrames: actionFrames, maximumRepeats: 3), crossfadeToNextFrames: 2)
     do {

@@ -132,7 +132,7 @@ public struct SceneCompositionInput: Codable, Equatable, Hashable, Sendable {
     }
 }
 
-public struct SceneCompositionRequest: Decodable, Sendable {
+public struct SceneCompositionRequest: Codable, Sendable {
     public let timing: SoundtrackTimingRequest
     public let assetLibraryPath: String
     public let assetManifestPath: String

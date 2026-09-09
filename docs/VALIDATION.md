@@ -108,7 +108,7 @@ invalid-input window. Capture guards reject clipped inspector/transport/scene
 controls. The Swift-owned loading window disables AppKit release-on-close;
 this launch/close path covers the recovered release-only ownership crash.
 Evidence: `~/.codex/melotrail-terra/v05b-repair-evidence`; fixtures are technical
-media, not production TABI identity approval. V05c/d and final V05 remain pending.
+media, not production TABI identity approval. Final V05 remains pending.
 
 V05c exercises real crop/motion/crossfade controls and compares rendered pixels
 at boundaries against the shared renderer. An independent bitmap oracle proves
@@ -117,6 +117,16 @@ capture verifies the inspector viewport and scrolls every editing field/button
 fully into view. Before/after crop and motion PNGs are retained with the owned
 fixture. Invalid edits preserve the accepted plan, source bytes and sole player.
 Evidence: `~/.codex/melotrail-terra/v05c-repair-evidence`.
+
+V05d drives native save/open and local Stop/Play/Restart controls. It compares
+saved/reopened pixels at the same soundtrack frame, checks transactional restore
+rollback on refresh failure, and retains the original player. Reopen rejects
+changed soundtrack/asset bytes and malformed documents, then recovers after
+repair. Save rejects unrelated files, protected inputs and symlink aliases.
+Owned ledger fixtures distinguish actual/estimated costs and explicitly label
+uncertain submission progress. Evidence:
+`~/.codex/melotrail-terra/v05d-repair-evidence`; no provider requests or production
+approvals are part of this check. Final V05 owns the complete keyboard/UI gate.
 
 ## Scheduled runner checks
 

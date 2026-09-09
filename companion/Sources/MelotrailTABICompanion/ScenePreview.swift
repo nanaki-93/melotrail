@@ -131,7 +131,7 @@ public final class ScenePreviewStage {
     /// Applies an edited plan without replacing the stage's one soundtrack
     /// player or its registered observers. Editor controls may change only
     /// resolver-backed scene facts; timing and pinned assets stay immutable.
-    public func updateComposition(_ updated: SceneCompositionPlan) throws {
+    public func updateComposition(_ updated: SceneCompositionPlan, refresh: () throws -> Void = {}) throws {
         guard updated.timing == composition.timing else {
             throw ScenePreviewError.invalidGeometry("an editor edit cannot change soundtrack timing or frame extent")
         }
@@ -139,7 +139,12 @@ public final class ScenePreviewStage {
             throw ScenePreviewError.invalidGeometry("an editor edit cannot change approved asset pins")
         }
         try SceneComposer.validatePinnedAssets(updated, library: library)
+        let previous = composition
         composition = updated
+        do { try refresh() } catch {
+            composition = previous
+            throw error
+        }
     }
 
     public var isPlaying: Bool { soundtrackPlayer.timeControlStatus == .playing }

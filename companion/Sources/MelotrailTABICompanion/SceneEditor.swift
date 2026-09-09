@@ -7,6 +7,7 @@ public enum SceneEditorError: Error, LocalizedError, Sendable {
     case invalidCrop
     case finalSceneTransition
     case closed
+    case staleSessionInputs(String)
 
     public var errorDescription: String? {
         switch self {
@@ -20,6 +21,8 @@ public enum SceneEditorError: Error, LocalizedError, Sendable {
             "The final scene cannot transition beyond the soundtrack."
         case .closed:
             "The scene editor is closed."
+        case .staleSessionInputs(let message):
+            "Saved session inputs changed: \(message)"
         }
     }
 }
@@ -99,6 +102,57 @@ public final class SceneEditorSession {
         )
     }
 
+    /// Reopens only a current-schema document after every persisted external
+    /// input still matches its saved identity. The document is companion state;
+    /// it never becomes authority for a soundtrack, MIDI export, asset library,
+    /// or accepted output.
+    public convenience init(document: SceneEditorDocument, geometry: PreviewOutputGeometry) throws {
+        try document.validatePinnedManifest()
+        try self.init(request: document.request, geometry: geometry)
+        let pins = try compositionPlan().assetPins
+        guard pins == document.assetPins else {
+            close()
+            throw SceneEditorError.staleSessionInputs("approved asset pins no longer match the saved session")
+        }
+        guard inputs.indices.contains(document.selectedSceneIndex) else {
+            close()
+            throw SceneEditorError.staleSessionInputs("the saved selected scene is outside the current scene plan")
+        }
+        selectedIndex = document.selectedSceneIndex
+    }
+
+    /// Restore edits transactionally on the existing soundtrack clock. Opening
+    /// another project's inputs requires launching that request separately.
+    public func restore(_ document: SceneEditorDocument, refresh: () throws -> Void = {}) throws {
+        try document.validatePinnedManifest()
+        let incoming = document.request
+        guard incoming.assetManifestPath == request.assetManifestPath,
+              incoming.assetLibraryPath == request.assetLibraryPath,
+              incoming.sceneVersion == request.sceneVersion,
+              incoming.identityVersion == request.identityVersion,
+              incoming.timing.soundtrackPath == request.timing.soundtrackPath,
+              incoming.timing.manifestPath == request.timing.manifestPath,
+              incoming.scenes.indices.contains(document.selectedSceneIndex) else {
+            throw SceneEditorError.staleSessionInputs("saved session belongs to different inputs")
+        }
+        let composition = try incoming.resolve()
+        guard composition.assetPins == document.assetPins else {
+            throw SceneEditorError.staleSessionInputs("approved asset pins no longer match the saved session")
+        }
+        let stage = try openStage()
+        let previousInputs = inputs
+        let previousIndex = selectedIndex
+        try stage.updateComposition(composition) {
+            inputs = incoming.scenes
+            selectedIndex = document.selectedSceneIndex
+            do { try refresh() } catch {
+                inputs = previousInputs
+                selectedIndex = previousIndex
+                throw error
+            }
+        }
+    }
+
     deinit { close() }
 
     public func snapshot() throws -> SceneEditorSnapshot {
@@ -157,6 +211,41 @@ public final class SceneEditorSession {
     /// receive this exact plan, rather than an editor-local crop/motion model.
     public func compositionPlan() throws -> SceneCompositionPlan {
         try openStage().composition
+    }
+
+    /// Creates a durable editor-only snapshot. Calling code chooses the
+    /// companion-owned destination and can safely retry persistence; no source
+    /// media or composition request is rewritten.
+    public func document() throws -> SceneEditorDocument {
+        // Do not let a long-lived preview session bless bytes that changed
+        // after it opened. Persisting remains read-only with respect to every
+        // external input, and the later reopen repeats these checks.
+        _ = try request.timing.resolve()
+        let plan = try compositionPlan()
+        try SceneComposer.validatePinnedAssets(plan, library: library)
+        return try SceneEditorDocument(
+            request: currentRequest(),
+            selectedSceneIndex: selectedIndex,
+            assetManifestSHA256: AssetDigest.sha256(of: URL(fileURLWithPath: request.assetManifestPath)),
+            assetPins: plan.assetPins
+        )
+    }
+
+    public func assetStates() throws -> [SceneEditorAssetState] {
+        let pins = try compositionPlan().assetPins
+        return try pins.map { pin in
+            guard let record = library.manifest.assets.first(where: { $0.identity == pin.identity }) else {
+                throw SceneEditorError.staleSessionInputs("asset \(pin.identity.assetID)@\(pin.identity.version) is missing from the manifest")
+            }
+            guard record.sha256 == pin.sha256 else {
+                throw SceneEditorError.staleSessionInputs("asset \(pin.identity.assetID)@\(pin.identity.version) changed")
+            }
+            return SceneEditorAssetState(
+                identity: pin.identity,
+                approval: record.approval,
+                unresolvedIdentityDifferences: record.identityDifferences.filter { !$0.resolved }
+            )
+        }
     }
 
     public func currentFrame() throws -> ScenePreviewFrame {
@@ -283,5 +372,28 @@ public final class SceneEditorSession {
         )
         try stage.updateComposition(composition)
         inputs = edited
+    }
+
+    private func currentRequest() -> SceneCompositionRequest {
+        SceneCompositionRequest(
+            timing: request.timing,
+            assetLibraryPath: request.assetLibraryPath,
+            assetManifestPath: request.assetManifestPath,
+            sceneVersion: request.sceneVersion,
+            identityVersion: request.identityVersion,
+            scenes: inputs
+        )
+    }
+}
+
+public struct SceneEditorAssetState: Equatable, Sendable {
+    public let identity: AssetIdentity
+    public let approval: AssetApproval
+    public let unresolvedIdentityDifferences: [AssetIdentityDifference]
+
+    public init(identity: AssetIdentity, approval: AssetApproval, unresolvedIdentityDifferences: [AssetIdentityDifference]) {
+        self.identity = identity
+        self.approval = approval
+        self.unresolvedIdentityDifferences = unresolvedIdentityDifferences
     }
 }

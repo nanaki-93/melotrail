@@ -5,12 +5,19 @@ import Foundation
 /// pixels, rather than a mock video player, and leaves composition editing to
 /// V05c.
 public final class SceneEditorWindowController: NSWindowController, NSWindowDelegate {
-    private let session: SceneEditorSession
+    private var session: SceneEditorSession
+    private let sessionDocumentURL: URL?
+    private let animationLedgerURL: URL?
     private let previewImage = NSImageView()
     private let sceneStrip = NSStackView()
     private let inspector = NSStackView()
     private let inspectorScroll = NSScrollView()
     private let playPauseButton = NSButton(title: "Play", target: nil, action: nil)
+    private let stopPreviewButton = NSButton(title: "Stop preview", target: nil, action: nil)
+    private let restartPreviewButton = NSButton(title: "Restart preview", target: nil, action: nil)
+    private let saveSessionButton = NSButton(title: "Save session", target: nil, action: nil)
+    private let openSessionButton = NSButton(title: "Open saved session", target: nil, action: nil)
+    private let reloadStateButton = NSButton(title: "Reload asset/job state", target: nil, action: nil)
     private let timeLabel = NSTextField(labelWithString: "00:00.00")
     private let seekSlider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
     private let statusLabel = NSTextField(labelWithString: "Loading scene preview…")
@@ -21,8 +28,14 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     private var sceneButtons: [NSButton] = []
     private var frameRate = 30
 
-    public init(session: SceneEditorSession) throws {
+    public init(
+        session: SceneEditorSession,
+        sessionDocumentURL: URL? = nil,
+        animationLedgerURL: URL? = nil
+    ) throws {
         self.session = session
+        self.sessionDocumentURL = sessionDocumentURL
+        self.animationLedgerURL = animationLedgerURL
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1_180, height: 760),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -267,15 +280,47 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         playPauseButton.action = #selector(togglePlayback)
         playPauseButton.setAccessibilityLabel("Play soundtrack")
         playPauseButton.bezelStyle = .rounded
+        stopPreviewButton.target = self
+        stopPreviewButton.action = #selector(stopPreview)
+        stopPreviewButton.setAccessibilityLabel("Stop local preview")
+        stopPreviewButton.toolTip = "Stops local soundtrack playback only. It does not cancel a provider job."
+        restartPreviewButton.target = self
+        restartPreviewButton.action = #selector(restartPreview)
+        restartPreviewButton.setAccessibilityLabel("Restart local preview")
+        restartPreviewButton.toolTip = "Restarts local soundtrack playback from the selected scene. It does not submit or cancel a provider job."
+        saveSessionButton.target = self
+        saveSessionButton.action = #selector(saveSession)
+        saveSessionButton.setAccessibilityLabel("Save editor session")
+        openSessionButton.target = self
+        openSessionButton.action = #selector(openSavedSession)
+        openSessionButton.setAccessibilityLabel("Open saved editor session")
+        reloadStateButton.target = self
+        reloadStateButton.action = #selector(reloadState)
+        reloadStateButton.setAccessibilityLabel("Reload asset and job state")
+        let hasSessionStore = sessionDocumentURL != nil
+        saveSessionButton.isEnabled = hasSessionStore
+        openSessionButton.isEnabled = hasSessionStore
         seekSlider.target = self
         seekSlider.action = #selector(seekChanged)
         seekSlider.setAccessibilityLabel("Seek soundtrack")
+        timeLabel.setAccessibilityLabel("Soundtrack time")
         timeLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         timeLabel.textColor = .white
-        let transport = NSStackView(views: [playPauseButton, timeLabel, seekSlider])
-        transport.orientation = .horizontal
-        transport.alignment = .centerY
-        transport.spacing = 12
+        let playback = NSStackView(views: [
+            playPauseButton, stopPreviewButton, restartPreviewButton, timeLabel, seekSlider,
+        ])
+        playback.orientation = .horizontal
+        playback.alignment = .centerY
+        playback.spacing = 12
+        let storage = NSStackView(views: [saveSessionButton, openSessionButton, reloadStateButton])
+        storage.orientation = .horizontal
+        storage.spacing = 12
+        let transport = NSStackView(views: [playback, storage])
+        transport.orientation = .vertical
+        transport.alignment = .leading
+        transport.spacing = 8
+        playback.widthAnchor.constraint(equalTo: transport.widthAnchor).isActive = true
+        seekSlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 160).isActive = true
         seekSlider.setContentHuggingPriority(.defaultLow, for: .horizontal)
         return transport
     }
@@ -283,6 +328,10 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     private func populateSceneStrip() throws {
         let thumbnails = try session.sceneStrip()
         let snapshot = try session.snapshot()
+        populateSceneStrip(thumbnails: thumbnails, snapshot: snapshot)
+    }
+
+    private func populateSceneStrip(thumbnails: [SceneEditorThumbnail], snapshot: SceneEditorSnapshot) {
         frameRate = snapshot.frameRate
         seekSlider.maxValue = Double(max(snapshot.frameCount - 1, 1))
         for thumbnail in thumbnails {
@@ -330,9 +379,101 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
             if snapshot.isPlaying {
                 session.pause()
             } else {
+                if observerToken == nil {
+                    observerToken = try session.observeFrames { [weak self] frame in self?.apply(frame: frame) }
+                }
                 try session.play()
             }
             updateAfterTransportChange()
+        } catch {
+            show(error)
+        }
+    }
+
+    /// This is intentionally local transport cancellation. The editor has no
+    /// provider instance and therefore cannot send a provider cancellation
+    /// request or claim a refund for an animation job.
+    @objc private func stopPreview() {
+        session.pause()
+        if let observerToken {
+            session.removeFrameObserver(observerToken)
+            self.observerToken = nil
+        }
+        updateAfterTransportChange()
+        statusLabel.stringValue = "Preview stopped locally; audio and frame callbacks stopped · provider jobs are untouched"
+    }
+
+    @objc private func restartPreview() {
+        do {
+            let selected = try session.snapshot().selectedSceneIndex
+            let start = try session.compositionPlan().scenes[selected].timing.startFrame
+            session.seek(toFrame: start) { [weak self] completed in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    guard completed else {
+                        self.showError("The soundtrack could not restart the selected scene.")
+                        return
+                    }
+                    do {
+                        if self.observerToken == nil {
+                            self.observerToken = try self.session.observeFrames { [weak self] frame in
+                                self?.apply(frame: frame)
+                            }
+                        }
+                        try self.session.play()
+                        self.updateAfterTransportChange()
+                        self.statusLabel.stringValue = "Preview restarted locally · provider jobs are untouched"
+                    } catch {
+                        self.show(error)
+                    }
+                }
+            }
+        } catch {
+            show(error)
+        }
+    }
+
+    @objc private func saveSession() {
+        do {
+            guard let sessionDocumentURL else { throw SceneEditorControlError.missingControl("session storage") }
+            try SceneEditorDocumentStore.save(session.document(), to: sessionDocumentURL)
+            statusLabel.textColor = NSColor(calibratedRed: 0.55, green: 0.84, blue: 0.75, alpha: 1)
+            statusLabel.stringValue = "Editor session saved · source media and accepted output were not changed"
+        } catch {
+            show(error)
+        }
+    }
+
+    /// Restores edits on the existing stage. A malformed or
+    /// stale document leaves the existing playable editor and its saved file
+    /// intact so the user can recover after fixing the external input.
+    @objc private func openSavedSession() {
+        do {
+            guard let sessionDocumentURL else { throw SceneEditorControlError.missingControl("session storage") }
+            let document = try SceneEditorDocumentStore.load(from: sessionDocumentURL)
+            try session.restore(document) {
+                // Resolve every throwing input/render operation before changing
+                // any visible view; restore can roll back without partial UI.
+                let thumbnails = try session.sceneStrip()
+                let snapshot = try session.snapshot()
+                let details = try session.inspector()
+                let assets = try session.assetStates()
+                let frame = try session.currentFrame()
+                replaceSceneStrip(thumbnails: thumbnails, snapshot: snapshot)
+                populateInspector(details: details, assets: assets)
+                apply(frame: frame)
+            }
+            statusLabel.textColor = NSColor(calibratedRed: 0.55, green: 0.84, blue: 0.75, alpha: 1)
+            statusLabel.stringValue = "Saved editor session reopened · pinned inputs revalidated"
+        } catch {
+            showError("Saved session was not opened. The current preview remains available. \(error.localizedDescription)")
+        }
+    }
+
+    @objc private func reloadState() {
+        do {
+            try refreshInspector()
+            statusLabel.stringValue = "Asset and persisted job state reloaded · no provider request was made"
         } catch {
             show(error)
         }
@@ -376,11 +517,16 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
 
     private func refreshInspector() throws {
         let details = try session.inspector()
+        let assets = try session.assetStates()
+        populateInspector(details: details, assets: assets)
+    }
+
+    private func populateInspector(details: SceneEditorInspector, assets: [SceneEditorAssetState]) {
         while inspector.arrangedSubviews.count > 1, let last = inspector.arrangedSubviews.last {
             inspector.removeArrangedSubview(last)
             last.removeFromSuperview()
         }
-        let facts = [
+        var facts = [
             ("Scene", details.label),
             ("Range", "\(format(seconds: details.startSeconds)) – \(format(seconds: details.endSeconds))"),
             ("Frames", "\(details.startFrame) – \(details.endFrame - 1)"),
@@ -391,11 +537,18 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
             ("Crop", "x \(details.crop.x), y \(details.crop.y), \(details.crop.width) × \(details.crop.height)"),
             ("Crossfade", details.crossfadeToNextFrames == 0 ? "None" : "\(details.crossfadeToNextFrames) frames"),
         ]
+        facts.append(("Pinned assets", assets.map(assetStateLabel).joined(separator: "\n")))
+        let differences = assets.flatMap { state in
+            state.unresolvedIdentityDifferences.map { "\(assetLabel(state.identity)): \($0.field)" }
+        }
+        facts.append(("Identity review", differences.isEmpty ? "No unresolved recorded differences" : differences.joined(separator: "\n")))
+        facts.append(("Animation jobs", jobStateLabel()))
+        facts.append(("Recovery", "Correct a pinned input, then use Open saved session. Failed provider jobs remain ledger state; this editor cannot retry or cancel them."))
         for (name, value) in facts {
             let label = NSTextField(wrappingLabelWithString: "\(name)\n\(value)")
             label.font = .systemFont(ofSize: 12)
             label.textColor = NSColor(calibratedWhite: 0.82, alpha: 1)
-            label.maximumNumberOfLines = 2
+            label.maximumNumberOfLines = 0
             inspector.addArrangedSubview(label)
         }
         addEditingControls(details)
@@ -532,12 +685,18 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     }
 
     private func refreshSceneStrip() throws {
+        let thumbnails = try session.sceneStrip()
+        let snapshot = try session.snapshot()
+        replaceSceneStrip(thumbnails: thumbnails, snapshot: snapshot)
+    }
+
+    private func replaceSceneStrip(thumbnails: [SceneEditorThumbnail], snapshot: SceneEditorSnapshot) {
         for view in sceneStrip.arrangedSubviews {
             sceneStrip.removeArrangedSubview(view)
             view.removeFromSuperview()
         }
         sceneButtons.removeAll()
-        try populateSceneStrip()
+        populateSceneStrip(thumbnails: thumbnails, snapshot: snapshot)
         sceneStrip.layoutSubtreeIfNeeded()
         sceneStrip.setFrameSize(sceneStrip.fittingSize)
     }
@@ -566,6 +725,30 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
             self.observerToken = nil
         }
         session.close()
+    }
+
+    private func assetStateLabel(_ state: SceneEditorAssetState) -> String {
+        let approval = state.approval
+        let date = ISO8601DateFormatter().string(from: approval.decidedAt)
+        return "\(assetLabel(state.identity)) · \(approval.state.rawValue) by \(approval.decidedBy) at \(date)"
+    }
+
+    private func jobStateLabel() -> String {
+        guard let animationLedgerURL else { return "No persisted animation ledger selected" }
+        do {
+            let jobs = try AnimationJobStore.load(from: animationLedgerURL).jobs
+            guard !jobs.isEmpty else { return "No persisted animation jobs" }
+            return jobs.map { job in
+                guard let attempt = job.latestAttempt else { return "\(job.jobID): no attempts" }
+                let cost = attempt.actualCost ?? attempt.estimatedCost
+                let costKind = attempt.actualCost == nil ? "estimated cost" : "actual cost"
+                let failure = attempt.failure.map { " · failure: \($0)" } ?? ""
+                let progress = (attempt.state == .submissionUncertain || attempt.state == .submitted || attempt.state == .submitting || attempt.state == .cancellationRequested) ? " · progress unknown" : ""
+                return "\(job.jobID): \(attempt.state.rawValue) · \(costKind): \(cost.currency) \(cost.amountCents) cents\(progress)\(failure)"
+            }.joined(separator: "\n")
+        } catch {
+            return "Unavailable: \(error.localizedDescription)"
+        }
     }
 
     private func waitForFrame(
@@ -633,12 +816,14 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         }
         window?.displayIfNeeded()
         content.layoutSubtreeIfNeeded()
-        for view in [inspectorScroll, sceneButtons[0], playPauseButton] {
+        for view in [inspectorScroll, sceneButtons[0], playPauseButton, seekSlider,
+                     stopPreviewButton, restartPreviewButton, saveSessionButton, openSessionButton, reloadStateButton] {
             let rect = view.convert(view.bounds, to: content)
             guard content.bounds.contains(rect), rect.width > 0, rect.height > 0 else {
                 throw SceneEditorEvidenceError.captureFailed
             }
         }
+        guard seekSlider.bounds.width >= 160 else { throw SceneEditorEvidenceError.captureFailed }
         let bounds = content.bounds
         guard bounds.width > 0, bounds.height > 0,
               let representation = content.bitmapImageRepForCachingDisplay(in: bounds) else {
