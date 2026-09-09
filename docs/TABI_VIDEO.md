@@ -228,8 +228,8 @@ long compilations, larger libraries, new providers or additional aspect ratios.
 
 ## Verified companion spike — 2026-09-08
 
-`companion/` is an independent Swift package with no third-party dependencies
-or Gradle/MIDI consumer. Its README owns the build/run commands. Host checks on
+`companion/` is an independent Swift package with no third-party or MIDI
+dependencies. The README owns the native Swift build/run commands. Host checks on
 macOS 26.6.2 (25G83), Swift 6.3.3, prove Apple AVFoundation ProRes 422 (`apcn`)
 encoding and passthrough MOV muxing: 320×180, 30fps, exactly one second of video
 and mono 44.1kHz PCM. The probe decodes frames at 0, 0.5 and 29/30 seconds,
@@ -246,7 +246,8 @@ redistributed encoder binary in this repository. FFmpeg/ffprobe are absent from
 PATH and are not selected. Apple SDK use is governed by the
 [Apple developer agreements](https://developer.apple.com/support/terms/);
 this spike makes no open-source codec or future app redistribution-rights claim.
-Production codec/preset selection and signed native packaging remain V01/V06 work.
+The V01 production-preset and packaging decision follows below. Encoding an
+actual episode, including its final dimensions and publish staging, remains V06.
 
 Read-only provider research: Runway documents `POST /v1/image_to_video` with
 `gen4.5`, `promptImage` URL/data URI, text, a `1280:720` five-second example,
@@ -260,3 +261,76 @@ No credentials, uploads, generation requests or spending were used in this proof
 V01 still owns the bounded paid-pilot proposal, source rights, current provider
 terms/privacy/account limits and distribution decisions; V03 owns persisted jobs,
 secure credentials, cancellation, budget admission and quarantined downloads.
+
+## V01 decision record — 2026-09-09
+
+This is a conservative dependency and pilot decision, not an authorization to
+spend money, send media to a provider, or distribute a video. The companion stays
+at [`companion/`](../companion/), independently built with Swift Package Manager.
+It is not included in the MIDI Gradle build and has no MIDI Core runtime,
+schema, project-path or export dependency.
+The only currently proved local media configuration is the
+owned spike: AVFoundation's OS-supplied ProRes 422 `apcn` video and PCM audio in
+MOV, 320x180 at 30 fps for one second. Its decoded first/middle/final frames,
+streams, duration and 44,100 PCM samples are checked by the existing regression.
+
+| Decision | Selected value and limit | Evidence / consequence |
+| --- | --- | --- |
+| Companion package | Swift tools 6.0 package, macOS 14+; host proof used Swift 6.3.3 on macOS 26.6.2 (25G83) | `swift build -c release` creates a separate native executable. No app bundle, signing, notarization, installer, or redistribution right is claimed yet. V06 owns a real delivery package. |
+| Local encoder | Apple AVFoundation; `apcn` ProRes 422 plus PCM in QuickTime MOV | The encoder is an OS framework, not a pinned or redistributed binary. The above short fixture is the codec proof; FFmpeg is not selected. Its OS/SDK agreement and the installed OS build must be recorded for every later actual encode. |
+| Pilot source/master preset | User-selected, immutable finished Logic PCM WAV at 44.1 kHz; one 16:9, 1920x1080, 30 fps ProRes 422/PCM MOV master | The exact 320x180/mono fixture is proven. Stereo source handling, 1920x1080 output and actual full-song duration are V04/V06 validation obligations, so this target is not a claim that a production master has already encoded. No H.264/AAC, alpha, HDR, codec conversion, audio normalization, trimming, stretching or remastering is selected or promised. |
+| Provider | Runway Dev REST `POST /v1/image_to_video`, API version `2024-11-06`, model `gen4.5` | Runway's current guide shows a bearer-authenticated task request with one `promptImage`, `promptText`, `1280:720` ratio and five-second duration, returning a task ID. V03 must persist/query that ID rather than blindly retry. Only an approved still may be sent; the finished soundtrack remains local. |
+| Generation preset | One 1280x720, five-second, image-to-video micro-action per request; no generated audio | The documented example establishes this request shape, not character continuity, start/end-frame conditioning, seed reproducibility, matte/alpha, or a complete scene. Composition/parallax supplies the rest of the 30–60 second scene. |
+
+### Provider constraints and rights gate
+
+The Runway facts were rechecked on 2026-09-09 without an account, credential,
+upload, request or spend. Its API documentation currently lists `gen4.5` at 12
+credits/second and developer credits at US$0.01 each: one five-second request is
+60 credits (US$0.60 before tax). ProRes/PNG sequence output would add five
+credits/second, so it is excluded from the generation request; the companion's
+local ProRes master is separate. Prices, model availability and API terms can
+change, and the V03 admission screen must re-read them before any submission.
+[Runway API guide](https://docs.dev.runwayml.com/guides/using-the-api/),
+[pricing](https://docs.dev.runwayml.com/guides/pricing/).
+
+Runway's terms require the user to hold the necessary rights, licences and
+permissions for every submitted input and describe additional obligations when
+API functionality is exposed to end users (including its then-current branding
+requirements). Its privacy policy treats submitted prompts, images, music/audio,
+video and associated metadata as user content. Therefore the supplied TABI and
+train pictures remain reference-only: they are not cleared production assets or
+permission to submit them to a provider. The same is true of any finished Logic
+bounce until its owner confirms the rights listed below. [Runway terms](https://runway.com/terms-of-use),
+[privacy policy](https://runway.com/privacy-policy).
+
+Before a paid request, the user must provide all of the following:
+
+- Written confirmation that the selected finished bounce can be used, synced and
+  locally distributed, including its composition/master/performance/sample rights.
+- Provenance and permitted provider/distribution use for every reference image,
+  approved TABI/train asset and any third-party visual; either clear the supplied
+  references or replace them with owned assets.
+- An account owner who accepts the then-current provider terms/privacy handling,
+  confirms the actual credit balance/tax, and accepts any API attribution or
+  end-user terms that apply to the intended companion distribution.
+- A human approval of the TABI identity and the one approved still for each
+  submitted micro-action. A provider result is proposed media, never automatic
+  approval or proof of continuity.
+
+### Bounded paid-pilot proposal — WAITING_USER
+
+Propose exactly four actions (blink/breathe, look out, writing, and steam), one
+five-second `gen4.5` request each, with at most one retry per action. That is at
+most eight requests / 40 generated seconds / 480 credits / **US$4.80 before tax**.
+There is no auto-billing, upscale, professional-output surcharge, second provider,
+long-form generation, upload or public release in this proposal. Rejected clips
+still consume their attempt; if none is approved, the pilot stops rather than
+expanding the budget. The actual tax-inclusive payment ceiling and the rights
+inputs above are absent, so paid V03 work is **WAITING_USER**. Independent
+owned-fixture work remains allowed.
+
+The provider account tier and actual balance are unverified. V03 must read its
+current task/concurrency and daily generation limits, using one in-flight pilot
+request at a time even if the account permits more.
+[Runway usage tiers](https://docs.dev.runwayml.com/usage/tiers/).

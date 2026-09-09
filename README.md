@@ -15,7 +15,9 @@ no audio-production or worker runtime.
 
 The new [PLAN](PLAN.md) and [task queue](TASKS.md) replace all previous plans.
 They cover musical quality, the supplied UI design and a smaller repository.
-A TABI video companion is planned separately; no video runtime is shipped.
+A TABI video companion is separately built under `companion/`; it is not shipped
+with, or required by, the MIDI app. Its owned-media boundary and paid-pilot gate
+are documented in [TABI video](docs/TABI_VIDEO.md).
 
 ## Run and validate
 

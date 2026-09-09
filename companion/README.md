@@ -16,6 +16,8 @@ The executable prints its unique temporary output path. It creates a one-second
 MOV, verifies byte-preserved soundtrack samples and decoded preview timestamps,
 and saves first/middle/final PNGs. Each run allocates a fresh companion-owned temporary directory; no input or output
 path arguments are accepted.
+The scheduler runs the same checks through `node tools/companion-check.mjs`
+from the repository root; no companion Gradle shim is needed.
 Build caches are ignored. The tone is a test fixture, not a MIDI audio renderer.
 
 This proves the local media boundary, not a video editor or generative TABI pilot.

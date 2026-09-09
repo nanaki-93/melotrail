@@ -25,12 +25,21 @@ var directories: [URL] = []
 defer { for directory in directories { try? FileManager.default.removeItem(at: directory) } }
 
 do {
+    let started = Date()
     let probe = try OwnedMediaSpike.run()
+    let elapsed = Date().timeIntervalSince(started)
+    let size = try probe.outputURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+    require(size > 0 && elapsed > 0, "owned encode measurements must be real and positive")
+    print("owned-encode output=\(probe.outputURL.path) bytes=\(size) elapsed-seconds=\(elapsed)")
     directories.append(probe.outputURL.deletingLastPathComponent())
     require(FileManager.default.fileExists(atPath: probe.outputURL.path), "the real caller must publish a MOV")
     require(abs(probe.previewSeekSeconds - 0.5) <= 1.0 / Double(OwnedMediaSpike.frameRate), "a shared half-second preview seek must remain aligned")
     let original = try Data(contentsOf: probe.outputURL)
+    let repeatedStarted = Date()
     let repeated = try OwnedMediaSpike.run()
+    let repeatedSize = try repeated.outputURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+    require(repeatedSize > 0, "retry output must have measured bytes")
+    print("owned-encode output=\(repeated.outputURL.path) bytes=\(repeatedSize) elapsed-seconds=\(Date().timeIntervalSince(repeatedStarted))")
     directories.append(repeated.outputURL.deletingLastPathComponent())
     require(repeated.outputURL != probe.outputURL, "repeated runs must allocate independent outputs")
     let retained = try Data(contentsOf: probe.outputURL)

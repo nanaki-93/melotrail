@@ -35,6 +35,26 @@ Keep deterministic fixtures small and owned. Test actual outcomes/invariants;
 source-text absence scans supplement behavior tests rather than replace them.
 Every fixed bug receives a regression that would fail before the fix.
 
+## Optional companion preflight
+
+V01's companion checks are separate from the MIDI application. The coordinator
+runs `node tools/companion-check.mjs`, dispatching the boundary check, native
+regressions and Swift release build. No Gradle companion shim is needed. The
+coordinator also runs normal MIDI `make test`/`make build`; the root settings do
+not include the companion.
+Record the actual macOS/Swift build, output directory, elapsed encode time and
+bytes for any new encode; do not reuse the owned one-second fixture as full-song
+evidence. The short probe must decode its
+first/middle/final frames, one video and one audio stream, one-second duration,
+and the shared PCM timeline.
+
+The coordinator must also confirm that the regression's fresh temporary outputs
+are outside the repository and that a failed/extra command-line path is rejected.
+These checks prove only the declared local fixture configuration. A 1920x1080
+master, stereo Logic bounce, H.264/AAC delivery, interactive playback, signed
+distribution, provider submission and final A/V pilot require their assigned
+V04–V07 evidence; no test substitutes for rights, budget or human visual review.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs
