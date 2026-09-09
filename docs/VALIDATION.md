@@ -91,6 +91,16 @@ HTTP. Source-swap fixtures prove preparation rejects changed bytes before ledger
 creation and freezes verified upload bytes against later file replacement.
 No live provider request is part of validation.
 
+V04a native regressions use the owned one-second MOV as a finished-soundtrack
+fixture plus a temporary digest-pinned fixed-tempo MIDI export manifest. They
+prove repeatable rational section/frame ranges, explicit lead-in/tail, absent
+manifest fallback, digest rejection, shorter/longer bounce and changed-tempo
+mismatches, and byte preservation for the soundtrack, manifest, and a protected
+project sentinel. Decoded rational validation, overlapping/gapped manifests and changed soundtrack
+rejection are also covered; the read-only `plan-timing` CLI prints the shared JSON plan.
+This is timing-plan evidence only: composition, preview,
+encoder parity, and human A/V approval remain V04–V07 work.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs

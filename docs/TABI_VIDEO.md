@@ -250,6 +250,34 @@ rational time/frame rounding policy and exact final-boundary correction.
 Preview and encoder consume the same plan. Crossfades consume explicitly
 modeled overlap; they cannot shorten the soundtrack or silently shift later scenes.
 
+### Deterministic soundtrack timing (V04a)
+
+The companion first opens one regular local finished-soundtrack file against a
+caller-pinned SHA-256 digest and records its exact single audio-track duration. It may
+then read only a caller-digest-pinned `melotrail-midi-export` manifest whose
+schema/validation status, fixed PPQ/tempo, and gap-free section ticks are valid.
+The manifest stays a section-timing suggestion; it is never rendered as audio
+and no MIDI project, snapshot, manifest, or soundtrack bytes are written.
+
+The read-only caller `melotrail-tabi-animation plan-timing <request.json>` prints
+the shared plan as JSON. Its request contains `soundtrackPath`, `soundtrackSHA256`,
+optional paired `manifestPath`/`manifestSHA256`, integer `frameRate`, and
+`alignment` with `leadIn`/`tail` objects (`numerator`, `denominator`). Decoded
+rationals are validated and normalized; changed soundtrack bytes reject planning.
+
+The caller must state `leadIn` and `tail` as non-negative rational durations.
+With a manifest, `leadIn + final MIDI tick time + tail` must equal the measured
+soundtrack duration exactly or planning rejects the mismatch. This makes a
+changed tempo, shorter/longer bounce, or unconfirmed decay explicit instead of
+trimming, stretching, or shifting music. Without a manifest, lead-in and tail
+must both be zero and the whole soundtrack is one timing scene.
+
+At an integer output frame rate, every scene end uses `ceil(exact seconds ×
+fps)`; each next start reuses that prior frame end. The resulting half-open
+frame ranges are contiguous and the last range ends at the one deterministic
+ceil-rounded soundtrack boundary. V04 composition, V05 preview, and V06 output
+must consume this plan rather than independently rounding timestamps.
+
 Keep natural breathing, sparse gestures, varied scenery and a recognizable
 journey. A static still can be a fallback, but it does not fulfill the planned
 animated-pilot gate. A few repeated loops across one music video may suit the

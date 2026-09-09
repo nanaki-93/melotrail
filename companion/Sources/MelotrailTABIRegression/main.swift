@@ -269,6 +269,146 @@ do {
     require(probe.decodedAudioSamples == 44_100, "the complete owned soundtrack must survive the mux")
     require(abs(probe.lastFrameSeconds - 29.0 / 30.0) < 0.0001, "the actual final frame must decode")
 
+    // V04a: resolve an immutable finished bounce and a digest-pinned MIDI
+    // manifest without turning either input into an audio or project write.
+    let timingRoot = FileManager.default.temporaryDirectory
+        .appendingPathComponent("melotrail-tabi-timing-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: timingRoot, withIntermediateDirectories: false)
+    directories.append(timingRoot)
+    let manifestURL = timingRoot.appendingPathComponent("manifest.json")
+    let projectURL = timingRoot.appendingPathComponent("project.json")
+    let manifestObject: [String: Any] = [
+        "schema": "melotrail-midi-export",
+        "manifestSchemaVersion": 1,
+        "snapshotId": "owned-timing-snapshot",
+        "authority": [
+            "ppq": 480,
+            "tempoMicrosecondsPerQuarter": 500_000,
+            "sections": [
+                ["occurrenceId": "intro-1", "label": "Intro", "startTick": 0, "endTick": 240],
+                ["occurrenceId": "verse-1", "label": "Verse", "startTick": 240, "endTick": 768],
+            ],
+        ],
+        "validation": ["status": "passed", "allMIDIFilesPassed": true],
+    ]
+    let manifestData = try JSONSerialization.data(withJSONObject: manifestObject, options: [.sortedKeys])
+    try manifestData.write(to: manifestURL, options: .withoutOverwriting)
+    let projectData = Data("{\"protected\":true}".utf8)
+    try projectData.write(to: projectURL, options: .withoutOverwriting)
+    let soundtrackBefore = try Data(contentsOf: probe.outputURL)
+    let manifestBefore = try Data(contentsOf: manifestURL)
+    let soundtrack = try FinishedSoundtrack.open(url: probe.outputURL, expectedSHA256: try AssetDigest.sha256(of: probe.outputURL))
+    let midiManifest = try VerifiedMidiTimingManifest.load(url: manifestURL, expectedSHA256: try AssetDigest.sha256(of: manifestURL))
+    let alignment = BounceAlignment(leadIn: try RationalTime(1, 10), tail: try RationalTime(1, 10))
+    let plan = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: midiManifest, alignment: alignment)
+    let repeatedPlan = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: midiManifest, alignment: alignment)
+    require(plan == repeatedPlan, "the same pinned soundtrack, manifest, and alignment must produce an identical plan")
+    require(plan.frameCount == 30, "one-second owned soundtrack must end at exactly frame 30")
+    require(plan.scenes.map(\.startFrame) == [0, 3, 11, 27], "one rational frame policy must round scene boundaries upward and keep them contiguous")
+    require(plan.scenes.map(\.endFrame) == [3, 11, 27, 30], "the final frame boundary must correct exactly to the soundtrack extent")
+    require(plan.scenes.map(\.kind) == [.leadIn, .section, .section, .tail], "lead-in and tail must remain explicit timing scenes")
+    let soundtrackAfter = try Data(contentsOf: probe.outputURL)
+    let manifestAfter = try Data(contentsOf: manifestURL)
+    let projectAfter = try Data(contentsOf: projectURL)
+    require(soundtrackAfter == soundtrackBefore, "timing resolution must not alter finished soundtrack bytes")
+    require(manifestAfter == manifestBefore, "timing resolution must not alter MIDI manifest bytes")
+    require(projectAfter == projectData, "timing resolution must not write a MIDI project")
+
+    let audioOnly = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: nil, alignment: BounceAlignment(leadIn: .zero, tail: .zero))
+    require(audioOnly.scenes.count == 1 && audioOnly.frameCount == 30, "a soundtrack without a MIDI suggestion must remain a single exact scene")
+    do {
+        _ = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: midiManifest, alignment: BounceAlignment(leadIn: alignment.leadIn, tail: .zero))
+        require(false, "a shorter bounce alignment must reject instead of trimming soundtrack audio")
+    } catch let error as SoundtrackSceneTimingError {
+        if case .invalidAlignment = error { } else { require(false, "short soundtrack mismatch must report explicit alignment") }
+    }
+    do {
+        _ = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: midiManifest, alignment: BounceAlignment(leadIn: alignment.leadIn, tail: try RationalTime(3, 10)))
+        require(false, "a longer planned bounce must reject instead of extending soundtrack audio")
+    } catch let error as SoundtrackSceneTimingError {
+        if case .invalidAlignment = error { } else { require(false, "long soundtrack mismatch must report explicit alignment") }
+    }
+    do {
+        _ = try FinishedSoundtrack.open(url: probe.outputURL, expectedSHA256: String(repeating: "0", count: 64))
+        require(false, "an unpinned finished soundtrack must reject")
+    } catch let error as SoundtrackSceneTimingError {
+        if case .soundtrackDigestMismatch = error { } else { require(false, "wrong soundtrack digest must not be accepted") }
+    }
+    do {
+        _ = try VerifiedMidiTimingManifest.load(url: manifestURL, expectedSHA256: String(repeating: "0", count: 64))
+        require(false, "an unpinned MIDI manifest must reject")
+    } catch let error as SoundtrackSceneTimingError {
+        if case .manifestDigestMismatch = error { } else { require(false, "wrong manifest digest must not be accepted") }
+    }
+    let changedAuthority: [String: Any] = [
+        "ppq": 480,
+        "tempoMicrosecondsPerQuarter": 400_000,
+        "sections": [
+            ["occurrenceId": "intro-1", "label": "Intro", "startTick": 0, "endTick": 240],
+            ["occurrenceId": "verse-1", "label": "Verse", "startTick": 240, "endTick": 768],
+        ],
+    ]
+    let changedTempoObject = manifestObject.merging(["authority": changedAuthority]) { _, replacement in replacement }
+    let changedTempoURL = timingRoot.appendingPathComponent("changed-tempo-manifest.json")
+    try JSONSerialization.data(withJSONObject: changedTempoObject, options: [.sortedKeys]).write(to: changedTempoURL, options: .withoutOverwriting)
+    let changedTempo = try VerifiedMidiTimingManifest.load(url: changedTempoURL, expectedSHA256: try AssetDigest.sha256(of: changedTempoURL))
+    do {
+        _ = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: changedTempo, alignment: alignment)
+        require(false, "a changed-tempo manifest must reject rather than rescale the finished soundtrack")
+    } catch let error as SoundtrackSceneTimingError {
+        if case .invalidAlignment = error { } else { require(false, "changed tempo must report explicit alignment") }
+    }
+
+    for json in ["{\"numerator\":1,\"denominator\":0}", "{\"numerator\":-1,\"denominator\":2}"] {
+        do {
+            _ = try JSONDecoder().decode(RationalTime.self, from: Data(json.utf8))
+            require(false, "decoded rationals must enforce non-negative finite timing")
+        } catch SoundtrackSceneTimingError.invalidTime { }
+    }
+    let reduced = try JSONDecoder().decode(RationalTime.self, from: Data("{\"numerator\":2,\"denominator\":4}".utf8))
+    require(reduced == (try! RationalTime(1, 2)), "decoded rational times must normalize")
+    let malformedAuthorities: [[String: Any]] = [
+        ["ppq": 480, "tempoMicrosecondsPerQuarter": 500_000, "sections": [
+            ["occurrenceId": "a", "label": "A", "startTick": 0, "endTick": 300],
+            ["occurrenceId": "b", "label": "B", "startTick": 240, "endTick": 768]]],
+        ["ppq": 480, "tempoMicrosecondsPerQuarter": 500_000, "sections": [
+            ["occurrenceId": "a", "label": "A", "startTick": 0, "endTick": 200],
+            ["occurrenceId": "b", "label": "B", "startTick": 240, "endTick": 768]]],
+        ["ppq": true, "tempoMicrosecondsPerQuarter": 500_000, "sections": []],
+        ["ppq": 480.5, "tempoMicrosecondsPerQuarter": 500_000, "sections": []],
+    ]
+    for (index, authority) in malformedAuthorities.enumerated() {
+        let badURL = timingRoot.appendingPathComponent("invalid-\(index).json")
+        let object = manifestObject.merging(["authority": authority]) { _, new in new }
+        try JSONSerialization.data(withJSONObject: object).write(to: badURL)
+        do {
+            _ = try VerifiedMidiTimingManifest.load(url: badURL, expectedSHA256: AssetDigest.sha256(of: badURL))
+            require(false, "overlapping/gapped sections and noninteger authority must reject")
+        } catch SoundtrackSceneTimingError.invalidManifest { }
+    }
+    do {
+        _ = try RationalTime(Int64.max).multiplied(by: 2)
+        require(false, "rational overflow must throw without trapping")
+    } catch SoundtrackSceneTimingError.overflow { }
+    let requestObject: [String: Any] = [
+        "soundtrackPath": probe.outputURL.path, "soundtrackSHA256": soundtrack.sha256,
+        "manifestPath": manifestURL.path, "manifestSHA256": midiManifest.sha256,
+        "alignment": ["leadIn": ["numerator": 1, "denominator": 10], "tail": ["numerator": 1, "denominator": 10]],
+        "frameRate": 30,
+    ]
+    let request = try JSONDecoder().decode(SoundtrackTimingRequest.self, from: JSONSerialization.data(withJSONObject: requestObject))
+    let resolvedPlan = try request.resolve()
+    require(resolvedPlan == plan, "the real request caller must resolve the shared exact plan")
+    let copiedSoundtrack = timingRoot.appendingPathComponent("replaceable.mov")
+    try soundtrackBefore.write(to: copiedSoundtrack)
+    let pinned = try FinishedSoundtrack.open(url: copiedSoundtrack, expectedSHA256: soundtrack.sha256)
+    try Data("changed after opening".utf8).write(to: copiedSoundtrack)
+    do {
+        _ = try SoundtrackScenePlanner.plan(soundtrack: pinned, midiManifest: nil, alignment: BounceAlignment(leadIn: .zero, tail: .zero))
+        require(false, "planning must reject a replaced soundtrack")
+    } catch SoundtrackSceneTimingError.soundtrackDigestMismatch { }
+    print("soundtrack-scene-timing-regression=PASS")
+
     let outputRoot = FileManager.default.temporaryDirectory
         .appendingPathComponent("TABI encoder Unicode β space \(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: outputRoot, withIntermediateDirectories: false)
