@@ -79,6 +79,18 @@ and directory aliases against one ledger; durable job and provider-call counts
 must agree. Sequential checks cover unknown quotes, retries, cancellation,
 uncertain submission and reopen. No paid request or production approval is made.
 
+V03b checks use an injected HTTP transport and owned video bytes. Valid owned MOV/MP4
+content must survive a `.tmp` staging name through quarantine and manual import;
+invalid clips, HTTP partial/error responses, size/digest mismatches and repository
+aliases reject without publishing staged files. Credentials remain absent from
+output-host requests and errors. A custom URLProtocol exercises the concrete
+URLSession collector: reject HTTPS downgrades before following them, reject
+insecure final URLs, and abort declared or streamed oversize bodies. Matching
+hash symlinks reject; oversized/invalid-ratio stills never reserve budget or call
+HTTP. Source-swap fixtures prove preparation rejects changed bytes before ledger
+creation and freezes verified upload bytes against later file replacement.
+No live provider request is part of validation.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs

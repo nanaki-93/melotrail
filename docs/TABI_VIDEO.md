@@ -201,6 +201,28 @@ V03a supplies no provider adapter, credentials, network client or live request.
 Its contract is exercised with an owned fake provider. V03b owns a selected API,
 secure configuration, quarantined output download and manual clip import.
 
+### Runway adapter and manual import (V03b)
+
+The companion uses the reviewed Runway Dev REST request shape only: HTTPS
+`POST /v1/image_to_video`, bearer credentials from `RUNWAYML_API_SECRET`,
+`X-Runway-Version: 2024-11-06`, `gen4.5`, one approved PNG/JPEG/WebP still as a
+data URI, `1280:720`, and five seconds. The token is neither Codable nor written
+to the V03a ledger or diagnostics. The provider adapter is injected through the
+existing coordinator, so its durable `submitting` state is written before the
+HTTP call; a transport timeout remains `submissionUncertain` and cannot be
+blindly resubmitted. Task polling maps Runway rate limiting to the persisted
+V03a backoff mechanism.
+
+A successful provider task yields only an HTTPS output URL. Its bytes must enter
+an external digest-addressed quarantine before any asset record: a declared
+content-length mismatch, empty/oversized response, digest mismatch, or unreadable
+video is discarded without publication. A digest-valid clip remains unapproved
+review evidence. `melotrail-tabi-animation import-manual-clip` provides the
+separate owned/user-provided local-video route; it copies through the immutable
+asset-library import boundary and returns a proposed record, never changing the
+source or an existing manifest. Neither path makes a paid request or auto-approves
+identity/loop quality.
+
 Useful pilot measurements: accepted seconds per generated second, identity/loop
 reject rate, actual cost per accepted clip and per finished video, asset reuse,
 encoding time/disk use and human correction time. Choose an expansion budget
@@ -395,3 +417,15 @@ The provider account tier and actual balance are unverified. V03 must read its
 current task/concurrency and daily generation limits, using one in-flight pilot
 request at a time even if the account permits more.
 [Runway usage tiers](https://docs.dev.runwayml.com/usage/tiers/).
+
+V03b recovery validates staged ISO movie bytes using their container header,
+rather than treating the temporary suffix as the media format. Quarantine keeps
+the matching MOV/MP4 suffix without transcoding and rejects partial HTTP responses.
+The Runway request preset was rechecked against the
+[official API guide](https://docs.dev.runwayml.com/guides/using-the-api/)
+on 2026-09-09; no live request was made. The
+[input contract](https://docs.dev.runwayml.com/assets/inputs/) caps encoded still
+data URIs at 5 MB and Gen-4.5 input ratios at 0.5–2.0; these are checked before
+job admission. Prepared requests freeze the bounded bytes and verify their digest
+against the approved asset before the ledger reserves an attempt. The HTTPS collector enforces the byte cap during reception and
+rejects insecure redirects; quarantine rejects symlink digest destinations.

@@ -344,7 +344,13 @@ public struct AssetMediaFacts: Hashable, Sendable {
 public enum AssetMediaInspector {
     public static func inspect(kind: AssetKind, url: URL) throws -> AssetMediaFacts {
         if kind.usesVideoProbe {
-            let asset = AVURLAsset(url: url)
+            // Staging paths deliberately end in .tmp. Infer ISO media format
+            // from its bytes so AVFoundation does not reject a valid clip by name.
+            let container = try videoContainerExtension(url)
+            let options: [String: Any]? = container.map {
+                [AVURLAssetOverrideMIMETypeKey: $0 == "mov" ? "video/quicktime" : "video/mp4"]
+            }
+            let asset = AVURLAsset(url: url, options: options)
             guard let videoTrack = asset.tracks(withMediaType: .video).first else {
                 throw AssetManifestError.unreadableManifest("no video track")
             }
@@ -370,6 +376,14 @@ public enum AssetMediaInspector {
             durationSeconds: nil,
             alpha: hasTransparency ? .present : .absent
         )
+    }
+
+    static func videoContainerExtension(_ url: URL) throws -> String? {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        let header = try handle.read(upToCount: 12) ?? Data()
+        guard header.count == 12, String(data: header[4..<8], encoding: .ascii) == "ftyp" else { return nil }
+        return String(data: header[8..<12], encoding: .ascii) == "qt  " ? "mov" : "mp4"
     }
 
     private static func hasTransparentPixel(in image: CGImage) throws -> Bool {

@@ -166,7 +166,9 @@ public final class OwnedOutputStager {
 
     fileprivate func stagedSize() throws -> Int64 {
         guard FileManager.default.fileExists(atPath: stagedOutputURL.path) else { return 0 }
-        let values = try stagedOutputURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey])
+        var currentURL = stagedOutputURL
+        currentURL.removeAllCachedResourceValues()
+        let values = try currentURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true else {
             throw BoundedEncoderError.invalidInput("Encoder staging did not create a regular file.")
         }
@@ -209,7 +211,9 @@ public final class OwnedOutputStager {
     }
 
     private static func isRegularFile(_ url: URL) -> Bool {
-        guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else { return false }
+        var currentURL = url
+        currentURL.removeAllCachedResourceValues()
+        guard let values = try? currentURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else { return false }
         return values.isRegularFile == true && values.isSymbolicLink != true
     }
 }

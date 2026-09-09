@@ -62,6 +62,28 @@ unresolved difference is deliberately not an approval: it returns a non-ready
 report for human review. No production media, paid generation, or identity
 approval is bundled with this package.
 
+## Animation adapter and manual clips
+
+V03b provides a narrowly configured Runway Dev REST adapter: API version
+`2024-11-06`, `gen4.5`, one approved PNG/JPEG/WebP still, `1280:720`, and five
+seconds. It reads `RUNWAYML_API_SECRET` only from secure process configuration;
+credentials and provider payloads are not written to the job ledger. A caller
+must use the V03a coordinator so admission is persisted before submission and
+uncertain submissions are never blindly retried. The adapter does not issue a
+request merely by being constructed.
+
+Provider output is first downloaded into an external, digest-addressed
+quarantine, where partial, oversized, digest-mismatched, and unreadable clips
+are discarded. A quarantined clip is still proposed evidence, not an approved
+asset. An owned manual clip may instead use the real companion caller below; it
+preserves the selected source and returns a proposed `AssetRecord`, which must
+be published only in a new manifest after human review.
+
+```sh
+swift run --package-path companion melotrail-tabi-animation import-manual-clip \
+  /path/to/library request.json
+```
+
 ## Encoder process boundary
 
 V06a adds a companion-only process runner for trusted encoder adapters: argv

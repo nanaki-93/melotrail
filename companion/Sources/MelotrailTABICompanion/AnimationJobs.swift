@@ -212,9 +212,18 @@ public struct AnimationProviderPoll: Equatable, Sendable {
 /// fakes now and prevents a coordinator from depending on network details.
 public protocol AnimationJobProvider: Sendable {
     var providerID: String { get }
+    func validate(request: AnimationRequest) throws
+    func prepareSubmission(request: AnimationRequest) throws -> @Sendable (AnimationSubmissionIdentity) throws -> String
     func submit(request: AnimationRequest, identity: AnimationSubmissionIdentity) throws -> String
     func poll(providerJobID: String) throws -> AnimationProviderPoll
     func cancel(providerJobID: String) throws -> AnimationProviderPoll
+}
+
+public extension AnimationJobProvider {
+    func validate(request: AnimationRequest) throws { }
+    func prepareSubmission(request: AnimationRequest) throws -> @Sendable (AnimationSubmissionIdentity) throws -> String {
+        { identity in try self.submit(request: request, identity: identity) }
+    }
 }
 
 public enum AnimationJobStore {
@@ -353,6 +362,7 @@ public final class AnimationJobCoordinator {
         }
         let estimate = try knownCost(request)
         try admit(estimate, budget: budget, ledger: ledger)
+        let submitPrepared = try provider.prepareSubmission(request: request)
         let identity = AnimationSubmissionIdentity(requestFingerprint: fingerprint, attempt: 1)
         let job = AnimationJob(
             jobID: UUID().uuidString.lowercased(), budgetID: budget.budgetID, request: request,
@@ -363,7 +373,7 @@ public final class AnimationJobCoordinator {
         try AnimationJobStore.save(ledger, to: ledgerURL)
 
         do {
-            let providerJobID = try provider.submit(request: request, identity: identity)
+            let providerJobID = try submitPrepared(identity)
             guard !providerJobID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return try markSubmissionUncertain(job.jobID, reason: "Provider returned an empty job ID.", now: now)
             }
@@ -450,14 +460,16 @@ public final class AnimationJobCoordinator {
         guard let previous = current.latestAttempt,
               (previous.state == .failed || previous.state == .cancelled) else { throw AnimationJobError.attemptNotRestartable(jobID) }
         guard current.attempts.count < current.request.maximumAttempts else { throw AnimationJobError.attemptLimitReached(jobID) }
+        try provider.validate(request: current.request)
         let estimate = try knownCost(current.request)
         guard let budget = ledger.budgets.first(where: { $0.budgetID == current.budgetID }) else { throw AnimationJobError.invalidBudget("Animation job \(jobID) references a missing budget.") }
         try admit(estimate, budget: budget, ledger: ledger)
+        let submitPrepared = try provider.prepareSubmission(request: current.request)
         let identity = AnimationSubmissionIdentity(requestFingerprint: current.requestFingerprint, attempt: current.attempts.count + 1)
         ledger.jobs[index].attempts.append(AnimationJobAttempt(identity: identity, state: .submitting, estimatedCost: estimate, submittedAt: now, updatedAt: now))
         try AnimationJobStore.save(ledger, to: ledgerURL)
         do {
-            let providerJobID = try provider.submit(request: current.request, identity: identity)
+            let providerJobID = try submitPrepared(identity)
             guard !providerJobID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return try markSubmissionUncertain(jobID, reason: "Provider returned an empty job ID.", now: now)
             }
@@ -529,6 +541,7 @@ public final class AnimationJobCoordinator {
             throw AnimationJobError.invalidRequest("Animation requests require provider, model, prompt, unique approved reference pins, and a positive attempt limit.")
         }
         try requireProvider(provider, for: request)
+        try provider.validate(request: request)
         let estimate = try knownCost(request)
         guard estimate.currency == budget.maximumCost.currency else { throw AnimationJobError.invalidBudget("Budget and request costs must use the same currency.") }
         guard !budget.budgetID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, budget.maximumCost.amountCents >= 0, budget.maximumInFlight > 0 else { throw AnimationJobError.invalidBudget("Animation budgets require an ID, non-negative cap, and positive concurrency limit.") }

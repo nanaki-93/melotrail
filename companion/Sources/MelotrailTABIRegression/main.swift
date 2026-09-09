@@ -1,4 +1,5 @@
 import Darwin
+import AVFoundation
 import CoreMedia
 import CoreGraphics
 import Foundation
@@ -63,6 +64,11 @@ if CommandLine.arguments.dropFirst().first == "--fixture-encoder" {
             fputs("fixture-encoder=FAIL: \(error.localizedDescription)\n", stderr)
             exit(74)
         }
+    case "grow-output":
+        try Data().write(to: output)
+        Thread.sleep(forTimeInterval: 0.15)
+        try Data(contentsOf: input).write(to: output)
+        exit(0)
     case "mutate-input":
         let preserved = try Data(contentsOf: input)
         try Data("buggy encoder changed its input".utf8).write(to: input)
@@ -376,6 +382,12 @@ do {
     func fixtureInvocation(_ mode: String) -> EncoderInvocation {
         EncoderInvocation(executableURL: fixture, arguments: [.literal("--fixture-encoder"), .literal("--input"), .input(0), .literal("--output"), .stagedOutput, .literal("--mode"), .literal(mode)])
     }
+    let grown = try encoder.run(
+        invocation: fixtureInvocation("grow-output"), inputs: [probe.outputURL],
+        stager: try OwnedOutputStager(outputDirectory: outputRoot, outputFileName: "grown.mov")
+    )
+    let grownBytes = try Data(contentsOf: grown.outputURL)
+    require(grownBytes == original, "output metadata must refresh after an initially empty file grows")
     let preCancelled = EncoderCancellation()
     preCancelled.cancel()
     let launchMarker = outputRoot.appendingPathComponent("launch-observed")
@@ -1024,6 +1036,262 @@ do {
     exit(1)
 }
 
+final class FixtureRunwayTransport: ProviderHTTPTransport, @unchecked Sendable {
+    enum Result {
+        case response(ProviderHTTPResponse)
+        case timeout
+    }
+
+    var results: [Result]
+    var requests: [URLRequest] = []
+
+    init(_ results: [Result]) { self.results = results }
+
+    func execute(_ request: URLRequest, timeout: TimeInterval, maximumBytes: Int) throws -> ProviderHTTPResponse {
+        requests.append(request)
+        require(timeout == 7, "Runway adapter must pass its bounded timeout to transport")
+        guard !results.isEmpty else { throw AssetManifestError.unreadableManifest("fixture transport exhausted") }
+        switch results.removeFirst() {
+        case .response(let response): return response
+        case .timeout: throw AssetManifestError.unreadableManifest("Authorization: Bearer must-not-leak")
+        }
+    }
+}
+
+final class SwappingRunwayProvider: AnimationJobProvider, Sendable {
+    let providerID = RunwayPreset.providerID
+    let wrapped: RunwayProvider
+    let source: URL
+    let beforePreparation: Bool
+    init(wrapped: RunwayProvider, source: URL, beforePreparation: Bool) {
+        self.wrapped = wrapped; self.source = source; self.beforePreparation = beforePreparation
+    }
+    func validate(request: AnimationRequest) throws { try wrapped.validate(request: request) }
+    func prepareSubmission(request: AnimationRequest) throws -> @Sendable (AnimationSubmissionIdentity) throws -> String {
+        if beforePreparation { try Data("replaced source".utf8).write(to: source, options: .atomic) }
+        let prepared = try wrapped.prepareSubmission(request: request)
+        if !beforePreparation { try Data("replaced source".utf8).write(to: source, options: .atomic) }
+        return prepared
+    }
+    func submit(request: AnimationRequest, identity: AnimationSubmissionIdentity) throws -> String { try wrapped.submit(request: request, identity: identity) }
+    func poll(providerJobID: String) throws -> AnimationProviderPoll { try wrapped.poll(providerJobID: providerJobID) }
+    func cancel(providerJobID: String) throws -> AnimationProviderPoll { try wrapped.cancel(providerJobID: providerJobID) }
+}
+
+do {
+    let libraryFixture = try makeAssetLibrary()
+    directories.append(libraryFixture.root)
+    let library = try AssetLibrary(manifestURL: libraryFixture.manifestURL, libraryRoot: libraryFixture.root)
+    do {
+        _ = try RunwayCredentials(environment: [:])
+        require(false, "Runway construction must reject missing secure credentials")
+    } catch RunwayProviderError.missingCredentials { }
+    let credentials = try RunwayCredentials(environment: ["RUNWAYML_API_SECRET": "must-not-leak"])
+    for endpoint in ["https://attacker.example", "https://api.dev.runwayml.com:444", "https://user@api.dev.runwayml.com", "https://api.dev.runwayml.com/other"] {
+        do {
+            _ = try RunwayProvider(credentials: credentials, assetLibrary: library, transport: FixtureRunwayTransport([]), baseURL: URL(string: endpoint)!)
+            require(false, "Runway credentials must be confined to the canonical endpoint")
+        } catch RunwayProviderError.invalidRequest { }
+    }
+    for beforePreparation in [false, true] {
+        let fixture = try makeAssetLibrary()
+        directories.append(fixture.root)
+        let library = try AssetLibrary(manifestURL: fixture.manifestURL, libraryRoot: fixture.root)
+        let approved = try library.validatedApprovedAssets(pinned: [fixture.approved])[0]
+        let source = fixture.root.appendingPathComponent(approved.relativeMediaPath)
+        let originalBytes = try Data(contentsOf: source)
+        let transport = FixtureRunwayTransport([.response(ProviderHTTPResponse(statusCode: 200, body: Data("{\"id\":\"frozen-task\"}".utf8)))])
+        let wrapped = try RunwayProvider(credentials: credentials, assetLibrary: library, transport: transport, timeout: 7)
+        let provider = SwappingRunwayProvider(wrapped: wrapped, source: source, beforePreparation: beforePreparation)
+        let ledger = fixture.root.appendingPathComponent("snapshot-jobs.json")
+        do {
+            _ = try AnimationJobCoordinator(ledgerURL: ledger).submit(RunwayPreset.request(prompt: "snapshot fixture", referenceAsset: fixture.approved, estimatedCost: AnimationCost(currency: "USD", amountCents: 60)), to: AnimationBudget(budgetID: "snapshot", maximumCost: AnimationCost(currency: "USD", amountCents: 60)), provider: provider)
+            require(!beforePreparation, "changed source before snapshot must reject")
+            let payload = try JSONSerialization.jsonObject(with: transport.requests[0].httpBody!) as! [String: Any]
+            require(payload["promptImage"] as? String == "data:image/png;base64," + originalBytes.base64EncodedString(), "source replacement after preparation must not change submitted bytes")
+        } catch {
+            require(beforePreparation, "verified snapshot submission must succeed")
+            require(transport.requests.isEmpty && !FileManager.default.fileExists(atPath: ledger.path), "source replacement before preparation must not reserve budget or call HTTP")
+        }
+    }
+    do {
+        let root = libraryFixture.root.appendingPathComponent("mislabeled")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        let image = root.appendingPathComponent("png-bytes.jpg")
+        try writeOwnedPNG(to: image, width: 2, height: 3)
+        let identity = AssetIdentity(assetID: "mislabeled", version: "v1")
+        let record = fixtureRecord(identity: identity, path: image.lastPathComponent, digest: try AssetDigest.sha256(of: image))
+        let manifest = root.appendingPathComponent("manifest.json")
+        try AssetManifestStore.save(AssetManifest(libraryID: "mislabeled", assets: [record]), to: manifest)
+        let transport = FixtureRunwayTransport([])
+        let provider = try RunwayProvider(credentials: credentials, assetLibrary: AssetLibrary(manifestURL: manifest, libraryRoot: root), transport: transport, timeout: 7)
+        let ledger = root.appendingPathComponent("jobs.json")
+        do {
+            _ = try AnimationJobCoordinator(ledgerURL: ledger).submit(RunwayPreset.request(prompt: "mislabeled fixture", referenceAsset: identity, estimatedCost: AnimationCost(currency: "USD", amountCents: 60)), to: AnimationBudget(budgetID: "test", maximumCost: AnimationCost(currency: "USD", amountCents: 60)), provider: provider)
+            require(false, "mislabeled image must reject before admission")
+        } catch RunwayProviderError.invalidRequest { }
+        require(transport.requests.isEmpty && !FileManager.default.fileExists(atPath: ledger.path), "mislabeled bytes must not reserve budget or call HTTP")
+    }
+    for oversized in [false, true] {
+        let rejectedRoot = libraryFixture.root.appendingPathComponent("invalid-input-\(oversized)")
+        try FileManager.default.createDirectory(at: rejectedRoot, withIntermediateDirectories: false)
+        let source = rejectedRoot.appendingPathComponent("input.png")
+        try writeOwnedPNG(to: source, width: oversized ? 2 : 1, height: 3)
+        if oversized {
+            let handle = try FileHandle(forWritingTo: source)
+            try handle.seekToEnd(); try handle.write(contentsOf: Data(repeating: 0, count: 4_000_000)); try handle.close()
+        }
+        let identity = AssetIdentity(assetID: "invalid-input", version: "v1")
+        let record = fixtureRecord(identity: identity, path: "input.png", digest: try AssetDigest.sha256(of: source), width: oversized ? 2 : 1)
+        let manifest = rejectedRoot.appendingPathComponent("manifest.json")
+        try AssetManifestStore.save(AssetManifest(libraryID: "rejected", assets: [record]), to: manifest)
+        let transport = FixtureRunwayTransport([])
+        let rejectedProvider = try RunwayProvider(credentials: credentials, assetLibrary: AssetLibrary(manifestURL: manifest, libraryRoot: rejectedRoot), transport: transport, timeout: 7)
+        let ledger = rejectedRoot.appendingPathComponent("jobs.json")
+        do {
+            _ = try AnimationJobCoordinator(ledgerURL: ledger).submit(RunwayPreset.request(prompt: "owned invalid fixture", referenceAsset: identity, estimatedCost: AnimationCost(currency: "USD", amountCents: 60)), to: AnimationBudget(budgetID: "test", maximumCost: AnimationCost(currency: "USD", amountCents: 60)), provider: rejectedProvider)
+            require(false, "invalid provider image must reject before durable admission")
+        } catch RunwayProviderError.invalidRequest { }
+        require(transport.requests.isEmpty && !FileManager.default.fileExists(atPath: ledger.path), "invalid image must not reserve budget or call HTTP")
+    }
+    let request = RunwayPreset.request(
+        prompt: "TABI takes one calm breath",
+        referenceAsset: libraryFixture.approved,
+        estimatedCost: AnimationCost(currency: "USD", amountCents: 60)
+    )
+    let transport = FixtureRunwayTransport([
+        .response(ProviderHTTPResponse(statusCode: 201, body: Data("{\"id\":\"runway-task-1\",\"status\":\"PENDING\"}".utf8))),
+        .response(ProviderHTTPResponse(statusCode: 429, headers: ["Retry-After": "12"])),
+        .response(ProviderHTTPResponse(statusCode: 200, body: Data("{\"status\":\"SUCCEEDED\",\"output\":[\"https://owned.example/clip.mov\",\"http://reject.example/clip.mov\"]}".utf8))),
+    ])
+    let runway = try RunwayProvider(credentials: credentials, assetLibrary: library, transport: transport, timeout: 7)
+    let providerJobID = try runway.submit(request: request, identity: AnimationSubmissionIdentity(requestFingerprint: "fixture", attempt: 1))
+    require(providerJobID == "runway-task-1", "Runway adapter must return its provider task ID")
+    require(transport.requests.count == 1, "Runway adapter must make one submission request")
+    let submittedRequest = transport.requests[0]
+    require(submittedRequest.url?.path == "/v1/image_to_video" && submittedRequest.httpMethod == "POST", "Runway adapter must use the reviewed image-to-video endpoint")
+    require(submittedRequest.value(forHTTPHeaderField: "X-Runway-Version") == RunwayPreset.apiVersion, "Runway adapter must pin the reviewed API version")
+    require(submittedRequest.value(forHTTPHeaderField: "Authorization") == "Bearer must-not-leak", "Runway adapter must send credentials only as an authorization header")
+    let submittedJSON = try JSONSerialization.jsonObject(with: submittedRequest.httpBody ?? Data()) as? [String: Any]
+    require(submittedJSON?["model"] as? String == "gen4.5" && submittedJSON?["ratio"] as? String == "1280:720" && submittedJSON?["duration"] as? Int == 5, "Runway adapter must submit explicit reviewed model and options")
+    require((submittedJSON?["promptImage"] as? String)?.hasPrefix("data:image/png;base64,") == true, "Runway adapter must resolve the exact approved still into a data URI")
+    let rateLimited = try runway.poll(providerJobID: providerJobID)
+    require(rateLimited.state == .rateLimited && rateLimited.retryAfter == 12, "Runway rate limits must become persisted-coordinator backoff inputs")
+    let outputs = try runway.outputURLs(providerJobID: providerJobID)
+    require(outputs.map(\.absoluteString) == ["https://owned.example/clip.mov"], "Runway outputs must retain only HTTPS media URLs")
+
+    let uncertainRoot = FileManager.default.temporaryDirectory.appending(path: "melotrail-runway-timeout-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: uncertainRoot, withIntermediateDirectories: false)
+    directories.append(uncertainRoot)
+    let timeoutProvider = try RunwayProvider(credentials: credentials, assetLibrary: library, transport: FixtureRunwayTransport([.timeout]), timeout: 7)
+    let uncertain = try AnimationJobCoordinator(ledgerURL: uncertainRoot.appending(path: "jobs.json")).submit(
+        request,
+        to: AnimationBudget(budgetID: "timeout", maximumCost: AnimationCost(currency: "USD", amountCents: 60)),
+        provider: timeoutProvider,
+        now: fixtureDate
+    )
+    require(uncertain.latestAttempt?.state == .submissionUncertain, "Runway transport timeout must preserve uncertain submission instead of retrying")
+    require(!(uncertain.latestAttempt?.failure?.contains("must-not-leak") ?? true), "Runway timeout diagnostics must redact credentials")
+
+    let quarantineRoot = FileManager.default.temporaryDirectory.appending(path: "melotrail-runway-quarantine-\(UUID().uuidString)")
+    directories.append(quarantineRoot)
+    do {
+        _ = try AnimationOutputQuarantine.store(response: ProviderHTTPResponse(statusCode: 200, headers: ["Content-Length": "5"], body: Data("abc".utf8)), expectedSHA256: nil, into: quarantineRoot)
+        require(false, "partial downloads must not enter output quarantine")
+    } catch AnimationOutputError.partialDownload { }
+    require(!FileManager.default.fileExists(atPath: quarantineRoot.path), "partial download rejection must happen before quarantine writes")
+    do {
+        _ = try AnimationOutputQuarantine.store(response: ProviderHTTPResponse(statusCode: 200, body: Data("digest-mismatch".utf8)), expectedSHA256: String(repeating: "0", count: 64), into: quarantineRoot)
+        require(false, "digest-mismatched output must not enter quarantine")
+    } catch AnimationOutputError.digestMismatch { }
+    let quarantineContentsAfterDigestMismatch = try FileManager.default.contentsOfDirectory(atPath: quarantineRoot.path)
+    require(quarantineContentsAfterDigestMismatch.isEmpty, "digest mismatch must leave no staged output behind")
+
+    let ownedClip = try OwnedMediaSpike.run()
+    directories.append(ownedClip.outputURL.deletingLastPathComponent())
+    let clipData = try Data(contentsOf: ownedClip.outputURL)
+    let clipDigest = try AssetDigest.sha256(of: ownedClip.outputURL)
+    let extensionlessStage = ownedClip.outputURL.deletingLastPathComponent().appendingPathComponent("clip.tmp")
+    try clipData.write(to: extensionlessStage)
+    let stagedFacts = try AssetMediaInspector.inspect(kind: .animationClip, url: extensionlessStage)
+    require(stagedFacts.width == 320 && stagedFacts.height == 180 && stagedFacts.durationSeconds == 1, "temporary suffix must not hide valid MOV content")
+    for response in [
+        ProviderHTTPResponse(statusCode: 206, headers: ["Content-Length": "\(clipData.count)"], body: clipData),
+        ProviderHTTPResponse(statusCode: 500, body: clipData)
+    ] {
+        do {
+            _ = try AnimationOutputQuarantine.store(response: response, expectedSHA256: nil, into: quarantineRoot)
+            require(false, "non-complete HTTP responses must never publish clips")
+        } catch AnimationOutputError.downloadRejected { }
+    }
+    do {
+        _ = try AnimationOutputQuarantine.store(response: ProviderHTTPResponse(statusCode: 200, body: Data("not a movie".utf8)), expectedSHA256: nil, into: quarantineRoot)
+        require(false, "unreadable clip bytes must remain rejected")
+    } catch AnimationOutputError.invalidClip { }
+    let leftovers = try FileManager.default.contentsOfDirectory(atPath: quarantineRoot.path)
+    require(leftovers.isEmpty, "failed video validation must remove staged bytes")
+    let repoAlias = ownedClip.outputURL.deletingLastPathComponent().appendingPathComponent("repo-alias")
+    let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    try FileManager.default.createSymbolicLink(at: repoAlias, withDestinationURL: repository)
+    do {
+        _ = try AnimationOutputQuarantine.store(response: ProviderHTTPResponse(statusCode: 200, body: clipData), expectedSHA256: nil, into: repoAlias.appendingPathComponent("missing/quarantine"))
+        require(false, "quarantine must reject repository aliases before writes")
+    } catch AnimationOutputError.invalidDestination { }
+    let downloadTransport = FixtureRunwayTransport([.response(ProviderHTTPResponse(statusCode: 200, headers: ["Content-Length": "\(clipData.count)"], body: clipData))])
+    let quarantined = try AnimationOutputQuarantine.download(outputURL: URL(string: "https://owned.example/clip.mov")!, transport: downloadTransport, timeout: 7, expectedSHA256: clipDigest, into: quarantineRoot)
+    require(quarantined.sha256 == clipDigest && quarantined.url.lastPathComponent == "\(clipDigest).mov", "digest-valid provider output must be immutable quarantine evidence")
+    require(downloadTransport.requests.first?.value(forHTTPHeaderField: "Authorization") == nil, "provider credentials must not be sent to an output host")
+    let duplicate = try AnimationOutputQuarantine.store(response: ProviderHTTPResponse(statusCode: 200, body: clipData), expectedSHA256: clipDigest, into: quarantineRoot)
+    require(duplicate.url == quarantined.url, "identical output digest must reuse quarantined evidence without overwrite")
+
+    // A separate owned MP4 fixture covers the provider's usual output container.
+    let mp4URL = ownedClip.outputURL.deletingLastPathComponent().appendingPathComponent("owned.mp4")
+    guard let exporter = AVAssetExportSession(asset: AVURLAsset(url: ownedClip.outputURL), presetName: AVAssetExportPresetMediumQuality) else {
+        throw AnimationOutputError.invalidClip
+    }
+    exporter.outputURL = mp4URL
+    exporter.outputFileType = .mp4
+    let exportDone = DispatchSemaphore(value: 0)
+    exporter.exportAsynchronously { exportDone.signal() }
+    guard exportDone.wait(timeout: .now() + 30) == .success else { exporter.cancelExport(); throw AnimationOutputError.invalidClip }
+    guard exporter.status == .completed else { throw AnimationOutputError.invalidClip }
+    let mp4Data = try Data(contentsOf: mp4URL)
+    let mp4 = try AnimationOutputQuarantine.store(response: ProviderHTTPResponse(statusCode: 200, body: mp4Data), expectedSHA256: nil, into: quarantineRoot)
+    require(mp4.url.pathExtension == "mp4" && mp4.facts.width > 0, "MP4 bytes must retain their container through temporary staging")
+    let mp4Digest = try AssetDigest.sha256(of: mp4URL)
+    require(mp4.sha256 == mp4Digest, "quarantine must never transcode provider bytes")
+
+    let symlinkQuarantine = quarantineRoot.appendingPathComponent("symlink-case")
+    try FileManager.default.createDirectory(at: symlinkQuarantine, withIntermediateDirectories: false)
+    try FileManager.default.createSymbolicLink(at: symlinkQuarantine.appendingPathComponent("\(clipDigest).mov"), withDestinationURL: ownedClip.outputURL)
+    do {
+        _ = try AnimationOutputQuarantine.store(response: ProviderHTTPResponse(statusCode: 200, body: clipData), expectedSHA256: clipDigest, into: symlinkQuarantine)
+        require(false, "matching-digest symlink must never be accepted as immutable evidence")
+    } catch AnimationOutputError.invalidDestination { }
+
+    let manualLibrary = FileManager.default.temporaryDirectory.appending(path: "melotrail-manual-clip-library-\(UUID().uuidString)")
+    directories.append(manualLibrary)
+    let manual = try ManualAnimationClipImporter.importOwned(
+        ManualAnimationClipImportRequest(assetImport: AssetImportRequest(
+            identity: AssetIdentity(assetID: "owned-loop", version: "v1"),
+            kind: .animationClip,
+            sourceURL: quarantined.url,
+            provenance: AssetProvenance(originalSource: "owned local clip", creator: "fixture", creationMethod: .owned, createdAt: fixtureDate),
+            rights: AssetRights(ownershipOrLicense: "owned fixture", permittedUses: ["local review"]),
+            importedBy: "fixture-user"
+        )),
+        into: manualLibrary,
+        now: fixtureDate
+    )
+    require(manual.record.kind == .animationClip && manual.record.approval.state == .proposed, "manual clip import must retain proposed review status")
+    let selectedClipDigestAfterImport = try AssetDigest.sha256(of: quarantined.url)
+    require(selectedClipDigestAfterImport == clipDigest, "manual clip import must preserve the selected owned source")
+    print("runway-adapter-and-manual-clip-regression=PASS")
+} catch {
+    fputs("runway-adapter-and-manual-clip-regression=FAIL: \(error.localizedDescription)\n", stderr)
+    exit(1)
+}
+
 
 // Records every fake provider invocation separately so lost ledger updates or
 // duplicate submissions cannot hide behind an overwritten event file.
@@ -1136,5 +1404,56 @@ do {
     print("animation-concurrency-regression=PASS")
 } catch {
     fputs("animation-concurrency-regression=FAIL: \(error)\n", stderr)
+    exit(1)
+}
+
+
+final class OwnedHTTPProtocol: URLProtocol, @unchecked Sendable {
+    static let insecureLoads = ConcurrentAnimationResults()
+    override class func canInit(with request: URLRequest) -> Bool { request.url?.host == "owned-http.example" }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let url = request.url!
+        if url.scheme != "https" { Self.insecureLoads.append(1) }
+        if url.path == "/redirect" || url.path == "/auth-redirect" {
+            let destination = url.path == "/redirect" ? "http://owned-http.example/target" : "https://owned-http.example:444/target"
+            let redirected = URLRequest(url: URL(string: destination)!)
+            let response = HTTPURLResponse(url: url, statusCode: 302, httpVersion: nil, headerFields: ["Location": redirected.url!.absoluteString])!
+            client?.urlProtocol(self, wasRedirectedTo: redirected, redirectResponse: response)
+            return
+        }
+        let responseURL = url.path == "/bad-final" ? URL(string: "http://owned-http.example/target")! : url
+        let headers = url.path == "/declared-size" ? ["Content-Length": "100000"] : [:]
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: responseURL, statusCode: 200, httpVersion: nil, headerFields: headers)!, cacheStoragePolicy: .notAllowed)
+        if url.path == "/stream" {
+            for _ in 0..<3 { client?.urlProtocol(self, didLoad: Data(repeating: 1, count: 4)) }
+        } else { client?.urlProtocol(self, didLoad: Data("abc".utf8)) }
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() { }
+}
+
+do {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [OwnedHTTPProtocol.self]
+    let session = URLSession(configuration: configuration)
+    defer { session.invalidateAndCancel() }
+    let transport = URLSessionProviderHTTPTransport(session: session)
+    let valid = try transport.execute(URLRequest(url: URL(string: "https://owned-http.example/valid")!), timeout: 10, maximumBytes: 8)
+    require(valid.body == Data("abc".utf8), "concrete bounded transport must return valid response bytes")
+    for endpoint in ["redirect", "auth-redirect", "bad-final", "stream", "declared-size"] {
+        do {
+            var request = URLRequest(url: URL(string: "https://owned-http.example/\(endpoint)")!)
+            if endpoint == "auth-redirect" { request.setValue("Bearer owned-fixture", forHTTPHeaderField: "Authorization") }
+            _ = try transport.execute(request, timeout: 10, maximumBytes: 8)
+            require(false, "unsafe or oversized transport response must reject")
+        } catch let error as URLError {
+            require(error.code == .secureConnectionFailed || error.code == .dataLengthExceedsMaximum, "\(endpoint): transport must reject at the HTTPS/byte boundary, got \(error.code)")
+        }
+    }
+    require(OwnedHTTPProtocol.insecureLoads.statuses.isEmpty, "HTTPS redirect must reject before issuing any HTTP request")
+    print("bounded-https-transport-regression=PASS")
+} catch {
+    fputs("bounded-https-transport-regression=FAIL: \(error)\n", stderr)
     exit(1)
 }
