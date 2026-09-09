@@ -10,6 +10,7 @@ let package = Package(
         .executable(name: "melotrail-tabi-regression", targets: ["MelotrailTABIRegression"]),
         .executable(name: "melotrail-tabi-assets", targets: ["MelotrailTABIAssets"]),
         .executable(name: "melotrail-tabi-animation", targets: ["MelotrailTABIAnimation"]),
+        .executable(name: "melotrail-tabi-editor", targets: ["MelotrailTABIEditor"]),
     ],
     targets: [
         .target(name: "MelotrailTABICompanion"),
@@ -17,5 +18,6 @@ let package = Package(
         .executableTarget(name: "MelotrailTABIRegression", dependencies: ["MelotrailTABICompanion"]),
         .executableTarget(name: "MelotrailTABIAssets", dependencies: ["MelotrailTABICompanion"]),
         .executableTarget(name: "MelotrailTABIAnimation", dependencies: ["MelotrailTABICompanion"]),
+        .executableTarget(name: "MelotrailTABIEditor", dependencies: ["MelotrailTABICompanion"]),
     ]
 )

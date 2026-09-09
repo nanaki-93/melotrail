@@ -1,4 +1,5 @@
 import Darwin
+import AppKit
 import AVFoundation
 import CoreMedia
 import CoreGraphics
@@ -117,6 +118,29 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) {
         fputs("regression=FAIL: \(message)\n", stderr)
         exit(1)
     }
+}
+
+@MainActor
+func findControl(withAccessibilityLabel label: String, in view: NSView) -> NSControl? {
+    if let control = view as? NSControl, control.accessibilityLabel() == label { return control }
+    for child in view.subviews {
+        if let control = findControl(withAccessibilityLabel: label, in: child) { return control }
+    }
+    return nil
+}
+
+func waitForEditorFrame(
+    _ session: SceneEditorSession,
+    matching predicate: (Int64) -> Bool,
+    timeout: TimeInterval = 2
+) throws -> ScenePreviewFrame {
+    let deadline = Date().addingTimeInterval(timeout)
+    var frame = try session.currentFrame()
+    while Date() < deadline && !predicate(frame.frame) {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        frame = try session.currentFrame()
+    }
+    return frame
 }
 
 let synchronizer = PreviewSynchronizer(
@@ -555,6 +579,38 @@ do {
     )
     let decodedComposition = try decodedCompositionRequest.resolve()
     require(decodedComposition == composition, "the read-only plan-scenes request must resolve the shared scene plan")
+    // A caller can request this small, owned, external fixture when it needs
+    // to exercise the actual release editor window. It is a copy of the same
+    // digest-pinned files used above, never a repository fixture or a MIDI
+    // project. The normal regression leaves no retained output behind.
+    if let fixturePath = ProcessInfo.processInfo.environment["MELOTRAIL_TABI_EDITOR_FIXTURE_DIR"] {
+        let fixtureRoot = URL(fileURLWithPath: fixturePath, isDirectory: true)
+        let fileManager = FileManager.default
+        guard (try? fixtureRoot.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true,
+              (try? fileManager.contentsOfDirectory(atPath: fixtureRoot.path).isEmpty) == true else {
+            throw AssetManifestError.unreadableManifest("editor fixture destination must be an empty existing directory")
+        }
+        let fixtureSoundtrack = fixtureRoot.appendingPathComponent("soundtrack.mov")
+        let fixtureManifest = fixtureRoot.appendingPathComponent("manifest.json")
+        let fixtureLibrary = fixtureRoot.appendingPathComponent("scene-library", isDirectory: true)
+        try fileManager.copyItem(at: probe.outputURL, to: fixtureSoundtrack)
+        try fileManager.copyItem(at: manifestURL, to: fixtureManifest)
+        try fileManager.copyItem(at: sceneLibrary, to: fixtureLibrary)
+        var fixtureTiming = requestObject
+        fixtureTiming["soundtrackPath"] = fixtureSoundtrack.path
+        fixtureTiming["manifestPath"] = fixtureManifest.path
+        let fixtureRequest: [String: Any] = [
+            "timing": fixtureTiming,
+            "assetLibraryPath": fixtureLibrary.path,
+            "assetManifestPath": fixtureLibrary.appendingPathComponent("asset-manifest.json").path,
+            "sceneVersion": "train-v1",
+            "identityVersion": "tabi-v1",
+            "scenes": decodedSceneInputs,
+        ]
+        let requestURL = fixtureRoot.appendingPathComponent("composition-request.json")
+        try JSONSerialization.data(withJSONObject: fixtureRequest, options: [.prettyPrinted, .sortedKeys]).write(to: requestURL, options: .withoutOverwriting)
+        print("editor-fixture=\(requestURL.path)")
+    }
     let repeatedComposition = try compositionRequest.resolve()
     require(composition == repeatedComposition, "identical accepted assets and job facts must produce identical composition plans")
     require(composition.timing == plan && composition.timing.frameCount == 30, "composition must retain the exact immutable soundtrack frame plan")
@@ -656,6 +712,84 @@ do {
         require(false, "preview must reject the frame immediately after the soundtrack boundary")
     } catch ScenePreviewError.invalidFrame { }
     print("scene-preview-regression=PASS")
+
+    // V05b: the real editor session exposes the V05a stage through a selected
+    // scene strip, factual inspector, player-derived seek, and explicit close
+    // cleanup. It never introduces an editor-only clock or placeholder image.
+    let editor = try SceneEditorSession(
+        request: compositionRequest,
+        geometry: try PreviewOutputGeometry(width: 2, height: 3)
+    )
+    let initialEditor = try editor.snapshot()
+    require(initialEditor.sceneCount == plan.scenes.count && initialEditor.frameRate == plan.frameRate, "editor session must retain the immutable scene timing plan")
+    require(initialEditor.soundtrackPlayerCount == 1, "an open editor session must own exactly one soundtrack player")
+    let editorStrip = try editor.sceneStrip()
+    require(editorStrip.count == plan.scenes.count && editorStrip.allSatisfy { $0.image.width == 2 && $0.image.height == 3 }, "editor scene strip must use rendered plan frames at the shared output geometry")
+    let sceneSelected = DispatchSemaphore(value: 0)
+    var selectedCompleted = false
+    try editor.selectScene(1) { completed in
+        selectedCompleted = completed
+        sceneSelected.signal()
+    }
+    require(sceneSelected.wait(timeout: .now() + 2) == .success && selectedCompleted, "selecting a scene must seek the sole soundtrack player to that scene")
+    let selectedInspector = try editor.inspector()
+    require(selectedInspector.sceneID == plan.scenes[1].id && selectedInspector.startFrame == plan.scenes[1].startFrame, "editor inspector must report the selected immutable scene")
+    let selectedFrame = try editor.currentFrame()
+    require(selectedFrame.frame == plan.scenes[1].startFrame && selectedFrame.sceneIDs == [plan.scenes[1].id], "selected scene preview must use the real V05a frame at its exact boundary")
+    try editor.play()
+    let editorPlaybackDeadline = Date().addingTimeInterval(2)
+    var editorPlaybackFrame = try editor.currentFrame()
+    while Date() < editorPlaybackDeadline && editorPlaybackFrame.frame == selectedFrame.frame {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        editorPlaybackFrame = try editor.currentFrame()
+    }
+    editor.pause()
+    require(editorPlaybackFrame.frame > selectedFrame.frame, "editor playback must advance from the V05a soundtrack clock")
+    editor.close()
+    require(editor.isClosed && editor.soundtrackPlayerCount == 0, "editor close must release its sole preview stage and soundtrack player")
+    do {
+        _ = try editor.currentFrame()
+        require(false, "a closed editor must not retain a playable transport")
+    } catch SceneEditorError.closed { }
+    print("scene-editor-regression=PASS")
+
+    // V05b native surface: open the actual AppKit controller, activate its
+    // scene, playback, and seek controls through their accessibility labels,
+    // then close the native window. This is intentionally distinct from the
+    // session checks above: it proves the visible control wiring and observer
+    // cleanup path that the release executable uses.
+    try MainActor.assumeIsolated {
+        let application = NSApplication.shared
+        application.setActivationPolicy(.regular)
+        let windowSession = try SceneEditorSession(
+            request: compositionRequest,
+            geometry: try PreviewOutputGeometry(width: 2, height: 3)
+        )
+        let editorWindow = try SceneEditorWindowController(session: windowSession)
+        editorWindow.showEditor()
+        guard let editorContent = editorWindow.window?.contentView,
+              editorWindow.window?.isVisible == true,
+              let sceneButton = findControl(withAccessibilityLabel: "Select scene Intro", in: editorContent) as? NSButton,
+              let playButton = findControl(withAccessibilityLabel: "Play soundtrack", in: editorContent) as? NSButton,
+              let seekControl = findControl(withAccessibilityLabel: "Seek soundtrack", in: editorContent) as? NSSlider else {
+            require(false, "native editor window must expose visible labeled scene and transport controls")
+            fatalError("unreachable")
+        }
+        sceneButton.performClick(nil)
+        let selectedWindowFrame = try waitForEditorFrame(windowSession, matching: { $0 == plan.scenes[1].startFrame })
+        require(selectedWindowFrame.sceneIDs == [plan.scenes[1].id], "native scene button must seek the real preview to the selected scene")
+        playButton.performClick(nil)
+        let acrossBoundaryFrame = try waitForEditorFrame(windowSession, matching: { $0 >= plan.scenes[2].startFrame })
+        require(acrossBoundaryFrame.sceneIDs == [plan.scenes[2].id], "native Play control must advance the real soundtrack player across a scene boundary")
+        playButton.performClick(nil)
+        seekControl.integerValue = 1
+        _ = seekControl.sendAction(seekControl.action, to: seekControl.target)
+        let soughtWindowFrame = try waitForEditorFrame(windowSession, matching: { $0 == 1 })
+        require(soughtWindowFrame.soundtrackTime == CMTime(value: 1, timescale: 30), "native seek slider must use the plan frame rate and sole soundtrack clock")
+        editorWindow.window?.close()
+        require(windowSession.isClosed, "closing the native editor window must remove its frame observer and release the player stage")
+        print("scene-editor-window-regression=PASS")
+    }
 
     var repetitive = sceneInputs
     repetitive[1] = SceneCompositionInput(timingSceneID: plan.scenes[1].id, interior: interior, windowMask: windowMask, parallaxLayers: [ParallaxLayerInput(asset: scenery, pixelsPerFrame: 3)], actionLoop: ActionLoopInput(clip: actionA, clipFrames: actionFrames, maximumRepeats: 3), crossfadeToNextFrames: 2)

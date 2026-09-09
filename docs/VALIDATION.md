@@ -101,6 +101,15 @@ rejection are also covered; the read-only `plan-timing` CLI prints the shared JS
 This is timing-plan evidence only: composition, preview,
 encoder parity, and human A/V approval remain V04–V07 work.
 
+V05b's release-window regression launches the native editor with an owned
+composition request, selects a scene, plays across a boundary, seeks and closes.
+It verifies player/observer cleanup and captures both the usable window and an
+invalid-input window. Capture guards reject clipped inspector/transport/scene
+controls. The Swift-owned loading window disables AppKit release-on-close;
+this launch/close path covers the recovered release-only ownership crash.
+Evidence: `~/.codex/melotrail-terra/v05b-repair-evidence`; fixtures are technical
+media, not production TABI identity approval. V05c/d and final V05 remain pending.
+
 ## Scheduled runner checks
 
 For runner changes, run `node --test tools/terra-runner.test.mjs

@@ -73,9 +73,35 @@ swift run --package-path companion melotrail-tabi-animation preview-frame previe
 ```
 
 It uses the one soundtrack player to seek to the selected frame, then prints
-that frame's soundtrack time, scene IDs and actual rendered dimensions. V05
-owns the editor controls; V06 will consume the same plan and output geometry
-for encoding.
+that frame's soundtrack time, scene IDs and actual rendered dimensions. V05b
+adds the first editor controls; V06 will consume the same plan and output
+geometry for encoding.
+
+## Native scene editor
+
+V05b provides a visible, resizable macOS editor for an existing composition
+request. It opens the digest-pinned finished soundtrack and approved scene
+assets already named by `SceneCompositionRequest`; it does not write that
+request, the soundtrack, asset library, MIDI project, or an output video.
+
+```sh
+swift build --package-path companion -c release
+"$(swift build --package-path companion -c release --show-bin-path)/melotrail-tabi-editor" \
+  /path/to/composition-request.json
+```
+
+The window first reports loading or request errors, then shows rendered scene
+thumbnails, the real preview, a read-only selected-scene inspector, and
+play/pause/seek transport. Scene selection seeks the same sole V05a AVPlayer
+clock used by preview playback. Closing the window pauses transport and removes
+the frame observer/player; crop, parallax, and crossfade editing are not
+available until V05c.
+
+`./companion/scripts/test.sh` also launches that release executable with a fresh
+owned composition fixture. It drives the visible scene/play/seek controls across
+a boundary, captures the actual AppKit editor and input-error windows, and writes
+transport/player/close observations under the ignored
+`companion/.build/v05b-editor-evidence.*` directory printed by the check.
 
 ## Asset-library manifest
 
