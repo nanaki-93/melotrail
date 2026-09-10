@@ -269,9 +269,12 @@ class MidiCoreArrangementStylePreview(
                     patternId = choice.patternId,
                     generator = MidiCoreGeneratorInput(
                         PREVIEW_GENERATOR_ID,
-                        MidiCoreBassDrumCoordination.generatorVersion(
-                            MidiCoreChordCompingPhrasePatterns.generatorVersion(
-                                "style-catalog-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+                        MidiCoreDrumGenerator.generatorVersion(
+                            MidiCoreBassDrumCoordination.generatorVersion(
+                                MidiCoreChordCompingPhrasePatterns.generatorVersion(
+                                    "style-catalog-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+                                    role,
+                                ),
                                 role,
                             ),
                             role,

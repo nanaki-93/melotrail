@@ -4,6 +4,7 @@ import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.arrangement.core.MidiCoreBassDrumCoordination
 import app.melotrail.arrangement.core.MidiCoreChordCompingPhrasePatterns
 import app.melotrail.arrangement.core.MidiCoreChordGenerator
+import app.melotrail.arrangement.core.MidiCoreDrumGenerator
 import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary
 import app.melotrail.arrangement.core.MidiCoreRoleValidationReportJson
@@ -242,9 +243,12 @@ class MidiCoreArrangementDraftGeneration(
             }
             if (currentScopeHash != scopeHash) return incomplete(session, draftId, orderedScopes.size, completed, problem(MidiCoreArrangementDraftProblemCode.DRAFT_STALE, "The plan changed while this scope was being prepared.", "Reload and retry the incomplete draft.", scope))
             val seed = derivedSeed(request.rootSeed, scope)
-            val generatorVersion = MidiCoreBassDrumCoordination.generatorVersion(
-                MidiCoreChordCompingPhrasePatterns.generatorVersion(
-                    "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+            val generatorVersion = MidiCoreDrumGenerator.generatorVersion(
+                MidiCoreBassDrumCoordination.generatorVersion(
+                    MidiCoreChordCompingPhrasePatterns.generatorVersion(
+                        "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+                        scope.role,
+                    ),
                     scope.role,
                 ),
                 scope.role,

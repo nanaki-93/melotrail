@@ -262,3 +262,13 @@ Quarter, eighth and sixteenth intent use the authoritative 3/4 or 6/8 grid,
 not a substituted 4/4 bar. In 6/8, optional off-beat kick support is measured
 against the two dotted-quarter pulses while retaining exact eighth/sixteenth
 positions. Coordination rule version is part of Bass/Drums draft generator identity.
+
+M08b realizes a style-selected Drum fill only at a confirmed phrase boundary
+where the current exit or next section entry requests a pickup. Harmony changes
+alone never request a fill; either the current or next quiet Intro/Outro intent
+suppresses fills, and a quiet next section also suppresses final-bar added
+Bass-derived kicks. A repeated plan family may choose one different,
+complete compatible authored groove; it never decimates or rewrites individual
+authored hits. Phrase/neighbor/repeat inputs and the Drum transition-rule version
+remain in the scoped fingerprint, so only the declared affected Drum scopes go
+stale when a transition intent changes.

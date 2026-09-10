@@ -449,6 +449,22 @@ data class MidiCoreGenerationContext(
     /** Generator version recorded by the candidate publication boundary. */
     val generatorVersion: String get() = generator.generatorVersion
 
+    /**
+     * A style leaves purpose unspecified and therefore consumes confirmed plan
+     * intent. Explicit direct-generation policy retains its supplied purpose
+     * for focused generation outside a complete arrangement draft.
+     */
+    val resolvedSectionPurpose: MidiCoreSectionPurpose
+        get() = occurrencePlan?.current?.purpose?.toSectionPurpose()
+            ?.takeIf { sectionPolicy.purpose == MidiCoreSectionPurpose.UNSPECIFIED }
+            ?: sectionPolicy.purpose
+
+    /** Confirmed plan energy accompanies plan-owned purpose; explicit direct policy stays intact. */
+    val resolvedSectionEnergy: Double
+        get() = occurrencePlan?.current?.energy?.div(100.0)
+            ?.takeIf { sectionPolicy.purpose == MidiCoreSectionPurpose.UNSPECIFIED }
+            ?: sectionPolicy.energy
+
     /** Complete scoped fingerprint used to admit asynchronous generation results. */
     val generationFingerprint: MidiCoreGenerationFingerprint
         get() = MidiCoreGenerationFingerprint(
@@ -603,6 +619,17 @@ data class MidiCoreGenerationContext(
             )
         }
     }
+}
+
+/** Translate persisted arrangement purpose into the generator's local vocabulary. */
+private fun app.melotrail.project.MidiCoreArrangementPurpose.toSectionPurpose(): MidiCoreSectionPurpose = when (this) {
+    app.melotrail.project.MidiCoreArrangementPurpose.INTRO -> MidiCoreSectionPurpose.INTRO
+    app.melotrail.project.MidiCoreArrangementPurpose.VERSE -> MidiCoreSectionPurpose.VERSE
+    app.melotrail.project.MidiCoreArrangementPurpose.PRE_CHORUS -> MidiCoreSectionPurpose.PRE_CHORUS
+    app.melotrail.project.MidiCoreArrangementPurpose.CHORUS -> MidiCoreSectionPurpose.CHORUS
+    app.melotrail.project.MidiCoreArrangementPurpose.BRIDGE -> MidiCoreSectionPurpose.BRIDGE
+    app.melotrail.project.MidiCoreArrangementPurpose.OUTRO -> MidiCoreSectionPurpose.OUTRO
+    app.melotrail.project.MidiCoreArrangementPurpose.OTHER -> MidiCoreSectionPurpose.UNSPECIFIED
 }
 
 private val HASH = Regex("[0-9a-f]{64}")

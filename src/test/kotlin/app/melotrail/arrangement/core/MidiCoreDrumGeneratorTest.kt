@@ -344,6 +344,158 @@ class MidiCoreDrumGeneratorTest {
     }
 
     @Test
+    fun `confirmed phrase pickup realizes a fill only at a two bar next-section transition`() {
+        val project = transitionProject(
+            firstBars = 2,
+            secondBars = 1,
+            firstPurpose = MidiCoreArrangementPurpose.PRE_CHORUS,
+            secondPurpose = MidiCoreArrangementPurpose.CHORUS,
+            firstPhrase = "pre-phrase",
+            secondPhrase = "chorus-phrase",
+            firstExit = MidiCoreBoundaryIntent.PICKUP,
+            secondEntry = MidiCoreBoundaryIntent.PICKUP,
+        )
+
+        val result = MidiCoreDrumGenerator.generate(
+            context(
+                MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+                project = project,
+                purpose = MidiCoreSectionPurpose.UNSPECIFIED,
+                fillPatternId = MidiCoreDrumFillPatternId.SOFT_TWO_STROKE.id,
+            ),
+        )
+        val snareStarts = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+            .filter { it.pitch == 38 }.map { it.startTick }
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertTrue(3_600L in snareStarts && 3_720L in snareStarts, snareStarts.toString())
+        assertTrue(result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().all { it.endTick <= 3_840L })
+    }
+
+    @Test
+    fun `one bar harmony edge and quiet intro do not infer a style fill or bass pickup`() {
+        val harmonyEdge = transitionProject(
+            firstBars = 1,
+            secondBars = 1,
+            firstPurpose = MidiCoreArrangementPurpose.VERSE,
+            secondPurpose = MidiCoreArrangementPurpose.VERSE,
+            firstPhrase = "shared-phrase",
+            secondPhrase = "shared-phrase",
+            firstExit = MidiCoreBoundaryIntent.NONE,
+            secondEntry = MidiCoreBoundaryIntent.NONE,
+            firstSymbol = "C",
+            secondSymbol = "F",
+        )
+        val quietIntro = transitionProject(
+            firstBars = 1,
+            secondBars = 1,
+            firstPurpose = MidiCoreArrangementPurpose.INTRO,
+            secondPurpose = MidiCoreArrangementPurpose.VERSE,
+            firstPhrase = "intro-phrase",
+            secondPhrase = "verse-phrase",
+            firstExit = MidiCoreBoundaryIntent.PICKUP,
+            secondEntry = MidiCoreBoundaryIntent.PICKUP,
+        )
+        val bass = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-pickup", "f".repeat(64)),
+            listOf(MidiCoreGenerationNote(720, 840, 36, 80)),
+        )
+
+        val edge = MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = harmonyEdge,
+            fillPatternId = MidiCoreDrumFillPatternId.SOFT_TWO_STROKE.id,
+        ))
+        val intro = MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = quietIntro,
+            purpose = MidiCoreSectionPurpose.UNSPECIFIED,
+            fillPatternId = MidiCoreDrumFillPatternId.SOFT_TWO_STROKE.id,
+            acceptedDependencies = listOf(bass),
+        ))
+        val edgeSnares = edge.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().filter { it.pitch == 38 }.map { it.startTick }
+        val introKicks = intro.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().filter { it.pitch == 36 }.map { it.startTick }
+
+        assertTrue(edge.accepted && intro.accepted)
+        assertFalse(1_680L in edgeSnares || 1_800L in edgeSnares, edgeSnares.toString())
+        assertFalse(720L in introKicks, introKicks.toString())
+    }
+
+    @Test
+    fun `pickup into quiet next intro or outro suppresses fills and final bar bass kicks`() {
+        for (quietPurpose in listOf(MidiCoreArrangementPurpose.INTRO, MidiCoreArrangementPurpose.OUTRO)) {
+            val project = transitionProject(
+                firstBars = 2,
+                secondBars = 1,
+                firstPurpose = MidiCoreArrangementPurpose.VERSE,
+                secondPurpose = quietPurpose,
+                firstPhrase = "verse-phrase",
+                secondPhrase = "quiet-phrase",
+                firstExit = MidiCoreBoundaryIntent.PICKUP,
+                secondEntry = MidiCoreBoundaryIntent.PICKUP,
+            )
+            val bass = MidiCoreAcceptedDependencyContext(
+                MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-quiet-$quietPurpose", "e".repeat(64)),
+                listOf(MidiCoreGenerationNote(3_600, 3_720, 36, 80)),
+            )
+
+            val result = MidiCoreDrumGenerator.generate(context(
+                MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+                project = project,
+                purpose = MidiCoreSectionPurpose.UNSPECIFIED,
+                fillPatternId = MidiCoreDrumFillPatternId.SOFT_TWO_STROKE.id,
+                acceptedDependencies = listOf(bass),
+            ))
+            val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+            val snareStarts = notes.filter { it.pitch == 38 }.map { it.startTick }
+            val kickStarts = notes.filter { it.pitch == 36 }.map { it.startTick }
+
+            assertTrue(result.accepted, "$quietPurpose: ${result.validation.report.findings}")
+            assertFalse(3_600L in snareStarts || 3_720L in snareStarts, "$quietPurpose: $snareStarts")
+            assertFalse(3_600L in kickStarts, "$quietPurpose: $kickStarts")
+        }
+    }
+
+    @Test
+    fun `repeat family varies one complete compatible groove deterministically`() {
+        val project = transitionProject(
+            firstBars = 1,
+            secondBars = 1,
+            firstPurpose = MidiCoreArrangementPurpose.CHORUS,
+            secondPurpose = MidiCoreArrangementPurpose.CHORUS,
+            firstPhrase = "chorus-a",
+            secondPhrase = "chorus-b",
+            firstExit = MidiCoreBoundaryIntent.HOLD,
+            secondEntry = MidiCoreBoundaryIntent.HOLD,
+            repeatFamily = "chorus-family",
+        )
+        val first = MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = project,
+            purpose = MidiCoreSectionPurpose.UNSPECIFIED,
+        ))
+        val repeated = MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = project,
+            occurrenceId = "verse-2",
+            purpose = MidiCoreSectionPurpose.UNSPECIFIED,
+        ))
+
+        assertTrue(first.accepted && repeated.accepted)
+        assertNotEquals(
+            first.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().map { it.startTick to it.pitch },
+            repeated.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+                .map { it.startTick - 1_920L to it.pitch },
+        )
+        assertEquals(repeated, MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = project,
+            occurrenceId = "verse-2",
+            purpose = MidiCoreSectionPurpose.UNSPECIFIED,
+        )))
+    }
+
+    @Test
     fun `GM pitches channel energy purpose and profile velocities remain deterministic`() {
         val low = MidiCoreDrumGenerator.generate(context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id, energy = 0.0, purpose = MidiCoreSectionPurpose.INTRO))
         val high = MidiCoreDrumGenerator.generate(context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id, energy = 1.0, purpose = MidiCoreSectionPurpose.CHORUS))
@@ -458,12 +610,13 @@ class MidiCoreDrumGeneratorTest {
         energy: Double = 0.5,
         purpose: MidiCoreSectionPurpose = MidiCoreSectionPurpose.VERSE,
         project: MidiCoreProject = project(1_920),
+        occurrenceId: String = "verse-1",
         fillPatternId: String? = null,
         acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
     ): MidiCoreGenerationContext = MidiCoreGenerationContext.from(
         project = project,
         role = CandidateRole.DRUMS,
-        occurrenceId = "verse-1",
+        occurrenceId = occurrenceId,
         performanceProfile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.DRUMS, profileId),
         patternId = patternId,
         generator = MidiCoreGeneratorInput("test-generator", "test-v1", patternId, seed),
@@ -511,6 +664,58 @@ class MidiCoreDrumGeneratorTest {
             ),
         ),
     )
+
+    private fun transitionProject(
+        firstBars: Int,
+        secondBars: Int,
+        firstPurpose: MidiCoreArrangementPurpose,
+        secondPurpose: MidiCoreArrangementPurpose,
+        firstPhrase: String,
+        secondPhrase: String,
+        firstExit: MidiCoreBoundaryIntent,
+        secondEntry: MidiCoreBoundaryIntent,
+        firstSymbol: String = "C",
+        secondSymbol: String = "C",
+        repeatFamily: String? = null,
+    ): MidiCoreProject {
+        val firstEnd = firstBars * 1_920L
+        val songEnd = firstEnd + secondBars * 1_920L
+        val roleSettings = CandidateRole.entries.map { role ->
+            MidiCoreRolePlanSettings(role, MidiCoreRoleActivity.SUPPORTING, 100, MidiCoreRegisterPreference.MID)
+        }
+        val firstFamily = repeatFamily ?: "first-family"
+        val secondFamily = repeatFamily ?: "second-family"
+        return project(songEnd).copy(
+            authority = ProjectAuthority(
+                key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
+                tempo = ProjectTempo(500_000),
+                meter = ProjectMeter(4, 2),
+                sectionDefinitions = listOf(ProjectSectionDefinition("verse-a", "Verse A"), ProjectSectionDefinition("verse-b", "Verse B")),
+                occurrences = listOf(
+                    ProjectSectionOccurrence("verse-1", "verse-a", "Verse A", 0, firstEnd),
+                    ProjectSectionOccurrence("verse-2", "verse-b", "Verse B", firstEnd, songEnd),
+                ),
+                chordEvents = listOf(
+                    AuthoritativeChordEvent("chord-a", "verse-1", firstSymbol, 0, firstEnd),
+                    AuthoritativeChordEvent("chord-b", "verse-2", secondSymbol, firstEnd, songEnd),
+                ),
+            ),
+            arrangementPlan = MidiCoreArrangementPlan(
+                MidiCoreArrangementPlan.VERSION,
+                MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.STEADY),
+                listOf(
+                    MidiCoreOccurrenceArrangementPlan(
+                        "verse-1", firstPurpose, firstPhrase, firstFamily, 1, 50, roleSettings,
+                        MidiCoreBoundaryIntent.NONE, firstExit,
+                    ),
+                    MidiCoreOccurrenceArrangementPlan(
+                        "verse-2", secondPurpose, secondPhrase, secondFamily, if (repeatFamily == null) 1 else 2, 50, roleSettings,
+                        secondEntry, MidiCoreBoundaryIntent.NONE,
+                    ),
+                ),
+            ),
+        )
+    }
 
     private object MidiCoreDrumPatternCatalogSize {
         const val LIFT_BUILD_STEPS = 20

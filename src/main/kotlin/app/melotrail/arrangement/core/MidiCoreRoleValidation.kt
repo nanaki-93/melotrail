@@ -431,7 +431,7 @@ object MidiCoreRoleValidator {
         notes: List<MidiCoreCandidateEvent.Note>,
         findings: MutableList<MidiCoreRoleFinding>,
     ) {
-        if (context.role != CandidateRole.DRUMS || context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO)) return
+        if (context.role != CandidateRole.DRUMS || context.resolvedSectionPurpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO)) return
         if (MidiCoreBassDrumCoordination.isRestrained(context)) return
         val kickStarts = notes.filter { it.pitch == KICK_PITCH }.map { it.startTick }.toSet()
         context.dependency(CandidateRole.BASS)?.notes.orEmpty().firstOrNull { bass ->

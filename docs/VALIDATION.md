@@ -255,6 +255,12 @@ restrained and compound-meter cases.
 These are engineering checks. Full-song M08 comparison packages and Q02 Logic
 listening remain separate pending work; no musical score is inferred.
 
+M08b adds deterministic Drum checks for a two-bar phrase pickup into the next
+section, a one-bar harmony edge without inferred fill, quiet current/next
+Intro/Outro pickup suppression, and repeat-family whole-groove variation. The coordinator still
+owns execution of these focused checks plus the required full test/build gates;
+these automated checks do not establish a listening or Logic result.
+
 U05a captures at `~/.codex/melotrail-terra/u05a-implementation-evidence`
 show the reference-adapted four MIDI lanes, five style choices and full-draft
 CTA at 1536×1024 and 1280×900. Tests check entire style-card bounds before

@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.audition.MidiAuditionScope
+import app.melotrail.arrangement.core.MidiCoreRoleValidationReportJson
 import app.melotrail.arrangement.core.MidiCoreSectionPolicy
 import app.melotrail.midi.OwnedMidiFixtures
 import app.melotrail.midi.domain.MidiExportRole
@@ -65,6 +66,15 @@ class MidiCoreArrangementDraftTest {
             listOf(candidates.getValue(CandidateRole.CHORDS).id, candidates.getValue(CandidateRole.BASS).id),
             candidates.getValue(CandidateRole.DRUMS).draftDependencyIds,
         )
+        val drums = candidates.getValue(CandidateRole.DRUMS)
+        assertEquals(
+            36,
+            MidiCoreRoleValidationReportJson.decode(
+                Files.readString(generated.session.root.resolve(drums.validationReport.path.value)),
+            ).noteCount,
+            "A one-section draft has no next-section phrase transition to fill.",
+        )
+        assertTrue(drums.generatorVersion.endsWith("-drums-transitions-v2"))
         assertContentEquals(beforeSource, Files.readAllBytes(session.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
 
         val reopened = store.openProject(generated.session.root)
@@ -207,7 +217,8 @@ class MidiCoreArrangementDraftTest {
             .map { reference -> retried.session.project.candidates.single { it.id == reference.candidateId } }
             .filter { it.role in setOf(CandidateRole.BASS, CandidateRole.DRUMS) }
         assertEquals(2, currentSupport.size)
-        assertTrue(currentSupport.all { it.generatorVersion.endsWith("-bass-drums-v1") })
+        assertTrue(currentSupport.single { it.role == CandidateRole.BASS }.generatorVersion.endsWith("-bass-drums-v1"))
+        assertTrue(currentSupport.single { it.role == CandidateRole.DRUMS }.generatorVersion.endsWith("-bass-drums-v1-drums-transitions-v2"))
     }
 
     @Test

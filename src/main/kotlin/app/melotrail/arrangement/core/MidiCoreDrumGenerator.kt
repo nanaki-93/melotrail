@@ -1,6 +1,8 @@
 package app.melotrail.arrangement.core
 
 import app.melotrail.project.CandidateRole
+import app.melotrail.project.MidiCoreArrangementPurpose
+import app.melotrail.project.MidiCoreBoundaryIntent
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -29,6 +31,10 @@ data class MidiCoreDrumGenerationResult(
 object MidiCoreDrumGenerator {
     /** Zero-based MIDI channel for the musician-facing Drum channel 10. */
     const val MIDI_CHANNEL = 9
+
+    /** Bind planned phrase/transition realization to Drum candidate identity. */
+    fun generatorVersion(baseVersion: String, role: CandidateRole): String =
+        if (role == CandidateRole.DRUMS) "$baseVersion-drums-transitions-v$TRANSITION_VERSION" else baseVersion
 
     /** Generate one semantic Drum candidate and validate it before publication. */
     fun generate(context: MidiCoreGenerationContext): MidiCoreDrumGenerationResult {
@@ -85,27 +91,43 @@ object MidiCoreDrumGenerator {
             }
     }
 
-    /** Resolve a requested groove and choose another whole authored variant only when density requires it. */
+    /** Resolve a requested groove and choose another whole authored variant only when density or a repeat requires it. */
     private fun selectedGroove(context: MidiCoreGenerationContext): MidiCoreDrumPattern {
         val requested = MidiCorePatternCatalog.drumGrooves.singleOrNull { it.id == context.patternId }
             ?: grooveForDirectFill(context)
         val budget = densityBudget(context)
         val compatible = MidiCorePatternCatalog.drumGrooves.filter { authoredAttackCount(context, it) <= budget }
-        if (requested in compatible) return requested
-        return compatible.minWithOrNull(
+        val base = if (requested in compatible) requested else compatible.minWithOrNull(
             compareBy<MidiCoreDrumPattern> { abs(it.steps.size - requested.steps.size) }
                 .thenBy { it.id },
         ) ?: requested
+        return repeatVariation(context, base, compatible)
+    }
+
+    /**
+     * A repeat family varies one complete authored groove, never individual
+     * hits.  A non-repeat and a repeat without another compatible groove retain
+     * the requested shape.
+     */
+    private fun repeatVariation(
+        context: MidiCoreGenerationContext,
+        base: MidiCoreDrumPattern,
+        compatible: List<MidiCoreDrumPattern>,
+    ): MidiCoreDrumPattern {
+        val repeat = context.occurrencePlan?.repeatSource ?: return base
+        val alternatives = compatible.filter { it.id != base.id }.sortedBy(MidiCoreDrumPattern::id)
+        if (alternatives.isEmpty()) return base
+        return alternatives[(repeat.repeatOrdinal - 1) % alternatives.size]
     }
 
     /** Pair a directly selected transition fill with a whole groove that matches explicit section intent. */
     private fun grooveForDirectFill(context: MidiCoreGenerationContext): MidiCoreDrumPattern {
         val id = when {
-            context.sectionPolicy.purpose == MidiCoreSectionPurpose.BRIDGE -> MidiCoreDrumGroovePatternId.HALF_TIME_POCKET.id
-            context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.CHORUS, MidiCoreSectionPurpose.PRE_CHORUS) &&
-                context.sectionPolicy.energy >= HIGH_ENERGY_THRESHOLD -> MidiCoreDrumGroovePatternId.LIFT_BUILD.id
-            context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO) ||
-                context.sectionPolicy.energy <= LOW_ENERGY_THRESHOLD -> MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id
+            context.resolvedSectionPurpose == MidiCoreSectionPurpose.BRIDGE -> MidiCoreDrumGroovePatternId.HALF_TIME_POCKET.id
+            context.resolvedSectionPurpose in setOf(MidiCoreSectionPurpose.CHORUS, MidiCoreSectionPurpose.PRE_CHORUS) &&
+                context.resolvedSectionEnergy >= HIGH_ENERGY_THRESHOLD -> MidiCoreDrumGroovePatternId.LIFT_BUILD.id
+            context.resolvedSectionPurpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO) ||
+                context.resolvedSectionEnergy <= LOW_ENERGY_THRESHOLD -> MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id
             else -> MidiCoreDrumGroovePatternId.LAZY_SWING.id
         }
         return MidiCorePatternCatalog.drumGroove(id)
@@ -149,7 +171,7 @@ object MidiCoreDrumGenerator {
         return attacks
     }
 
-    /** Apply one explicit fill to the final occurrence bar, replacing only same-hit boundary attacks. */
+    /** Apply one phrase-end fill only when its confirmed next-section transition requests a pickup. */
     private fun addPhraseFill(
         context: MidiCoreGenerationContext,
         attacks: MutableMap<Pair<Long, MidiCoreDrumHit>, DrumAttack>,
@@ -177,11 +199,13 @@ object MidiCoreDrumGenerator {
         val existingKicks = attacks.values.filter { it.hit == MidiCoreDrumHit.KICK }.map { it.startTick }.toSet()
         val existingSnares = attacks.values.filter { it.hit == MidiCoreDrumHit.SNARE }.map { it.startTick }.toSet()
         val transitionBar = effectiveFill(context)?.let { barWindows(context).lastOrNull()?.first }
+        val quietTransitionBar = if (nextSectionIsQuiet(context)) barWindows(context).lastOrNull()?.first else null
         bass.asSequence()
             .map(MidiCoreGenerationNote::startTick)
             .filter { MidiCoreBassDrumCoordination.supportsKickAt(context, it) }
             .filter { it !in existingKicks && it !in existingSnares }
             .filter { transitionBar == null || it < transitionBar }
+            .filter { quietTransitionBar == null || it < quietTransitionBar }
             .distinct()
             .sorted()
             .groupBy { barStart(context, it) }
@@ -197,8 +221,8 @@ object MidiCoreDrumGenerator {
     /** Limit dependency-derived kick support so low-energy sections and transitions retain their authored shape. */
     private fun contextualKickLimitPerBar(context: MidiCoreGenerationContext): Int {
         val purposeLimit = when {
-            context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO) -> 0
-            context.sectionPolicy.energy <= LOW_ENERGY_THRESHOLD -> 1
+            context.resolvedSectionPurpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO) -> 0
+            context.resolvedSectionEnergy <= LOW_ENERGY_THRESHOLD -> 1
             else -> MAX_CONTEXTUAL_KICKS_PER_BAR
         }
         return MidiCoreBassDrumCoordination.kickLimitPerBar(context, purposeLimit)
@@ -217,14 +241,14 @@ object MidiCoreDrumGenerator {
 
     /** Shape deterministic velocity from profile, energy, purpose, phrase position, and authored accent. */
     private fun velocity(context: MidiCoreGenerationContext, attack: DrumAttack): Int {
-        val profileLift = ((context.sectionPolicy.energy - 0.5) * ENERGY_VELOCITY_SPAN).roundToInt()
+        val profileLift = ((context.resolvedSectionEnergy - 0.5) * ENERGY_VELOCITY_SPAN).roundToInt()
         val hitLift = when (attack.hit) {
             MidiCoreDrumHit.KICK -> 4
             MidiCoreDrumHit.SNARE -> 2
             MidiCoreDrumHit.CLOSED_HAT -> -8
             MidiCoreDrumHit.OPEN_HAT -> -2
         }
-        val purposeLift = when (context.sectionPolicy.purpose) {
+        val purposeLift = when (context.resolvedSectionPurpose) {
             MidiCoreSectionPurpose.CHORUS -> 4
             MidiCoreSectionPurpose.PRE_CHORUS -> 2
             MidiCoreSectionPurpose.BRIDGE -> -2
@@ -250,9 +274,32 @@ object MidiCoreDrumGenerator {
         }
     }
 
-    /** Resolve the explicit phrase fill, including a fill pattern used directly as the requested pattern. */
-    private fun effectiveFill(context: MidiCoreGenerationContext): String? = context.sectionPolicy.fillPatternId
-        ?: MidiCoreDrumFillPatternId.entries.singleOrNull { it.id == context.patternId }?.id
+    /**
+     * A style-selected fill is realized only at a confirmed phrase boundary
+     * whose current exit or next entry asks for a pickup.  This keeps harmony
+     * edges from acquiring a fill merely because their style has one. Direct
+     * fill selection keeps its explicit legacy meaning
+     * when no confirmed arrangement plan is available.
+     */
+    private fun effectiveFill(context: MidiCoreGenerationContext): String? {
+        val fill = context.sectionPolicy.fillPatternId
+            ?: MidiCoreDrumFillPatternId.entries.singleOrNull { it.id == context.patternId }?.id
+            ?: return null
+        val plan = context.occurrencePlan ?: return fill
+        val next = plan.nextNeighbor ?: return null
+        if (next.purpose in QUIET_SECTION_PURPOSES) return null
+        if (context.resolvedSectionPurpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO)) return null
+        val phraseEnds = plan.current.phraseGroupId != next.phraseGroupId
+        val pickupRequested = plan.current.exitIntent == MidiCoreBoundaryIntent.PICKUP ||
+            next.entryIntent == MidiCoreBoundaryIntent.PICKUP
+        return fill.takeIf { phraseEnds && pickupRequested }
+    }
+
+    /** A quiet next section receives neither a lead-in fill nor an added Bass kick in the final source bar. */
+    private fun nextSectionIsQuiet(context: MidiCoreGenerationContext): Boolean {
+        val next = context.occurrencePlan?.nextNeighbor ?: return false
+        return next.purpose in QUIET_SECTION_PURPOSES
+    }
 
     /** Calculate the target role's deterministic drum-hit budget for this occurrence. */
     private fun densityBudget(context: MidiCoreGenerationContext): Int =
@@ -280,4 +327,6 @@ object MidiCoreDrumGenerator {
     private const val MAX_CONTEXTUAL_KICKS = 4
     private const val MAX_CONTEXTUAL_KICKS_PER_BAR = 2
     private const val SEED_STEP = 7_919L
+    private val QUIET_SECTION_PURPOSES = setOf(MidiCoreArrangementPurpose.INTRO, MidiCoreArrangementPurpose.OUTRO)
+    private const val TRANSITION_VERSION = 2
 }
