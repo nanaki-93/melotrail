@@ -19,8 +19,20 @@ import app.melotrail.project.ExportedFileKind
 import app.melotrail.project.ExportedSnapshotFile
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
+import app.melotrail.project.MidiCoreBoundaryIntent
 import app.melotrail.project.MidiCoreExportSnapshot
+import app.melotrail.project.MidiCoreGrooveDrive
+import app.melotrail.project.MidiCoreGrooveFeel
+import app.melotrail.project.MidiCoreGrooveSubdivision
+import app.melotrail.project.MidiCoreOccurrenceArrangementPlan
+import app.melotrail.project.MidiCorePlannedRest
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
+import app.melotrail.project.MidiCoreRolePlanSettings
+import app.melotrail.project.MidiCoreSharedGrooveIntent
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.ProjectAuthority
 import app.melotrail.project.ProjectId
@@ -68,6 +80,28 @@ class MidiCoreExportPageTest {
 
         onNodeWithTag(MidiCoreExportPageTags.READINESS).assertExists()
         onNodeWithText("Accept one current Chords candidate for Verse 1 before exporting.").assertExists()
+    }
+
+    @Test
+    fun `Export accepts a current planned rest as complete scoped work`() = runComposeUiTest {
+        val plan = exportPlan(inactiveRole = CandidateRole.BASS)
+        val initial = exportState(arrangementPlan = plan)
+        val project = requireNotNull(initial.project)
+        val rest = MidiCorePlannedRest(
+            occurrenceId = "verse-1",
+            role = CandidateRole.BASS,
+            authorityHash = app.melotrail.project.MidiCoreAuthorityHasher.from(project).scopeHash("verse-1", CandidateRole.BASS),
+        )
+        val state = initial.copy(project = project.copy(
+            acceptances = project.acceptances.filterNot { it.role == CandidateRole.BASS },
+            acceptedPlannedRests = listOf(rest),
+        ))
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+
+        setContent { MelotrailTheme { MidiCoreExportPage(state, intents::add) } }
+
+        onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsEnabled().performClick()
+        assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.ExportPackage), intents)
     }
 
     @Test
@@ -152,6 +186,7 @@ class MidiCoreExportPageTest {
         candidateStatus: MidiCoreCandidateStatus = MidiCoreCandidateStatus.ACCEPTED,
         snapshot: MidiCoreExportSnapshot? = null,
         operation: MidiCoreWorkspaceOperation = MidiCoreWorkspaceOperation.idle(),
+        arrangementPlan: MidiCoreArrangementPlan? = null,
     ): MidiCoreWorkspaceState {
         val authority = ProjectAuthority(
             key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
@@ -173,6 +208,7 @@ class MidiCoreExportPageTest {
                 ),
                 selectedMelody = SelectedMelodyTrack(0, 0, "c".repeat(64)),
                 authority = authority,
+                arrangementPlan = arrangementPlan,
                 candidates = CandidateRole.entries.map { role ->
                     MidiCoreCandidate(
                         id = "${role.name.lowercase()}-candidate",
@@ -204,6 +240,35 @@ class MidiCoreExportPageTest {
             operation = operation,
         )
     }
+
+    private fun exportPlan(inactiveRole: CandidateRole? = null) = MidiCoreArrangementPlan(
+        version = 1,
+        sharedGroove = MidiCoreSharedGrooveIntent(
+            MidiCoreGrooveFeel.STRAIGHT,
+            MidiCoreGrooveSubdivision.EIGHTH,
+            MidiCoreGrooveDrive.STEADY,
+        ),
+        occurrences = listOf(
+            MidiCoreOccurrenceArrangementPlan(
+                occurrenceId = "verse-1",
+                purpose = MidiCoreArrangementPurpose.VERSE,
+                phraseGroupId = "phrase-verse-1",
+                repeatFamilyId = "repeat-verse-1",
+                repeatOrdinal = 1,
+                energy = 50,
+                roleSettings = CandidateRole.entries.map { role ->
+                    MidiCoreRolePlanSettings(
+                        role,
+                        if (role == inactiveRole) MidiCoreRoleActivity.INACTIVE else MidiCoreRoleActivity.SUPPORTING,
+                        if (role == inactiveRole) 0 else 50,
+                        MidiCoreRegisterPreference.MID,
+                    )
+                },
+                entryIntent = MidiCoreBoundaryIntent.NONE,
+                exitIntent = MidiCoreBoundaryIntent.NONE,
+            ),
+        ),
+    )
 
     private fun exportSnapshot(): MidiCoreExportSnapshot = MidiCoreExportSnapshot(
         id = "export-ready",

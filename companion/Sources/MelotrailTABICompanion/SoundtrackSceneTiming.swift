@@ -165,7 +165,7 @@ public struct VerifiedMidiTimingManifest: Equatable, Sendable {
         }
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               object["schema"] as? String == "melotrail-midi-export",
-              object["manifestSchemaVersion"] as? Int == 1,
+              object["manifestSchemaVersion"] as? Int == 2,
               let snapshotID = object["snapshotId"] as? String,
               let authority = object["authority"] as? [String: Any],
               let validation = object["validation"] as? [String: Any],

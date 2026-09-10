@@ -287,9 +287,22 @@ revision-guarded unlock in both candidate/rest directions after plan edits,
 stale-state preservation on Undo, locked-rest authority replacement, downstream
 rest-dependency invalidation and acceptance guards, desktop section repair and
 preview at three fixture sizes, cancellation/retry and piano-boundary reset
-across an inactive occurrence. Schema v4 rejects prior schema versions before writes. Current Logic
-playback evidence remains pending; M07 owns complete rest-aware export and Q02
-owns its Logic matrix.
+across an inactive occurrence. M07 adds an accepted all-song-rest export fixture:
+the inactive role is absent from the complete/song-role files and snapshot,
+listed as inactive in the manifest, while Melody and active role files retain
+their source origin and exact arrangement end. Schema v4 rejects prior schema
+versions before writes. Current Logic playback evidence remains pending; Q02
+owns its matrix, including a real import check of this changed track count and
+role-file omission. The complementary two-bar fixture accepts an introductory
+Bass rest and enters at tick 1920 (bar 2), ending at tick 3840. Re-import compares
+accepted notes in both `bass.mid` and `complete-song.mid`, checks every emitted
+file's PPQ/end, and preserves source bytes. Ready-to-import packages are retained
+at `~/.codex/melotrail-terra/m07-repair-evidence/logic-packages-verified/`:
+`all-song-bass-rest` and `intro-bass-rest`. Import at song origin in Logic, verify
+Bass is absent for the first case and silent for bar 1 in the second, and check
+the exact final boundary. These checks are prepared, not human-passed. Companion
+native validation also accepts current manifest v2 and preserves rejected v1
+bytes; no project migration or soundtrack change is performed.
 
 U04b automated checks cover section identity operations, explicit purpose/phrase
 review and confirmation, invalid phrase entry, concurrent section/plan saves,

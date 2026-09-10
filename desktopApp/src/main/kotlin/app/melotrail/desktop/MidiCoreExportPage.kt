@@ -128,7 +128,7 @@ private fun ExportDestinationCard(
         Text("New packages are written under the project-owned export directory as a fresh snapshot ID. Collision handling chooses a new snapshot; no MIDI file or prior snapshot is silently replaced.", style = MaterialTheme.typography.bodyMedium)
         Text(projectExportRoot?.toString() ?: "Project export directory will be available after opening a project.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
         Text(
-            "Package files: complete-song.mid, melody.mid, chords.mid, bass.mid, drums.mid, and manifest.json.",
+            "Package files: complete-song.mid, melody.mid, each active generated role file, and manifest.json. A role inactive for the whole song is recorded in the manifest and omitted.",
             modifier = Modifier.semantics { testTag = MidiCoreExportPageTags.FILENAMES },
             style = MaterialTheme.typography.bodySmall,
             color = MusicWorkspaceTokens.TextSecondary,
@@ -272,8 +272,21 @@ private fun ExportCard(tag: String, title: String, content: @Composable ColumnSc
 private fun exportReadiness(state: MidiCoreWorkspaceState): List<String> {
     val project = state.project ?: return listOf("Open a MIDI Core project before exporting.")
     val authority = project.authority ?: return listOf("Confirm complete musical authority before exporting.")
+    val authorityFingerprint = runCatching { app.melotrail.project.MidiCoreAuthorityHasher.from(project) }.getOrNull()
     return CandidateRole.entries.flatMap { role ->
         authority.occurrences.mapNotNull { occurrence ->
+            val rest = project.acceptedPlannedRests.singleOrNull { selected ->
+                selected.role == role && selected.occurrenceId == occurrence.id
+            }
+            if (rest != null) {
+                val plannedInactive = project.arrangementPlan?.occurrences
+                    ?.singleOrNull { it.occurrenceId == occurrence.id }?.roleSettings
+                    ?.singleOrNull { it.role == role }?.activity == app.melotrail.project.MidiCoreRoleActivity.INACTIVE
+                val currentRest = plannedInactive && authorityFingerprint?.scopeHash(occurrence.id, role) == rest.authorityHash
+                return@mapNotNull if (currentRest) null else {
+                    "The planned ${role.exportDisplayName} rest for ${occurrence.label} is stale. Confirm the plan and use a current complete draft before exporting."
+                }
+            }
             val acceptance = project.acceptances.singleOrNull { accepted ->
                 accepted.role == role && accepted.occurrenceId == occurrence.id
             } ?: return@mapNotNull "Accept one current ${role.exportDisplayName} candidate for ${occurrence.label} before exporting."

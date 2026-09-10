@@ -159,11 +159,20 @@ among paths within the documented near-best cost bound.
 
 ## Export package
 
-Each new immutable snapshot contains `complete-song.mid`, aligned role files
-`melody.mid`, `chords.mid`, `bass.mid`, `drums.mid`, and `manifest.json` for the
-current four-role workflow. Files use the same PPQ, fixed tempo/meter, song
-origin and end boundary. Individual role files must not shift their first note
-to tick zero. Initial silence is meaningful.
+Each new immutable snapshot contains `complete-song.mid`, `melody.mid`,
+`manifest.json`, and aligned `chords.mid`, `bass.mid`, and `drums.mid` files for
+generated roles that are active in at least one occurrence. A generated role that is an accepted planned rest
+for the entire song is omitted from both `complete-song.mid` and its individual
+role file; its manifest entry has `enabled: false` and `activity: "inactive"`.
+Melody is always present. A generated role that is inactive only in some
+occurrences remains present, with its intentional silence at those original
+song positions. Active scopes still require one valid accepted candidate: a
+missing or failed output cannot be exported as silence.
+
+Every emitted MIDI file uses the same PPQ, fixed tempo/meter, song origin and
+authoritative end boundary. Individual role files must not shift their first
+note to tick zero. Initial silence is meaningful, including when a role enters
+after an introductory planned rest.
 
 | Track in complete SMF 1 | Musician-facing MIDI channel |
 | --- | --- |
@@ -179,6 +188,9 @@ bytes. No default program/bank changes; instrument suggestions live in the
 manifest. Marker text uses `<ordinal>:<occurrence-label>` and exact boundary
 ticks. Duplicate names remain distinguishable. Marker display in Logic is
 best effort; note/bar alignment is mandatory.
+
+The current export manifest schema is version 2. The companion timing reader
+accepts that version; unsupported manifests are rejected without rewriting them.
 
 Manifest fields: schema/build/snapshot/project IDs, source and candidate hashes,
 PPQ/tempo/meter/key, occurrences and chord windows, role presence, generator
@@ -212,14 +224,6 @@ transaction with candidate review and snapshot capture, so a stale concurrent
 write is rejected rather than being overwritten. Bounded neighbor dependency
 resolution remains M07 work. This is the current project schema version; older
 project schemas are rejected before writes, with no automatic migration.
-
-The remaining export requirements for M07 are not claims of shipped support:
-- **Rest-aware export:** export silence in inactive sections while retaining
-  global origin/end. Omit a generated role inactive for the entire song and list
-  it as inactive in the manifest; Melody
-  always remains. An active scope missing valid output blocks export. Never
-  write a placeholder to hide failure. Test changed track counts and role-file
-  omission in Q02 before claiming compatibility for this extension.
 
 A changed generator/catalog invalidates applicability of its earlier musical
 rating; a changed export policy requires fresh relevant Logic evidence. Stored

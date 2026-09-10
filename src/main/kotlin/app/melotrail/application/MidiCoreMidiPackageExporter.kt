@@ -225,6 +225,17 @@ class MidiCoreMidiPackageExporter(
             is MidiCoreAcceptedSongAssemblyResult.Assembled -> result.review
             is MidiCoreAcceptedSongAssemblyResult.Rejected -> return rejected(result.problem)
         }
+        // Audition keeps a silent lane for a planned rest. Export instead omits
+        // a role with no accepted candidate anywhere in the requested song: an
+        // all-song rest is complete arrangement evidence, not empty output.
+        val exportedRoles = request.enabledRoles.filterTo(sortedSetOf<CandidateRole>()) { role ->
+            assembled.acceptedCandidates.any { it.role == role }
+        }
+        val exportSong = assembled.song.copy(
+            roles = assembled.song.roles.filter { track ->
+                track.role == MidiExportRole.MELODY || exportedRoles.any { exportRole(it) == track.role }
+            },
+        )
         val createdAt = try {
             Instant.now(clock).toString()
         } catch (error: Exception) {
@@ -261,24 +272,24 @@ class MidiCoreMidiPackageExporter(
                 "Check project-folder permissions and retry the export.",
             )
         }
-        val stagedFiles = midiFileSpecs(assembled.song, request.enabledRoles)
+        val stagedFiles = midiFileSpecs(exportSong, exportedRoles)
         val validations: List<MidiCoreExportedPackageFile>
         val manifestBytes: ByteArray
         try {
             stagedFiles.forEach { spec ->
                 val path = staged.resolve(spec.filename)
                 when (spec.kind) {
-                    ExportedFileKind.COMPLETE_SONG -> writer.writeComplete(assembled.song, path)
-                    ExportedFileKind.MELODY -> writer.writeRole(assembled.song, MidiExportRole.MELODY, path)
-                    ExportedFileKind.CHORDS -> writer.writeRole(assembled.song, MidiExportRole.CHORDS, path)
-                    ExportedFileKind.BASS -> writer.writeRole(assembled.song, MidiExportRole.BASS, path)
-                    ExportedFileKind.DRUMS -> writer.writeRole(assembled.song, MidiExportRole.DRUMS, path)
+                    ExportedFileKind.COMPLETE_SONG -> writer.writeComplete(exportSong, path)
+                    ExportedFileKind.MELODY -> writer.writeRole(exportSong, MidiExportRole.MELODY, path)
+                    ExportedFileKind.CHORDS -> writer.writeRole(exportSong, MidiExportRole.CHORDS, path)
+                    ExportedFileKind.BASS -> writer.writeRole(exportSong, MidiExportRole.BASS, path)
+                    ExportedFileKind.DRUMS -> writer.writeRole(exportSong, MidiExportRole.DRUMS, path)
                     ExportedFileKind.MANIFEST -> error("Manifest is written after MIDI validation")
                 }
             }
             validations = stagedFiles.map { spec ->
                 val path = staged.resolve(spec.filename)
-                val validation = validateReimport(assembled.song, spec, path)
+                val validation = validateReimport(exportSong, spec, path)
                 MidiCoreExportedPackageFile(spec.kind, spec.filename, sha256(path), validation)
             }
             manifestBytes = manifest(
@@ -286,7 +297,8 @@ class MidiCoreMidiPackageExporter(
                 review = assembled,
                 snapshotId = snapshotId,
                 createdAt = createdAt,
-                enabledRoles = request.enabledRoles,
+                enabledRoles = exportedRoles,
+                requestedRoles = request.enabledRoles,
                 files = validations,
             )
             validateManifest(manifestBytes, snapshotId, validations)
@@ -347,7 +359,7 @@ class MidiCoreMidiPackageExporter(
                     session = MidiCoreProjectSession(root, current),
                     files = snapshotFiles,
                     snapshotId = snapshotId,
-                    enabledRoles = request.enabledRoles,
+                    enabledRoles = exportedRoles,
                     createdAt = createdAt,
                 ),
             )
@@ -446,6 +458,7 @@ class MidiCoreMidiPackageExporter(
         snapshotId: String,
         createdAt: String,
         enabledRoles: Set<CandidateRole>,
+        requestedRoles: Set<CandidateRole>,
         files: List<MidiCoreExportedPackageFile>,
     ): ByteArray {
         val authority = requireNotNull(project.authority)
@@ -471,9 +484,15 @@ class MidiCoreMidiPackageExporter(
         val roleManifests = listOf(MidiExportRole.MELODY) + enabledRoles.sortedBy(CandidateRole::ordinal).map(::exportRole)
         val roles = MidiExportRole.entries.map { role ->
             val roleAccepted = accepted.filter { it.role.equals(role.name.lowercase(), ignoreCase = true) }
+            val activity = when {
+                role == MidiExportRole.MELODY || roleAccepted.isNotEmpty() -> "active"
+                role in requestedRoles.map(::exportRole) -> "inactive"
+                else -> "not-exported"
+            }
             ManifestRole(
                 role = role.name.lowercase(),
                 enabled = role in roleManifests,
+                activity = activity,
                 optional = role != MidiExportRole.MELODY,
                 acceptedCandidateIds = roleAccepted.map(ManifestAcceptedCandidate::candidateId),
                 acceptedCandidates = roleAccepted,
@@ -483,7 +502,7 @@ class MidiCoreMidiPackageExporter(
         }
         val manifest = MidiCoreExportManifest(
             schema = MANIFEST_SCHEMA,
-            manifestSchemaVersion = 1,
+            manifestSchemaVersion = 2,
             projectId = project.id.value,
             snapshotId = snapshotId,
             exportTimestamp = createdAt,
@@ -553,7 +572,7 @@ class MidiCoreMidiPackageExporter(
         }
         val orderedFiles = files.sortedBy(MidiCoreExportedPackageFile::kind)
         semanticManifestRequire(manifest.schema == MANIFEST_SCHEMA, "schema identifier differs")
-        semanticManifestRequire(manifest.manifestSchemaVersion == 1, "schema version differs")
+        semanticManifestRequire(manifest.manifestSchemaVersion == 2, "schema version differs")
         semanticManifestRequire(manifest.snapshotId == snapshotId, "snapshot identifier differs")
         semanticManifestRequire(isPortableFilename(manifest.source.filename), "source filename is not portable")
         semanticManifestRequire(
@@ -567,6 +586,10 @@ class MidiCoreMidiPackageExporter(
         semanticManifestRequire(
             manifest.validation.semanticReimportedMidiFiles == orderedFiles.size && manifest.validation.allMIDIFilesPassed,
             "semantic validation summary differs",
+        )
+        semanticManifestRequire(
+            manifest.roles.filter { it.activity == "inactive" }.all { !it.enabled },
+            "inactive roles must not claim an exported role file",
         )
     }
 
@@ -791,6 +814,7 @@ private data class ManifestChordEvent(
 private data class ManifestRole(
     val role: String,
     val enabled: Boolean,
+    val activity: String,
     val optional: Boolean,
     val acceptedCandidateIds: List<String>,
     val acceptedCandidates: List<ManifestAcceptedCandidate>,

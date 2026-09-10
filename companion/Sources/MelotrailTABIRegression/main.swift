@@ -449,7 +449,7 @@ do {
     let projectURL = timingRoot.appendingPathComponent("project.json")
     let manifestObject: [String: Any] = [
         "schema": "melotrail-midi-export",
-        "manifestSchemaVersion": 1,
+        "manifestSchemaVersion": 2,
         "snapshotId": "owned-timing-snapshot",
         "authority": [
             "ppq": 480,
@@ -469,6 +469,17 @@ do {
     let manifestBefore = try Data(contentsOf: manifestURL)
     let soundtrack = try FinishedSoundtrack.open(url: probe.outputURL, expectedSHA256: try AssetDigest.sha256(of: probe.outputURL))
     let midiManifest = try VerifiedMidiTimingManifest.load(url: manifestURL, expectedSHA256: try AssetDigest.sha256(of: manifestURL))
+    var retiredManifest = manifestObject
+    retiredManifest["manifestSchemaVersion"] = 1
+    let retiredURL = timingRoot.appendingPathComponent("unsupported-manifest.json")
+    let retiredBytes = try JSONSerialization.data(withJSONObject: retiredManifest, options: [.sortedKeys])
+    try retiredBytes.write(to: retiredURL, options: .withoutOverwriting)
+    do {
+        _ = try VerifiedMidiTimingManifest.load(url: retiredURL, expectedSHA256: AssetDigest.sha256(of: retiredURL))
+        require(false, "retired export schema must be rejected without migration")
+    } catch SoundtrackSceneTimingError.invalidManifest { }
+    let preservedRetiredBytes = try Data(contentsOf: retiredURL)
+    require(preservedRetiredBytes == retiredBytes, "schema rejection must preserve the existing manifest")
     let alignment = BounceAlignment(leadIn: try RationalTime(1, 10), tail: try RationalTime(1, 10))
     let plan = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: midiManifest, alignment: alignment)
     let repeatedPlan = try SoundtrackScenePlanner.plan(soundtrack: soundtrack, midiManifest: midiManifest, alignment: alignment)

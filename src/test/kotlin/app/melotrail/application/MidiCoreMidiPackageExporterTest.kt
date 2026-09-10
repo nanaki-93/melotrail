@@ -5,6 +5,7 @@ import app.melotrail.midi.adapter.JdkMidiReader
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateAcceptance
 import app.melotrail.project.CandidateRole
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.AtomicWriteObserver
@@ -65,7 +66,7 @@ class MidiCoreMidiPackageExporterTest {
 
         val manifest = Files.readString(exported.directory.resolve("manifest.json"))
         assertTrue(manifest.contains("\"schema\": \"melotrail-midi-export\""))
-        assertTrue(manifest.contains("\"manifestSchemaVersion\": 1"))
+        assertTrue(manifest.contains("\"manifestSchemaVersion\": 2"))
         assertTrue(manifest.contains("\"projectId\": \"${accepted.project.id.value}\""))
         assertTrue(manifest.contains("\"snapshotId\": \"export-1\""))
         assertTrue(manifest.contains("\"source\""))
@@ -103,6 +104,121 @@ class MidiCoreMidiPackageExporterTest {
         assertTrue(manifest.contains("\"role\": \"chords\",\n            \"enabled\": true"))
         assertTrue(manifest.contains("\"role\": \"bass\",\n            \"enabled\": false"))
         assertTrue(manifest.contains("\"role\": \"drums\",\n            \"enabled\": false"))
+    }
+
+    @Test
+    fun `omits an all-song accepted rest while retaining source and active-role boundaries`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val planned = confirmPlan(store, readySession(store, root.resolve("all-song-rest-project")))
+        val restPlan = requireNotNull(planned.project.arrangementPlan).copy(
+            occurrences = requireNotNull(planned.project.arrangementPlan).occurrences.map { occurrence ->
+                occurrence.copy(roleSettings = occurrence.roleSettings.map { settings ->
+                    if (settings.role == CandidateRole.BASS) settings.copy(activity = MidiCoreRoleActivity.INACTIVE, density = 0)
+                    else settings
+                })
+            },
+        )
+        val resting = assertIs<MidiCoreArrangementPlanEditResult.Confirmed>(
+            MidiCoreArrangementPlanEdit(store).confirm(ConfirmMidiCoreArrangementPlanEdit(planned, restPlan)),
+        ).session
+        val draft = assertIs<MidiCoreArrangementDraftGenerationResult.Completed>(
+            MidiCoreArrangementDraftGeneration(artifacts = store).generate(
+                GenerateMidiCoreArrangementDraft(resting, "steady-road", 93L, draftId = "all-song-bass-rest"),
+            ),
+        )
+        assertEquals(listOf(CandidateRole.BASS), draft.draft.plannedRests.map { it.role })
+        val accepted = assertIs<MidiCoreArrangementDraftAcceptanceResult.Applied>(
+            MidiCoreArrangementDraftAcceptance(artifacts = store, idFactory = { "all-song-rest-use" }).use(
+                UseMidiCoreArrangementDraft(draft.session, draft.draft.id),
+            ),
+        ).session
+
+        val assembled = assertIs<MidiCoreAcceptedSongAssemblyResult.Assembled>(
+            MidiCoreAcceptedSongAssembly(artifacts = store).assemble(AssembleMidiCoreSong(accepted)),
+        ).review
+        assertEquals(listOf("Melody", "Chords", "Bass", "Drums"), assembled.song.roles.map { it.role.trackName })
+        assertTrue(assembled.song.role(app.melotrail.midi.domain.MidiExportRole.BASS).events.isEmpty())
+
+        val exported = assertIs<MidiCoreMidiPackageExportResult.Exported>(
+            exporter(store, "export-all-song-rest").export(ExportMidiCorePackage(accepted)),
+        ).packageResult
+
+        assertEquals(listOf("complete-song.mid", "melody.mid", "chords.mid", "drums.mid"), exported.files.map { it.filename })
+        assertEquals(listOf(CandidateRole.CHORDS, CandidateRole.DRUMS), exported.snapshot.enabledRoles)
+        assertFalse(Files.exists(exported.directory.resolve("bass.mid")))
+        val songEnd = requireNotNull(accepted.project.authority).arrangementEndTick
+        assertTrue(exported.files.all { file ->
+            JdkMidiReader().inspect(exported.directory.resolve(file.filename)).sourceEndTick == songEnd
+        })
+        val complete = JdkMidiReader().inspect(exported.directory.resolve("complete-song.mid"))
+        assertEquals(listOf("Conductor", "Melody", "Chords", "Drums"), complete.trackSummaries.map { it.name })
+        assertEquals(
+            assembled.song.role(app.melotrail.midi.domain.MidiExportRole.MELODY).events
+                .filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>().map { it.orderingKey.tick to it.endTick },
+            JdkMidiReader().inspect(exported.directory.resolve("melody.mid")).sequence.tracks[1].events
+                .filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>().map { it.orderingKey.tick to it.endTick },
+        )
+        val manifest = Files.readString(exported.directory.resolve("manifest.json"))
+        assertTrue(manifest.contains("\"role\": \"bass\",\n            \"enabled\": false,\n            \"activity\": \"inactive\""))
+        assertTrue(manifest.contains("\"semanticReimportedMidiFiles\": 4"))
+        materializeDawMatrixPackage("all-song-bass-rest", exported)
+    }
+
+    @Test
+    fun `exports later bass entry after accepted intro rest at its exact song position`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val harmonized = readySession(store, root.resolve("intro-rest-project"), sourceFixture = "whole-song-two-bars.mid",
+            sectionPlacements = listOf(
+                app.melotrail.structure.MidiCoreBarOccurrencePlacement("intro", "verse", "Intro", 1),
+                app.melotrail.structure.MidiCoreBarOccurrencePlacement("verse", "verse", "Verse", 1),
+            ))
+        val planned = confirmPlan(store, harmonized)
+        val plan = requireNotNull(planned.project.arrangementPlan)
+        val resting = assertIs<MidiCoreArrangementPlanEditResult.Confirmed>(MidiCoreArrangementPlanEdit(store).confirm(
+            ConfirmMidiCoreArrangementPlanEdit(planned, plan.copy(occurrences = plan.occurrences.map { occurrence ->
+                occurrence.copy(roleSettings = occurrence.roleSettings.map { settings ->
+                    if (settings.role != CandidateRole.BASS) settings
+                    else settings.copy(activity = if (occurrence.occurrenceId == "intro") MidiCoreRoleActivity.INACTIVE else MidiCoreRoleActivity.SUPPORTING,
+                        density = if (occurrence.occurrenceId == "intro") 0 else 50)
+                })
+            })),
+        )).session
+        val draft = assertIs<MidiCoreArrangementDraftGenerationResult.Completed>(MidiCoreArrangementDraftGeneration(artifacts = store).generate(
+            GenerateMidiCoreArrangementDraft(resting, "steady-road", 93L, draftId = "intro-bass-rest"),
+        ))
+        val accepted = assertIs<MidiCoreArrangementDraftAcceptanceResult.Applied>(MidiCoreArrangementDraftAcceptance(artifacts = store).use(
+            UseMidiCoreArrangementDraft(draft.session, draft.draft.id),
+        )).session
+        val sourceBefore = Files.readAllBytes(accepted.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value))
+        val assembled = assertIs<MidiCoreAcceptedSongAssemblyResult.Assembled>(MidiCoreAcceptedSongAssembly(artifacts = store).assemble(
+            AssembleMidiCoreSong(accepted),
+        )).review
+        val expected = assembled.song.role(app.melotrail.midi.domain.MidiExportRole.BASS).events
+            .filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>()
+        assertTrue(expected.isNotEmpty())
+        assertEquals(1920L, expected.minOf { it.orderingKey.tick })
+        val exported = assertIs<MidiCoreMidiPackageExportResult.Exported>(exporter(store, "export-intro-rest").export(
+            ExportMidiCorePackage(accepted),
+        )).packageResult
+        fun facts(notes: List<app.melotrail.midi.domain.MidiNoteEvent>) = notes.map {
+            listOf(it.orderingKey.tick, it.endTick, it.pitch, it.velocity, it.releaseVelocity ?: 0)
+        }
+        for (filename in listOf("bass.mid", "complete-song.mid")) {
+            val reopened = JdkMidiReader().inspect(exported.directory.resolve(filename))
+            val index = reopened.trackSummaries.indexOfFirst { it.name == "Bass" }
+            assertTrue(index >= 0)
+            val notes = reopened.sequence.tracks[index].events.filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>()
+            assertEquals(facts(expected), facts(notes), "accepted bass timing and notes must survive $filename")
+            assertTrue(notes.all { it.orderingKey.tick >= 1920 && it.endTick <= 3840 })
+        }
+        exported.files.forEach { file ->
+            val reopened = JdkMidiReader().inspect(exported.directory.resolve(file.filename))
+            assertEquals(3840L, reopened.sourceEndTick)
+            assertEquals(480, MidiSystem.getSequence(exported.directory.resolve(file.filename).toFile()).resolution)
+        }
+        assertContentEquals(sourceBefore, Files.readAllBytes(accepted.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
+        assertTrue(CandidateRole.BASS in exported.snapshot.enabledRoles)
+        materializeDawMatrixPackage("intro-bass-rest", exported)
     }
 
     @Test
@@ -296,6 +412,9 @@ class MidiCoreMidiPackageExporterTest {
         assertTrue(exported.files.all { file ->
             JdkMidiReader().inspect(exported.directory.resolve(file.filename)).sourceEndTick == 1_920L
         })
+        val melodyNotes = JdkMidiReader().inspect(exported.directory.resolve("melody.mid")).sequence.tracks[1].events
+            .filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>()
+        assertEquals(listOf(240L to 1_700L), melodyNotes.map { it.orderingKey.tick to it.endTick })
         assertContentEquals(inputBytes, Files.readAllBytes(accepted.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
         materializeDawMatrixPackage("padded-arrangement-end", exported)
     }
@@ -340,6 +459,15 @@ class MidiCoreMidiPackageExporterTest {
         )
         store.saveProject(published.session.root, project)
         return MidiCoreProjectSession(published.session.root, project)
+    }
+
+    private fun confirmPlan(store: MidiCoreArtifactStore, session: MidiCoreProjectSession): MidiCoreProjectSession {
+        val proposal = assertIs<MidiCoreArrangementPlanProposalResult.Proposed>(
+            MidiCoreArrangementPlanProposalUseCase(store).propose(ProposeMidiCoreArrangementPlan(session, "steady-road")),
+        ).proposal
+        return assertIs<MidiCoreArrangementPlanProposalResult.Confirmed>(
+            MidiCoreArrangementPlanProposalUseCase(store).confirm(ConfirmMidiCoreArrangementPlanProposal(session, proposal)),
+        ).session
     }
 
     private fun publishCandidate(
@@ -394,6 +522,7 @@ class MidiCoreMidiPackageExporterTest {
         harmonySymbols: List<String> = listOf("C"),
         sourcePath: Path? = null,
         padToNextBar: Boolean = false,
+        sectionPlacements: List<app.melotrail.structure.MidiCoreBarOccurrencePlacement>? = null,
     ): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(artifacts = store).create(
@@ -429,7 +558,7 @@ class MidiCoreMidiPackageExporterTest {
                 ReplaceMidiCoreStructure(
                     extent,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(app.melotrail.structure.MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", barCount)),
+                    sectionPlacements ?: listOf(app.melotrail.structure.MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", barCount)),
                 ),
             ),
         ).session
@@ -437,7 +566,9 @@ class MidiCoreMidiPackageExporterTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     structured,
-                    harmonySymbols.mapIndexed { index, symbol ->
+                    if (sectionPlacements != null) requireNotNull(structured.project.authority).occurrences.map { occurrence ->
+                        AuthoritativeChordEvent("${occurrence.id}-chord", occurrence.id, "C", occurrence.startTick, occurrence.endTick)
+                    } else harmonySymbols.mapIndexed { index, symbol ->
                         val start = songEndTick * index / harmonySymbols.size
                         val windowEnd = songEndTick * (index + 1) / harmonySymbols.size
                         AuthoritativeChordEvent("chord-${index + 1}", "verse-1", symbol, start, windowEnd)
@@ -450,7 +581,7 @@ class MidiCoreMidiPackageExporterTest {
     private fun sourceWithTrailingEndOfTrack(path: Path): Path {
         val sequence = Sequence(Sequence.PPQ, 480)
         val track = sequence.createTrack()
-        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 100), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 100), 240))
         track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_700))
         track.add(MidiEvent(MetaMessage(0x2f, byteArrayOf(), 0), 1_800))
         require(MidiSystem.write(sequence, 1, path.toFile()) > 0)

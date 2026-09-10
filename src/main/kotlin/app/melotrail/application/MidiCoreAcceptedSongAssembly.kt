@@ -325,6 +325,9 @@ class MidiCoreAcceptedSongAssembly(
                 },
                 roles = listOf(
                     MidiExportRoleTrack(MidiExportRole.MELODY, protectedMelody.events),
+                    // Draft and accepted audition retain every requested lane. A
+                    // planned rest is therefore audible as deliberate silence in
+                    // its original position rather than an absent audition role.
                     *roles.sortedBy(CandidateRole::ordinal).map { role -> roleTrack(role, roleNotes.getValue(role)) }.toTypedArray(),
                 ),
                 songEndTick = songEndTick,
