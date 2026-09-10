@@ -43,6 +43,8 @@ internal object MidiCoreSongMapTags {
 /** A textual role state prevents the map from communicating safety through colour alone. */
 internal enum class MidiCoreSongMapRoleState(val label: String) {
     NOT_GENERATED("Not generated"),
+    PLANNED_REST_IN_DRAFT("Planned rest in draft"),
+    ACCEPTED_PLANNED_REST("Accepted planned rest"),
     DRAFT("In draft"),
     ACCEPTED("Accepted"),
     STALE("Stale"),
@@ -52,6 +54,8 @@ internal enum class MidiCoreSongMapRoleState(val label: String) {
 private val MidiCoreSongMapRoleState.compactLabel: String
     get() = when (this) {
         MidiCoreSongMapRoleState.NOT_GENERATED -> "new"
+        MidiCoreSongMapRoleState.PLANNED_REST_IN_DRAFT -> "draft rest"
+        MidiCoreSongMapRoleState.ACCEPTED_PLANNED_REST -> "rest"
         MidiCoreSongMapRoleState.DRAFT -> "draft"
         MidiCoreSongMapRoleState.ACCEPTED -> "accepted"
         MidiCoreSongMapRoleState.STALE -> "stale"
@@ -75,7 +79,8 @@ internal fun midiCoreSongMap(project: MidiCoreProject): List<MidiCoreSongMapOccu
     val ticksPerBar = ppq.toLong() * 4L * authority.meter.numerator / authority.meter.denominator
     if (ticksPerBar <= 0L) return emptyList()
     val labelCounts = authority.occurrences.groupingBy(ProjectSectionOccurrence::label).eachCount()
-    val currentDraft = project.arrangementDrafts.lastOrNull { it.authorityHash == app.melotrail.project.MidiCoreAuthorityHasher.from(project).sha256 }
+    val authorityFingerprint = app.melotrail.project.MidiCoreAuthorityHasher.from(project)
+    val currentDraft = project.arrangementDrafts.lastOrNull { it.authorityHash == authorityFingerprint.sha256 }
     return authority.occurrences.mapIndexed { index, occurrence ->
         val startBar = occurrence.startTick / ticksPerBar + 1L
         val endBar = occurrence.endTick / ticksPerBar
@@ -84,9 +89,15 @@ internal fun midiCoreSongMap(project: MidiCoreProject): List<MidiCoreSongMapOccu
         val states = CandidateRole.entries.associateWith { role ->
             val accepted = project.acceptances.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }
             val candidate = accepted?.let { acceptedCandidate -> project.candidates.singleOrNull { it.id == acceptedCandidate.candidateId } }
+            val scopeHash = authorityFingerprint.scopeHash(occurrence.id, role)
+            val acceptedRest = project.acceptedPlannedRests.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }
+            val draftRest = currentDraft?.plannedRests?.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }
             when {
                 candidate?.status == MidiCoreCandidateStatus.STALE -> MidiCoreSongMapRoleState.STALE
                 accepted != null && candidate != null -> MidiCoreSongMapRoleState.ACCEPTED
+                acceptedRest?.authorityHash == scopeHash -> MidiCoreSongMapRoleState.ACCEPTED_PLANNED_REST
+                draftRest?.authorityHash == scopeHash -> MidiCoreSongMapRoleState.PLANNED_REST_IN_DRAFT
+                acceptedRest != null -> MidiCoreSongMapRoleState.STALE
                 currentDraft?.candidateReferences?.any { it.occurrenceId == occurrence.id && it.role == role } == true -> MidiCoreSongMapRoleState.DRAFT
                 project.candidates.any { it.occurrenceId == occurrence.id && it.role == role && it.status == MidiCoreCandidateStatus.STALE } -> MidiCoreSongMapRoleState.STALE
                 project.candidates.any { it.occurrenceId == occurrence.id && it.role == role && it.status == MidiCoreCandidateStatus.REJECTED } -> MidiCoreSongMapRoleState.ATTENTION
@@ -127,7 +138,7 @@ internal fun MidiCoreSongMap(
         },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
     ) {
-        Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
             Text("SONG MAP", color = MusicWorkspaceTokens.Primary)
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).semantics {
@@ -144,7 +155,7 @@ internal fun MidiCoreSongMap(
                         onClick = { onOccurrenceSelected(item) },
                         colors = workspaceSelectableButtonColors(selected),
                         modifier = Modifier.width((item.barCount * 52).coerceAtLeast(148).dp)
-                            .heightIn(min = 64.dp)
+                            .heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
                             .semantics {
                                 testTag = MidiCoreSongMapTags.occurrence(item.occurrence.id)
                                 this.selected = selected

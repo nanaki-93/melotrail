@@ -255,6 +255,16 @@ restrained and compound-meter cases.
 These are engineering checks. Full-song M08 comparison packages and Q02 Logic
 listening remain separate pending work; no musical score is inferred.
 
+U05a captures at `~/.codex/melotrail-terra/u05a-implementation-evidence`
+show the reference-adapted four MIDI lanes, five style choices and full-draft
+CTA at 1536×1024 and 1280×900. Tests check entire style-card bounds before
+scrolling, including the 24-point gap above the persistent player; 720×900
+checks selection and CTA reachability by scrolling. The selected-section
+inspector distinguishes accepted planned rests from rests in an unaccepted draft,
+and current accepted candidates retain precedence over a simultaneous draft rest.
+Full workflow/preview repair behavior remains U05b/U05; these captures are
+engineering evidence, not a recorded human visual approval.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

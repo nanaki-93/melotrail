@@ -78,7 +78,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | M09 | Add meaningful alternatives and targeted musical repair | M09a | TODO | |
 | U04b | Edit sections and confirmed arrangement purpose | U04a, M06 | DONE | Section duplicate/split/move/remove and separately reviewed purpose/phrase confirmation. Repaired canonical test publication, invalid phrase input, section/plan write race and removed-rest evidence preservation. 410 tests, build, diff check and fresh Terra High review PASS; three-size controls inspected. Evidence ~/.codex/melotrail-terra/u04b-recovery-evidence; U04 layout and human visual/Logic gates pending. |
 | U04 | Build compact Structure & Harmony editing | U04b | DONE | Recovered shared selection, unsaved impact and total recovery; fixed Compose test import/assertion, wrapped section actions and first-viewport name/save access. Unsaved sections cannot display another occurrence’s chords. 411 tests, build, three-size captures and fresh Terra review; evidence ~/.codex/melotrail-terra/u04-repair-evidence. |
-| U05a | Make Arrange lanes and full-draft action dominant | U04, M07 | TODO | |
+| U05a | Make Arrange lanes and full-draft action dominant | U04, M07 | DONE | Compact five-style gallery/full-draft CTA, selected-section plan/progress, distinct draft/accepted rests and accepted-work precedence. Three-size captures and unclipped wide card bounds, combined test/build and Terra review passed. Evidence ~/.codex/melotrail-terra/u05a-implementation-evidence. |
 | U05b | Wire bounded previews and contextual repair actions | U05a, M09 | TODO | |
 | U05 | Build timeline-first Arrange with plan and repairs | U05b | TODO | |
 | U06a | Finish whole-song review and atomic decisions | U05 | TODO | |

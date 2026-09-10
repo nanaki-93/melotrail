@@ -7,8 +7,10 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -40,6 +42,7 @@ import app.melotrail.project.MidiCoreArrangementDraftValidationSummary
 import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
+import app.melotrail.project.MidiCorePlannedRest
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.ProjectAuthority
@@ -119,7 +122,7 @@ class MidiCoreArrangePageTest {
     }
 
     @Test
-    fun `song map distinguishes not generated attention accepted stale and draft role states`() {
+    fun `song map distinguishes not generated draft rest accepted rest attention accepted stale and draft role states`() {
         val project = requireNotNull(arrangeState().project)
         val rejected = project.candidates.single()
         val authorityHash = MidiCoreAuthorityHasher.from(project).sha256
@@ -155,7 +158,67 @@ class MidiCoreArrangePageTest {
         assertEquals(MidiCoreSongMapRoleState.ACCEPTED, chordState(rejected.copy(status = MidiCoreCandidateStatus.ACCEPTED, rejectionReason = null), accept = true))
         assertEquals(MidiCoreSongMapRoleState.STALE, chordState(rejected.copy(status = MidiCoreCandidateStatus.STALE, rejectionReason = null)))
         assertEquals(MidiCoreSongMapRoleState.DRAFT, midiCoreSongMap(draftProject).first().roleStates.getValue(CandidateRole.CHORDS))
+        assertEquals(
+            MidiCoreSongMapRoleState.ACCEPTED_PLANNED_REST,
+            midiCoreSongMap(project.copy(acceptedPlannedRests = listOf(MidiCorePlannedRest(
+                "verse-1", CandidateRole.BASS, MidiCoreAuthorityHasher.from(project).scopeHash("verse-1", CandidateRole.BASS),
+            )))).first()
+                .roleStates.getValue(CandidateRole.BASS),
+        )
         assertEquals(MidiCoreSongMapRoleState.NOT_GENERATED, midiCoreSongMap(project).first().roleStates.getValue(CandidateRole.BASS))
+
+        val bassDraft = draftCandidates.single { it.occurrenceId == "verse-1" && it.role == CandidateRole.BASS }
+        val draftRest = MidiCorePlannedRest(
+            "verse-1", CandidateRole.BASS, MidiCoreAuthorityHasher.from(project).scopeHash("verse-1", CandidateRole.BASS),
+        )
+        val currentDraft = draftProject.arrangementDrafts.single()
+        val projectWithDraftRestAndAcceptedBass = draftProject.copy(
+            arrangementDrafts = listOf(currentDraft.copy(
+                candidateReferences = currentDraft.candidateReferences.filterNot { it.occurrenceId == "verse-1" && it.role == CandidateRole.BASS },
+                plannedRests = listOf(draftRest),
+            )),
+            acceptances = listOf(CandidateAcceptance("verse-1", CandidateRole.BASS, bassDraft.id, false)),
+        )
+        val projectWithDraftRest = projectWithDraftRestAndAcceptedBass.copy(acceptances = emptyList())
+        assertEquals(
+            MidiCoreSongMapRoleState.PLANNED_REST_IN_DRAFT,
+            midiCoreSongMap(projectWithDraftRest).first().roleStates.getValue(CandidateRole.BASS),
+        )
+        assertEquals(
+            MidiCoreSongMapRoleState.ACCEPTED,
+            midiCoreSongMap(projectWithDraftRestAndAcceptedBass).first().roleStates.getValue(CandidateRole.BASS),
+        )
+    }
+
+    @Test
+    fun `selected section inspector reports factual planned rest and active draft progress`() = runComposeUiTest {
+        setContent {
+            MelotrailTheme {
+                MidiCoreArrangePage(
+                    arrangeState(
+                        operation = MidiCoreWorkspaceOperation(
+                            id = 5L,
+                            kind = MidiCoreWorkspaceOperationKind.DRAFT_GENERATION,
+                            phase = MidiCoreWorkspaceOperationPhase.RUNNING,
+                            message = "Creating draft",
+                            progress = MidiCoreWorkspaceOperationProgress(2, 6),
+                        ),
+                    ).copy(
+                        project = requireNotNull(arrangeState().project).copy(
+                            acceptedPlannedRests = listOf(MidiCorePlannedRest(
+                                "verse-1", CandidateRole.BASS,
+                                MidiCoreAuthorityHasher.from(requireNotNull(arrangeState().project)).scopeHash("verse-1", CandidateRole.BASS),
+                            )),
+                        ),
+                    ),
+                    {},
+                    {},
+                )
+            }
+        }
+
+        onNodeWithText("Bass: Accepted planned rest").assertExists()
+        onNodeWithText("Draft progress: 2 of 6 scopes complete.").assertExists()
     }
 
     @Test
@@ -208,6 +271,30 @@ class MidiCoreArrangePageTest {
         waitForIdle()
         onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).assertIsEnabled()
         onNodeWithContentDescription("Create full Late Night arrangement draft from Verse 2").assertExists()
+    }
+
+    @Test
+    fun `selected style and full draft action remain reachable at all Arrange reference sizes`() {
+        listOf(Size(1536f, 1024f), Size(1280f, 900f), Size(720f, 900f)).forEach { size ->
+            runSkikoComposeUiTest(size = size) {
+                setContent {
+                    MelotrailTheme {
+                        MidiCoreWorkspaceShell(
+                            state = arrangeState(styleId = "late-night").copy(visualEvidence = arrangeVisualEvidence()),
+                            initialDestination = MidiCoreWorkspaceDestination.ARRANGE,
+                        )
+                    }
+                }
+                onNodeWithTag(MidiCoreArrangePageTags.style("late-night")).assertIsSelected()
+                onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().assertIsEnabled()
+                val draftAction = onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).getUnclippedBoundsInRoot()
+                val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+                assertTrue(
+                    draftAction.top.value >= 0f && draftAction.bottom.value <= player.top.value,
+                    "The selected style's full-draft action must be reachable above the persistent player at ${size.width.toInt()}×${size.height.toInt()}",
+                )
+            }
+        }
     }
 
     @Test
@@ -356,6 +443,10 @@ class MidiCoreArrangePageTest {
                 val lane = onNodeWithTag(MidiCoreVerifiedTimelineTags.lane(role)).getUnclippedBoundsInRoot()
                 assertTrue(lane.top.value >= 0f && lane.bottom.value <= player.top.value, "The real ${role.trackName} lane must remain visible above the persistent player")
             }
+            MidiCoreArrangementStyleCatalog.styles.forEach { style ->
+                val card = onNodeWithTag(MidiCoreArrangePageTags.style(style.id)).getUnclippedBoundsInRoot()
+                assertTrue(card.top.value >= 0f && card.bottom.value <= player.top.value - 24f, "The full ${style.displayName} style card must remain visible above the persistent player")
+            }
             assertTrue(draftAction.top.value >= 0f && draftAction.bottom.value <= player.top.value, "The full-draft action must remain visible above the persistent player")
             onNodeWithContentDescription("Current playback target: Current Verse 1 section").assertExists()
             writeSongMapFixture("wide-song-map.png", onRoot().captureToImage().toAwtImage())
@@ -375,6 +466,12 @@ class MidiCoreArrangePageTest {
             val inspector = onNodeWithTag(MidiCoreWorkspaceShellTags.PAGE_INSPECTOR).getUnclippedBoundsInRoot()
             assertEquals(332f, (inspector.right - inspector.left).value)
             onNodeWithTag(MidiCoreArrangePageTags.INSPECTOR).assertExists()
+            onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).assertIsEnabled()
+            val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+            MidiCoreArrangementStyleCatalog.styles.forEach { style ->
+                val card = onNodeWithTag(MidiCoreArrangePageTags.style(style.id)).getUnclippedBoundsInRoot()
+                assertTrue(card.top.value >= 0f && card.bottom.value <= player.top.value - 24f, "The reference-wide ${style.displayName} style card must remain visible above the persistent player")
+            }
             onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).assertDoesNotExist()
             writeSongMapFixture("reference-wide-song-map.png", onRoot().captureToImage().toAwtImage())
         }
@@ -391,6 +488,10 @@ class MidiCoreArrangePageTest {
                 }
             }
             onNodeWithTag(MidiCoreSongMapTags.TRACK).assertExists()
+            onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().assertIsEnabled()
+            val draftAction = onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).getUnclippedBoundsInRoot()
+            val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+            assertTrue(draftAction.top.value >= 0f && draftAction.bottom.value <= player.top.value, "The compact full-draft action must be reachable above the persistent player")
             onNodeWithTag(MidiCoreArrangePageTags.ADVANCED).performScrollTo().assertExists()
             onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertExists()
             onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_CONTEXT).assertDoesNotExist()
