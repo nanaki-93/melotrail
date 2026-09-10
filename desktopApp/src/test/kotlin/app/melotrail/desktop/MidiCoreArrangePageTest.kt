@@ -68,15 +68,27 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreArrangePageTest {
     @Test
-    fun `advanced role generation records current engine and pattern identity`() = runComposeUiTest {
+    fun `advanced role generation records current role engine and pattern identity`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent { MelotrailTheme { MidiCoreArrangePage(arrangeState(), intents::add, {}) } }
         onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
         onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().assertIsEnabled().performClick()
-        val request = kotlin.test.assertIs<MidiCoreWorkspaceIntent.GenerateCandidate>(intents.single())
-        assertEquals("midi-core-desktop", request.generator.generatorId)
-        assertEquals("midi-core-v5-patterns-v2-comping-v1", request.generator.generatorVersion)
-        assertEquals(request.patternId, request.generator.patternId)
+        val chords = kotlin.test.assertIs<MidiCoreWorkspaceIntent.GenerateCandidate>(intents.single())
+        assertEquals("midi-core-desktop", chords.generator.generatorId)
+        assertEquals("midi-core-v5-patterns-v2-comping-v1", chords.generator.generatorVersion)
+        assertEquals(chords.patternId, chords.generator.patternId)
+
+        onNodeWithTag(MidiCoreArrangePageTags.role(CandidateRole.BASS)).performClick()
+        intents.clear()
+        onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().performClick()
+        val bass = kotlin.test.assertIs<MidiCoreWorkspaceIntent.GenerateCandidate>(intents.single())
+        assertEquals("midi-core-v5-patterns-v2-bass-drums-v1", bass.generator.generatorVersion)
+
+        onNodeWithTag(MidiCoreArrangePageTags.role(CandidateRole.DRUMS)).performClick()
+        intents.clear()
+        onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().performClick()
+        val drums = kotlin.test.assertIs<MidiCoreWorkspaceIntent.GenerateCandidate>(intents.single())
+        assertEquals("midi-core-v5-patterns-v2-bass-drums-v1", drums.generator.generatorVersion)
     }
 
     @Test

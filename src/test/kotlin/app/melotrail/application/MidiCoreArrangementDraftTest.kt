@@ -203,6 +203,11 @@ class MidiCoreArrangementDraftTest {
         val currentChord = retried.session.project.candidates.single { it.id == retried.draft.candidateReferences.first().candidateId }
         assertTrue(currentChord.id != retained.id)
         assertEquals("midi-core-style-v5-patterns-v2-comping-v1", currentChord.generatorVersion)
+        val currentSupport = retried.draft.candidateReferences
+            .map { reference -> retried.session.project.candidates.single { it.id == reference.candidateId } }
+            .filter { it.role in setOf(CandidateRole.BASS, CandidateRole.DRUMS) }
+        assertEquals(2, currentSupport.size)
+        assertTrue(currentSupport.all { it.generatorVersion.endsWith("-bass-drums-v1") })
     }
 
     @Test

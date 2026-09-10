@@ -9,8 +9,19 @@ import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAcceptedDependency
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
+import app.melotrail.project.MidiCoreBoundaryIntent
 import app.melotrail.project.MidiCoreGeneratorInput
+import app.melotrail.project.MidiCoreGrooveDrive
+import app.melotrail.project.MidiCoreGrooveFeel
+import app.melotrail.project.MidiCoreGrooveSubdivision
+import app.melotrail.project.MidiCoreOccurrenceArrangementPlan
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
+import app.melotrail.project.MidiCoreRolePlanSettings
+import app.melotrail.project.MidiCoreSharedGrooveIntent
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.ProjectAuthority
 import app.melotrail.project.ProjectId
@@ -140,6 +151,168 @@ class MidiCoreBassGeneratorTest {
         assertEquals(4, walkingNotes.size)
         assertEquals(4, approachNotes.size)
         assertEquals(4, approachNotes[1].pitch % 12, "approach=${approachNotes.map { it.pitch }}")
+    }
+
+    @Test
+    fun `bounded approach resolves into the next authoritative bass root`() {
+        val result = MidiCoreBassGenerator.generate(
+            context(
+                MidiCoreBassPatternId.DIATONIC_APPROACH.id,
+                project = project(chordEvents = listOf(
+                    AuthoritativeChordEvent("c", "verse-1", "C", 0, 960),
+                    AuthoritativeChordEvent("f", "verse-1", "F", 960, 1_920),
+                    AuthoritativeChordEvent("chorus", "chorus-1", "F", 1_920, 3_840),
+                )),
+            ),
+        )
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(4, notes.single { it.startTick == 480L }.pitch % 12)
+        assertEquals(5, notes.single { it.startTick == 960L }.pitch % 12)
+        assertTrue(notes.all { note -> result.context.chordWindows.any { window ->
+            note.startTick >= window.startTick && note.endTick <= window.endTick && window.chord.containsPitchClass(note.pitch)
+        } })
+    }
+
+    @Test
+    fun `held low melody leaves one bass support per chord while preserving chord space`() {
+        val chords = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.CHORDS, "verse-1", "chords-accepted", "d".repeat(64)),
+            listOf(MidiCoreGenerationNote(0, 1_920, 52, 80)),
+        )
+        val result = MidiCoreBassGenerator.generate(
+            context(
+                MidiCoreBassPatternId.ROOT_FIFTH.id,
+                protectedMelodyNotes = listOf(MidiCoreProtectedMelodyNote("pmn-${"1".repeat(64)}", 0, 1_920, 40, 90, true)),
+                acceptedDependencies = listOf(chords),
+            ),
+        )
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L), notes.map(MidiCoreCandidateEvent.Note::startTick))
+        assertTrue(notes.all { note -> abs(note.pitch - 52) > 4 })
+    }
+
+    @Test
+    fun `held melody reduces only the harmony window that it overlaps`() {
+        val result = MidiCoreBassGenerator.generate(
+            context(
+                MidiCoreBassPatternId.ROOT_FIFTH.id,
+                project = project(chordEvents = listOf(
+                    AuthoritativeChordEvent("c", "verse-1", "C", 0, 960),
+                    AuthoritativeChordEvent("f", "verse-1", "F", 960, 1_920),
+                    AuthoritativeChordEvent("chorus", "chorus-1", "F", 1_920, 3_840),
+                )),
+                protectedMelodyNotes = listOf(
+                    MidiCoreProtectedMelodyNote("pmn-${"2".repeat(64)}", 0, 960, 67, 90, true),
+                ),
+            ),
+        )
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L, 960L, 1_440L), starts(result))
+    }
+
+    @Test
+    fun `reduced density preserves support in every held melody harmony window`() {
+        val project = project(chordEvents = listOf(
+            AuthoritativeChordEvent("c", "verse-1", "C", 0, 960),
+            AuthoritativeChordEvent("f", "verse-1", "F", 960, 1_920),
+            AuthoritativeChordEvent("chorus", "chorus-1", "F", 1_920, 3_840),
+        ))
+        for (pattern in listOf(MidiCoreBassPatternId.ROOT_FIFTH, MidiCoreBassPatternId.SUSTAINED_ROOT)) {
+            for (density in listOf(0.25, 0.5, 1.0)) {
+                val context = context(pattern.id, project = project, density = density,
+                    protectedMelodyNotes = listOf(
+                        MidiCoreProtectedMelodyNote("pmn-${"3".repeat(64)}", 0, 1_920, 67, 90, true),
+                    ))
+                val result = MidiCoreBassGenerator.generate(context)
+                assertTrue(result.accepted, result.validation.report.findings.toString())
+                assertEquals(listOf(0L, 960L), starts(result), "${pattern.id} density=$density")
+                assertEquals(result, MidiCoreBassGenerator.generate(context))
+                val tooSparse = MidiCoreBassGenerator.generate(context.copy(
+                    sectionPolicy = MidiCoreSectionPolicy(density = 0.01)))
+                assertEquals(listOf(0L, 960L), starts(tooSparse))
+                assertFalse(tooSparse.accepted)
+                assertTrue(tooSparse.validation.report.findings.any {
+                    it.code == MidiCoreRoleFindingCode.DENSITY_EXCEEDED
+                })
+                val rest = MidiCoreBassGenerator.generate(context.copy(
+                    sectionPolicy = MidiCoreSectionPolicy(density = 0.0)))
+                assertTrue(rest.accepted, rest.validation.report.findings.toString())
+                assertTrue(rest.candidate.events.isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun `shared groove preserves the first chord-aligned support attack in every harmony window`() {
+        val groove = MidiCoreSharedGrooveIntent(
+            MidiCoreGrooveFeel.STRAIGHT,
+            MidiCoreGrooveSubdivision.QUARTER,
+            MidiCoreGrooveDrive.STEADY,
+        )
+        val chordRhythm = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.CHORDS, "verse-1", "chords-accepted", "d".repeat(64)),
+            listOf(
+                MidiCoreGenerationNote(120, 240, 60, 80),
+                MidiCoreGenerationNote(600, 720, 64, 80),
+            ),
+        )
+        val result = MidiCoreBassGenerator.generate(
+            context(
+                MidiCoreBassPatternId.ROOT_FIFTH.id,
+                project = project(arrangementPlan = planFor(groove)),
+                acceptedDependencies = listOf(chordRhythm),
+            ),
+        )
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(120L, 960L, 1_440L), starts(result))
+    }
+
+    @Test
+    fun `bass uses exact three four and six eight meter slots with repeatable groove fingerprints`() {
+        val threeFour = MidiCoreBassGenerator.generate(context(
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            project = project(meter = ProjectMeter(3, 2), occurrenceLength = 1_440),
+        ))
+        val sixEightProject = project(meter = ProjectMeter(6, 3), occurrenceLength = 1_440)
+        val sixEight = MidiCoreBassGenerator.generate(context(MidiCoreBassPatternId.ROOT_FIFTH.id, project = sixEightProject))
+        val groove = MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.QUARTER, MidiCoreGrooveDrive.STEADY)
+        val planned = project(arrangementPlan = planFor(groove))
+        val plannedSixEight = MidiCoreBassGenerator.generate(context(
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            project = project(occurrenceLength = 1_440, meter = ProjectMeter(6, 3), arrangementPlan = planFor(groove)),
+        ))
+        val same = MidiCoreGenerationContext.from(
+            planned, CandidateRole.BASS, "verse-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("test-generator", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 17),
+        )
+        val changed = MidiCoreGenerationContext.from(
+            planned.copy(arrangementPlan = planFor(groove.copy(drive = MidiCoreGrooveDrive.RESTRAINED))), CandidateRole.BASS, "verse-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("test-generator", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 17),
+        )
+
+        assertTrue(threeFour.accepted, threeFour.validation.report.findings.toString())
+        assertTrue(sixEight.accepted, sixEight.validation.report.findings.toString())
+        assertTrue(plannedSixEight.accepted, plannedSixEight.validation.report.findings.toString())
+        assertEquals(listOf(0L, 480L, 960L), starts(threeFour))
+        assertEquals(listOf(0L, 240L, 480L, 720L, 960L, 1_200L), starts(sixEight))
+        assertEquals(listOf(0L, 480L, 960L), starts(plannedSixEight))
+        assertEquals(same.contextSha256, MidiCoreGenerationContext.from(
+            planned, CandidateRole.BASS, "verse-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("test-generator", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 17),
+        ).contextSha256)
+        assertTrue(same.generationFingerprint.sha256 != changed.generationFingerprint.sha256)
     }
 
     @Test
@@ -346,17 +519,23 @@ class MidiCoreBassGeneratorTest {
         protectedMelodyNotes: List<MidiCoreProtectedMelodyNote> = emptyList(),
         acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
         sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(density = density),
-    ): MidiCoreGenerationContext = MidiCoreGenerationContext.forOccurrence(
-        authority = MidiCoreAuthoritySnapshot.from(project),
-        role = CandidateRole.BASS,
-        occurrenceId = occurrenceId,
-        performanceProfile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, profileId),
-        patternId = patternId,
-        generator = MidiCoreGeneratorInput("test-generator", "test-v1", patternId, seed),
-        protectedMelodyNotes = protectedMelodyNotes,
-        acceptedDependencies = acceptedDependencies,
-        sectionPolicy = sectionPolicy,
-    )
+    ): MidiCoreGenerationContext {
+        val authority = MidiCoreAuthoritySnapshot.from(project)
+        return MidiCoreGenerationContext.forOccurrence(
+            authority = authority,
+            role = CandidateRole.BASS,
+            occurrenceId = occurrenceId,
+            performanceProfile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, profileId),
+            patternId = patternId,
+            generator = MidiCoreGeneratorInput("test-generator", "test-v1", patternId, seed),
+            protectedMelodyNotes = protectedMelodyNotes,
+            acceptedDependencies = acceptedDependencies,
+            sectionPolicy = sectionPolicy,
+            occurrencePlan = project.arrangementPlan?.let { plan ->
+                MidiCoreResolvedOccurrenceGenerationPlan.resolve(plan, authority.occurrences, occurrenceId, CandidateRole.BASS)
+            },
+        )
+    }
 
     private fun protectedNote(start: Long, pitch: Int, anchor: Boolean, suffix: Int): MidiCoreProtectedMelodyNote = MidiCoreProtectedMelodyNote(
         id = "pmn-${suffix.toString(16).padStart(2, '0')}${"a".repeat(62)}",
@@ -368,10 +547,13 @@ class MidiCoreBassGeneratorTest {
     )
 
     private fun project(
+        occurrenceLength: Long = 1_920,
         chordEvents: List<AuthoritativeChordEvent> = listOf(
-            AuthoritativeChordEvent("verse-chord", "verse-1", "C", 0, 1_920),
-            AuthoritativeChordEvent("chorus-chord", "chorus-1", "F", 1_920, 3_840),
+            AuthoritativeChordEvent("verse-chord", "verse-1", "C", 0, occurrenceLength),
+            AuthoritativeChordEvent("chorus-chord", "chorus-1", "F", occurrenceLength, occurrenceLength * 2),
         ),
+        meter: ProjectMeter = ProjectMeter(4, 2),
+        arrangementPlan: MidiCoreArrangementPlan? = null,
     ): MidiCoreProject = MidiCoreProject(
         id = ProjectId("bass-generator-project"),
         metadata = ProjectMetadata("Bass generator", "2026-08-27T00:00:00Z"),
@@ -383,23 +565,36 @@ class MidiCoreBassGeneratorTest {
             original = ProjectArtifact(ProjectRelativePath("source/original.mid"), "a".repeat(64)),
             importReport = ProjectArtifact(ProjectRelativePath("reports/import.json"), "b".repeat(64)),
             trackSummaries = listOf(MidiTrackSummary(0, "Melody", emptyList())),
-            sourceEndTick = 3_840,
+            sourceEndTick = occurrenceLength * 2,
         ),
         selectedMelody = SelectedMelodyTrack(0, 0, "c".repeat(64)),
         authority = ProjectAuthority(
             key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
             tempo = ProjectTempo(500_000),
-            meter = ProjectMeter(4, 2),
+            meter = meter,
             sectionDefinitions = listOf(
                 ProjectSectionDefinition("verse", "Verse"),
                 ProjectSectionDefinition("chorus", "Chorus"),
             ),
             occurrences = listOf(
-                ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, 1_920),
-                ProjectSectionOccurrence("chorus-1", "chorus", "Chorus", 1_920, 3_840),
+                ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, occurrenceLength),
+                ProjectSectionOccurrence("chorus-1", "chorus", "Chorus", occurrenceLength, occurrenceLength * 2),
             ),
             chordEvents = chordEvents,
         ),
+        arrangementPlan = arrangementPlan,
+    )
+
+    private fun planFor(groove: MidiCoreSharedGrooveIntent): MidiCoreArrangementPlan = MidiCoreArrangementPlan(
+        MidiCoreArrangementPlan.VERSION,
+        groove,
+        listOf("verse-1", "chorus-1").mapIndexed { index, occurrenceId ->
+            MidiCoreOccurrenceArrangementPlan(
+                occurrenceId, MidiCoreArrangementPurpose.VERSE, "phrase-$index", "family-$index", 1, 50,
+                CandidateRole.entries.map { role -> MidiCoreRolePlanSettings(role, MidiCoreRoleActivity.SUPPORTING, 50, MidiCoreRegisterPreference.MID) },
+                MidiCoreBoundaryIntent.NONE, MidiCoreBoundaryIntent.NONE,
+            )
+        },
     )
 
     private fun twoOccurrenceProject(): MidiCoreProject = project(

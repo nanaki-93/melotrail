@@ -74,7 +74,9 @@ object MidiCoreBassGenerator {
             authoredAttacks(context, windowIndex, window)
         }
         val rhythmAware = applyAcceptedRhythmContext(context, authored)
-        val selected = selectAttacks(context, rhythmAware)
+        val grooveAware = applySharedGrooveIntent(context, rhythmAware)
+        val melodySpaced = leaveHeldMelodySpace(context, grooveAware)
+        val selected = selectAttacks(context, melodySpaced)
         var previousPitch: Int? = null
         val notes = mutableListOf<MidiCoreCandidateEvent.Note>()
         selected.forEachIndexed { position, attack ->
@@ -265,6 +267,46 @@ object MidiCoreBassGenerator {
         }
     }
 
+    /** Apply confirmed shared groove without consulting a downstream Drum candidate. */
+    private fun applySharedGrooveIntent(
+        context: MidiCoreGenerationContext,
+        attacks: List<BassAttack>,
+    ): List<BassAttack> {
+        if (attacks.isEmpty()) return attacks
+        if (MidiCoreBassDrumCoordination.isRestrained(context)) {
+            return attacks.groupBy(BassAttack::windowIndex).values.map { it.first() }
+        }
+        val stride = MidiCoreBassDrumCoordination.bassAttackStride(context) ?: return attacks
+        val firstAttackByWindow = attacks.groupBy(BassAttack::windowIndex).mapValues { (_, windowAttacks) ->
+            windowAttacks.first()
+        }
+        return attacks.filter { attack ->
+            attack == firstAttackByWindow.getValue(attack.windowIndex) ||
+                (attack.startTick - context.occurrence.startTick) % stride == 0L
+        }
+    }
+
+    /** Each harmony window under held melody receives one support attack rather than repeated Bass motion. */
+    private fun leaveHeldMelodySpace(
+        context: MidiCoreGenerationContext,
+        attacks: List<BassAttack>,
+    ): List<BassAttack> {
+        if (MidiCorePatternCatalog.bassPattern(context.patternId) == MidiCoreBassPatternId.SUSTAINED_ROOT) return attacks
+        val heldThreshold = context.tickGrid.ticksPerBeat * 2L
+        val heldMelody = context.protectedMelodyNotes.filter { melody ->
+            melody.endTick - melody.startTick >= heldThreshold
+        }
+        if (heldMelody.isEmpty()) return attacks
+        return attacks.groupBy(BassAttack::windowIndex).values.flatMap { windowAttacks ->
+            val first = windowAttacks.first()
+            if (heldMelody.any { melody -> melody.overlaps(first.windowStart, first.windowEnd) }) {
+                listOf(first)
+            } else {
+                windowAttacks
+            }
+        }
+    }
+
     /** Select a density- and melody-aware subset while preserving phrase-edge attacks. */
     private fun selectAttacks(context: MidiCoreGenerationContext, attacks: List<BassAttack>): List<BassAttack> {
         if (attacks.isEmpty()) return emptyList()
@@ -279,11 +321,23 @@ object MidiCoreBassGenerator {
         val validatorBudget = ceil(beats * 2.0 * context.sectionPolicy.density).toInt().coerceAtLeast(1)
         val target = minOf(attacks.size, requested, validatorBudget)
         if (target >= attacks.size) return attacks
-        if (target == 1) return listOf(attacks.first())
-        val selected = (0 until target).map { index ->
+        val heldMelody = context.protectedMelodyNotes.filter {
+            it.endTick - it.startTick >= context.tickGrid.ticksPerBeat * 2L
+        }
+        val support = attacks.groupBy(BassAttack::windowIndex).values.mapNotNull { windowAttacks ->
+            windowAttacks.first().takeIf { attack ->
+                heldMelody.any { it.overlaps(attack.windowStart, attack.windowEnd) }
+            }
+        }
+        val selected = if (target == 1) listOf(attacks.first()) else (0 until target).map { index ->
             attacks[(index.toLong() * (attacks.size - 1) / (target - 1)).toInt()]
         }
-        return selected.distinctBy { it.startTick }
+        // Density reduces optional motion, never a held-melody window's only support.
+        // If mandatory support exceeds the approved ceiling, validation reports the
+        // incompatible policy rather than silently dropping harmony windows.
+        val optional = (selected + attacks).distinctBy { it.startTick }.filter { it !in support }
+        return (support + optional.take((target - support.size).coerceAtLeast(0)))
+            .sortedBy { it.startTick }
     }
 
     /** Choose a bounded register pitch with deterministic melody, low-end, section, and voice-continuity preferences. */
@@ -302,7 +356,8 @@ object MidiCoreBassGenerator {
         if (anchorSafe.isEmpty()) return null
         val lowEndSafe = anchorSafe.filter { pitch ->
             context.dependency(CandidateRole.CHORDS)?.notes.orEmpty().none { chordNote ->
-                chordNote.pitch == pitch && chordNote.startTick < endTick && attack.startTick < chordNote.endTick
+                abs(chordNote.pitch - pitch) <= CHORD_SPACE_SEMITONES &&
+                    chordNote.startTick < endTick && attack.startTick < chordNote.endTick
             }
         }
         val pool = lowEndSafe.ifEmpty { anchorSafe }
@@ -384,6 +439,7 @@ object MidiCoreBassGenerator {
     )
 
     private const val MAX_LEAP = 12
+    private const val CHORD_SPACE_SEMITONES = 4
     private const val OCTAVE_TARGET_OFFSET = 6
     private const val ENERGY_VELOCITY_SPAN = 16.0
     private const val ENERGY_REGISTER_SPAN = 8.0

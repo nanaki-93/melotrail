@@ -8,8 +8,19 @@ import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAcceptedDependency
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
+import app.melotrail.project.MidiCoreBoundaryIntent
 import app.melotrail.project.MidiCoreGeneratorInput
+import app.melotrail.project.MidiCoreGrooveDrive
+import app.melotrail.project.MidiCoreGrooveFeel
+import app.melotrail.project.MidiCoreGrooveSubdivision
+import app.melotrail.project.MidiCoreOccurrenceArrangementPlan
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
+import app.melotrail.project.MidiCoreRolePlanSettings
+import app.melotrail.project.MidiCoreSharedGrooveIntent
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.ProjectAuthority
 import app.melotrail.project.ProjectId
@@ -160,6 +171,73 @@ class MidiCoreDrumGeneratorTest {
     }
 
     @Test
+    fun `confirmed shared groove drives bounded bass kick support on the three four grid`() {
+        val bassDependency = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "d".repeat(64)),
+            listOf(240L, 720L, 1_200L).map { start -> MidiCoreGenerationNote(start, start + 120, 36, 80) },
+        )
+        val drivingProject = project(
+            endTick = 1_440,
+            meter = ProjectMeter(3, 2),
+            arrangementPlan = planFor(MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.DRIVING)),
+        )
+        val restrainedProject = drivingProject.copy(
+            arrangementPlan = planFor(MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.RESTRAINED)),
+        )
+        val driving = MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = drivingProject,
+            acceptedDependencies = listOf(bassDependency),
+        ))
+        val restrained = MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = restrainedProject,
+            acceptedDependencies = listOf(bassDependency),
+        ))
+        val drivingKicks = driving.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().filter { it.pitch == 36 }.map { it.startTick }
+        val restrainedKicks = restrained.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().filter { it.pitch == 36 }.map { it.startTick }
+
+        assertTrue(driving.accepted, driving.validation.report.findings.toString())
+        assertTrue(restrained.accepted, restrained.validation.report.findings.toString())
+        assertTrue(240L in drivingKicks && 720L in drivingKicks)
+        assertTrue(240L !in restrainedKicks && 720L !in restrainedKicks)
+        assertEquals(driving, MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = drivingProject,
+            acceptedDependencies = listOf(bassDependency),
+        )))
+    }
+
+    @Test
+    fun `confirmed shared groove uses compound pulses on the six eight grid`() {
+        val bassDependency = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "e".repeat(64)),
+            listOf(240L, 720L, 1_200L).map { start -> MidiCoreGenerationNote(start, start + 120, 36, 80) },
+        )
+        val project = project(
+            endTick = 1_440,
+            meter = ProjectMeter(6, 3),
+            arrangementPlan = planFor(MidiCoreSharedGrooveIntent(
+                MidiCoreGrooveFeel.STRAIGHT,
+                MidiCoreGrooveSubdivision.EIGHTH,
+                MidiCoreGrooveDrive.DRIVING,
+            )),
+        )
+        val result = MidiCoreDrumGenerator.generate(context(
+            MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+            project = project,
+            acceptedDependencies = listOf(bassDependency),
+        ))
+        val kicks = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+            .filter { it.pitch == 36 }
+            .map { it.startTick }
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertTrue(240L in kicks && 1_200L in kicks)
+        assertTrue(720L !in kicks, "The second dotted-quarter pulse is not an off-beat support position: $kicks")
+    }
+
+    @Test
     fun `bass-aware kicks are restrained per bar and never crowd an explicit final-bar fill`() {
         val bassDependency = MidiCoreAcceptedDependencyContext(
             MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "f".repeat(64)),
@@ -184,6 +262,41 @@ class MidiCoreDrumGeneratorTest {
         assertEquals(listOf(720L, 1_200L), addedKicks.map { it.startTick })
         assertTrue(addedKicks.groupBy { it.startTick / 1_920 }.values.all { it.size <= 2 })
         assertTrue(addedKicks.none { it.startTick >= 1_920 })
+    }
+
+    @Test
+    fun `steady planned groove preserves intro and outro support ceilings`() {
+        val project = project(1_920, arrangementPlan = planFor(MidiCoreSharedGrooveIntent(
+            MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.STEADY)))
+        val bass = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "1".repeat(64)),
+            listOf(MidiCoreGenerationNote(720, 840, 36, 80)))
+        for (purpose in listOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO)) {
+            val context = context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+                project = project, purpose = purpose, acceptedDependencies = listOf(bass))
+            val withBass = MidiCoreDrumGenerator.generate(context)
+            val authored = MidiCoreDrumGenerator.generate(context.copy(acceptedDependencies = emptyList()))
+            assertTrue(withBass.accepted, withBass.validation.report.findings.toString())
+            assertEquals(authored.candidate.events, withBass.candidate.events)
+        }
+    }
+
+    @Test
+    fun `intent advisory ignores restrained and ineligible compound pickups`() {
+        for ((drive, onset) in listOf(MidiCoreGrooveDrive.RESTRAINED to 720L, MidiCoreGrooveDrive.DRIVING to 120L)) {
+            val meter = if (drive == MidiCoreGrooveDrive.RESTRAINED) ProjectMeter(4, 2) else ProjectMeter(6, 3)
+            val endTick = if (drive == MidiCoreGrooveDrive.RESTRAINED) 1_920L else 1_440L
+            val project = project(endTick, meter = meter, arrangementPlan = planFor(
+                MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, drive)))
+            val bass = MidiCoreAcceptedDependencyContext(
+                MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "1".repeat(64)),
+                listOf(MidiCoreGenerationNote(onset, onset + 120, 36, 80)))
+            val context = context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+                project = project, acceptedDependencies = listOf(bass))
+            val report = MidiCoreRoleValidator.validate(context,
+                listOf(MidiCoreCandidateEvent.Note(0, 120, 36, 80))).report
+            assertTrue(report.findings.none { it.code == MidiCoreRoleFindingCode.KICK_BASS_INTENT_MISSING }, report.findings.toString())
+        }
     }
 
     @Test
@@ -347,8 +460,8 @@ class MidiCoreDrumGeneratorTest {
         project: MidiCoreProject = project(1_920),
         fillPatternId: String? = null,
         acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
-    ): MidiCoreGenerationContext = MidiCoreGenerationContext.forOccurrence(
-        authority = MidiCoreAuthoritySnapshot.from(project),
+    ): MidiCoreGenerationContext = MidiCoreGenerationContext.from(
+        project = project,
         role = CandidateRole.DRUMS,
         occurrenceId = "verse-1",
         performanceProfile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.DRUMS, profileId),
@@ -358,7 +471,11 @@ class MidiCoreDrumGeneratorTest {
         sectionPolicy = MidiCoreSectionPolicy(purpose, energy, density, fillPatternId),
     )
 
-    private fun project(endTick: Long): MidiCoreProject = MidiCoreProject(
+    private fun project(
+        endTick: Long,
+        meter: ProjectMeter = ProjectMeter(4, 2),
+        arrangementPlan: MidiCoreArrangementPlan? = null,
+    ): MidiCoreProject = MidiCoreProject(
         id = ProjectId("drum-generator-project"),
         metadata = ProjectMetadata("Drum generator", "2026-08-27T00:00:00Z"),
         sourceMidi = SourceMidiRecord(
@@ -375,10 +492,23 @@ class MidiCoreDrumGeneratorTest {
         authority = ProjectAuthority(
             key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
             tempo = ProjectTempo(500_000),
-            meter = ProjectMeter(4, 2),
+            meter = meter,
             sectionDefinitions = listOf(ProjectSectionDefinition("verse", "Verse")),
             occurrences = listOf(ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, endTick)),
             chordEvents = listOf(AuthoritativeChordEvent("verse-chord", "verse-1", "C", 0, endTick)),
+        ),
+        arrangementPlan = arrangementPlan,
+    )
+
+    private fun planFor(groove: MidiCoreSharedGrooveIntent): MidiCoreArrangementPlan = MidiCoreArrangementPlan(
+        MidiCoreArrangementPlan.VERSION,
+        groove,
+        listOf(
+            MidiCoreOccurrenceArrangementPlan(
+                "verse-1", MidiCoreArrangementPurpose.VERSE, "phrase-1", "family-1", 1, 50,
+                CandidateRole.entries.map { role -> MidiCoreRolePlanSettings(role, MidiCoreRoleActivity.SUPPORTING, 50, MidiCoreRegisterPreference.MID) },
+                MidiCoreBoundaryIntent.NONE, MidiCoreBoundaryIntent.NONE,
+            ),
         ),
     )
 

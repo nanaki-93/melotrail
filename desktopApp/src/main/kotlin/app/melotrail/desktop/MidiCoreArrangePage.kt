@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.testTag
 import app.melotrail.application.MidiCoreCandidateReviewItem
 import app.melotrail.arrangement.core.MidiCoreArrangementStyle
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
+import app.melotrail.arrangement.core.MidiCoreBassDrumCoordination
 import app.melotrail.arrangement.core.MidiCoreChordCompingPhrasePatterns
 import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
@@ -549,8 +550,11 @@ private fun generationIntent(role: CandidateRole, occurrenceId: String, profileI
         patternId,
         MidiCoreGeneratorInput(
             "midi-core-desktop",
-            MidiCoreChordCompingPhrasePatterns.generatorVersion(
-                "midi-core-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+            MidiCoreBassDrumCoordination.generatorVersion(
+                MidiCoreChordCompingPhrasePatterns.generatorVersion(
+                    "midi-core-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
+                    role,
+                ),
                 role,
             ),
             patternId,

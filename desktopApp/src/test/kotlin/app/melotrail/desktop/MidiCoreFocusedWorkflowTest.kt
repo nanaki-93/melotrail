@@ -238,7 +238,7 @@ class MidiCoreFocusedWorkflowTest {
             repairCandidates.forEach { candidate ->
                 val expectedRepairGeneratorVersion =
                     "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}" +
-                        if (candidate.role == CandidateRole.CHORDS) "-comping-v1" else ""
+                        if (candidate.role == CandidateRole.CHORDS) "-comping-v1" else "-bass-drums-v1"
                 assertEquals(expectedRepairGeneratorVersion, candidate.generatorVersion)
             }
             captureFixture("arrange")

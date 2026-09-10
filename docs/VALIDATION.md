@@ -243,6 +243,18 @@ four-role, 4/4 fixture and an additional 3/4/6/8 smoke set:
 Targets missing on the reference machine require profiling and an explicit
 budget decision with evidence. Agents must not claim measurements they did not run.
 
+M08a repair evidence is retained at
+`~/.codex/melotrail-terra/m08a-repair-evidence`. Reduced-density held-melody
+regressions keep Bass attacks at ticks 0 and 960 across C/F windows at densities
+0.25, 0.5 and 1.0 for moving and sustained-root patterns. An incompatible 0.01
+ceiling produces a density finding; zero density stays silent. Core/desktop
+checks also cover chord spacing, approach resolution, shared groove in 3/4 and
+6/8, deterministic role fingerprints and the existing full-draft caller. Planned steady grooves preserve intro/outro
+zero-support limits; pickup advisories share generator eligibility, including
+restrained and compound-meter cases.
+These are engineering checks. Full-song M08 comparison packages and Q02 Logic
+listening remain separate pending work; no musical score is inferred.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

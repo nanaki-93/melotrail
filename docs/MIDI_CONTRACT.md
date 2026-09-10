@@ -244,3 +244,21 @@ their authored attacks and may leave a rest after a chord change. Other meters
 remain valid musical authority and import data, but Chords generation and style
 preview reject them explicitly
 until authored comping is available; they never substitute a 4/4 pattern.
+
+M08a binds Bass and Drums to the same confirmed shared-groove record already
+included in their role-scoped plan fingerprints. Complete-draft generation
+keeps the existing Chords → Bass → Drums order: Bass consumes Chords evidence,
+and Drums consumes Chords plus already-generated Bass evidence. It never waits
+for a downstream candidate. Bass keeps its approaches
+inside the current chord window, leaves one support attack per harmony window
+under held protected melody even at reduced density. Density removes optional
+motion first; if those support attacks exceed the approved density ceiling,
+validation rejects the incompatible policy rather than silently omitting a chord
+window. Zero density remains an explicit rest. Bass rejects low-end candidates that cannot retain
+the existing Chords/Bass separation. Shared groove changes only bounded Bass
+attack density and optional Bass-derived off-beat Drum kicks; it never rewrites
+an authored drum groove, protected melody, authority timing, or accepted MIDI.
+Quarter, eighth and sixteenth intent use the authoritative 3/4 or 6/8 grid,
+not a substituted 4/4 bar. In 6/8, optional off-beat kick support is measured
+against the two dotted-quarter pulses while retaining exact eighth/sixteenth
+positions. Coordination rule version is part of Bass/Drums draft generator identity.
