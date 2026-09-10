@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.audition.MidiAuditionPlaybackPlan
 import app.melotrail.audition.MidiAuditionView
+import app.melotrail.midi.adapter.JdkMidiReader
 import app.melotrail.midi.domain.MidiEventOrderingKey
 import app.melotrail.midi.domain.MidiExportMarker
 import app.melotrail.midi.domain.MidiExportRole
@@ -9,8 +10,11 @@ import app.melotrail.midi.domain.MidiExportRoleTrack
 import app.melotrail.midi.domain.MidiExportSong
 import app.melotrail.midi.domain.MidiNoteEvent
 import app.melotrail.midi.domain.MidiPpq
+import app.melotrail.midi.domain.MidiMelodySelection
+import app.melotrail.midi.domain.MidiProtectedMelodySelector
 import app.melotrail.midi.domain.MidiSemanticEventKind
 import app.melotrail.project.CandidateRole
+import app.melotrail.project.adapter.MidiCoreArtifactStore
 
 /**
  * Prepares MIDI-only review audition views from digest-checked candidate and
@@ -19,6 +23,8 @@ import app.melotrail.project.CandidateRole
 class MidiCoreReviewAudition(
     private val review: MidiCoreCandidateReview = MidiCoreCandidateReview(),
     private val assembly: MidiCoreAcceptedSongAssembly = MidiCoreAcceptedSongAssembly(),
+    private val artifacts: MidiCoreArtifactStore = MidiCoreArtifactStore(),
+    private val reader: JdkMidiReader = JdkMidiReader(),
 ) {
     /** Prepare one inspectable candidate, including stale evidence, for audition. */
     fun candidate(request: PrepareMidiCoreCandidateAudition): MidiCoreReviewAuditionResult {
@@ -28,6 +34,7 @@ class MidiCoreReviewAudition(
                 request.role,
                 request.occurrenceId,
                 request.expectedRevision,
+                candidateIds = setOf(request.candidateId),
             ),
         )
         val candidates = when (listed) {
@@ -49,6 +56,7 @@ class MidiCoreReviewAudition(
             "Import and preserve one source MIDI before starting Review audition.",
         )
         val song = try {
+            val melody = melodyTrack(request.session)
             MidiExportSong(
                 ppq = MidiPpq(source.ppq),
                 sequenceName = request.session.project.metadata.name,
@@ -57,6 +65,7 @@ class MidiCoreReviewAudition(
                 meterDenominatorExponent = authority.meter.denominatorExponent,
                 markers = markers(authority),
                 roles = listOf(
+                    melody,
                     MidiExportRoleTrack(
                         exportRole(request.role),
                         item.notes.mapIndexed { index, note ->
@@ -80,14 +89,18 @@ class MidiCoreReviewAudition(
                         "Save at least one contiguous section occurrence before starting Review audition.",
                     ),
             )
-        } catch (error: IllegalArgumentException) {
+        } catch (error: Exception) {
             return rejected(
                 error.message ?: "Candidate evidence cannot be prepared for MIDI audition.",
                 "Restore the candidate evidence or choose another candidate.",
             )
         }
+        val occurrence = authority.occurrences.singleOrNull { it.id == request.occurrenceId }
+            ?: return rejected("The candidate occurrence is no longer authoritative.", "Reload the project and retry this same repair scope.")
         return MidiCoreReviewAuditionResult.Ready(
-            MidiAuditionPlaybackPlan(MidiAuditionView.candidate(item.candidate.id, exportRole(request.role), song)),
+            // Occurrence scope preserves the common melody and exact bar
+            // position for a before/after repair A/B; it never alters state.
+            MidiAuditionPlaybackPlan(MidiAuditionView.occurrence(occurrence.id, song, occurrence.startTick, occurrence.endTick)),
         )
     }
 
@@ -146,6 +159,22 @@ class MidiCoreReviewAudition(
         CandidateRole.CHORDS -> MidiExportRole.CHORDS
         CandidateRole.BASS -> MidiExportRole.BASS
         CandidateRole.DRUMS -> MidiExportRole.DRUMS
+    }
+
+    private fun melodyTrack(session: MidiCoreProjectSession): MidiExportRoleTrack {
+        val source = requireNotNull(session.project.sourceMidi)
+        val selected = requireNotNull(session.project.selectedMelody)
+        val sequence = reader.inspect(artifacts.verify(session.root, source.original)).sequence
+        require(sequence.source.sha256 == source.sha256 && sequence.source.format == source.format && sequence.source.ppq.value == source.ppq) {
+            "The preserved source MIDI no longer matches project identity."
+        }
+        val melody = MidiProtectedMelodySelector().select(sequence, MidiMelodySelection(selected.trackIndex, selected.channel))
+        require(melody.identitySha256 == selected.identitySha256 && melody.sourceSha256 == source.sha256) {
+            "The protected melody identity no longer matches the preserved source."
+        }
+        // Keep the complete supported protected stream (including CC64, bend,
+        // and pressure) so both sides of a repair A/B hear the same melody.
+        return MidiExportRoleTrack(MidiExportRole.MELODY, melody.events)
     }
 
     private fun rejected(message: String, nextAction: String) =

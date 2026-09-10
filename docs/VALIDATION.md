@@ -307,6 +307,24 @@ are planned rests from tick 5760. Focused/full/build logs and digest verificatio
 are retained beside the packages. Human A/B ratings and Logic playback remain
 Q01/Q02; these fixtures do not establish musical acceptance.
 
+M09 repair evidence is retained at `~/.codex/melotrail-terra/m09-repair-evidence`.
+The real-service owned two-occurrence workflow previews without writes, repairs
+all affected neighboring scopes, checks immutable piano-boundary hashes and
+rejects unaccepted dependencies, tampered boundary metadata and colliding batch
+history without partial writes. Complete Use commits once; lower-register
+intent/offset identity survives publication, acceptance and reopen. Source and
+prior candidate bytes remain identical. The retained project contains baseline
+and repaired accepted-only export snapshots for equal-position comparison.
+Core tests reject cosmetic alternatives and stale/rejected choices; the full
+suite also covers single-scope repairs, limits, locks, cancellation and audition.
+Retry coverage verifies one plan confirmation and identical generation settings
+across repeated attempts after a no-result failure.
+These checks do not score musical usefulness. For Q01/Q02, compare the snapshots
+with identical Logic instruments, verify melody/role origins, piano continuity
+at bar 2, lower-register intent and exact end at tick 3840, then save/reopen.
+Arrange buttons and final UI flow remain U05b/U05; musical and Logic approvals
+remain pending human evidence.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

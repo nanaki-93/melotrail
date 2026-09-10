@@ -22,6 +22,13 @@ class MidiCoreCandidateReview(
     private val reader: JdkMidiReader = JdkMidiReader(),
 ) {
     /** List all inspectable candidates for one role and occurrence in deterministic order. */
+    /** Reuse the same immutable-MIDI boundary proof as full-draft generation. */
+    fun precedingPianoBoundary(session: MidiCoreProjectSession, occurrenceId: String, generatedIds: List<String>): app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary? {
+        val project = artifacts.openProject(session.root)
+        require(project == session.project) { "The project changed before resolving its piano boundary" }
+        return precedingPianoBoundary(session.root, project, occurrenceId, generatedIds, artifacts)
+    }
+
     fun list(request: ListMidiCoreCandidates): MidiCoreCandidateReviewResult {
         val loaded = when (val result = load(request.session, request.expectedRevision)) {
             is ReviewLoad.Ready -> result
@@ -38,6 +45,7 @@ class MidiCoreCandidateReview(
         }
         val items = loaded.project.candidates
             .filter { it.role == request.role && it.occurrenceId == request.occurrenceId }
+            .filter { request.candidateIds == null || it.id in request.candidateIds }
             .sortedWith(compareBy<MidiCoreCandidate> { it.createdAt }.thenBy { it.id })
             .map { candidate ->
                 when (val item = inspectCandidate(loaded.root, loaded.project, currentAuthority, candidate, request.role, request.occurrenceId)) {
@@ -98,6 +106,8 @@ class MidiCoreCandidateReview(
     }
 
     /** Apply a user-authorized acceptance with the caller's optimistic project revision. */
+    fun acceptBatch(request: AcceptMidiCoreCandidateBatch): MidiCoreCandidateLifecycleResult = lifecycle.acceptBatch(request)
+
     fun accept(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
         lifecycle.accept(request.withDefaultRevision())
 
@@ -295,7 +305,13 @@ data class ListMidiCoreCandidates(
     val role: CandidateRole,
     val occurrenceId: String,
     val expectedRevision: Long? = session.project.revision,
-)
+    /** Optional exact evidence subset; null retains the ordinary all-candidates review list. */
+    val candidateIds: Set<String>? = null,
+) {
+    init {
+        require(candidateIds == null || candidateIds.all { it.isNotBlank() }) { "Candidate review IDs must not be blank" }
+    }
+}
 
 data class CompareMidiCoreCandidates(
     val session: MidiCoreProjectSession,
@@ -404,4 +420,19 @@ sealed interface MidiCoreCandidateReviewResult {
     }
 
     data class Rejected(val problem: MidiCoreCandidateProblem) : MidiCoreCandidateReviewResult
+}
+
+internal fun precedingPianoBoundary(root: Path, project: MidiCoreProject, occurrenceId: String, generatedIds: List<String>, artifacts: MidiCoreArtifactStore): app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary? {
+    val occurrences = requireNotNull(project.authority).occurrences
+    val index = occurrences.indexOfFirst { it.id == occurrenceId }
+    require(index >= 0) { "Piano occurrence is not authoritative" }
+    if (index == 0) return null
+    val previous = occurrences[index - 1].id
+    if (project.arrangementPlan?.occurrences?.single { it.occurrenceId == previous }?.roleSettings
+        ?.single { it.role == CandidateRole.CHORDS }?.activity == app.melotrail.project.MidiCoreRoleActivity.INACTIVE) return null
+    val candidate = project.candidates.singleOrNull { it.id in generatedIds && it.occurrenceId == previous && it.role == CandidateRole.CHORDS }
+        ?: project.acceptances.singleOrNull { it.occurrenceId == previous && it.role == CandidateRole.CHORDS }
+            ?.let { accepted -> project.candidates.single { it.id == accepted.candidateId } }
+    require(candidate != null && candidate.status !in setOf(MidiCoreCandidateStatus.STALE, MidiCoreCandidateStatus.REJECTED)) { "A current preceding Chords candidate is required" }
+    return midiDerivedPianoBoundary(root, project, candidate, artifacts)
 }

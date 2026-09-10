@@ -71,6 +71,22 @@ class MidiCoreChordGeneratorTest {
     }
 
     @Test
+    fun `explicit lower-register repair shifts voicing center without changing legal range`() {
+        val baseline = MidiCoreChordGenerator.generate(context(chordSymbol = "Cmaj7", seed = 0))
+        val lowered = MidiCoreChordGenerator.generate(
+            context(chordSymbol = "Cmaj7", seed = 0, registerCenterOffsetSemitones = -12),
+        )
+        val baselinePitches = baseline.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().map { it.pitch }
+        val loweredPitches = lowered.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().map { it.pitch }
+
+        assertTrue(baseline.accepted && lowered.accepted)
+        assertTrue(loweredPitches.average() < baselinePitches.average(), "$baselinePitches should move lower, got $loweredPitches")
+        assertEquals(baselinePitches.map { it % 12 }.toSet(), loweredPitches.map { it % 12 }.toSet())
+        assertTrue(loweredPitches.all { it in 48..84 })
+        assertTrue(baseline.context.contextSha256 != lowered.context.contextSha256)
+    }
+
+    @Test
     fun `expands complete curated chord rhythms without changing harmony`() {
         val patterns = listOf(
             MidiCoreChordRhythmPatternId.SUSTAINED,
@@ -787,6 +803,7 @@ class MidiCoreChordGeneratorTest {
         protectedMelodyNotes: List<MidiCoreProtectedMelodyNote> = emptyList(),
         acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
         pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
+        registerCenterOffsetSemitones: Int = 0,
     ): MidiCoreGenerationContext = MidiCoreGenerationContext.forOccurrence(
         authority = MidiCoreAuthoritySnapshot.from(project),
         role = CandidateRole.CHORDS,
@@ -796,7 +813,10 @@ class MidiCoreChordGeneratorTest {
         generator = MidiCoreGeneratorInput("test-generator", "test-v1", patternId, seed),
         protectedMelodyNotes = protectedMelodyNotes,
         acceptedDependencies = acceptedDependencies,
-        sectionPolicy = MidiCoreSectionPolicy(density = density),
+        sectionPolicy = MidiCoreSectionPolicy(
+            density = density,
+            registerCenterOffsetSemitones = registerCenterOffsetSemitones,
+        ),
         pianoVoicingBoundary = pianoVoicingBoundary,
     )
 

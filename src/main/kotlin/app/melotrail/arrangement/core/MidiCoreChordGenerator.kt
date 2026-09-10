@@ -586,7 +586,8 @@ object MidiCoreChordGenerator {
             MidiCoreSectionPurpose.VERSE, MidiCoreSectionPurpose.UNSPECIFIED -> 0
         }
         val energyOffset = ((context.sectionPolicy.energy - 0.5) * ENERGY_REGISTER_SPAN).roundToInt()
-        return (base + purposeOffset + energyOffset).coerceIn(range.first, range.last)
+        return (base + purposeOffset + energyOffset + context.sectionPolicy.registerCenterOffsetSemitones)
+            .coerceIn(range.first, range.last)
     }
 
     /** Align two ordered voicings with a bounded dynamic-programming movement metric. */

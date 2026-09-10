@@ -39,6 +39,13 @@ import app.melotrail.application.MidiCoreCandidateReviewResult
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMidiPackageExportResult
 import app.melotrail.application.MidiCoreMusicalAuthority
+import app.melotrail.application.MidiCoreMusicalRepair
+import app.melotrail.application.MidiCoreMusicalRepairIntent
+import app.melotrail.application.MidiCoreMusicalRepairResult
+import app.melotrail.application.MidiCoreMusicalRepairAlternatives
+import app.melotrail.application.MidiCoreMusicalRepairAlternativesResult
+import app.melotrail.application.PreviewMidiCoreMusicalRepair
+import app.melotrail.application.RankMidiCoreMusicalRepairAlternatives
 import app.melotrail.application.MidiCoreProjectLifecycle
 import app.melotrail.application.MidiCoreProjectLifecycleResult
 import app.melotrail.application.MidiCoreProjectSession
@@ -84,7 +91,9 @@ import app.melotrail.arrangement.core.MidiCoreInvalidationPreview
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.arrangement.core.MidiCoreBassDrumCoordination
 import app.melotrail.arrangement.core.MidiCoreChordCompingPhrasePatterns
+import app.melotrail.arrangement.core.MidiCoreDrumGenerator
 import app.melotrail.arrangement.core.MidiCorePatternCatalog
+import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
 import app.melotrail.midi.domain.MidiFinding
 import app.melotrail.midi.domain.MidiImportValidationResult
 import app.melotrail.midi.domain.MidiTrackSummary
@@ -154,11 +163,15 @@ interface MidiCoreWorkspaceUseCases {
     fun cancelArrangementPlan(request: CancelMidiCoreArrangementPlanProposal): MidiCoreArrangementPlanProposalResult
     fun previewArrangementPlanEdit(request: PreviewMidiCoreArrangementPlanEdit): MidiCoreArrangementPlanEditResult
     fun confirmArrangementPlanEdit(request: ConfirmMidiCoreArrangementPlanEdit): MidiCoreArrangementPlanEditResult
+    fun previewMusicalRepair(request: PreviewMidiCoreMusicalRepair): MidiCoreMusicalRepairResult
+    fun rankMusicalRepairAlternatives(request: RankMidiCoreMusicalRepairAlternatives): MidiCoreMusicalRepairAlternativesResult
     fun confirmArrangementExtent(request: ConfirmMidiCoreArrangementExtent): app.melotrail.application.MidiCoreArrangementExtentResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
     fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
     fun listCandidates(request: ListMidiCoreCandidates): MidiCoreCandidateReviewResult
     fun compareCandidates(request: CompareMidiCoreCandidates): MidiCoreCandidateReviewResult
+    fun precedingPianoBoundary(session: MidiCoreProjectSession, occurrenceId: String, generatedIds: List<String>): app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary?
+    fun acceptBatch(request: app.melotrail.application.AcceptMidiCoreCandidateBatch): MidiCoreCandidateLifecycleResult
     fun acceptCandidate(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult
     fun rejectCandidate(request: RejectMidiCoreCandidate): MidiCoreCandidateLifecycleResult
     fun lockCandidate(request: LockMidiCoreCandidate): MidiCoreCandidateLifecycleResult
@@ -182,6 +195,8 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val harmony: MidiCoreAuthoritativeHarmony,
     private val arrangementPlan: MidiCoreArrangementPlanProposalUseCase = MidiCoreArrangementPlanProposalUseCase(),
     private val arrangementPlanEdit: MidiCoreArrangementPlanEdit = MidiCoreArrangementPlanEdit(),
+    private val musicalRepair: MidiCoreMusicalRepair = MidiCoreMusicalRepair(),
+    private val musicalRepairAlternatives: MidiCoreMusicalRepairAlternatives = MidiCoreMusicalRepairAlternatives(),
     private val generation: MidiCoreCandidateGeneration,
     private val review: MidiCoreCandidateReview,
     private val exporter: MidiCoreMidiPackageExporter,
@@ -237,6 +252,10 @@ class DefaultMidiCoreWorkspaceUseCases(
 
     override fun confirmArrangementPlanEdit(request: ConfirmMidiCoreArrangementPlanEdit): MidiCoreArrangementPlanEditResult = arrangementPlanEdit.confirm(request)
 
+    override fun previewMusicalRepair(request: PreviewMidiCoreMusicalRepair): MidiCoreMusicalRepairResult = musicalRepair.preview(request)
+
+    override fun rankMusicalRepairAlternatives(request: RankMidiCoreMusicalRepairAlternatives): MidiCoreMusicalRepairAlternativesResult = musicalRepairAlternatives.rank(request)
+
     override fun confirmArrangementExtent(request: ConfirmMidiCoreArrangementExtent) = arrangementExtent.confirm(request)
 
     override fun replaceStructure(request: ReplaceMidiCoreStructure) = structure.replace(request)
@@ -246,6 +265,10 @@ class DefaultMidiCoreWorkspaceUseCases(
     override fun listCandidates(request: ListMidiCoreCandidates): MidiCoreCandidateReviewResult = review.list(request)
 
     override fun compareCandidates(request: CompareMidiCoreCandidates): MidiCoreCandidateReviewResult = review.compare(request)
+
+    override fun precedingPianoBoundary(session: MidiCoreProjectSession, occurrenceId: String, generatedIds: List<String>) = review.precedingPianoBoundary(session, occurrenceId, generatedIds)
+
+    override fun acceptBatch(request: app.melotrail.application.AcceptMidiCoreCandidateBatch): MidiCoreCandidateLifecycleResult = review.acceptBatch(request)
 
     override fun acceptCandidate(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult = review.accept(request)
 
@@ -449,6 +472,8 @@ data class MidiCoreWorkspaceState(
     val arrangementPlanProposal: MidiCoreArrangementPlanProposalUiState = MidiCoreArrangementPlanProposalUiState(),
     /** A reviewed plan edit is session state until its separate explicit confirmation. */
     val arrangementPlanEdit: MidiCoreArrangementPlanEditUiState = MidiCoreArrangementPlanEditUiState(),
+    /** A named musical repair stays ephemeral until Apply confirms its plan adjustment. */
+    val musicalRepair: MidiCoreMusicalRepairUiState = MidiCoreMusicalRepairUiState(),
     val arrangement: MidiCoreArrangementUiState = MidiCoreArrangementUiState(),
     /** Verified, immutable source/candidate/draft/accepted lane facts; Compose never reads artifacts itself. */
     val visualEvidence: MidiCoreVisualEvidenceProjection? = null,
@@ -482,6 +507,17 @@ data class MidiCoreArrangementPlanProposalUiState(
 data class MidiCoreArrangementPlanEditUiState(
     val plan: MidiCoreArrangementPlan? = null,
     val invalidation: MidiCoreInvalidationPreview? = null,
+)
+
+data class MidiCoreMusicalRepairUiState(
+    val prepared: MidiCoreMusicalRepairResult.Prepared? = null,
+    val applied: Boolean = false,
+    val baselineCandidateId: String? = null,
+    val baselinesByScope: Map<app.melotrail.project.MidiCoreAuthorityScopeKey, String> = emptyMap(),
+    val alternativesByScope: Map<app.melotrail.project.MidiCoreAuthorityScopeKey, List<app.melotrail.application.MidiCoreMusicalRepairAlternative>> = emptyMap(),
+    val alternatives: List<app.melotrail.application.MidiCoreMusicalRepairAlternative> = emptyList(),
+    val rejections: List<app.melotrail.application.MidiCoreMusicalRepairAlternativeRejection> = emptyList(),
+    val noResultReason: String? = null,
 )
 
 /** Ephemeral selection and retry identity for the whole-song arrangement workspace. */
@@ -559,6 +595,10 @@ sealed interface MidiCoreWorkspaceIntent {
     data class PreviewArrangementPlanEdit(val plan: MidiCoreArrangementPlan) : MidiCoreWorkspaceIntent
     data class ConfirmArrangementPlanEdit(val plan: MidiCoreArrangementPlan) : MidiCoreWorkspaceIntent
     data object CancelArrangementPlanEdit : MidiCoreWorkspaceIntent
+    data class PreviewMusicalRepair(val occurrenceId: String, val intent: MidiCoreMusicalRepairIntent) : MidiCoreWorkspaceIntent
+    data object ApplyMusicalRepair : MidiCoreWorkspaceIntent
+    data object CancelMusicalRepair : MidiCoreWorkspaceIntent
+    data class UseMusicalRepair(val candidateIds: List<String>) : MidiCoreWorkspaceIntent
     data class SelectArrangementOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
     data class CreateArrangementDraft(
         val styleId: String,
@@ -661,6 +701,10 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit -> previewArrangementPlanEdit(intent)
             is MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit -> confirmArrangementPlanEdit(intent)
             MidiCoreWorkspaceIntent.CancelArrangementPlanEdit -> cancelArrangementPlanEdit()
+            is MidiCoreWorkspaceIntent.PreviewMusicalRepair -> previewMusicalRepair(intent)
+            MidiCoreWorkspaceIntent.ApplyMusicalRepair -> applyMusicalRepair()
+            MidiCoreWorkspaceIntent.CancelMusicalRepair -> cancelMusicalRepair()
+            is MidiCoreWorkspaceIntent.UseMusicalRepair -> useMusicalRepair(intent)
             is MidiCoreWorkspaceIntent.SelectArrangementOccurrence -> selectArrangementOccurrence(intent)
             is MidiCoreWorkspaceIntent.CreateArrangementDraft -> generateArrangementDraft(intent)
             is MidiCoreWorkspaceIntent.RegenerateArrangementSection -> regenerateArrangementSection(intent)
@@ -1302,6 +1346,256 @@ class MidiCoreWorkspaceViewModel(
         _state.value = _state.value.copy(arrangementPlanEdit = MidiCoreArrangementPlanEditUiState())
     }
 
+    /** Inspect the exact bounded repair impact without changing project authority or audition state. */
+    private fun previewMusicalRepair(intent: MidiCoreWorkspaceIntent.PreviewMusicalRepair) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.ARRANGEMENT_PLAN, "Reviewing musical repair impact…", intent) { _ ->
+            when (val result = useCases.previewMusicalRepair(PreviewMidiCoreMusicalRepair(current, intent.occurrenceId, intent.intent))) {
+                is MidiCoreMusicalRepairResult.Prepared -> success("Review the repair impact, then apply it to create new alternatives.") {
+                    val baseline = current.project.acceptances.singleOrNull {
+                        it.occurrenceId == intent.occurrenceId && it.role == result.proposal.settings.changedRoles.firstOrNull()
+                    }?.candidateId
+                    _state.value = _state.value.copy(musicalRepair = MidiCoreMusicalRepairUiState(prepared = result, baselineCandidateId = baseline,
+                        baselinesByScope = current.project.acceptances.associate { app.melotrail.project.MidiCoreAuthorityScopeKey(it.occurrenceId, it.role) to it.candidateId }))
+                }
+                is MidiCoreMusicalRepairResult.Rejected -> failure(musicalRepairBlocker(result.problem), intent)
+            }
+        }
+    }
+
+    /**
+     * Applying a repair is deliberately separate from candidate acceptance.
+     * Existing locked selections are never replaced; the existing plan-edit
+     * use case provides the revision-checked project write and scoped stale
+     * evidence handling.
+     */
+    private fun applyMusicalRepair() {
+        val current = requireSessionOrBlock() ?: return
+        val repairState = state.value.musicalRepair
+        val prepared = repairState.prepared ?: return failImmediately(blocker(
+            MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED,
+            "There is no reviewed musical repair to apply.",
+            "Choose a named repair and review its exact affected scope first.",
+        ))
+        val scopes = repairScopes(prepared)
+        if (scopes.size > 9 || scopes.any { scope -> prepared.proposal.plan.occurrences.single { it.occurrenceId == scope.occurrenceId }
+                .roleSettings.single { it.role == scope.role }.activity == app.melotrail.project.MidiCoreRoleActivity.INACTIVE }) {
+            return failImmediately(blocker(MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+                "This repair requires a complete draft because its impact exceeds nine scopes or includes planned rests.",
+                "Review the plan and create a complete draft; no repair settings were written."))
+        }
+        if (prepared.lockedScopes.isNotEmpty()) {
+            return failImmediately(blocker(
+                MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+                "This repair would replace locked work in ${prepared.lockedScopes.joinToString { "${it.occurrenceId} ${it.role.name.lowercase()}" }}.",
+                "Unlock the affected work or choose a repair outside that locked scope, then review it again.",
+            ))
+        }
+        startOperation(MidiCoreWorkspaceOperationKind.ARRANGEMENT_PLAN, "Applying musical repair…", MidiCoreWorkspaceIntent.ApplyMusicalRepair) { cancellation ->
+            val repaired = if (repairState.applied) {
+                if (current.project.arrangementPlan != prepared.proposal.plan) return@startOperation failure(blocker(
+                    MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT, "The confirmed repair plan changed before retry.", "Review the current plan before another repair."))
+                current
+            } else when (val result = useCases.confirmArrangementPlanEdit(ConfirmMidiCoreArrangementPlanEdit(current, prepared.proposal.plan))) {
+                is MidiCoreArrangementPlanEditResult.Confirmed -> result.session
+                is MidiCoreArrangementPlanEditResult.Rejected -> return@startOperation failure(arrangementPlanEditBlocker(result.problem), MidiCoreWorkspaceIntent.ApplyMusicalRepair)
+                else -> error("Musical repair confirmation returned an unexpected result")
+            }
+            val outcome = generateRepairAlternatives(repaired, prepared, repairState.baselinesByScope, cancellation)
+            fun retainRetry(previous: (() -> Unit)?) {
+                previous?.invoke()
+                _state.value = _state.value.copy(musicalRepair = _state.value.musicalRepair.copy(
+                    prepared = prepared, applied = true, baselinesByScope = repairState.baselinesByScope,
+                ))
+            }
+            when (outcome) {
+                is WorkspaceOutcome.Success -> outcome
+                is WorkspaceOutcome.Failure -> outcome.copy(retry = MidiCoreWorkspaceIntent.ApplyMusicalRepair,
+                    blocker = outcome.blocker.copy(action = MidiCoreWorkspaceIntent.ApplyMusicalRepair), apply = { retainRetry(outcome.apply) })
+                is WorkspaceOutcome.Cancelled -> outcome.copy(apply = { retainRetry(outcome.apply) })
+            }
+        }
+    }
+
+    private fun repairScopes(prepared: MidiCoreMusicalRepairResult.Prepared): List<app.melotrail.project.MidiCoreAuthorityScopeKey> =
+        (prepared.invalidation.affectedScopes.map { app.melotrail.project.MidiCoreAuthorityScopeKey(it.occurrenceId, it.role) } +
+            prepared.proposal.settings.changedRoles.map { app.melotrail.project.MidiCoreAuthorityScopeKey(prepared.proposal.settings.occurrenceId, it) }).distinct()
+
+    private fun useMusicalRepair(intent: MidiCoreWorkspaceIntent.UseMusicalRepair) {
+        val current = requireSessionOrBlock() ?: return
+        val choices = state.value.musicalRepair.alternativesByScope
+        if (choices.isEmpty() || intent.candidateIds.size != choices.size || intent.candidateIds.distinct().size != choices.size ||
+            choices.values.any { options -> intent.candidateIds.count { id -> options.any { it.candidateId == id } } != 1 }) {
+            return failImmediately(blocker(MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+                "Select one reviewed candidate for every repair role.", "Review this complete repair scope again."))
+        }
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Using musical repair…", intent) { _ ->
+            when (val result = useCases.acceptBatch(app.melotrail.application.AcceptMidiCoreCandidateBatch(current, intent.candidateIds))) {
+                is MidiCoreCandidateLifecycleResult.Updated -> success("The complete selected repair is now accepted.", result.session)
+                is MidiCoreCandidateLifecycleResult.Rejected -> failure(candidateBlocker(result.problem), intent)
+                else -> error("Repair acceptance returned an unexpected result")
+            }
+        }
+    }
+
+    private fun cancelMusicalRepair() {
+        _state.value = _state.value.copy(musicalRepair = MidiCoreMusicalRepairUiState())
+    }
+
+    /** Offer three isolated variants or one dependency-complete set across at most nine scopes. */
+    private suspend fun generateRepairAlternatives(
+        repairedSession: MidiCoreProjectSession,
+        prepared: MidiCoreMusicalRepairResult.Prepared,
+        baselines: Map<app.melotrail.project.MidiCoreAuthorityScopeKey, String>,
+        cancellation: AtomicBoolean,
+    ): WorkspaceOutcome {
+        val targets = repairScopes(prepared)
+        val order = prepared.proposal.plan.occurrences.map { it.occurrenceId }
+        val scopes = targets.sortedWith(compareBy<app.melotrail.project.MidiCoreAuthorityScopeKey> { order.indexOf(it.occurrenceId) }.thenBy { it.role.ordinal })
+        var working = repairedSession
+        val selectedDependencies = mutableMapOf<app.melotrail.project.MidiCoreAuthorityScopeKey, String>()
+        val byScope = linkedMapOf<app.melotrail.project.MidiCoreAuthorityScopeKey, List<app.melotrail.application.MidiCoreMusicalRepairAlternative>>()
+        val rejections = mutableListOf<app.melotrail.application.MidiCoreMusicalRepairAlternativeRejection>()
+        for (scope in scopes) {
+            val role = scope.role
+            val occurrenceId = scope.occurrenceId
+            val setting = prepared.proposal.plan.occurrences.single { it.occurrenceId == occurrenceId }
+                .roleSettings.single { it.role == role }
+            val direct = occurrenceId == prepared.proposal.settings.occurrenceId && role in prepared.proposal.settings.changedRoles
+            val baseline = baselines[scope]?.let { id -> repairedSession.project.candidates.singleOrNull { it.id == id } }
+            val patterns = (if (direct) repairPatterns(prepared.proposal.settings.intent, role) else
+                listOfNotNull(baseline?.patternId ?: repairPatterns(MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION, role).firstOrNull()))
+                .take(if (scopes.size == 1) 3 else 1)
+            val generatedCandidateIds = mutableListOf<String>()
+            val generationProblems = mutableListOf<String>()
+            patterns.forEachIndexed { index, pattern ->
+                if (cancellation.get()) return cancelled(working)
+                val profile = repairProfile(role)
+                val upstreamRoles = CandidateRole.entries.take(role.ordinal)
+                val upstreamCandidates = upstreamRoles.mapNotNull { upstreamRole ->
+                    selectedDependencies[app.melotrail.project.MidiCoreAuthorityScopeKey(occurrenceId, upstreamRole)] ?: working.project.acceptances.singleOrNull { it.occurrenceId == occurrenceId && it.role == upstreamRole }?.candidateId
+                }
+                val upstreamRests = upstreamRoles.mapNotNull { upstreamRole ->
+                    working.project.acceptedPlannedRests.singleOrNull { it.occurrenceId == occurrenceId && it.role == upstreamRole }
+                }
+                when (val generated = useCases.generateCandidate(GenerateMidiCoreCandidate(
+                    working, role, occurrenceId, profile, pattern,
+                    MidiCoreGeneratorInput(
+                        "musical-repair",
+                        repairGeneratorVersion(prepared.proposal.settings.version, role, prepared.proposal.settings.intent, direct),
+                        pattern,
+                        index.toLong() + 1L,
+                    ),
+                    MidiCoreSectionPolicy(
+                        density = setting.density / 100.0,
+                        registerCenterOffsetSemitones = if (
+                            direct && prepared.proposal.settings.intent == MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER
+                        ) -12 else 0,
+                    ),
+                    pianoVoicingBoundary = if (role == CandidateRole.CHORDS) useCases.precedingPianoBoundary(working, occurrenceId, selectedDependencies.values.toList()) else null,
+                    draftDependencyIds = upstreamCandidates,
+                    draftDependencyRests = upstreamRests,
+                    useDraftDependencies = true,
+                    cancellation = app.melotrail.application.MidiCoreGenerationCancellation { cancellation.get() },
+                ))) {
+                    is MidiCoreCandidateGenerationResult.Published -> {
+                        working = generated.session
+                        generatedCandidateIds += generated.candidate.id
+                    }
+                    is MidiCoreCandidateGenerationResult.Cancelled -> return cancelled(working)
+                    is MidiCoreCandidateGenerationResult.ValidationRejected -> generationProblems +=
+                        "${pattern.replace('.', ' ')} failed role validation"
+                    is MidiCoreCandidateGenerationResult.Rejected -> generationProblems += generated.problem.message
+                }
+            }
+
+            when (val ranked = useCases.rankMusicalRepairAlternatives(RankMidiCoreMusicalRepairAlternatives(
+                ListMidiCoreCandidates(working, role, occurrenceId, working.project.revision),
+                prepared.proposal.settings.intent, generatedCandidateIds, baselines[scope], patterns.size, generationProblems,
+                allowBaselineReuse = scopes.size > 1,
+            ))) {
+                is MidiCoreMusicalRepairAlternativesResult.Ranked -> {
+                    rejections += ranked.ranking.rejections
+                    val alternatives = ranked.ranking.alternatives
+                    if (alternatives.isEmpty()) {
+                        val reason = "${role.name.lowercase()}: ${ranked.ranking.noResultReason}"
+                        return failure(blocker(MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED, reason,
+                            "Review this same repair scope; previously generated candidates remain evidence, not a complete repair.",
+                            action = MidiCoreWorkspaceIntent.PreviewMusicalRepair(prepared.proposal.settings.occurrenceId, prepared.proposal.settings.intent),
+                            occurrenceId = occurrenceId, role = role), session = working) {
+                            _state.value = _state.value.copy(musicalRepair = MidiCoreMusicalRepairUiState(
+                                baselinesByScope = baselines, rejections = rejections, noResultReason = reason,
+                            ))
+                        }
+                    }
+                    byScope[scope] = alternatives
+                    selectedDependencies[scope] = alternatives.first().candidateId
+                }
+                is MidiCoreMusicalRepairAlternativesResult.Rejected -> return failure(candidateBlocker(ranked.problem), session = working)
+            }
+        }
+        val scope = scopes.first()
+        val role = scope.role
+        val occurrenceId = scope.occurrenceId
+        val alternatives = byScope.values.flatten()
+        if (alternatives.all { it.matchesBaseline }) return failure(blocker(
+            MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+            "The complete repair matches the audible baseline; no distinct choice was found.",
+            "Review the same scope or choose another repair intent; generation is bounded."), session = working)
+        val first = byScope.getValue(scope).first().candidateId
+        return success("${alternatives.size} repair candidates across ${byScope.size} role scopes are ready for explicit review.", working) {
+            val reviewIds = listOfNotNull(baselines[scope]) + byScope.getValue(scope).map { it.candidateId }
+            _state.value = _state.value.copy(
+                musicalRepair = MidiCoreMusicalRepairUiState(baselineCandidateId = baselines[scope], baselinesByScope = baselines,
+                    alternativesByScope = byScope, alternatives = alternatives, rejections = rejections),
+                review = _state.value.review.copy(role = role, occurrenceId = occurrenceId,
+                    candidates = candidateReviewItems(working, role, occurrenceId, reviewIds.toSet()).orEmpty(),
+                    selectedCandidateId = first),
+            )
+        }
+    }
+
+    private fun repairPatterns(intent: MidiCoreMusicalRepairIntent, role: CandidateRole): List<String> {
+        if (intent == MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION) return when (role) {
+            CandidateRole.CHORDS -> listOf("chords.rhythm.sustained")
+            CandidateRole.BASS -> listOf("bass.sustained-root")
+            CandidateRole.DRUMS -> listOf("drums.half-time-pocket")
+        }
+        val preferred = when (intent) {
+            MidiCoreMusicalRepairIntent.LEAVE_MORE_MELODY_SPACE -> listOf(
+                "chords.rhythm.sustained", "chords.rhythm.late-entry", "chords.rhythm.bridge-half-time",
+            )
+            MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO,
+            MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER,
+            MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION,
+            -> listOf("chords.rhythm.sustained", "chords.rhythm.late-entry", "chords.rhythm.laid-back-quarters")
+            MidiCoreMusicalRepairIntent.REDUCE_BASS_MOVEMENT -> listOf(
+                "bass.sustained-root", "bass.root-fifth", "bass.octave",
+            )
+            MidiCoreMusicalRepairIntent.CALMER_DRUMS -> listOf(
+                "drums.half-time-pocket", "drums.dusty-straight", "drums.lazy-swing",
+            )
+        }
+        return preferred.filter { it in MidiCorePatternCatalog.allowedPatternIds(role) }.take(3)
+    }
+
+    private fun repairProfile(role: CandidateRole): String = when (role) {
+        CandidateRole.CHORDS -> "chords.sustained"
+        CandidateRole.BASS -> "bass.sustained-sub-like"
+        CandidateRole.DRUMS -> "drums.dusty"
+    }.also { MidiCorePerformanceProfileCatalog.requireForRole(role, it) }
+
+    private fun repairGeneratorVersion(version: Int, role: CandidateRole, intent: MidiCoreMusicalRepairIntent, direct: Boolean): String = MidiCoreDrumGenerator.generatorVersion(
+        MidiCoreBassDrumCoordination.generatorVersion(
+            MidiCoreChordCompingPhrasePatterns.generatorVersion(
+                "musical-repair-v$version-i${intent.ordinal}-r${if (direct && intent == MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER) -12 else 0}-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}-profiles-v${MidiCorePerformanceProfileCatalog.VERSION}",
+                role,
+            ),
+            role,
+        ),
+        role,
+    )
+
     /** Select one authoritative section without coupling the map to page-local candidate state. */
     private fun selectArrangementOccurrence(intent: MidiCoreWorkspaceIntent.SelectArrangementOccurrence) {
         val occurrence = state.value.project?.authority?.occurrences?.singleOrNull { it.id == intent.occurrenceId }
@@ -1867,6 +2161,7 @@ class MidiCoreWorkspaceViewModel(
             stylePreview = previewScope,
             arrangementPlanProposal = proposalScope,
             arrangementPlanEdit = MidiCoreArrangementPlanEditUiState(),
+            musicalRepair = MidiCoreMusicalRepairUiState(),
             arrangement = arrangementScope,
             visualEvidence = null,
             audition = useCases.audition.state,
@@ -1922,8 +2217,11 @@ class MidiCoreWorkspaceViewModel(
         candidateSession: MidiCoreProjectSession,
         role: CandidateRole,
         occurrenceId: String,
+        candidateIds: Set<String>? = null,
     ): List<app.melotrail.application.MidiCoreCandidateReviewItem>? =
-        when (val review = useCases.listCandidates(ListMidiCoreCandidates(candidateSession, role, occurrenceId, candidateSession.project.revision))) {
+        when (val review = useCases.listCandidates(
+            ListMidiCoreCandidates(candidateSession, role, occurrenceId, candidateSession.project.revision, candidateIds),
+        )) {
             is MidiCoreCandidateReviewResult.Listed -> review.candidates
             is MidiCoreCandidateReviewResult.Rejected,
             is MidiCoreCandidateReviewResult.Compared,
@@ -1985,6 +2283,19 @@ class MidiCoreWorkspaceViewModel(
             -> MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED
             app.melotrail.application.MidiCoreArrangementPlanEditProblemCode.STALE_PROJECT -> MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT
             else -> MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE
+        },
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
+    private fun musicalRepairBlocker(problem: app.melotrail.application.MidiCoreMusicalRepairProblem) = blocker(
+        when (problem.code) {
+            app.melotrail.application.MidiCoreMusicalRepairProblemCode.PLAN_REQUIRED,
+            app.melotrail.application.MidiCoreMusicalRepairProblemCode.INVALID_OCCURRENCE,
+            -> MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED
+            app.melotrail.application.MidiCoreMusicalRepairProblemCode.STALE_PROJECT -> MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT
+            app.melotrail.application.MidiCoreMusicalRepairProblemCode.INVALID_PROJECT -> MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE
         },
         problem.message,
         problem.nextAction,

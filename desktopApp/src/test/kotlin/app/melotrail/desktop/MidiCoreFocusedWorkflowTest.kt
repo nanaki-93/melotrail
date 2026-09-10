@@ -62,6 +62,112 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreFocusedWorkflowTest {
     @Test
+    fun `real musical repair covers neighboring scopes and atomically accepts matching dependencies`() {
+        val temporaryRoot = Files.createTempDirectory("melotrail-m09-")
+        val projectRoot = temporaryRoot.resolve("project")
+        val artifacts = MidiCoreArtifactStore()
+        val source = writeSourceMidi(temporaryRoot.resolve("source.mid"), pitch = 84)
+        val workspace = newWorkspace(artifacts, WorkflowFakeMidiAudition(), WorkflowPreferences())
+        fun apply(intent: MidiCoreWorkspaceIntent) {
+            workspace.accept(intent)
+            awaitWorkspaceCompletion(workspace, intent.toString())
+            assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, workspace.state.value.operation.phase,
+                "${intent}: ${workspace.state.value.blockers}")
+        }
+        try {
+            apply(MidiCoreWorkspaceIntent.CreateProject(projectRoot, "Repair fixture"))
+            apply(MidiCoreWorkspaceIntent.ImportSource(source))
+            apply(MidiCoreWorkspaceIntent.ConfirmAuthority)
+            apply(MidiCoreWorkspaceIntent.ReplaceStructure(listOf(ProjectSectionDefinition("verse", "Verse")),
+                listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse 1", 1), MidiCoreBarOccurrencePlacement("verse-2", "verse", "Verse 2", 1))))
+            apply(MidiCoreWorkspaceIntent.ReplaceHarmony(listOf(AuthoritativeChordEvent("c1", "verse-1", "C", 0, 1920),
+                AuthoritativeChordEvent("c2", "verse-2", "F", 1920, 3840))))
+            apply(MidiCoreWorkspaceIntent.ProposeArrangementPlan("steady-road"))
+            apply(MidiCoreWorkspaceIntent.ConfirmArrangementPlan)
+            val activePlan = requireNotNull(workspace.state.value.project?.arrangementPlan).let { plan ->
+                plan.copy(occurrences = plan.occurrences.map { occurrence -> occurrence.copy(roleSettings = occurrence.roleSettings.map {
+                    it.copy(activity = app.melotrail.project.MidiCoreRoleActivity.SUPPORTING, density = 65,
+                        registerPreference = if (it.role == CandidateRole.CHORDS) app.melotrail.project.MidiCoreRegisterPreference.HIGH else it.registerPreference)
+                }) })
+            }
+            apply(MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit(activePlan))
+            apply(MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit(activePlan))
+            apply(MidiCoreWorkspaceIntent.CreateArrangementDraft("steady-road", 41))
+            val draft = requireNotNull(workspace.state.value.project).arrangementDrafts.last()
+            apply(MidiCoreWorkspaceIntent.UseArrangementDraft(draft.id))
+            apply(MidiCoreWorkspaceIntent.ExportPackage)
+            val before = artifacts.openProject(projectRoot)
+            val oldBytes = before.candidates.associate { it.id to Files.readAllBytes(projectRoot.resolve(it.midi.path.value)) }
+            val sourceBytes = Files.readAllBytes(projectRoot.resolve(requireNotNull(before.sourceMidi).original.path.value))
+            apply(MidiCoreWorkspaceIntent.PreviewMusicalRepair("verse-2", app.melotrail.application.MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION))
+            val prepared = requireNotNull(workspace.state.value.musicalRepair.prepared)
+            assertEquals(before, artifacts.openProject(projectRoot), "Preview must be write-free")
+            apply(MidiCoreWorkspaceIntent.ApplyMusicalRepair)
+            val repair = workspace.state.value.musicalRepair
+            val expectedScopes = prepared.invalidation.affectedScopes.map { it.occurrenceId to it.role }.toSet()
+            assertTrue(expectedScopes.any { it.first == "verse-1" }, "Fixture must exercise a neighboring dependency")
+            assertEquals(expectedScopes, repair.alternativesByScope.keys.map { it.occurrenceId to it.role }.toSet())
+            val ids = repair.alternativesByScope.values.map { it.single().candidateId }
+            val generated = artifacts.openProject(projectRoot)
+            assertEquals(before.acceptances, generated.acceptances, "Generating repairs must not accept them")
+            val downstream = generated.candidates.first { it.id in ids && it.draftDependencyIds.isNotEmpty() }
+            val rejected = MidiCoreCandidateReview(artifacts).accept(app.melotrail.application.AcceptMidiCoreCandidate(
+                app.melotrail.application.MidiCoreProjectSession(projectRoot, generated), downstream.id))
+            assertTrue(rejected is app.melotrail.application.MidiCoreCandidateLifecycleResult.Rejected,
+                "A dependent role cannot be accepted against unaccepted repair inputs")
+            assertEquals(generated, artifacts.openProject(projectRoot))
+            val successor = generated.candidates.single { it.id in ids && it.role == CandidateRole.CHORDS && it.occurrenceId == "verse-2" }
+            val boundary = MidiCoreCandidateReview(artifacts).precedingPianoBoundary(
+                app.melotrail.application.MidiCoreProjectSession(projectRoot, generated), "verse-2", ids)
+            assertEquals(requireNotNull(boundary).sha256, successor.boundarySummarySha256)
+            val projectFile = projectRoot.resolve("project.json")
+            val validProjectBytes = Files.readAllBytes(projectFile)
+            val tampered = generated.copy(candidates = generated.candidates.map {
+                if (it.id == successor.id) it.copy(boundarySummarySha256 = null) else it
+            })
+            Files.writeString(projectFile, app.melotrail.project.MidiCoreProjectSchema.encode(tampered))
+            val badBytes = Files.readAllBytes(projectFile)
+            val badBatch = MidiCoreCandidateReview(artifacts).acceptBatch(app.melotrail.application.AcceptMidiCoreCandidateBatch(
+                app.melotrail.application.MidiCoreProjectSession(projectRoot, tampered), ids))
+            assertTrue(badBatch is app.melotrail.application.MidiCoreCandidateLifecycleResult.Rejected)
+            assertTrue(badBytes.contentEquals(Files.readAllBytes(projectFile)), "Rejected batch must not write any selection")
+            Files.write(projectFile, validProjectBytes)
+            val collisionReview = MidiCoreCandidateReview(artifacts, lifecycle = MidiCoreCandidateLifecycle(artifacts, idFactory = { "batch-history-collision" }))
+            val collided = collisionReview.acceptBatch(app.melotrail.application.AcceptMidiCoreCandidateBatch(
+                app.melotrail.application.MidiCoreProjectSession(projectRoot, generated), ids))
+            assertTrue(collided is app.melotrail.application.MidiCoreCandidateLifecycleResult.Rejected)
+            assertTrue(validProjectBytes.contentEquals(Files.readAllBytes(projectFile)), "History collisions must leave the whole batch untouched")
+
+            apply(MidiCoreWorkspaceIntent.UseMusicalRepair(ids))
+            val accepted = artifacts.openProject(projectRoot)
+            assertEquals(generated.revision + 1, accepted.revision, "The complete repair must commit in one revision")
+            assertTrue(ids.all { id -> accepted.acceptances.any { it.candidateId == id } })
+            assertTrue(sourceBytes.contentEquals(Files.readAllBytes(projectRoot.resolve(requireNotNull(accepted.sourceMidi).original.path.value))))
+            oldBytes.forEach { (id, bytes) -> assertTrue(bytes.contentEquals(Files.readAllBytes(projectRoot.resolve(accepted.candidates.single { it.id == id }.midi.path.value)))) }
+            apply(MidiCoreWorkspaceIntent.PreviewMusicalRepair("verse-2", app.melotrail.application.MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER))
+            apply(MidiCoreWorkspaceIntent.ApplyMusicalRepair)
+            val lowerChoices = workspace.state.value.musicalRepair.alternativesByScope.values.map { it.single().candidateId }
+            val lowerCandidate = requireNotNull(workspace.state.value.project).candidates.single {
+                it.id in lowerChoices && it.role == CandidateRole.CHORDS && it.occurrenceId == "verse-2"
+            }
+            assertTrue(lowerCandidate.generatorVersion.contains("-i2-r-12-"), "The used lower-register policy must survive candidate publication")
+            apply(MidiCoreWorkspaceIntent.UseMusicalRepair(lowerChoices))
+            val lowered = artifacts.openProject(projectRoot)
+            assertEquals(lowerCandidate.generatorVersion, lowered.candidates.single { it.id == lowerCandidate.id }.generatorVersion)
+            val exported = MidiCoreMidiPackageExporter(artifacts).export(app.melotrail.application.ExportMidiCorePackage(
+                app.melotrail.application.MidiCoreProjectSession(projectRoot, lowered)))
+            assertTrue(exported is app.melotrail.application.MidiCoreMidiPackageExportResult.Exported, exported.toString())
+            val evidence = Path.of("build/m09-repair-evidence/project")
+            deleteTree(evidence)
+            Files.walk(projectRoot).use { paths -> paths.forEach { input ->
+                val output = evidence.resolve(projectRoot.relativize(input).toString())
+                if (Files.isDirectory(input)) Files.createDirectories(output) else Files.copy(input, output)
+            } }
+
+        } finally { workspace.close(); deleteTree(temporaryRoot) }
+    }
+
+    @Test
     fun `reference-wide six target pages complete a real MIDI Core workflow and reopen an immutable export`() =
         runFocusedWorkflow(Size(1536f, 1024f), "reference-wide")
 
@@ -348,14 +454,14 @@ class MidiCoreFocusedWorkflowTest {
         Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
     }
 
-    private fun writeSourceMidi(path: Path): Path {
+    private fun writeSourceMidi(path: Path, pitch: Int = 60): Path {
         Files.createDirectories(path.parent)
         val sequence = Sequence(Sequence.PPQ, 480)
         val track = sequence.createTrack()
         val name = "Lead".encodeToByteArray()
         track.add(MidiEvent(MetaMessage(0x03, name, name.size), 0L))
-        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 96), 0L))
-        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 3_840L))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, pitch, 96), 0L))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, pitch, 0), 3_840L))
         MidiSystem.write(sequence, 1, path.toFile())
         return path
     }

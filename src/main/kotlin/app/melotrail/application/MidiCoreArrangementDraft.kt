@@ -909,7 +909,7 @@ internal fun validationSummary(
 }.getOrNull()
 
 /** Derive the only continuity input from one verified immutable Chords artifact under current authority. */
-private fun midiDerivedPianoBoundary(
+internal fun midiDerivedPianoBoundary(
     root: Path,
     project: MidiCoreProject,
     candidate: MidiCoreCandidate,

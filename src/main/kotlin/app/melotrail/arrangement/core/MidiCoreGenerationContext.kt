@@ -297,6 +297,8 @@ data class MidiCoreSectionPolicy(
     val energy: Double = 0.5,
     val density: Double = 0.5,
     val fillPatternId: String? = null,
+    /** Optional bounded voicing-center shift used by the explicit lower-register repair. */
+    val registerCenterOffsetSemitones: Int = 0,
 ) {
     init {
         require(energy.isFinite() && energy in 0.0..1.0 && density.isFinite() && density in 0.0..1.0) {
@@ -305,11 +307,15 @@ data class MidiCoreSectionPolicy(
         require(fillPatternId == null || fillPatternId in MidiCoreDrumFillPatternId.entries.map { it.id }) {
             "Section fill pattern is not in the curated MIDI Core catalog"
         }
+        require(registerCenterOffsetSemitones in -12..0) { "Section register center offset must be between -12 and 0 semitones" }
     }
 
     /** Stable representation used in the context hash. */
     val canonicalSerialization: String
-        get() = listOf(purpose.name, energy.toString(), density.toString(), fillPatternId ?: "none").joinToString("|")
+        get() = (
+            listOf(purpose.name, energy.toString(), density.toString(), fillPatternId ?: "none") +
+                if (registerCenterOffsetSemitones == 0) emptyList() else listOf("register-center=$registerCenterOffsetSemitones")
+            ).joinToString("|")
 }
 
 /**

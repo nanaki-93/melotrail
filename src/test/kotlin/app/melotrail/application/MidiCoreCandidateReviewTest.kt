@@ -1,6 +1,8 @@
 package app.melotrail.application
 
 import app.melotrail.midi.OwnedMidiFixtures
+import app.melotrail.audition.MidiAuditionScope
+import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectScaleMode
@@ -73,6 +75,35 @@ class MidiCoreCandidateReviewTest {
     }
 
     @Test
+    fun `candidate audition keeps protected melody and exact occurrence position without writes`() {
+        val store = MidiCoreArtifactStore()
+        val session = readySession(store, root.resolve("repair-audition-project"))
+        val generated = generate(store, request(session, "repair-candidate", "chords.sustained", "chords.rhythm.sustained"))
+        val before = store.openProject(generated.session.root)
+
+        val ready = assertIs<MidiCoreReviewAuditionResult.Ready>(
+            MidiCoreReviewAudition(
+                review = MidiCoreCandidateReview(artifacts = store),
+                artifacts = store,
+            ).candidate(
+                PrepareMidiCoreCandidateAudition(
+                    generated.session,
+                    generated.candidate.id,
+                    CandidateRole.CHORDS,
+                    "verse-1",
+                ),
+            ),
+        )
+
+        assertEquals(MidiAuditionScope.Occurrence("verse-1"), ready.plan.view.scope)
+        assertEquals(0L, ready.plan.view.window.startTick)
+        assertEquals(1920L, ready.plan.view.window.endTick)
+        assertEquals(listOf(MidiExportRole.MELODY, MidiExportRole.CHORDS), ready.plan.view.roles)
+        assertTrue(ready.plan.view.song.role(MidiExportRole.MELODY).events.isNotEmpty())
+        assertEquals(before, store.openProject(generated.session.root))
+    }
+
+    @Test
     fun `accepts rejects locks unlocks and restores without automatic pointer changes`() {
         val store = MidiCoreArtifactStore()
         var session = readySession(store, root.resolve("review-state-project"))
@@ -131,10 +162,31 @@ class MidiCoreCandidateReviewTest {
     fun `rejects tampered evidence and stale expected revisions`() {
         val store = MidiCoreArtifactStore()
         val session = readySession(store, root.resolve("review-integrity-project"))
-        val published = generate(store, request(session, "tampered-candidate", "chords.sustained", "chords.rhythm.sustained"))
+        val cleanCandidate = generate(store, request(session, "clean-candidate", "chords.sustained", "chords.rhythm.sustained"))
+        val published = generate(store, request(cleanCandidate.session, "tampered-candidate", "chords.pulsed", "chords.rhythm.laid-back-quarters"))
         val candidatePath = published.session.root.resolve(published.candidate.midi.path.value)
-        Files.write(candidatePath, Files.readAllBytes(candidatePath) + byteArrayOf(0x01))
         val review = MidiCoreCandidateReview(artifacts = store)
+
+        val targeted = assertIs<MidiCoreCandidateReviewResult.Listed>(
+            review.list(
+                ListMidiCoreCandidates(
+                    published.session,
+                    CandidateRole.CHORDS,
+                    "verse-1",
+                    candidateIds = setOf("clean-candidate"),
+                ),
+            ),
+        )
+        assertEquals(listOf("clean-candidate"), targeted.candidates.map { it.candidate.id })
+        val projectBytes = Files.readAllBytes(published.session.root.resolve("project.json"))
+        Files.write(candidatePath, Files.readAllBytes(candidatePath) + byteArrayOf(0x01))
+        val filteredTampered = assertIs<MidiCoreCandidateReviewResult.Rejected>(
+            review.list(ListMidiCoreCandidates(published.session, CandidateRole.CHORDS, "verse-1",
+                candidateIds = setOf("clean-candidate"))),
+        )
+        assertEquals(MidiCoreCandidateProblemCode.DIGEST_MISMATCH, filteredTampered.problem.code)
+        assertTrue(projectBytes.contentEquals(Files.readAllBytes(published.session.root.resolve("project.json"))))
+
 
         val tampered = assertIs<MidiCoreCandidateReviewResult.Rejected>(
             review.list(ListMidiCoreCandidates(published.session, CandidateRole.CHORDS, "verse-1")),

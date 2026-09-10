@@ -208,6 +208,50 @@ class MidiCoreCandidateLifecycle(
     fun accept(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
         MidiCoreProjectWriteCoordinator.withLock(request.session.root) { acceptLocked(request) }
 
+    /** Validate every selected repair member against the final dependency set, then write once. */
+    fun acceptBatch(request: AcceptMidiCoreCandidateBatch): MidiCoreCandidateLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) {
+            val loaded = when (val result = load(request.session, request.expectedRevision)) {
+                is CandidateLoad.Ready -> result
+                is CandidateLoad.Rejected -> return@withLock result.result
+            }
+            val current = loaded.project
+            val selected = request.candidateIds.map { id -> current.candidates.singleOrNull { it.id == id }
+                ?: return@withLock rejected(MidiCoreCandidateProblemCode.CANDIDATE_NOT_FOUND, "Repair candidate is missing.", "Reload the repair choices.") }
+                .sortedBy { it.role.ordinal }
+            if (selected.map { it.occurrenceId to it.role }.distinct().size != selected.size) {
+                return@withLock rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "Repair choices must identify one candidate per role/occurrence scope.", "Review this same scope again.")
+            }
+            if (selected.any { it.status == MidiCoreCandidateStatus.REJECTED || it.status == MidiCoreCandidateStatus.STALE }) {
+                return@withLock rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "Repair choices contain stale or rejected evidence.", "Regenerate the affected scope before acceptance.")
+            }
+            val scopes = selected.map { it.occurrenceId to it.role }.toSet()
+            if (current.acceptances.any { it.locked && (it.occurrenceId to it.role) in scopes } ||
+                current.acceptedPlannedRests.any { it.locked && (it.occurrenceId to it.role) in scopes }) {
+                return@withLock rejected(MidiCoreCandidateProblemCode.LOCKED, "A repair scope is locked.", "Unlock affected work and review the repair again.")
+            }
+            val acceptances = selected.map { CandidateAcceptance(it.occurrenceId, it.role, it.id, false) }
+            // Only pointers are projected here. No candidate status/evidence is changed until all checks pass.
+            val projected = current.copy(acceptances = current.acceptances.filterNot { (it.occurrenceId to it.role) in scopes } + acceptances,
+                acceptedPlannedRests = current.acceptedPlannedRests.filterNot { (it.occurrenceId to it.role) in scopes },
+                candidates = current.candidates.map { candidate -> if (candidate.id in request.candidateIds && candidate.status == MidiCoreCandidateStatus.CURRENT)
+                    candidate.copy(status = MidiCoreCandidateStatus.ACCEPTED) else candidate })
+            for (candidate in selected) ensureAcceptable(loaded.root, projected, candidate)?.let { return@withLock it }
+            ensurePianoBoundaryChain(loaded.root, projected)?.let { return@withLock it }
+            val historyEntries = try { selected.map { candidate -> history(current, candidate,
+                if (current.acceptances.any { it.occurrenceId == candidate.occurrenceId && it.role == candidate.role }) MidiCoreAcceptanceAction.REPLACED else MidiCoreAcceptanceAction.ACCEPTED) } }
+                catch (_: Exception) { return@withLock rejected(MidiCoreCandidateProblemCode.CANDIDATE_ID_COLLISION, "Cannot create unique repair history.", "Retry with fresh history identifiers.") }
+            if (historyEntries.map { it.id }.distinct().size != historyEntries.size) {
+                return@withLock rejected(MidiCoreCandidateProblemCode.CANDIDATE_ID_COLLISION,
+                    "Repair history identifiers collided.", "Retry with unique history identifiers; no selections changed.")
+            }
+            val oldIds = current.acceptances.filter { (it.occurrenceId to it.role) in scopes }.map { it.candidateId }.toSet()
+            val updated = projected.copy(candidates = projected.candidates.map { candidate ->
+                if (candidate.id in oldIds && candidate.id !in request.candidateIds && candidate.status == MidiCoreCandidateStatus.ACCEPTED)
+                    candidate.copy(status = MidiCoreCandidateStatus.CURRENT) else candidate }, acceptanceHistory = current.acceptanceHistory + historyEntries)
+            persistTransition(loaded.root, updated, selected.first(), acceptances.first())
+        }
+
     private fun acceptLocked(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
         val loaded = when (val result = load(request.session, request.expectedRevision)) {
             is CandidateLoad.Ready -> result
@@ -255,6 +299,7 @@ class MidiCoreCandidateLifecycle(
             acceptedPlannedRests = current.acceptedPlannedRests.filterNot { it.occurrenceId == candidate.occurrenceId && it.role == candidate.role },
             acceptanceHistory = current.acceptanceHistory + historyEntry,
         )
+        ensurePianoBoundaryChain(loaded.root, updated)?.let { return it }
         return persistTransition(loaded.root, updated, candidate, acceptance)
     }
 
@@ -360,6 +405,7 @@ class MidiCoreCandidateLifecycle(
             acceptedPlannedRests = current.acceptedPlannedRests.filterNot { it.occurrenceId == request.occurrenceId && it.role == request.role },
             acceptanceHistory = current.acceptanceHistory + historyEntry,
         )
+        ensurePianoBoundaryChain(loaded.root, updated)?.let { return it }
         return persistTransition(loaded.root, updated, candidate, acceptance)
     }
 
@@ -404,6 +450,22 @@ class MidiCoreCandidateLifecycle(
         return persistTransition(loaded.root, updated, candidate, updatedAcceptance)
     }
 
+    private fun ensurePianoBoundaryChain(root: Path, project: MidiCoreProject): MidiCoreCandidateLifecycleResult.Rejected? {
+        if (project.arrangementPlan == null) return null
+        return try {
+            for (acceptance in project.acceptances.filter { it.role == CandidateRole.CHORDS }) {
+                val candidate = project.candidates.single { it.id == acceptance.candidateId }
+                if (candidate.status == MidiCoreCandidateStatus.STALE) continue
+                require(candidate.boundarySummarySha256 == precedingPianoBoundary(root, project, candidate.occurrenceId, emptyList(), artifacts)?.sha256)
+            }
+            null
+        } catch (_: Exception) {
+            rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE,
+                "The selection does not preserve the complete accepted piano boundary chain.",
+                "Regenerate matching neighbors or create a complete draft before Use.")
+        }
+    }
+
     private fun ensureAcceptable(
         root: Path,
         project: MidiCoreProject,
@@ -440,6 +502,16 @@ class MidiCoreCandidateLifecycle(
                     runCatching { authority.scopeHash(rest.occurrenceId, rest.role) }.getOrNull() != rest.authorityHash
             }) {
             return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "A planned-rest dependency no longer matches current authority.", "Regenerate this candidate from the confirmed plan before accepting it.")
+        }
+        for (dependencyId in candidate.draftDependencyIds + candidate.acceptedDependencyIds) {
+            val dependency = project.candidates.singleOrNull { it.id == dependencyId }
+            if (dependency == null || dependency.status != MidiCoreCandidateStatus.ACCEPTED ||
+                project.acceptances.none { it.candidateId == dependencyId } ||
+                dependency.authorityHash != runCatching { authority.scopeHash(dependency.occurrenceId, dependency.role) }.getOrNull()) {
+                return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE,
+                    "A generated dependency is not the current accepted candidate.",
+                    "Use the matching repair candidates together, or regenerate against current accepted work.")
+            }
         }
         try {
             artifacts.verify(root, candidate.midi)
@@ -876,3 +948,12 @@ private val SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")
 private val TOKEN = Regex("[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}")
 private val HASH = Regex("[0-9a-f]{64}")
 private val ISO_INSTANT = Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z")
+
+/** One explicit, revision-guarded acceptance of a bounded candidate set across scopes. */
+data class AcceptMidiCoreCandidateBatch(
+    val session: MidiCoreProjectSession,
+    val candidateIds: List<String>,
+    val expectedRevision: Long? = session.project.revision,
+) {
+    init { require(candidateIds.size in 1..9 && candidateIds == candidateIds.distinct()) { "Select one to nine distinct repair candidates" } }
+}

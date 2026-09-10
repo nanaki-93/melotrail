@@ -58,6 +58,280 @@ data class MidiCoreMusicalRepairProposal(
     val plan: MidiCoreArrangementPlan,
 )
 
+/**
+ * A reviewable repair alternative.  Its [semanticSignature] deliberately
+ * omits velocity: a velocity-only variation is cosmetic rather than a useful
+ * musical option for this workflow.
+ */
+data class MidiCoreMusicalRepairAlternative(
+    val candidateId: String,
+    val semanticSignature: String,
+    val impactLabel: String,
+    val matchesBaseline: Boolean = false,
+)
+
+data class MidiCoreMusicalRepairAlternativeRejection(
+    val candidateId: String,
+    val reason: String,
+) {
+    init {
+        require(candidateId.isNotBlank() && reason.isNotBlank()) { "Rejected repair evidence must be explained" }
+    }
+}
+
+data class MidiCoreMusicalRepairAlternativeRanking(
+    val alternatives: List<MidiCoreMusicalRepairAlternative>,
+    val rejections: List<MidiCoreMusicalRepairAlternativeRejection>,
+    /** Honest terminal explanation; generation is never retried by changing seeds indefinitely. */
+    val noResultReason: String? = null,
+) {
+    init {
+        require(alternatives.size <= MAXIMUM_ALTERNATIVES) { "Repair alternatives must be bounded" }
+        require(alternatives.map(MidiCoreMusicalRepairAlternative::candidateId).distinct().size == alternatives.size) {
+            "Repair alternatives must not repeat candidates"
+        }
+        require(rejections.map { it.candidateId } == rejections.map { it.candidateId }.distinct().sorted()) {
+            "Rejected repair alternatives must be deterministic"
+        }
+        require((alternatives.isEmpty()) == (noResultReason != null)) {
+            "A repair ranking must explain exactly when it has no usable alternative"
+        }
+    }
+
+    companion object { const val MAXIMUM_ALTERNATIVES = 3 }
+}
+
+/**
+ * Keeps only musically observable alternatives.  The signature has note
+ * timing and pitch but no velocity so seed/velocity-only duplicates cannot
+ * crowd out a genuinely different texture.
+ */
+object MidiCoreMusicalRepairAlternativeRanker {
+    fun rank(
+        candidates: List<MidiCoreCandidateReviewItem>,
+        intent: MidiCoreMusicalRepairIntent,
+        baseline: MidiCoreCandidateReviewItem? = null,
+        heldThresholdTicks: Long = 480L,
+        attemptedCount: Int = candidates.size,
+        generationProblems: List<String> = emptyList(),
+        allowBaselineReuse: Boolean = false,
+    ): MidiCoreMusicalRepairAlternativeRanking {
+        require(heldThresholdTicks > 0L) { "Repair held-note threshold must be positive" }
+        require(attemptedCount in 0..3 && candidates.size <= attemptedCount) { "Repair generation attempts must be bounded" }
+        val baselineSignature = baseline?.let(::semanticSignature)
+        val retainedBySignature = linkedMapOf<String, MidiCoreCandidateReviewItem>()
+        val rejected = mutableListOf<MidiCoreMusicalRepairAlternativeRejection>()
+        candidates.sortedBy { it.candidate.id }.forEach { candidate ->
+            val signature = semanticSignature(candidate)
+            val unusableReason = when {
+                !candidate.authorityCurrent -> "This candidate is stale for the confirmed repair settings."
+                candidate.candidate.status == app.melotrail.project.MidiCoreCandidateStatus.REJECTED ->
+                    "This candidate was rejected and remains evidence only."
+                candidate.candidate.status == app.melotrail.project.MidiCoreCandidateStatus.STALE ->
+                    "This candidate is stale and remains evidence only."
+                else -> null
+            }
+            if (unusableReason != null) {
+                rejected += MidiCoreMusicalRepairAlternativeRejection(candidate.candidate.id, unusableReason)
+                return@forEach
+            }
+            if (signature == baselineSignature && !allowBaselineReuse) {
+                rejected += MidiCoreMusicalRepairAlternativeRejection(
+                    candidate.candidate.id,
+                    "This candidate matches the audible baseline's note timing and pitches; velocity-only changes are cosmetic.",
+                )
+                return@forEach
+            }
+            val existing = retainedBySignature[signature]
+            if (existing == null) {
+                retainedBySignature[signature] = candidate
+            } else {
+                // Prefer current evidence, then the stable identifier.  This
+                // leaves rejected/stale evidence inspectable without showing
+                // it as another audible choice.
+                val preferred = listOf(existing, candidate).sortedWith(
+                    compareByDescending<MidiCoreCandidateReviewItem> { it.authorityCurrent }
+                        .thenByDescending { it.candidate.status == app.melotrail.project.MidiCoreCandidateStatus.CURRENT }
+                        .thenBy { it.candidate.id },
+                ).first()
+                retainedBySignature[signature] = preferred
+                val duplicate = if (preferred == existing) candidate else existing
+                rejected += MidiCoreMusicalRepairAlternativeRejection(
+                    duplicate.candidate.id,
+                    "This candidate duplicates ${preferred.candidate.id} in note timing and pitches; velocity-only changes are cosmetic.",
+                )
+            }
+        }
+        val retained = retainedBySignature.map { (signature, item) ->
+            MidiCoreMusicalRepairAlternative(item.candidate.id, signature, impactLabel(item, baseline, heldThresholdTicks), signature == baselineSignature)
+        }.sortedWith(compareBy<MidiCoreMusicalRepairAlternative> { alternative ->
+            intentScore(intent, candidates.single { it.candidate.id == alternative.candidateId }, heldThresholdTicks)
+        }.thenBy { it.semanticSignature }.thenBy { it.candidateId })
+        retained.drop(MidiCoreMusicalRepairAlternativeRanking.MAXIMUM_ALTERNATIVES).forEach { alternative ->
+            rejected += MidiCoreMusicalRepairAlternativeRejection(
+                alternative.candidateId,
+                "This valid candidate ranked outside the three-choice repair limit.",
+            )
+        }
+        val orderedRejections = rejected.distinctBy { it.candidateId }.sortedBy { it.candidateId }
+        return MidiCoreMusicalRepairAlternativeRanking(
+            retained.take(MidiCoreMusicalRepairAlternativeRanking.MAXIMUM_ALTERNATIVES),
+            orderedRejections,
+            noResultReason = if (retained.isEmpty()) {
+                noResultReason(attemptedCount, generationProblems, orderedRejections, baseline != null)
+            } else null,
+        )
+    }
+
+    private fun semanticSignature(item: MidiCoreCandidateReviewItem): String = item.notes
+        .sortedWith(compareBy<MidiCoreReviewNote> { it.startTick }.thenBy { it.endTick }.thenBy { it.pitch })
+        .joinToString(";") { note -> "${note.startTick}-${note.endTick}-${note.pitch}" }
+
+    private fun impactLabel(item: MidiCoreCandidateReviewItem, baseline: MidiCoreCandidateReviewItem?, heldThreshold: Long): String {
+        val metrics = metrics(item, heldThreshold)
+        if (baseline == null) return "${metrics.attacks} attacks · ${metrics.notes} notes · ${metrics.held} held"
+        val prior = metrics(baseline, heldThreshold)
+        return listOf(
+            delta(metrics.attacks - prior.attacks, "attack"),
+            delta(metrics.notes - prior.notes, "note"),
+            delta(metrics.held - prior.held, "held note"),
+        ).joinToString(" · ")
+    }
+
+    private fun delta(value: Int, noun: String): String = when {
+        value < 0 -> "${-value} fewer ${noun}${if (value == -1) "" else "s"}"
+        value > 0 -> "$value more ${noun}${if (value == 1) "" else "s"}"
+        else -> "same ${noun} count"
+    }
+
+    private fun intentScore(intent: MidiCoreMusicalRepairIntent, item: MidiCoreCandidateReviewItem, heldThreshold: Long): Long {
+        val metrics = metrics(item, heldThreshold)
+        return when (intent) {
+            MidiCoreMusicalRepairIntent.LEAVE_MORE_MELODY_SPACE,
+            MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO,
+            MidiCoreMusicalRepairIntent.CALMER_DRUMS,
+            -> metrics.attacks * 100_000L + metrics.notes * 1_000L - metrics.held
+            MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER ->
+                (metrics.pitchSum * 1_000L / metrics.notes.coerceAtLeast(1)) + metrics.attacks
+            MidiCoreMusicalRepairIntent.REDUCE_BASS_MOVEMENT -> metrics.pitchMovement * 100_000L + metrics.attacks * 1_000L + metrics.notes
+            MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION -> -metrics.heldTicks + metrics.attacks * 1_000L + metrics.pitchMovement
+        }
+    }
+
+    private fun metrics(item: MidiCoreCandidateReviewItem, heldThreshold: Long): Metrics {
+        val ordered = item.notes.sortedWith(compareBy<MidiCoreReviewNote> { it.startTick }.thenBy { it.pitch })
+        return Metrics(
+            attacks = ordered.map { it.startTick }.distinct().size,
+            notes = ordered.size,
+            held = ordered.count { it.endTick - it.startTick >= heldThreshold },
+            heldTicks = ordered.sumOf { it.endTick - it.startTick },
+            pitchSum = ordered.sumOf { it.pitch.toLong() },
+            pitchMovement = ordered.zipWithNext().sumOf { (first, second) -> kotlin.math.abs(second.pitch - first.pitch).toLong() },
+        )
+    }
+
+    private fun noResultReason(
+        attemptedCount: Int,
+        generationProblems: List<String>,
+        rejections: List<MidiCoreMusicalRepairAlternativeRejection>,
+        hadBaseline: Boolean,
+    ): String {
+        val reason = when {
+            attemptedCount == 0 -> "No generation attempt was available."
+            hadBaseline && rejections.isNotEmpty() && rejections.all {
+                it.reason.contains("matches the audible baseline") || it.reason.contains("duplicates")
+            } -> "Every validated result matched the audible baseline or duplicated another result."
+            rejections.isNotEmpty() -> "Every published result was stale, rejected, or duplicated other repair evidence."
+            generationProblems.isNotEmpty() -> "$attemptedCount bounded generation attempts produced no validated candidate: ${generationProblems.distinct().sorted().joinToString("; ")}"
+            else -> "No current semantically distinct validated alternative was produced."
+        }
+        return "$reason Retry this same scope after reviewing its confirmed repair settings; seed hunting will not continue automatically."
+    }
+
+    private data class Metrics(
+        val attacks: Int,
+        val notes: Int,
+        val held: Int,
+        val heldTicks: Long,
+        val pitchSum: Long,
+        val pitchMovement: Long,
+    )
+}
+
+data class RankMidiCoreMusicalRepairAlternatives(
+    val candidates: ListMidiCoreCandidates,
+    val intent: MidiCoreMusicalRepairIntent,
+    val generatedCandidateIds: List<String>,
+    val baselineCandidateId: String?,
+    val attemptedCount: Int,
+    val generationProblems: List<String> = emptyList(),
+    val allowBaselineReuse: Boolean = false,
+) {
+    init {
+        require(attemptedCount in 0..3) { "Repair attempts must be bounded" }
+        require(generatedCandidateIds.size <= attemptedCount && generatedCandidateIds == generatedCandidateIds.distinct()) {
+            "Repair candidates must identify only this bounded attempt"
+        }
+        require(baselineCandidateId == null || baselineCandidateId !in generatedCandidateIds) {
+            "Repair baseline must precede the generated alternatives"
+        }
+    }
+}
+
+/**
+ * Loads immutable same-scope candidate evidence before ranking it.  This is
+ * intentionally read-only, so an A/B request cannot publish, accept, reject,
+ * or otherwise alter a project.
+ */
+class MidiCoreMusicalRepairAlternatives(
+    private val review: MidiCoreCandidateReview = MidiCoreCandidateReview(),
+) {
+    fun rank(request: RankMidiCoreMusicalRepairAlternatives): MidiCoreMusicalRepairAlternativesResult = when (val listed = review.list(
+        request.candidates.copy(candidateIds = (request.generatedCandidateIds + listOfNotNull(request.baselineCandidateId)).toSet()),
+    )) {
+        is MidiCoreCandidateReviewResult.Listed -> {
+            val byId = listed.candidates.associateBy { it.candidate.id }
+            val missing = (request.generatedCandidateIds + listOfNotNull(request.baselineCandidateId)).filterNot(byId::containsKey)
+            val wrongGenerator = request.generatedCandidateIds.filter { candidateId ->
+                byId[candidateId]?.candidate?.generatorVersion?.startsWith("musical-repair-v${MidiCoreMusicalRepairSettings.VERSION}-") != true
+            }
+            if (missing.isNotEmpty() || wrongGenerator.isNotEmpty()) {
+                MidiCoreMusicalRepairAlternativesResult.Rejected(
+                    MidiCoreCandidateProblem(
+                        MidiCoreCandidateProblemCode.INVALID_STATE,
+                        "Repair candidate evidence changed or does not belong to this repair policy before alternatives could be ranked.",
+                        "Reload the project and retry this same repair scope.",
+                    ),
+                )
+            } else MidiCoreMusicalRepairAlternativesResult.Ranked(
+                listed.session,
+                listed.revision,
+                MidiCoreMusicalRepairAlternativeRanker.rank(
+                    request.generatedCandidateIds.map(byId::getValue),
+                    request.intent,
+                    request.baselineCandidateId?.let(byId::getValue),
+                    listed.session.project.sourceMidi?.ppq?.toLong() ?: 480L,
+                    request.attemptedCount,
+                    request.generationProblems,
+                    request.allowBaselineReuse,
+                ),
+            )
+        }
+        is MidiCoreCandidateReviewResult.Rejected -> MidiCoreMusicalRepairAlternativesResult.Rejected(listed.problem)
+        is MidiCoreCandidateReviewResult.Compared -> error("Candidate listing cannot return comparison evidence")
+    }
+}
+
+sealed interface MidiCoreMusicalRepairAlternativesResult {
+    data class Ranked(
+        val session: MidiCoreProjectSession,
+        val revision: Long,
+        val ranking: MidiCoreMusicalRepairAlternativeRanking,
+    ) : MidiCoreMusicalRepairAlternativesResult
+
+    data class Rejected(val problem: MidiCoreCandidateProblem) : MidiCoreMusicalRepairAlternativesResult
+}
+
 /** Translate a named repair into one bounded confirmed-plan adjustment. */
 object MidiCoreMusicalRepairPlanner {
     fun propose(

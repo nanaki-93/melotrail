@@ -286,3 +286,37 @@ preview without writing project state. It preserves source bytes, chord authorit
 candidate/export artifacts, acceptance references and locks. The later M09
 candidate/acceptance workflow is the only path that can publish a new candidate
 or alter an accepted selection.
+
+M09 offers at most three timing/pitch-distinct alternatives for an isolated
+scope. Velocity-only variants and results identical to its audible baseline
+are omitted. Dependency-spanning repairs instead offer one coherent set, with
+one candidate per affected role/occurrence (maximum nine scopes). Required
+members may retain the baseline's notes while refreshing dependency evidence;
+`matchesBaseline` identifies them. An entirely baseline-identical set is not a
+new choice. Oversized impacts and planned-rest scopes return full-draft guidance
+before any plan write. This is a bounded local repair, not a whole-song rewrite.
+
+Preview is write-free; Apply confirms the exact plan change and generates in
+occurrence order, Chords → Bass → Drums. It includes affected neighbors, binds
+new upstream candidate IDs, and carries the verified preceding immutable piano
+boundary using the full-draft evidence helper. Rejected/stale history remains
+inspectable. Filtered review never bypasses project-wide artifact integrity.
+The accepted pre-repair candidate remains the same-position, melody-inclusive
+A/B baseline. Audition preserves all supported protected melody events and
+cannot write project state. Unusable results give an explicit same-scope reason.
+A failed or cancelled Apply retains the confirmed settings for retry; it does
+not apply the plan adjustment again. A changed plan requires a new preview.
+
+Use validates one reviewed candidate per repair scope and accepts the entire
+set in one revision. The underlying bounded candidate-batch API rechecks the
+revision, locks, status, authority, artifacts, dependencies and complete accepted
+piano boundary chain under the project write lock. Individual acceptance cannot
+use unmatched upstream work; missing/mismatched batch evidence changes nothing.
+Unrelated accepted references and all source/candidate bytes remain preserved.
+
+Generator identity binds repair policy, intent ordinal under that version,
+explicit register offset, style, pattern/profile, comping and coordination
+versions. Lower piano uses a −12-semitone voicing-center preference, preserving
+legal ranges and chord identity; constraints may yield no distinct result.
+Changing the intent mapping requires a new repair-policy version. Q01 listening
+and Q02 Logic checks remain human evidence, not a consequence of these tests.

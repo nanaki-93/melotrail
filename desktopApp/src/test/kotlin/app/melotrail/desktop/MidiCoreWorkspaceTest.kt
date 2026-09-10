@@ -251,6 +251,107 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `musical repair preview is write-free and apply keeps candidate acceptance explicit`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmArrangementPlan)
+        advanceUntilIdle()
+        val before = requireNotNull(viewModel.state.value.project)
+        val proposal = app.melotrail.application.MidiCoreMusicalRepairPlanner.propose(
+            requireNotNull(before.arrangementPlan), "verse-1", app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO,
+        )
+        fake.musicalRepairResult = app.melotrail.application.MidiCoreMusicalRepairResult.Prepared(
+            proposal,
+            MidiCoreInvalidationPlanner.preview(
+                app.melotrail.project.MidiCoreAuthorityHasher.from(before),
+                app.melotrail.project.MidiCoreAuthorityHasher.from(before.copy(arrangementPlan = proposal.plan)),
+            ),
+            emptyList(),
+            emptyList(),
+        )
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewMusicalRepair("verse-1", app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO))
+        advanceUntilIdle()
+        assertEquals(before, viewModel.state.value.project)
+        assertEquals(proposal, viewModel.state.value.musicalRepair.prepared?.proposal)
+        assertTrue(fake.confirmArrangementPlanEditRequests.isEmpty())
+        fake.musicalRepairAlternativesResult = app.melotrail.application.MidiCoreMusicalRepairAlternativesResult.Ranked(
+            MidiCoreProjectSession(fake.persistedSession().root, before),
+            before.revision,
+            app.melotrail.application.MidiCoreMusicalRepairAlternativeRanking(
+                emptyList(),
+                emptyList(),
+                "Three bounded attempts produced no valid result; retry this same scope.",
+            ),
+        )
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ApplyMusicalRepair)
+        advanceUntilIdle()
+        assertEquals(listOf(proposal.plan), fake.confirmArrangementPlanEditRequests.map { it.plan })
+        assertEquals(proposal.plan, viewModel.state.value.project?.arrangementPlan)
+        assertTrue(viewModel.state.value.project?.acceptances.orEmpty().isEmpty())
+        assertEquals(proposal, viewModel.state.value.musicalRepair.prepared?.proposal)
+        assertTrue(viewModel.state.value.musicalRepair.applied)
+        assertEquals(3, fake.candidateGenerationRequests.size)
+        assertEquals(3, fake.candidateGenerationRequests.map { it.patternId }.distinct().size)
+        assertTrue(fake.candidateGenerationRequests.all {
+            it.role == CandidateRole.CHORDS && it.occurrenceId == "verse-1" && it.useDraftDependencies &&
+                it.generator.generatorVersion.contains("patterns-v") && it.generator.generatorVersion.contains("profiles-v")
+        })
+        assertTrue(viewModel.state.value.musicalRepair.noResultReason?.contains("same scope") == true)
+        val firstAttempt = fake.candidateGenerationRequests.toList()
+        viewModel.accept(MidiCoreWorkspaceIntent.ApplyMusicalRepair)
+        advanceUntilIdle()
+        assertEquals(1, fake.confirmArrangementPlanEditRequests.size, "Retry must not apply the density adjustment again")
+        assertEquals(proposal.plan, viewModel.state.value.project?.arrangementPlan)
+        assertEquals(6, fake.candidateGenerationRequests.size)
+        assertEquals(firstAttempt.map { it.sectionPolicy }, fake.candidateGenerationRequests.drop(3).map { it.sectionPolicy })
+        assertEquals(firstAttempt.map { it.generator }, fake.candidateGenerationRequests.drop(3).map { it.generator })
+
+        viewModel.close()
+    }
+
+    @Test
+    fun `locked musical repair is blocked before its plan can be written`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmArrangementPlan)
+        advanceUntilIdle()
+        val project = requireNotNull(viewModel.state.value.project)
+        val proposal = app.melotrail.application.MidiCoreMusicalRepairPlanner.propose(
+            requireNotNull(project.arrangementPlan), "verse-1", app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO,
+        )
+        fake.musicalRepairResult = app.melotrail.application.MidiCoreMusicalRepairResult.Prepared(
+            proposal,
+            MidiCoreInvalidationPlanner.preview(
+                app.melotrail.project.MidiCoreAuthorityHasher.from(project),
+                app.melotrail.project.MidiCoreAuthorityHasher.from(project.copy(arrangementPlan = proposal.plan)),
+            ),
+            listOf("locked-chords"),
+            listOf(app.melotrail.project.MidiCoreAuthorityScopeKey("verse-1", CandidateRole.CHORDS)),
+        )
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewMusicalRepair("verse-1", app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ApplyMusicalRepair)
+
+        assertTrue(fake.confirmArrangementPlanEditRequests.isEmpty())
+        assertEquals(MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED, viewModel.state.value.blockers.first().code)
+        assertEquals(project, viewModel.state.value.project)
+        viewModel.close()
+    }
+
+    @Test
     fun `real position observation updates only while playing and stops after pause`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
@@ -768,6 +869,18 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     val cancelArrangementPlanRequests = mutableListOf<app.melotrail.application.CancelMidiCoreArrangementPlanProposal>()
     val previewArrangementPlanEditRequests = mutableListOf<app.melotrail.application.PreviewMidiCoreArrangementPlanEdit>()
     val confirmArrangementPlanEditRequests = mutableListOf<app.melotrail.application.ConfirmMidiCoreArrangementPlanEdit>()
+    val candidateGenerationRequests = mutableListOf<GenerateMidiCoreCandidate>()
+    var musicalRepairResult: app.melotrail.application.MidiCoreMusicalRepairResult =
+        app.melotrail.application.MidiCoreMusicalRepairResult.Rejected(
+            app.melotrail.application.MidiCoreMusicalRepairProblem(
+                app.melotrail.application.MidiCoreMusicalRepairProblemCode.PLAN_REQUIRED,
+                "not used",
+                "not used",
+            ),
+        )
+    var musicalRepairAlternativesResult: app.melotrail.application.MidiCoreMusicalRepairAlternativesResult =
+        app.melotrail.application.MidiCoreMusicalRepairAlternativesResult.Ranked(session, session.project.revision,
+            app.melotrail.application.MidiCoreMusicalRepairAlternativeRanking(emptyList(), emptyList(), "not used"))
     val arrangementExtentRequests = mutableListOf<ConfirmMidiCoreArrangementExtent>()
     var occurrenceAuditionCalls = 0
     var closeCalls = 0
@@ -925,6 +1038,14 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         )
     }
 
+    override fun previewMusicalRepair(
+        request: app.melotrail.application.PreviewMidiCoreMusicalRepair,
+    ): app.melotrail.application.MidiCoreMusicalRepairResult = musicalRepairResult
+
+    override fun rankMusicalRepairAlternatives(
+        request: app.melotrail.application.RankMidiCoreMusicalRepairAlternatives,
+    ): app.melotrail.application.MidiCoreMusicalRepairAlternativesResult = musicalRepairAlternativesResult
+
     override fun confirmArrangementExtent(
         request: ConfirmMidiCoreArrangementExtent,
     ): app.melotrail.application.MidiCoreArrangementExtentResult {
@@ -946,6 +1067,10 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
 
     override fun compareCandidates(request: CompareMidiCoreCandidates): MidiCoreCandidateReviewResult = error("not used")
 
+    override fun precedingPianoBoundary(session: MidiCoreProjectSession, occurrenceId: String, generatedIds: List<String>): app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary? = null
+
+    override fun acceptBatch(request: app.melotrail.application.AcceptMidiCoreCandidateBatch): MidiCoreCandidateLifecycleResult = error("not used")
+
     override fun acceptCandidate(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult = error("not used")
 
     override fun rejectCandidate(request: RejectMidiCoreCandidate): MidiCoreCandidateLifecycleResult = error("not used")
@@ -956,8 +1081,16 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
 
     override fun restoreCandidate(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult = error("not used")
 
-    override suspend fun generateCandidate(request: GenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult = pendingGeneration?.await()
-        ?: MidiCoreCandidateGenerationResult.Cancelled(null, null, emptyList())
+    override suspend fun generateCandidate(request: GenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult {
+        candidateGenerationRequests += request
+        return pendingGeneration?.await() ?: MidiCoreCandidateGenerationResult.Rejected(
+            app.melotrail.application.MidiCoreCandidateProblem(
+                app.melotrail.application.MidiCoreCandidateProblemCode.INVALID_CANDIDATE,
+                "No valid repair candidate for the fake request.",
+                "Retry this same scope.",
+            ),
+        )
+    }
 
     override suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult = generateCandidate(request.generation)
 
