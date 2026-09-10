@@ -108,7 +108,7 @@ invalid-input window. Capture guards reject clipped inspector/transport/scene
 controls. The Swift-owned loading window disables AppKit release-on-close;
 this launch/close path covers the recovered release-only ownership crash.
 Evidence: `~/.codex/melotrail-terra/v05b-repair-evidence`; fixtures are technical
-media, not production TABI identity approval. Final V05 remains pending.
+media, not production TABI identity approval. Final human visual approval remains pending.
 
 V05c exercises real crop/motion/crossfade controls and compares rendered pixels
 at boundaries against the shared renderer. An independent bitmap oracle proves
@@ -126,7 +126,30 @@ repair. Save rejects unrelated files, protected inputs and symlink aliases.
 Owned ledger fixtures distinguish actual/estimated costs and explicitly label
 uncertain submission progress. Evidence:
 `~/.codex/melotrail-terra/v05d-repair-evidence`; no provider requests or production
-approvals are part of this check. Final V05 owns the complete keyboard/UI gate.
+approvals are part of this check. V05 completes the technical keyboard/UI gate below.
+
+V05's release-editor check uses the same owned multi-scene request at
+1536×1024, 1280×900 and 720×900. It retains
+`editor-1536x1024.png`, `editor-1280x900.png`, `editor-720x900.png`,
+`editor-controls.png`, `editor-window.png` and `editor-observations.json` under
+the fresh companion `.build/v05b-editor-evidence.*` output. The JSON records
+each preview/inspector/scene-strip/transport rectangle, whether the compact
+stacked layout applied, real keyboard frame seeking, the last preview frame and
+the exact final audio-tail end frame. The release check drives scene selection, play and seeking; the native
+controller regression drives crop/motion/crossfade editing, save/reopen and
+field-safe keyboard handling; it also checks shared-resolver pixels at scene boundaries and source
+digests. These are owned-fixture engineering measurements, not production TABI
+identity, artistic, rights, listening or paid-pilot approval.
+Repair evidence is retained at `~/.codex/melotrail-terra/v05-repair-evidence/release`.
+The captures use exact content sizes in points (Retina PNGs use backing pixels),
+with an evidence-only override of the screen-height cap. The adapted reference-08
+geometry is checked within 8 points: 20-point side margins, a 280-point right
+inspector at wide sizes, and a full-width 150-point inspector below the preview
+at 720 points. Output frame dimensions remain unchanged on resize. Inspector
+controls retain their native field editor during seeks; real typing and arrow
+function-key modifiers are exercised. The owned one-second fixture ends at
+frame boundary 30, with final preview frame 29 at 30 fps; it is not a production
+TABI episode or a listening approval.
 
 ## Scheduled runner checks
 

@@ -129,6 +129,35 @@ func findControl(withAccessibilityLabel label: String, in view: NSView) -> NSCon
     return nil
 }
 
+@MainActor
+func findView(withAccessibilityLabel label: String, in view: NSView) -> NSView? {
+    if view.accessibilityLabel() == label { return view }
+    for child in view.subviews {
+        if let match = findView(withAccessibilityLabel: label, in: child) { return match }
+    }
+    return nil
+}
+
+@MainActor
+func sendNativeKey(_ window: NSWindow, characters: String, keyCode: UInt16, modifiers: NSEvent.ModifierFlags = []) {
+    guard let event = NSEvent.keyEvent(
+        with: .keyDown,
+        location: .zero,
+        modifierFlags: modifiers,
+        timestamp: 0,
+        windowNumber: window.windowNumber,
+        context: nil,
+        characters: characters,
+        charactersIgnoringModifiers: characters,
+        isARepeat: false,
+        keyCode: keyCode
+    ) else {
+        require(false, "native keyboard fixture must construct an AppKit key event")
+        return
+    }
+    window.sendEvent(event)
+}
+
 func waitForEditorFrame(
     _ session: SceneEditorSession,
     matching predicate: (Int64) -> Bool,
@@ -870,6 +899,51 @@ do {
         _ = seekControl.sendAction(seekControl.action, to: seekControl.target)
         let soughtWindowFrame = try waitForEditorFrame(windowSession, matching: { $0 == 1 })
         require(soughtWindowFrame.soundtrackTime == CMTime(value: 1, timescale: 30), "native seek slider must use the plan frame rate and sole soundtrack clock")
+        guard let editorNativeWindow = editorWindow.window,
+              let cropField = findControl(withAccessibilityLabel: "Crop width", in: editorContent) as? NSTextField,
+              findView(withAccessibilityLabel: "Rendered scene preview", in: editorContent) != nil,
+              findView(withAccessibilityLabel: "Selected scene inspector", in: editorContent) != nil,
+              findView(withAccessibilityLabel: "Scene timeline", in: editorContent) != nil,
+              findView(withAccessibilityLabel: "Keyboard shortcuts", in: editorContent) != nil else {
+            require(false, "native editor must label the preview, inspector, timeline, keyboard help, and editable controls")
+            fatalError("unreachable")
+        }
+        sendNativeKey(editorNativeWindow, characters: "\u{F703}", keyCode: 124, modifiers: [.numericPad, .function])
+        let keyboardFrame = try waitForEditorFrame(windowSession, matching: { $0 == 2 })
+        require(keyboardFrame.soundtrackTime == CMTime(value: 2, timescale: 30), "right-arrow must seek the real soundtrack player by one shared frame")
+        cropField.scrollToVisible(cropField.bounds)
+        require(editorNativeWindow.makeFirstResponder(cropField), "crop field must accept real keyboard focus")
+        require(cropField.currentEditor() != nil, "test must exercise an active native field editor")
+        sendNativeKey(editorNativeWindow, characters: "7", keyCode: 26)
+        require(cropField.currentEditor()?.string.contains("7") == true, "native text input must reach the active field")
+        sendNativeKey(editorNativeWindow, characters: "", keyCode: 119)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        let textEditingFrame = try windowSession.currentFrame()
+        require(textEditingFrame.frame == 2, "timeline shortcuts must not seek while a text field is editing")
+        editorNativeWindow.makeFirstResponder(sceneButton)
+        sendNativeKey(editorNativeWindow, characters: "", keyCode: 115)
+        _ = try waitForEditorFrame(windowSession, matching: { $0 == 0 })
+        sendNativeKey(editorNativeWindow, characters: "", keyCode: 119)
+        _ = try waitForEditorFrame(windowSession, matching: { $0 == plan.frameCount - 1 })
+        sendNativeKey(editorNativeWindow, characters: "", keyCode: 115)
+        _ = try waitForEditorFrame(windowSession, matching: { $0 == 0 })
+        sendNativeKey(editorNativeWindow, characters: " ", keyCode: 49)
+        let keyboardPlayback = try waitForEditorFrame(windowSession, matching: { $0 > 0 })
+        require(keyboardPlayback.frame > 0, "space must start the same real soundtrack transport")
+        sendNativeKey(editorNativeWindow, characters: "", keyCode: 53)
+        let stoppedKeyboardSnapshot = try windowSession.snapshot()
+        require(!stoppedKeyboardSnapshot.isPlaying, "escape must stop local preview playback without touching a provider job")
+        editorNativeWindow.setContentSize(NSSize(width: 720, height: 900))
+        editorContent.layoutSubtreeIfNeeded()
+        guard let compactInspector = findView(withAccessibilityLabel: "Selected scene inspector", in: editorContent),
+              let compactPreview = findView(withAccessibilityLabel: "Rendered scene preview", in: editorContent) else {
+            require(false, "compact editor must retain preview and inspector regions")
+            fatalError("unreachable")
+        }
+        cropField.scrollToVisible(cropField.bounds)
+        let inspectorRect = compactInspector.convert(compactInspector.bounds, to: editorContent)
+        let previewRect = compactPreview.convert(compactPreview.bounds, to: editorContent)
+        require(editorContent.bounds.contains(inspectorRect) && editorContent.bounds.contains(previewRect), "720-wide compact layout must keep preview and scrollable inspector reachable")
         editorWindow.window?.close()
         require(windowSession.isClosed, "closing the native editor window must remove its frame observer and release the player stage")
         print("scene-editor-window-regression=PASS")

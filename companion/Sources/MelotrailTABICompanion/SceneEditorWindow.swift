@@ -1,6 +1,23 @@
 import AppKit
 import Foundation
 
+/// Keeps transport shortcuts at the native-window boundary so they work for
+/// the compact editor without taking key events away from an active text field.
+private final class SceneEditorWindow: NSWindow {
+    var allowsOversizedEvidence = false
+
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        allowsOversizedEvidence ? frameRect : super.constrainFrameRect(frameRect, to: screen)
+    }
+
+    var shortcutHandler: ((NSEvent) -> Bool)?
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, shortcutHandler?(event) == true { return }
+        super.sendEvent(event)
+    }
+}
+
 /// A native, resizable V05b editor surface. It presents plan-backed preview
 /// pixels, rather than a mock video player, and leaves composition editing to
 /// V05c.
@@ -21,12 +38,24 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     private let timeLabel = NSTextField(labelWithString: "00:00.00")
     private let seekSlider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
     private let statusLabel = NSTextField(labelWithString: "Loading scene preview…")
+    private let shortcutHint = NSTextField(labelWithString: "Space play/pause · ←/→ frame · Home/End timeline · Esc stop preview")
+    private var displayedInspector: SceneEditorInspector?
     private var cropFields: [NSTextField] = []
     private var motionFields: [NSTextField] = []
     private var crossfadeField: NSTextField?
     private var observerToken: Any?
     private var sceneButtons: [NSButton] = []
     private var frameRate = 30
+    private var stageRow: NSStackView?
+    private var previewBox: NSView?
+    private var stripScroll: NSScrollView?
+    private var inspectorWidthConstraint: NSLayoutConstraint?
+    private var inspectorScrollWidthConstraint: NSLayoutConstraint?
+    private var compactPreviewWidthConstraint: NSLayoutConstraint?
+    private var compactInspectorDocumentWidthConstraint: NSLayoutConstraint?
+    private var compactInspectorWidthConstraint: NSLayoutConstraint?
+    private var compactInspectorHeightConstraint: NSLayoutConstraint?
+    private var inspectorHeightConstraint: NSLayoutConstraint?
 
     public init(
         session: SceneEditorSession,
@@ -36,17 +65,18 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         self.session = session
         self.sessionDocumentURL = sessionDocumentURL
         self.animationLedgerURL = animationLedgerURL
-        let window = NSWindow(
+        let window = SceneEditorWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1_180, height: 760),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Melotrail TABI — Scene Preview"
-        window.minSize = NSSize(width: 820, height: 660)
+        window.minSize = NSSize(width: 720, height: 660)
         window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self
+        window.shortcutHandler = { [weak self] event in self?.handleShortcut(event) ?? false }
         try buildInterface()
     }
 
@@ -55,11 +85,22 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     public func showEditor() {
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
+        window?.makeFirstResponder(sceneButtons.first)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     public func windowWillClose(_ notification: Notification) {
         releasePreview()
+    }
+
+    public func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+        let contentWidth = sender.contentRect(forFrameRect: NSRect(origin: .zero, size: frameSize)).width
+        updateCompactLayout(forWidth: contentWidth)
+        return frameSize
+    }
+
+    public func windowDidResize(_ notification: Notification) {
+        updateCompactLayout()
     }
 
     /// Drives the same visible controls used by a person and retains a bitmap
@@ -83,18 +124,64 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
             guard window?.isVisible == true, window?.styleMask.contains(.resizable) == true else {
                 throw SceneEditorEvidenceError.windowNotVisible
             }
+            var layouts: [[String: Any]] = []
             if let window {
-                let originalFrame = window.frame
-                var minimumFrame = originalFrame
-                minimumFrame.size = window.minSize
-                window.setFrame(minimumFrame, display: true)
-                try verifyInspectorReachability()
-                try captureWindow(to: outputDirectory.appendingPathComponent("editor-minimum-window.png"))
+                let originalSize = window.contentView?.bounds.size ?? window.frame.size
+                let evidenceWindow = window as? SceneEditorWindow
+                evidenceWindow?.allowsOversizedEvidence = true
+                defer { evidenceWindow?.allowsOversizedEvidence = false }
+                let captureSizes: [(String, NSSize)] = [
+                    ("1536x1024", NSSize(width: 1_536, height: 1_024)),
+                    ("1280x900", NSSize(width: 1_280, height: 900)),
+                    ("720x900", NSSize(width: 720, height: 900)),
+                ]
+                for (name, size) in captureSizes {
+                    updateCompactLayout(forWidth: size.width)
+                    window.setContentSize(size)
+                    window.contentView?.layoutSubtreeIfNeeded()
+                    updateCompactLayout()
+                    inspector.layoutSubtreeIfNeeded()
+                    guard let content = window.contentView,
+                          abs(content.bounds.width - size.width) <= 1,
+                          abs(content.bounds.height - size.height) <= 1 else {
+                        fputs("capture-size-mismatch: requested \(size), actual \(String(describing: window.contentView?.bounds))\n", stderr)
+                        throw SceneEditorEvidenceError.captureFailed
+                    }
+                    let compact = size.width <= 900
+                    let expectedPreview = NSRect(x: 20, y: compact ? 414 : 248,
+                        width: size.width - (compact ? 40 : 336), height: size.height - (compact ? 470 : 304))
+                    let expectedInspector = NSRect(x: compact ? 20 : size.width - 300, y: 248,
+                        width: compact ? size.width - 40 : 280, height: compact ? 150 : size.height - 304)
+                    for (view, expected) in [(previewImage as NSView, expectedPreview), (inspectorScroll as NSView, expectedInspector)] {
+                        let actual = view.convert(view.bounds, to: content)
+                        guard abs(actual.minX - expected.minX) <= 8, abs(actual.minY - expected.minY) <= 8,
+                              abs(actual.width - expected.width) <= 8, abs(actual.height - expected.height) <= 8 else {
+                            fputs("capture-layout-mismatch \(name): actual \(actual), expected \(expected)\n", stderr)
+                            throw SceneEditorEvidenceError.captureFailed
+                        }
+                    }
+                    guard abs(inspector.bounds.width - expectedInspector.width) <= 8 else {
+                        fputs("capture-inspector-document-width-mismatch: \(inspector.bounds.width), expected \(expectedInspector.width)\n", stderr)
+                        throw SceneEditorEvidenceError.captureFailed
+                    }
+                    let rendered = try session.currentFrame().image
+                    guard rendered.width == session.geometry.width, rendered.height == session.geometry.height else {
+                        throw SceneEditorEvidenceError.captureFailed
+                    }
+                    try verifyInspectorReachability()
+                    let captureURL = outputDirectory.appendingPathComponent("editor-\(name).png")
+                    try captureWindow(to: captureURL)
+                    guard let content = window.contentView else { throw SceneEditorEvidenceError.windowNotVisible }
+                    layouts.append(layoutMeasurement(name: name, content: content))
+                }
+                updateCompactLayout(forWidth: originalSize.width)
+                window.setContentSize(originalSize)
+                window.contentView?.layoutSubtreeIfNeeded()
+                updateCompactLayout()
                 if let field = crossfadeField {
                     field.scrollToVisible(field.bounds)
-                    try captureWindow(to: outputDirectory.appendingPathComponent("editor-minimum-controls.png"))
+                    try captureWindow(to: outputDirectory.appendingPathComponent("editor-controls.png"))
                 }
-                window.setFrame(originalFrame, display: true)
             }
             let selected = scenes[1]
             let next = scenes[2]
@@ -113,41 +200,52 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
                         guard let self else { return }
                         do {
                             let boundaryFrame = try boundaryResult.get()
-                            if try self.session.snapshot().isPlaying {
-                                self.playPauseButton.performClick(nil)
-                            }
+                            if try self.session.snapshot().isPlaying { self.playPauseButton.performClick(nil) }
                             let captureURL = outputDirectory.appendingPathComponent("editor-window.png")
                             try self.captureWindow(to: captureURL)
-                            self.seekSlider.integerValue = 1
-                            _ = self.seekSlider.sendAction(self.seekSlider.action, to: self.seekSlider.target)
-                            self.waitForFrame(1) { [weak self] seekResult in
+                            self.dispatchShortcut(characters: "", keyCode: 124)
+                            self.waitForFrame(boundaryFrame + 1) { [weak self] keyboardResult in
                                 guard let self else { return }
                                 do {
-                                    let soughtFrame = try seekResult.get()
-                                    self.window?.close()
-                                    let observations: [String: Any] = [
-                                        "schemaVersion": 1,
-                                        "releaseExecutableLaunched": true,
-                                        "executablePath": CommandLine.arguments[0],
-                                        "compositionRequestPath": compositionRequestURL.path,
-                                        "windowVisible": true,
-                                        "windowResizable": true,
-                                        "selectedSceneIndex": selected.sceneIndex,
-                                        "selectedSceneStartFrame": selectedFrame,
-                                        "playedAcrossBoundaryFrame": boundaryFrame,
-                                        "soughtFrame": soughtFrame,
-                                        "soundtrackPlayerCountBeforeClose": playerCount,
-                                        "soundtrackPlayerCountAfterClose": self.session.soundtrackPlayerCount,
-                                        "frameObserverAndPlayerReleasedOnClose": self.session.isClosed,
-                                        "capturePath": captureURL.path,
-                                    ]
-                                    let reportURL = outputDirectory.appendingPathComponent("editor-observations.json")
-                                    try JSONSerialization.data(withJSONObject: observations, options: [.prettyPrinted, .sortedKeys])
-                                        .write(to: reportURL, options: .withoutOverwriting)
-                                    completion(.success(reportURL))
-                                } catch {
-                                    completion(.failure(error))
-                                }
+                                    let keyboardFrame = try keyboardResult.get()
+                                    let finalFrame = Int64(self.seekSlider.maxValue)
+                                    self.seekSlider.integerValue = Int(finalFrame)
+                                    _ = self.seekSlider.sendAction(self.seekSlider.action, to: self.seekSlider.target)
+                                    self.waitForFrame(finalFrame) { [weak self] seekResult in
+                                        guard let self else { return }
+                                        do {
+                                            let soughtFrame = try seekResult.get()
+                                            let finalPreview = try self.session.currentFrame()
+                                            let finalEndFrame = try self.session.snapshot().frameCount
+                                            self.window?.close()
+                                            let observations: [String: Any] = [
+                                                "schemaVersion": 2,
+                                                "releaseExecutableLaunched": true,
+                                                "executablePath": CommandLine.arguments[0],
+                                                "compositionRequestPath": compositionRequestURL.path,
+                                                "windowVisible": true,
+                                                "windowResizable": true,
+                                                "selectedSceneIndex": selected.sceneIndex,
+                                                "selectedSceneStartFrame": selectedFrame,
+                                                "playedAcrossBoundaryFrame": boundaryFrame,
+                                                "keyboardRightFrame": keyboardFrame,
+                                                "soughtFrame": soughtFrame,
+                                                "finalPreviewFrame": finalPreview.frame,
+                                                "finalAudioTailEndFrame": finalEndFrame,
+                                                "finalAudioTailSeconds": Double(finalEndFrame) / Double(self.frameRate),
+                                                "soundtrackPlayerCountBeforeClose": playerCount,
+                                                "soundtrackPlayerCountAfterClose": self.session.soundtrackPlayerCount,
+                                                "frameObserverAndPlayerReleasedOnClose": self.session.isClosed,
+                                                "capturePath": captureURL.path,
+                                                "layoutCaptures": layouts,
+                                            ]
+                                            let reportURL = outputDirectory.appendingPathComponent("editor-observations.json")
+                                            try JSONSerialization.data(withJSONObject: observations, options: [.prettyPrinted, .sortedKeys])
+                                                .write(to: reportURL, options: .withoutOverwriting)
+                                            completion(.success(reportURL))
+                                        } catch { completion(.failure(error)) }
+                                    }
+                                } catch { completion(.failure(error)) }
                             }
                         } catch {
                             completion(.failure(error))
@@ -187,7 +285,10 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         statusLabel.textColor = NSColor(calibratedWhite: 0.72, alpha: 1)
         statusLabel.lineBreakMode = .byTruncatingMiddle
         statusLabel.setAccessibilityLabel("Editor status")
-        let header = NSStackView(views: [title, NSView(), statusLabel])
+        shortcutHint.font = .systemFont(ofSize: 11)
+        shortcutHint.textColor = NSColor(calibratedWhite: 0.72, alpha: 1)
+        shortcutHint.setAccessibilityLabel("Keyboard shortcuts")
+        let header = NSStackView(views: [title, NSView(), shortcutHint, statusLabel])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.spacing = 10
@@ -197,12 +298,14 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
 
         previewImage.imageScaling = .scaleProportionallyUpOrDown
         previewImage.imageAlignment = .alignCenter
+        previewImage.setAccessibilityLabel("Rendered scene preview")
         previewImage.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         previewImage.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         previewImage.wantsLayer = true
         previewImage.layer?.backgroundColor = NSColor.black.cgColor
         previewImage.translatesAutoresizingMaskIntoConstraints = false
         let previewBox = NSView()
+        self.previewBox = previewBox
         previewBox.wantsLayer = true
         previewBox.layer?.cornerRadius = 8
         previewBox.layer?.masksToBounds = true
@@ -220,10 +323,16 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         inspectorScroll.hasVerticalScroller = true
         inspectorScroll.drawsBackground = false
         inspectorScroll.translatesAutoresizingMaskIntoConstraints = false
-        inspector.widthAnchor.constraint(equalToConstant: 280).isActive = true
-        inspectorScroll.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        inspector.setAccessibilityLabel("Selected scene inspector")
+        inspectorScroll.setAccessibilityLabel("Selected scene inspector")
+        inspectorWidthConstraint = inspector.widthAnchor.constraint(equalToConstant: 280)
+        inspectorWidthConstraint?.isActive = true
+        inspectorScrollWidthConstraint = inspectorScroll.widthAnchor.constraint(equalToConstant: 280)
+        inspectorScrollWidthConstraint?.isActive = true
         let stageRow = NSStackView(views: [previewBox, inspectorScroll])
-        inspectorScroll.heightAnchor.constraint(equalTo: previewBox.heightAnchor).isActive = true
+        self.stageRow = stageRow
+        inspectorHeightConstraint = inspectorScroll.heightAnchor.constraint(equalTo: previewBox.heightAnchor)
+        inspectorHeightConstraint?.isActive = true
         stageRow.orientation = .horizontal
         stageRow.alignment = .top
         stageRow.spacing = 16
@@ -240,12 +349,14 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         sceneStrip.spacing = 10
         sceneStrip.edgeInsets = NSEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
         let stripScroll = NSScrollView()
+        self.stripScroll = stripScroll
         stripScroll.documentView = sceneStrip
         stripScroll.hasHorizontalScroller = true
         stripScroll.autohidesScrollers = true
         stripScroll.drawsBackground = false
         stripScroll.translatesAutoresizingMaskIntoConstraints = false
         stripScroll.heightAnchor.constraint(equalToConstant: 146).isActive = true
+        stripScroll.setAccessibilityLabel("Scene timeline")
         root.addArrangedSubview(stripScroll)
         stripScroll.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -40).isActive = true
 
@@ -260,9 +371,110 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
             self?.apply(frame: frame)
         }
         statusLabel.stringValue = "Ready · real soundtrack transport"
+        updateCompactLayout()
+    }
+
+    /// Reference-08 keeps its scene preview, inspector and strip as separate
+    /// regions. At compact width the same regions stack so controls stay in
+    /// the window rather than being clipped or hidden behind the transport.
+    private func updateCompactLayout(forWidth proposedWidth: CGFloat? = nil) {
+        guard let content = window?.contentView,
+              let stageRow,
+              let previewBox else { return }
+        let compact = (proposedWidth ?? content.bounds.width) <= 900
+        stageRow.orientation = compact ? .vertical : .horizontal
+        stageRow.alignment = compact ? .leading : .top
+        inspectorWidthConstraint?.isActive = !compact
+        inspectorScrollWidthConstraint?.isActive = !compact
+        inspectorHeightConstraint?.isActive = !compact
+
+        if compact {
+            if compactPreviewWidthConstraint == nil {
+                compactPreviewWidthConstraint = previewBox.widthAnchor.constraint(equalTo: stageRow.widthAnchor)
+                compactInspectorWidthConstraint = inspectorScroll.widthAnchor.constraint(equalTo: stageRow.widthAnchor)
+                compactInspectorDocumentWidthConstraint = inspector.widthAnchor.constraint(equalToConstant: 680)
+                compactInspectorHeightConstraint = inspectorScroll.heightAnchor.constraint(equalToConstant: 150)
+            }
+            compactPreviewWidthConstraint?.isActive = true
+            compactInspectorWidthConstraint?.isActive = true
+            compactInspectorDocumentWidthConstraint?.constant = max(280, (proposedWidth ?? content.bounds.width) - 40)
+            compactInspectorDocumentWidthConstraint?.isActive = true
+            compactInspectorHeightConstraint?.isActive = true
+            shortcutHint.isHidden = true
+        } else {
+            compactPreviewWidthConstraint?.isActive = false
+            compactInspectorWidthConstraint?.isActive = false
+            compactInspectorDocumentWidthConstraint?.isActive = false
+            compactInspectorHeightConstraint?.isActive = false
+            shortcutHint.isHidden = false
+        }
+        content.layoutSubtreeIfNeeded()
+    }
+
+    private func handleShortcut(_ event: NSEvent) -> Bool {
+        guard !isEditingText(),
+              event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty else { return false }
+        switch event.keyCode {
+        case 49: // Space
+            togglePlayback()
+        case 123: // Left arrow
+            seekRelative(by: -1)
+        case 124: // Right arrow
+            seekRelative(by: 1)
+        case 115: // Home
+            do { try seek(toFrame: 0) } catch { show(error) }
+        case 119: // End
+            do { try seek(toFrame: session.snapshot().frameCount - 1) } catch { show(error) }
+        case 53: // Escape
+            stopPreview()
+        default:
+            return false
+        }
+        return true
+    }
+
+    /// Used by the release evidence path and native regression to send the
+    /// same AppKit key event the window handles for a keyboard user.
+    func dispatchShortcut(characters: String, keyCode: UInt16) {
+        guard let event = NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: window?.windowNumber ?? 0,
+            context: nil,
+            characters: characters,
+            charactersIgnoringModifiers: characters,
+            isARepeat: false,
+            keyCode: keyCode
+        ) else { return }
+        window?.sendEvent(event)
+    }
+
+    private func isEditingText() -> Bool {
+        guard let responder = window?.firstResponder else { return false }
+        if let editor = responder as? NSTextView, editor.isFieldEditor { return true }
+        return responder is NSTextField
+    }
+
+    private func seekRelative(by delta: Int64) {
+        do {
+            let snapshot = try session.snapshot()
+            try seek(toFrame: min(max(snapshot.currentFrame + delta, 0), snapshot.frameCount - 1))
+        } catch { show(error) }
+    }
+
+    private func seek(toFrame frame: Int64) throws {
+        session.seek(toFrame: frame) { [weak self] completed in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                completed ? self.updateAfterTransportChange() : self.showError("The soundtrack could not seek to that frame.")
+            }
+        }
     }
 
     private func configureInspector() {
+        inspector.translatesAutoresizingMaskIntoConstraints = false
         inspector.orientation = .vertical
         inspector.alignment = .leading
         inspector.spacing = 8
@@ -492,7 +704,9 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     private func updateAfterTransportChange() {
         do {
             try refreshCurrentFrame()
-            try refreshInspector()
+            // Transport completion must not destroy an active field editor.
+            // Rebuild only when selecting a different scene changes its facts.
+            if try session.inspector() != displayedInspector { try refreshInspector() }
             let snapshot = try session.snapshot()
             playPauseButton.title = snapshot.isPlaying ? "Pause" : "Play"
         } catch {
@@ -522,6 +736,7 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
     }
 
     private func populateInspector(details: SceneEditorInspector, assets: [SceneEditorAssetState]) {
+        displayedInspector = details
         while inspector.arrangedSubviews.count > 1, let last = inspector.arrangedSubviews.last {
             inspector.removeArrangedSubview(last)
             last.removeFromSuperview()
@@ -787,6 +1002,22 @@ public final class SceneEditorWindowController: NSWindowController, NSWindowDele
         } catch {
             completion(.failure(error))
         }
+    }
+
+    private func layoutMeasurement(name: String, content: NSView) -> [String: Any] {
+        func rect(_ view: NSView) -> [String: Double] {
+            let value = view.convert(view.bounds, to: content)
+            return ["x": value.origin.x, "y": value.origin.y, "width": value.width, "height": value.height]
+        }
+        return [
+            "fixture": name,
+            "content": rect(content),
+            "preview": rect(previewImage),
+            "inspector": rect(inspectorScroll),
+            "sceneStrip": stripScroll.map { rect($0) } ?? [:],
+            "transport": rect(seekSlider),
+            "compactStackedLayout": stageRow?.orientation == .vertical,
+        ]
     }
 
     private func verifyInspectorReachability() throws {

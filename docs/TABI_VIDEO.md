@@ -323,6 +323,16 @@ transport and never concurrently substitutes the MIDI synth as the soundtrack.
 Optional launch from MIDI Export appears only after an independently working
 companion exists; its absence leaves MIDI export unaffected.
 
+The editor keeps those regions reachable at 1536×1024, 1280×900 and 720×900:
+at compact width, the same real preview, scrollable selected-scene inspector,
+transport and horizontal scene strip stack rather than scale into clipped
+controls. Space toggles local preview, Left/Right seek one shared frame,
+Home/End seek the soundtrack extent and Escape stops local preview; active text
+fields keep their normal editing keys. Labels name the preview, scene timeline,
+inspector, transport and edit actions for keyboard and accessibility clients.
+These controls affect only the existing shared composition plan and one
+soundtrack player; they do not submit, cancel or imply approval of provider jobs.
+
 ## YouTube and commercial intent
 
 AI-assisted original work can be eligible for monetization, but using owned

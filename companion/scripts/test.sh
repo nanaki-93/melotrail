@@ -60,13 +60,22 @@ test "$(plutil -extract compositionRequestPath raw -o - "$valid/editor-observati
 selected_frame=$(plutil -extract selectedSceneStartFrame raw -o - "$valid/editor-observations.json")
 boundary_frame=$(plutil -extract playedAcrossBoundaryFrame raw -o - "$valid/editor-observations.json")
 test "$boundary_frame" -gt "$selected_frame"
-test "$(plutil -extract soughtFrame raw -o - "$valid/editor-observations.json")" = "1"
+keyboard_frame=$(plutil -extract keyboardRightFrame raw -o - "$valid/editor-observations.json")
+test "$keyboard_frame" -gt "$selected_frame"
+final_frame=$(plutil -extract finalPreviewFrame raw -o - "$valid/editor-observations.json")
+final_tail=$(plutil -extract finalAudioTailEndFrame raw -o - "$valid/editor-observations.json")
+test "$final_frame" -eq $((final_tail - 1))
 test "$(plutil -extract soundtrackPlayerCountBeforeClose raw -o - "$valid/editor-observations.json")" = "1"
 test "$(plutil -extract soundtrackPlayerCountAfterClose raw -o - "$valid/editor-observations.json")" = "0"
 test "$(plutil -extract frameObserverAndPlayerReleasedOnClose raw -o - "$valid/editor-observations.json")" = "true"
 test "$(plutil -extract inputErrorVisible raw -o - "$invalid/input-error-observations.json")" = "true"
 test "$(sips -g pixelWidth "$valid/editor-window.png" | awk '/pixelWidth/ { print $2 }')" -gt 700
 test "$(sips -g pixelHeight "$valid/editor-window.png" | awk '/pixelHeight/ { print $2 }')" -gt 500
+for fixture in 1536x1024 1280x900 720x900; do
+  test -s "$valid/editor-$fixture.png"
+done
+test "$(plutil -extract 'layoutCaptures.2.fixture' raw -o - "$valid/editor-observations.json")" = "720x900"
+test "$(plutil -extract 'layoutCaptures.2.compactStackedLayout' raw -o - "$valid/editor-observations.json")" = "true"
 test "$(sips -g pixelWidth "$invalid/input-error-window.png" | awk '/pixelWidth/ { print $2 }')" -gt 400
 test "$(wc -c < "$valid/editor-window.png")" -gt 1000
 echo "release-editor-evidence=PASS executable=$editor"
