@@ -758,7 +758,11 @@ The original contract below is the overall acceptance checklist. Reuse completed
 children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** reconcile character-sheet versus scene details once into an approved
-identity bible; old “Moki” text never appears in output. Create a manifest with
+identity bible; old “Moki” text never appears in output. Follow TABI_VIDEO's
+pastel reference brief: compare four styles using the same train composition,
+allow palette-matched TABI recoloring, and record the user's chosen direction
+before production expansion. Style briefs are prepared; visual approval remains
+pending. Create a manifest with
 hashes, origin/rights/model/version, geometry/anchor/alpha/layer and approvals.
 Start with the small pilot kit in TABI_VIDEO; import owned assets and generate
 missing assets only within the authorized budget. Keep originals immutable.
