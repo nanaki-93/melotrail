@@ -410,7 +410,7 @@ spend money, send media to a provider, or distribute a video. The companion stay
 at [`companion/`](../companion/), independently built with Swift Package Manager.
 It is not included in the MIDI Gradle build and has no MIDI Core runtime,
 schema, project-path or export dependency.
-The only currently proved local media configuration is the
+At the V01 decision, the proved local media configuration was the
 owned spike: AVFoundation's OS-supplied ProRes 422 `apcn` video and PCM audio in
 MOV, 320x180 at 30 fps for one second. Its decoded first/middle/final frames,
 streams, duration and 44,100 PCM samples are checked by the existing regression.
@@ -422,6 +422,17 @@ streams, duration and 44,100 PCM samples are checked by the existing regression.
 | Pilot source/master preset | User-selected, immutable finished Logic PCM WAV at 44.1 kHz; one 16:9, 1920x1080, 30 fps ProRes 422/PCM MOV master | The exact 320x180/mono fixture is proven. Stereo source handling, 1920x1080 output and actual full-song duration are V04/V06 validation obligations, so this target is not a claim that a production master has already encoded. No H.264/AAC, alpha, HDR, codec conversion, audio normalization, trimming, stretching or remastering is selected or promised. |
 | Provider | Runway Dev REST `POST /v1/image_to_video`, API version `2024-11-06`, model `gen4.5` | Runway's current guide shows a bearer-authenticated task request with one `promptImage`, `promptText`, `1280:720` ratio and five-second duration, returning a task ID. V03 must persist/query that ID rather than blindly retry. Only an approved still may be sent; the finished soundtrack remains local. |
 | Generation preset | One 1280x720, five-second, image-to-video micro-action per request; no generated audio | The documented example establishes this request shape, not character continuity, start/end-frame conditioning, seed reproducibility, matte/alpha, or a complete scene. Composition/parallax supplies the rest of the 30–60 second scene. |
+
+V06 validation update — 2026-09-10: the selected ProRes 422/PCM MOV path now
+encodes resolver-backed owned scenes at 320×180 mono/one second and 1920×1080
+stereo/twelve seconds, 30 fps. The native writer delivers 32-bit float PCM and
+compares decoded source/output PCM sample digests exactly. First/final decoded
+frames, streams, timing, provenance, cancellation and collision-safe paired
+publication are checked. Evidence lives at
+`~/.codex/melotrail-terra/v06-repair-evidence/`; see [Validation](VALIDATION.md).
+This extends the short V01 codec proof without selecting another preset or
+claiming a production full-song pilot, approved TABI assets, Logic listening
+approval, signing/distribution rights, generation budget or public upload.
 
 ### Provider constraints and rights gate
 

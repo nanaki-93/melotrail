@@ -74,7 +74,7 @@ swift run --package-path companion melotrail-tabi-animation preview-frame previe
 
 It uses the one soundtrack player to seek to the selected frame, then prints
 that frame's soundtrack time, scene IDs and actual rendered dimensions. V05b
-adds the first editor controls; V06 will consume the same plan and output
+adds the first editor controls; V06 consumes the same plan and output
 geometry for encoding.
 
 ## Native scene editor
@@ -192,4 +192,44 @@ disk limits and atomic publication to a new collision-safe filename. Pre-cancell
 jobs never launch; a dedicated process group contains ordinary child processes.
 Surviving children prevent publication and are stopped before job cleanup. Native
 regressions use a child fixture executable and owned MOV bytes. Actual episode
-encoding and stream/preview parity validation remain V06; no provider is called.
+encoding and stream/preview parity validation use the V06 API below; no provider is called.
+
+## Local episode encode
+
+V06 encodes the existing resolved composition with the exact `ScenePreviewStage`
+renderer and its digest-pinned finished soundtrack. The only delivery preset is
+ProRes 422/PCM MOV at the composition's integer frame rate. The soundtrack is
+decoded to 32-bit float PCM, with source/output sample digests verified exactly; it is never created from MIDI,
+trimmed, stretched, normalized, or mastered. The staged result must decode with
+one ProRes video stream and one PCM audio stream, match the declared geometry and
+frame cadence, retain the soundtrack timeline within one output frame, and keep
+first/final decoded pixels within the documented ProRes fidelity bound of the
+same preview renderer before it can be published. Both images are compared as
+sRGB RGB over black (mean absolute channel error ≤32 on a 0–255 scale).
+Transparent regions are flattened onto initialized black video pixels. Output
+dimensions must be even and fit within a 3840×2160 pixel budget.
+
+```sh
+swift run --package-path companion melotrail-tabi-animation encode episode-request.json
+```
+
+```json
+{
+  "composition": { "...": "the V04/V05 composition request" },
+  "outputWidth": 1920,
+  "outputHeight": 1080,
+  "outputDirectory": "/a/user-selected/output-directory",
+  "outputFileName": "tabi-journey.mov"
+}
+```
+
+The companion stages work only in its UUID directory below the selected output
+directory, validates before collision-safe no-overwrite publication, and writes
+a compact adjacent `.provenance.json` technical report with output, soundtrack
+and composition digests, decoded PCM sample digest, channels/sample rate and
+exact asset pins. Both names must be available;
+the report is reserved before the video becomes complete. The native API accepts
+bounded input/output/disk/time limits and cancellation, and reports encoding,
+finalizing, validating and publishing phases. Progress callbacks run synchronously
+and must return promptly. Audio/video samples are fed in timeline order. It never uploads, edits
+the soundtrack/assets/MIDI project, or labels a failed staging file complete.

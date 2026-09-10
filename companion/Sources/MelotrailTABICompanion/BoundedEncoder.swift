@@ -92,7 +92,7 @@ public final class EncoderCancellation: @unchecked Sendable {
         lock.unlock()
     }
 
-    fileprivate var isCancelled: Bool {
+    var isCancelled: Bool {
         lock.lock()
         defer { lock.unlock() }
         return cancelled
@@ -141,14 +141,22 @@ public final class OwnedOutputStager {
         try? FileManager.default.removeItem(at: jobDirectory)
     }
 
-    fileprivate func publish() throws -> URL {
+    fileprivate func publish(provenance: Data? = nil, beforePublication: () throws -> Void = {}) throws -> URL {
+        let reportStage = jobDirectory.appendingPathComponent("provenance.json")
+        if let provenance { try provenance.write(to: reportStage, options: .withoutOverwriting) }
         guard Self.isRegularFile(stagedOutputURL), try stagedSize() > 0 else { throw BoundedEncoderError.missingStagedOutput }
         let extensionPart = (desiredName as NSString).pathExtension
         let stem = (desiredName as NSString).deletingPathExtension
         for collision in 0..<10_000 {
+            try beforePublication()
             let suffix = collision == 0 ? "" : " (\(collision + 1))"
             let name = extensionPart.isEmpty ? "\(stem)\(suffix)" : "\(stem)\(suffix).\(extensionPart)"
             let destination = outputDirectory.appendingPathComponent(name)
+            let reportDestination = destination.deletingPathExtension().appendingPathExtension("provenance.json")
+            if provenance != nil && link(reportStage.path, reportDestination.path) != 0 {
+                if errno == EEXIST { continue }
+                throw BoundedEncoderError.publishFailed("Cannot reserve provenance report: \(String(cString: strerror(errno))).")
+            }
             if link(stagedOutputURL.path, destination.path) == 0 {
                 // The link is the publication point. Cleanup cannot make this completed,
                 // collision-safe output become a reported failure.
@@ -158,10 +166,26 @@ public final class OwnedOutputStager {
                 finished = !FileManager.default.fileExists(atPath: jobDirectory.path)
                 return destination
             }
-            if errno == EEXIST { continue }
-            throw BoundedEncoderError.publishFailed("Cannot publish a new output: \(String(cString: strerror(errno))).")
+            let publicationError = errno
+            if provenance != nil {
+                var stagedInfo = stat(), linkedInfo = stat()
+                if lstat(reportStage.path, &stagedInfo) == 0, lstat(reportDestination.path, &linkedInfo) == 0,
+                   stagedInfo.st_dev == linkedInfo.st_dev, stagedInfo.st_ino == linkedInfo.st_ino {
+                    _ = unlink(reportDestination.path)
+                }
+            }
+            if publicationError == EEXIST { continue }
+            throw BoundedEncoderError.publishFailed("Cannot publish a new output: \(String(cString: strerror(publicationError))).")
         }
         throw BoundedEncoderError.publishFailed("Could not claim a new output name after repeated collisions.")
+    }
+
+    /// Runs a technical check while the encoded bytes are still job-owned, then
+    /// claims a new final name. A failed check therefore cannot leave a file
+    /// that looks like a completed delivery in the selected directory.
+    public func validateAndPublish(provenance: Data? = nil, _ validation: (URL) throws -> Void) throws -> URL {
+        try validation(stagedOutputURL)
+        return try publish(provenance: provenance, beforePublication: { try validation(self.stagedOutputURL) })
     }
 
     fileprivate func stagedSize() throws -> Int64 {

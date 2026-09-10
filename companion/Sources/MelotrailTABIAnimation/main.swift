@@ -3,7 +3,7 @@ import Foundation
 import MelotrailTABICompanion
 
 func usage() -> Never {
-    fputs("Usage:\n  melotrail-tabi-animation import-manual-clip <library-root> <request.json>\n  melotrail-tabi-animation plan-timing <request.json>\n  melotrail-tabi-animation plan-scenes <request.json>\n  melotrail-tabi-animation preview-frame <request.json> <frame>\n", stderr)
+    fputs("Usage:\n  melotrail-tabi-animation import-manual-clip <library-root> <request.json>\n  melotrail-tabi-animation plan-timing <request.json>\n  melotrail-tabi-animation plan-scenes <request.json>\n  melotrail-tabi-animation preview-frame <request.json> <frame>\n  melotrail-tabi-animation encode <request.json>\n", stderr)
     exit(64)
 }
 
@@ -19,6 +19,20 @@ private struct PreviewFrameResult: Encodable {
     let sceneIDs: [String]
     let width: Int
     let height: Int
+}
+
+private struct EpisodeEncodeRequest: Decodable {
+    let composition: SceneCompositionRequest
+    let outputWidth: Int
+    let outputHeight: Int
+    let outputDirectory: String
+    let outputFileName: String
+}
+
+private struct EpisodeEncodeResult: Encodable {
+    let outputPath: String
+    let reportPath: String
+    let report: EpisodeTechnicalReport
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -74,6 +88,29 @@ do {
             sceneIDs: preview.sceneIDs,
             width: preview.image.width,
             height: preview.image.height
+        )))
+        FileHandle.standardOutput.write(Data("\n".utf8))
+        exit(0)
+    }
+    if arguments.count == 2, arguments[0] == "encode" {
+        let request = try decoder.decode(EpisodeEncodeRequest.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[1])))
+        let composition = try request.composition.resolve()
+        let library = try AssetLibrary(
+            manifestURL: URL(fileURLWithPath: request.composition.assetManifestPath),
+            libraryRoot: URL(fileURLWithPath: request.composition.assetLibraryPath)
+        )
+        let soundtrack = try FinishedSoundtrack.open(
+            url: URL(fileURLWithPath: request.composition.timing.soundtrackPath),
+            expectedSHA256: request.composition.timing.soundtrackSHA256
+        )
+        let output = try TABIEpisodeEncoder.encode(
+            composition: composition, library: library, soundtrack: soundtrack,
+            geometry: try PreviewOutputGeometry(width: request.outputWidth, height: request.outputHeight),
+            outputDirectory: URL(fileURLWithPath: request.outputDirectory, isDirectory: true),
+            outputFileName: request.outputFileName
+        )
+        FileHandle.standardOutput.write(try encoder.encode(EpisodeEncodeResult(
+            outputPath: output.outputURL.path, reportPath: output.reportURL.path, report: output.report
         )))
         FileHandle.standardOutput.write(Data("\n".utf8))
         exit(0)

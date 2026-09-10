@@ -1333,6 +1333,144 @@ do {
         _ = try SceneComposer.plan(timing: plan, library: library, request: SceneCompositionRequest(timing: request, assetLibraryPath: sceneLibrary.path, assetManifestPath: sceneManifestURL.path, sceneVersion: "train-v1", identityVersion: "tabi-v1", scenes: repetitive))
         require(false, "adjacent scenes must not monotonously repeat the same action episode")
     } catch SceneCompositionError.invalidRequest { }
+
+    // V06: encode the same resolver-backed scene plan at a delivery geometry.
+    // The existing one-second owned soundtrack keeps this a bounded technical
+    // fixture; it is not a claim about a full-song TABI pilot or its approval.
+    let episodeOutputRoot = FileManager.default.temporaryDirectory
+        .appendingPathComponent("TABI episode output β space \(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: episodeOutputRoot, withIntermediateDirectories: false)
+    directories.append(episodeOutputRoot)
+    let previousEpisode = episodeOutputRoot.appendingPathComponent("TABI episode β.mov")
+    let previousEpisodeBytes = Data("previous complete episode".utf8)
+    try previousEpisodeBytes.write(to: previousEpisode, options: .atomic)
+    let occupiedReport = episodeOutputRoot.appendingPathComponent("TABI episode β (2).provenance.json")
+    try previousEpisodeBytes.write(to: occupiedReport, options: .withoutOverwriting)
+    let outputGeometry = try PreviewOutputGeometry(width: 320, height: 180)
+    let episodeStarted = Date()
+    let encodedEpisode = try TABIEpisodeEncoder.encode(
+        composition: previewComposition, library: library, soundtrack: soundtrack,
+        geometry: outputGeometry, outputDirectory: episodeOutputRoot,
+        outputFileName: "TABI episode β.mov",
+        limits: EpisodeEncodingLimits(timeout: 30, maximumOutputBytes: 16 * 1024 * 1024, minimumAvailableBytes: 1)
+    )
+    print("episode-encode seconds=\(Date().timeIntervalSince(episodeStarted)) bytes=\((try encodedEpisode.outputURL.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0)")
+    require(encodedEpisode.outputURL.lastPathComponent == "TABI episode β (3).mov", "episode publication must preserve a previous complete collision")
+    let previousEpisodeAfter = try Data(contentsOf: previousEpisode)
+    require(previousEpisodeAfter == previousEpisodeBytes, "episode collision must preserve the prior complete output")
+    require(FileManager.default.fileExists(atPath: encodedEpisode.reportURL.path), "a complete episode must publish its compact provenance report")
+    require(encodedEpisode.report.videoCodec == "apcn" && encodedEpisode.report.audioCodec == "lpcm", "episode report must identify the selected ProRes/PCM preset")
+    require(encodedEpisode.report.width == 320 && encodedEpisode.report.height == 180 && encodedEpisode.report.frameRate == previewComposition.timing.frameRate, "episode report must retain preview/output geometry and cadence")
+    require(encodedEpisode.report.audioVideoDriftSeconds <= 1.0 / Double(previewComposition.timing.frameRate), "episode report must retain the soundtrack timeline within one output frame")
+    let oldReportAfter = try Data(contentsOf: occupiedReport)
+    require(oldReportAfter == previousEpisodeBytes, "sidecar-only collisions must preserve the existing report and choose another paired name")
+    require(!FileManager.default.fileExists(atPath: episodeOutputRoot.appendingPathComponent("TABI episode β.provenance.json").path), "failed output reservation must remove only its own report link")
+    let decodedReport = try JSONDecoder().decode(EpisodeTechnicalReport.self, from: Data(contentsOf: encodedEpisode.reportURL))
+    let encodedDigest = try AssetDigest.sha256(of: encodedEpisode.outputURL)
+    require(decodedReport == encodedEpisode.report && decodedReport.outputSHA256 == encodedDigest, "published provenance must describe the actual delivered bytes")
+    require(decodedReport.assetPins == previewComposition.assetPins && decodedReport.compositionSHA256.count == 64, "provenance must retain exact asset pins and composition digest")
+    require(decodedReport.firstFrameMeanAbsoluteError <= 32 && decodedReport.finalFrameMeanAbsoluteError <= 32, "transparent colored fixture must encode without uninitialized buffer noise")
+    if let evidence = ProcessInfo.processInfo.environment["MELOTRAIL_EPISODE_EVIDENCE"] {
+        let destination = URL(fileURLWithPath: evidence, isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: encodedEpisode.outputURL, to: destination.appendingPathComponent("episode.mov"))
+        try FileManager.default.copyItem(at: encodedEpisode.reportURL, to: destination.appendingPathComponent("episode.provenance.json"))
+        print("episode-evidence=\(destination.path)")
+    }
+    for phase in [EpisodeEncodingPhase.finalizing, .validating, .publishing] {
+        let cancellation = EncoderCancellation()
+        let name = "cancel-\(phase.rawValue).mov"
+        do {
+            _ = try TABIEpisodeEncoder.encode(composition: previewComposition, library: library, soundtrack: soundtrack,
+                geometry: outputGeometry, outputDirectory: episodeOutputRoot, outputFileName: name,
+                cancellation: cancellation, onProgress: { if $0 == phase { cancellation.cancel() } })
+            require(false, "cancellation at \(phase) must prevent publication")
+        } catch EpisodeEncodingError.cancelled { }
+        require(!FileManager.default.fileExists(atPath: episodeOutputRoot.appendingPathComponent(name).path), "late cancellation must leave no complete output")
+        require(!FileManager.default.fileExists(atPath: episodeOutputRoot.appendingPathComponent(name).deletingPathExtension().appendingPathExtension("provenance.json").path), "late cancellation must leave no published report")
+    }
+    for (name, limits) in [
+        ("oversized.mov", EpisodeEncodingLimits(maximumOutputBytes: 1, minimumAvailableBytes: 1)),
+        ("timeout.mov", EpisodeEncodingLimits(timeout: 0.000001, minimumAvailableBytes: 1)),
+        ("disk.mov", EpisodeEncodingLimits(minimumAvailableBytes: Int64.max))
+    ] {
+        do {
+            _ = try TABIEpisodeEncoder.encode(composition: previewComposition, library: library, soundtrack: soundtrack,
+                geometry: outputGeometry, outputDirectory: episodeOutputRoot, outputFileName: name, limits: limits)
+            require(false, "bounded encode must reject \(name)")
+        } catch BoundedEncoderError.outputTooLarge where name == "oversized.mov" {
+        } catch EpisodeEncodingError.timedOut where name == "timeout.mov" {
+        } catch BoundedEncoderError.insufficientDiskSpace where name == "disk.mov" { }
+        require(!FileManager.default.fileExists(atPath: episodeOutputRoot.appendingPathComponent(name).path), "failed limits must not publish a video")
+    }
+    let stagingParent = episodeOutputRoot.appendingPathComponent(".melotrail-tabi-staging", isDirectory: true)
+    require((try? FileManager.default.contentsOfDirectory(atPath: stagingParent.path).isEmpty) == true, "successful episode publication must clean its UUID staging directory")
+    let cancelledEpisode = EncoderCancellation(); cancelledEpisode.cancel()
+    do {
+        _ = try TABIEpisodeEncoder.encode(
+            composition: previewComposition, library: library, soundtrack: soundtrack,
+            geometry: outputGeometry, outputDirectory: episodeOutputRoot,
+            outputFileName: "cancelled.mov", cancellation: cancelledEpisode
+        )
+        require(false, "pre-cancelled episode work must not launch or publish")
+    } catch EpisodeEncodingError.cancelled { }
+    require(!FileManager.default.fileExists(atPath: episodeOutputRoot.appendingPathComponent("cancelled.mov").path), "cancelled episode work must not label an output complete")
+    let staleSceneryBytes = try Data(contentsOf: sceneryURL)
+    try Data("stale V06 asset input".utf8).write(to: sceneryURL, options: .atomic)
+    do {
+        _ = try TABIEpisodeEncoder.encode(
+            composition: previewComposition, library: library, soundtrack: soundtrack,
+            geometry: outputGeometry, outputDirectory: episodeOutputRoot, outputFileName: "stale.mov"
+        )
+        require(false, "encoding must reject a changed pinned scene input before publication")
+    } catch { }
+    try staleSceneryBytes.write(to: sceneryURL, options: .atomic)
+    require(!FileManager.default.fileExists(atPath: episodeOutputRoot.appendingPathComponent("stale.mov").path), "stale-input rejection must leave no complete episode output")
+    let soundtrackAfterEpisode = try Data(contentsOf: probe.outputURL)
+    require(soundtrackAfterEpisode == soundtrackBefore, "episode encoding must preserve the finished soundtrack bytes")
+    // Extend the owned tone to exercise sustained interleaved A/V delivery.
+    let extendedURL = episodeOutputRoot.appendingPathComponent("owned 12 seconds.wav")
+    let audioFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2)!
+    let tone = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: 44100 * 12)!
+    tone.frameLength = tone.frameCapacity
+    for channel in 0..<2 {
+        for sample in 0..<Int(tone.frameLength) {
+            tone.floatChannelData![channel][sample] = Float(sin(Double(sample) * 2 * .pi * Double(220 + channel * 110) / 44100) * 0.1)
+        }
+    }
+    do {
+        var fileSettings = audioFormat.settings
+        fileSettings[AVLinearPCMIsNonInterleaved] = false
+        let audioFile = try AVAudioFile(forWriting: extendedURL, settings: fileSettings)
+        try audioFile.write(from: tone)
+    }
+    let extendedSoundtrack = try FinishedSoundtrack.open(url: extendedURL, expectedSHA256: AssetDigest.sha256(of: extendedURL))
+    let extendedTiming = try SoundtrackScenePlanner.plan(soundtrack: extendedSoundtrack, midiManifest: nil,
+        alignment: BounceAlignment(leadIn: .zero, tail: .zero))
+    let template = previewInputs[0]
+    let extendedInput = SceneCompositionInput(timingSceneID: extendedTiming.scenes[0].id, interior: template.interior,
+        windowMask: template.windowMask, parallaxLayers: template.parallaxLayers)
+    let extendedRequest = SceneCompositionRequest(timing: request, assetLibraryPath: sceneLibrary.path,
+        assetManifestPath: sceneManifestURL.path, sceneVersion: "train-v1", identityVersion: "tabi-v1", scenes: [extendedInput])
+    let extendedPlan = try SceneComposer.plan(timing: extendedTiming, library: library, request: extendedRequest)
+    let sustainedStarted = Date()
+    let extendedEpisode = try TABIEpisodeEncoder.encode(composition: extendedPlan, library: library, soundtrack: extendedSoundtrack,
+        geometry: try PreviewOutputGeometry(width: 1920, height: 1080), outputDirectory: episodeOutputRoot, outputFileName: "owned sustained episode.mov",
+        limits: EpisodeEncodingLimits(timeout: 180, maximumOutputBytes: 512 * 1024 * 1024, minimumAvailableBytes: 1))
+    print("sustained-encode seconds=\(Date().timeIntervalSince(sustainedStarted)) bytes=\((try extendedEpisode.outputURL.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0)")
+    require(extendedEpisode.report.width == 1920 && extendedEpisode.report.height == 1080 && extendedEpisode.report.audioChannels == 2 && extendedEpisode.report.audioSampleRate == 44100 && extendedEpisode.report.audioSamplesSHA256.count == 64 && extendedEpisode.report.frameCount == 360 && abs(extendedEpisode.report.audioDurationSeconds - 12) < 0.02,
+        "sustained encode must retain all 360 frames and twelve seconds of continuous audio")
+    let extendedSourceDigest = try AssetDigest.sha256(of: extendedURL)
+    require(extendedSourceDigest == extendedSoundtrack.sha256, "sustained encode must preserve the source soundtrack")
+    if let evidence = ProcessInfo.processInfo.environment["MELOTRAIL_EPISODE_EVIDENCE"] {
+        let destination = URL(fileURLWithPath: evidence, isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: extendedEpisode.outputURL, to: destination.appendingPathComponent("sustained.mov"))
+        try FileManager.default.copyItem(at: extendedEpisode.reportURL, to: destination.appendingPathComponent("sustained.provenance.json"))
+        print("sustained-episode-evidence=\(destination.path)")
+    }
+    print("episode-encode-regression=PASS")
+
     let replacedSoundtrackURL = timingRoot.appendingPathComponent("preview-replaced-soundtrack.mov")
     try soundtrackBefore.write(to: replacedSoundtrackURL)
     let replacement = try FinishedSoundtrack.open(url: replacedSoundtrackURL, expectedSHA256: soundtrack.sha256)

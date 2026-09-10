@@ -73,6 +73,27 @@ fixtures stop real writing descendants. Noisy diagnostics/progress stay bounded,
 blocked callbacks cannot stall supervision, and credentials are redacted. This tests
 the process/publication boundary; V06 still owns episode codec/parity validation.
 
+V06's native episode regressions encode owned 320×180 mono (one second) and
+1920×1080 stereo (twelve seconds) compositions to ProRes 422/PCM MOV at 30fps.
+Decode first/final frames, normalize
+both images to sRGB RGB over black, and require mean absolute channel error ≤32
+on the 0–255 scale. Verify one video/audio stream, dimensions/cadence, continuous
+PCM timestamps, duration and A/V drift within one frame. Compare decoded
+32-bit float PCM source/output sample digests exactly, retaining channel count
+and sample rate in provenance. Transparent pixels must
+not expose uninitialized encoder memory. Video and audio are fed in timeline
+order, with output-size/disk/deadline/cancel checks through finalization.
+Late cancellation, tiny timeout/output limits, insufficient disk, stale assets,
+Unicode/spaced names and video-only/report-only collisions must preserve sources
+and previous outputs and leave no completed failed delivery. Provenance records
+the output/soundtrack/composition digests and exact asset pins; the report is
+reserved before the video publication point. Set `MELOTRAIL_EPISODE_EVIDENCE` to
+an external directory to retain fresh MOV/report pairs from the native check.
+Repair evidence: `~/.codex/melotrail-terra/v06-repair-evidence/` (native log,
+retained outputs and MIDI test/build logs). These owned technical
+fixtures do not approve a full-song 1080p master, stereo Logic bounce, production
+TABI identity, musical quality, rights or upload; those remain V07/user gates.
+
 V03a uses fake providers only. Real concurrent processes and threads exercise identical
 requests, independent requests, in-flight/cost rejection, preserved provider IDs
 and directory aliases against one ledger; durable job and provider-call counts
