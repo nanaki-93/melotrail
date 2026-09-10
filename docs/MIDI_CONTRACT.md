@@ -272,3 +272,17 @@ complete compatible authored groove; it never decimates or rewrites individual
 authored hits. Phrase/neighbor/repeat inputs and the Drum transition-rule version
 remain in the scoped fingerprint, so only the declared affected Drum scopes go
 stale when a transition intent changes.
+
+M09a defines six `musical-repair-v1` plan adjustments. `leave more melody
+space` sets the selected Chords scope to sparse and subtracts 20 density points;
+`simplify piano` does the same with 35 points; and `lower piano register` selects
+the low Chords register. `reduce bass movement` sets only selected Bass sparse
+and subtracts 25 points; `calmer drums` sets only selected Drums sparse and
+subtracts 30 points. `smooth the transition` sets the selected occurrence's
+entry to gradual and exit to hold, so its bounded previous/current/next role
+scopes may change according to their declared neighbor inputs. All reductions
+floor at zero. A repair first creates exactly the resulting scoped invalidation
+preview without writing project state. It preserves source bytes, chord authority,
+candidate/export artifacts, acceptance references and locks. The later M09
+candidate/acceptance workflow is the only path that can publish a new candidate
+or alter an accepted selection.

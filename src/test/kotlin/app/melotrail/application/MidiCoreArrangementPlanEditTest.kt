@@ -13,6 +13,8 @@ import app.melotrail.project.ExportedSnapshotFile
 import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.MidiCoreAuthorityDimension
 import app.melotrail.project.MidiCoreCandidateStatus
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.AtomicWriteObserver
@@ -35,6 +37,107 @@ import org.junit.jupiter.api.io.TempDir
 
 class MidiCoreArrangementPlanEditTest {
     @TempDir lateinit var root: Path
+
+    @Test
+    fun `repair intents have bounded versioned plan settings`() {
+        val store = MidiCoreArtifactStore()
+        val session = confirmedSession(store)
+        val plan = requireNotNull(session.project.arrangementPlan)
+        val target = plan.occurrences.single { it.occurrenceId == "verse-1" }
+        val repairs = listOf(
+            MidiCoreMusicalRepairIntent.LEAVE_MORE_MELODY_SPACE to listOf(CandidateRole.CHORDS),
+            MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO to listOf(CandidateRole.CHORDS),
+            MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER to listOf(CandidateRole.CHORDS),
+            MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION to CandidateRole.entries.toList(),
+            MidiCoreMusicalRepairIntent.REDUCE_BASS_MOVEMENT to listOf(CandidateRole.BASS),
+            MidiCoreMusicalRepairIntent.CALMER_DRUMS to listOf(CandidateRole.DRUMS),
+        )
+
+        repairs.forEach { (intent, roles) ->
+            val proposal = MidiCoreMusicalRepairPlanner.propose(plan, "verse-1", intent)
+            val changed = proposal.plan.occurrences.single { it.occurrenceId == "verse-1" }
+            assertEquals(MidiCoreMusicalRepairSettings.VERSION, proposal.settings.version)
+            assertEquals("musical-repair-v1", proposal.settings.policyId)
+            assertEquals(roles, proposal.settings.changedRoles)
+            assertEquals("verse-1", proposal.settings.occurrenceId)
+            assertEquals(
+                plan.occurrences.filterNot { it.occurrenceId == "verse-1" },
+                proposal.plan.occurrences.filterNot { it.occurrenceId == "verse-1" },
+            )
+            when (intent) {
+                MidiCoreMusicalRepairIntent.LEAVE_MORE_MELODY_SPACE -> assertRoleChange(
+                    target, changed, CandidateRole.CHORDS, MidiCoreRoleActivity.SPARSE, target.setting(CandidateRole.CHORDS).density - 20,
+                )
+                MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO -> assertRoleChange(
+                    target, changed, CandidateRole.CHORDS, MidiCoreRoleActivity.SPARSE, target.setting(CandidateRole.CHORDS).density - 35,
+                )
+                MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER -> {
+                    assertEquals(MidiCoreRegisterPreference.LOW, changed.setting(CandidateRole.CHORDS).registerPreference)
+                    assertEquals(target.roleSettings.filterNot { it.role == CandidateRole.CHORDS }, changed.roleSettings.filterNot { it.role == CandidateRole.CHORDS })
+                }
+                MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION -> {
+                    assertEquals(app.melotrail.project.MidiCoreBoundaryIntent.GRADUAL_ENTRY, changed.entryIntent)
+                    assertEquals(app.melotrail.project.MidiCoreBoundaryIntent.HOLD, changed.exitIntent)
+                    assertEquals(target.roleSettings, changed.roleSettings)
+                }
+                MidiCoreMusicalRepairIntent.REDUCE_BASS_MOVEMENT -> assertRoleChange(
+                    target, changed, CandidateRole.BASS, MidiCoreRoleActivity.SPARSE, target.setting(CandidateRole.BASS).density - 25,
+                )
+                MidiCoreMusicalRepairIntent.CALMER_DRUMS -> assertRoleChange(
+                    target, changed, CandidateRole.DRUMS, MidiCoreRoleActivity.SPARSE, target.setting(CandidateRole.DRUMS).density - 30,
+                )
+            }
+        }
+
+        val transition = assertIs<MidiCoreMusicalRepairResult.Prepared>(
+            MidiCoreMusicalRepair(store).preview(
+                // The initial Intro already uses gradual/hold; choose the Outro so this
+                // regression exercises an actual bounded transition change.
+                PreviewMidiCoreMusicalRepair(session, "chorus-1", MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION),
+            ),
+        )
+        assertEquals(
+            // Invalidation previews expose their deterministic occurrence-ID/role order.
+            listOf("chorus-1", "verse-1").flatMap { occurrenceId ->
+                CandidateRole.entries.map { role -> occurrenceId to role }
+            },
+            transition.invalidation.affectedScopes.map { it.occurrenceId to it.role },
+        )
+    }
+
+    @Test
+    fun `repair preview identifies locked affected work without mutating accepted source or candidate bytes`() {
+        val store = MidiCoreArtifactStore()
+        var session = confirmedSession(store)
+        session = publish(store, session, CandidateRole.CHORDS, "locked-chords", "verse-1")
+        session = assertIs<MidiCoreCandidateLifecycleResult.Updated>(
+            MidiCoreCandidateLifecycle(store).accept(AcceptMidiCoreCandidate(session, "locked-chords", locked = true)),
+        ).session
+        val source = requireNotNull(session.project.sourceMidi)
+        val candidate = session.project.candidates.single { it.id == "locked-chords" }
+        val sourceBytes = Files.readAllBytes(store.verify(session.root, source.original))
+        val candidateBytes = Files.readAllBytes(store.verify(session.root, candidate.midi))
+        val acceptance = session.project.acceptances.single()
+        val projectFile = session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)
+        val beforePreview = Files.readAllBytes(projectFile)
+        val repair = MidiCoreMusicalRepair(store)
+
+        val preview = assertIs<MidiCoreMusicalRepairResult.Prepared>(
+            repair.preview(PreviewMidiCoreMusicalRepair(session, "verse-1", MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO)),
+        )
+        assertEquals(listOf("locked-chords"), preview.invalidation.staleCandidateIds)
+        assertEquals(listOf("locked-chords"), preview.lockedCandidateIds)
+        assertEquals(listOf("verse-1" to CandidateRole.CHORDS), preview.lockedScopes.map { it.occurrenceId to it.role })
+        assertContentEquals(beforePreview, Files.readAllBytes(projectFile))
+        val persisted = store.openProject(session.root)
+        assertEquals(session.project.revision, persisted.revision)
+        assertEquals(session.project.arrangementPlan, persisted.arrangementPlan)
+        assertEquals(MidiCoreCandidateStatus.ACCEPTED, persisted.candidates.single { it.id == "locked-chords" }.status)
+        assertEquals(acceptance, persisted.acceptances.single())
+        assertTrue(persisted.acceptances.single().locked)
+        assertContentEquals(sourceBytes, Files.readAllBytes(store.verify(session.root, source.original)))
+        assertContentEquals(candidateBytes, Files.readAllBytes(store.verify(session.root, candidate.midi)))
+    }
 
     @Test
     fun `confirmed purpose and phrase edits preserve protected source bytes`() {
@@ -380,4 +483,19 @@ class MidiCoreArrangementPlanEditTest {
             ),
         ).session
     }
+
+    private fun assertRoleChange(
+        before: app.melotrail.project.MidiCoreOccurrenceArrangementPlan,
+        after: app.melotrail.project.MidiCoreOccurrenceArrangementPlan,
+        role: CandidateRole,
+        activity: MidiCoreRoleActivity,
+        densityBeforeFloor: Int,
+    ) {
+        assertEquals(activity, after.setting(role).activity)
+        assertEquals(densityBeforeFloor.coerceAtLeast(0), after.setting(role).density)
+        assertEquals(before.roleSettings.filterNot { it.role == role }, after.roleSettings.filterNot { it.role == role })
+    }
+
+    private fun app.melotrail.project.MidiCoreOccurrenceArrangementPlan.setting(role: CandidateRole) =
+        roleSettings.single { it.role == role }
 }
