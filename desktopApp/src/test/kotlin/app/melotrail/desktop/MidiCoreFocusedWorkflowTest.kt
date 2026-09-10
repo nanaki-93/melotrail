@@ -34,8 +34,6 @@ import app.melotrail.audition.MidiAuditionPlaybackState
 import app.melotrail.audition.MidiAuditionPort
 import app.melotrail.audition.MidiAuditionResult
 import app.melotrail.audition.MidiAuditionState
-import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
-import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.midi.domain.MidiFindingCode
 import app.melotrail.project.AuthoritativeChordEvent
@@ -336,17 +334,15 @@ class MidiCoreFocusedWorkflowTest {
             assertEquals(1, workspace.state.value.project?.arrangementDrafts?.size)
             onNodeWithTag(MidiCoreVerifiedTimelineTags.ROOT).performScrollTo()
             captureFixture("arrange-top")
-            val candidateIdsBeforeRepair = workspace.state.value.project?.candidates.orEmpty().mapTo(mutableSetOf()) { it.id }
-            onNodeWithTag(MidiCoreArrangePageTags.REGENERATE_SECTION).performScrollTo().assertIsEnabled().performClick()
-            awaitWorkspaceSuccess("regenerate selected section")
-            val repairCandidates = workspace.state.value.project?.candidates.orEmpty().filterNot { it.id in candidateIdsBeforeRepair }
-            assertEquals(CandidateRole.entries, repairCandidates.map { it.role })
-            repairCandidates.forEach { candidate ->
-                val expectedRepairGeneratorVersion =
-                    "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}" +
-                        if (candidate.role == CandidateRole.CHORDS) "-comping-v1" else "-bass-drums-v1"
-                assertEquals(expectedRepairGeneratorVersion, candidate.generatorVersion)
-            }
+            val projectBeforeRepairPreview = checkNotNull(workspace.state.value.project)
+            onNodeWithTag(MidiCoreArrangePageTags.repair(app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO)).performScrollTo().assertIsEnabled().performClick()
+            awaitWorkspaceSuccess("preview selected section repair")
+            assertEquals(projectBeforeRepairPreview, workspace.state.value.project, "Repair preview must remain session-only until Apply")
+            assertNotNull(workspace.state.value.musicalRepair.prepared)
+            onNodeWithTag(MidiCoreArrangePageTags.APPLY_REPAIR).performScrollTo().assertIsEnabled()
+            captureFixture("arrange-repair-preview")
+            onNodeWithTag(MidiCoreArrangePageTags.CANCEL_REPAIR).performScrollTo().performClick()
+            assertEquals(null, workspace.state.value.musicalRepair.prepared)
             captureFixture("arrange")
 
             navigateTo(MidiCoreWorkspaceDestination.REVIEW)
@@ -432,7 +428,7 @@ class MidiCoreFocusedWorkflowTest {
                 preview.staleTargets.single { it.id == drums.id }.reasons)
 
             assertEquals(
-                listOf("arrange", "arrange-proposal", "arrange-top", "export", "midi", "project", "review", "review-top", "structure-harmony"),
+                listOf("arrange", "arrange-proposal", "arrange-repair-preview", "arrange-top", "export", "midi", "project", "review", "review-top", "structure-harmony"),
                 capturedFixtureNames(fixtureSet),
             )
         } finally {

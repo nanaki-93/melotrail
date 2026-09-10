@@ -325,6 +325,15 @@ at bar 2, lower-register intent and exact end at tick 3840, then save/reopen.
 Arrange buttons and final UI flow remain U05b/U05; musical and Logic approvals
 remain pending human evidence.
 
+U05b recovery evidence is retained at `~/.codex/melotrail-terra/u05b-repair-evidence`.
+Focused StylePreview, ArrangePage, Workspace and real-workflow checks execute
+with `--rerun-tasks`; full test and build runs also force execution. The one-bar
+fixture loops its real 1920-tick window without project writes. Three-size
+Arrange captures show scoped repair preview, Apply/Cancel and the persistent
+player. The failed-Apply regression distinguishes a saved plan from unaccepted
+alternatives and dispatches the same repair on Retry. These are technical checks;
+full Arrange completion remains U05 and human musical/Logic approval stays pending.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

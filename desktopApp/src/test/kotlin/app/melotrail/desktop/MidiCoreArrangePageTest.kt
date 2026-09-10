@@ -8,6 +8,8 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -255,6 +257,7 @@ class MidiCoreArrangePageTest {
         }
 
         onNodeWithContentDescription("Current playback target: Late Night style preview · Verse 1").assertExists()
+        onAllNodesWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertCountEquals(1)
     }
 
     @Test
@@ -361,12 +364,12 @@ class MidiCoreArrangePageTest {
     }
 
     @Test
-    fun `section repair and role controls retain the selected global style behind disclosure`() = runComposeUiTest {
+    fun `section repair previews a bounded contextual action and retains role controls behind disclosure`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent { MelotrailTheme { MidiCoreArrangePage(arrangeState(styleId = "late-night"), intents::add, {}) } }
 
-        onNodeWithTag(MidiCoreArrangePageTags.REGENERATE_SECTION).performScrollTo().assertIsEnabled().performClick()
-        assertEquals(MidiCoreWorkspaceIntent.RegenerateArrangementSection("verse-1", "late-night", 1L), intents.single())
+        onNodeWithTag(MidiCoreArrangePageTags.repair(app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO)).performScrollTo().assertIsEnabled().performClick()
+        assertEquals(MidiCoreWorkspaceIntent.PreviewMusicalRepair("verse-1", app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO), intents.single())
         intents.clear()
         onNodeWithTag(MidiCoreArrangePageTags.PROFILE_MENU).assertDoesNotExist()
         onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
@@ -380,6 +383,54 @@ class MidiCoreArrangePageTest {
         )
         onNodeWithTag(MidiCoreArrangePageTags.PROFILE_MENU).assertExists()
         onNodeWithTag(MidiCoreArrangePageTags.PATTERN_MENU).assertExists()
+    }
+
+    @Test
+    fun `failed applied repair labels saved plan and retries the exact repair`() = runComposeUiTest {
+        val initial = arrangeState(styleId = "late-night")
+        val project = requireNotNull(initial.project)
+        val plan = app.melotrail.project.MidiCoreArrangementPlan(
+            version = 1,
+            sharedGroove = app.melotrail.project.MidiCoreSharedGrooveIntent(
+                app.melotrail.project.MidiCoreGrooveFeel.STRAIGHT,
+                app.melotrail.project.MidiCoreGrooveSubdivision.EIGHTH,
+                app.melotrail.project.MidiCoreGrooveDrive.STEADY,
+            ),
+            occurrences = requireNotNull(project.authority).occurrences.map { occurrence ->
+                app.melotrail.project.MidiCoreOccurrenceArrangementPlan(
+                    occurrence.id, app.melotrail.project.MidiCoreArrangementPurpose.VERSE,
+                    "phrase-${occurrence.id}", "repeat-${occurrence.id}", 1, 50,
+                    CandidateRole.entries.map { role -> app.melotrail.project.MidiCoreRolePlanSettings(
+                        role, app.melotrail.project.MidiCoreRoleActivity.SUPPORTING, 50,
+                        app.melotrail.project.MidiCoreRegisterPreference.MID,
+                    ) },
+                    app.melotrail.project.MidiCoreBoundaryIntent.NONE, app.melotrail.project.MidiCoreBoundaryIntent.NONE,
+                )
+            },
+        )
+        val before = project.copy(arrangementPlan = plan)
+        val proposal = app.melotrail.application.MidiCoreMusicalRepairPlanner.propose(
+            plan, "verse-1", app.melotrail.application.MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO,
+        )
+        val after = before.copy(arrangementPlan = proposal.plan)
+        val prepared = app.melotrail.application.MidiCoreMusicalRepairResult.Prepared(
+            proposal,
+            app.melotrail.arrangement.core.MidiCoreInvalidationPlanner.preview(
+                MidiCoreAuthorityHasher.from(before), MidiCoreAuthorityHasher.from(after),
+            ), emptyList(), emptyList(),
+        )
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent { MelotrailTheme { MidiCoreArrangePage(
+            initial.copy(project = after, musicalRepair = MidiCoreMusicalRepairUiState(
+                prepared = prepared, applied = true, noResultReason = "No distinct alternatives.",
+            )), intents::add, {},
+        ) } }
+        onNodeWithText("Repair plan saved · alternatives not accepted").performScrollTo().assertExists()
+        onNodeWithText("Repair preview · not saved").assertDoesNotExist()
+        onNodeWithTag(MidiCoreArrangePageTags.APPLY_REPAIR).performScrollTo().performClick()
+        assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.ApplyMusicalRepair), intents)
+        onNodeWithTag(MidiCoreArrangePageTags.CANCEL_REPAIR).performClick()
+        assertEquals(MidiCoreWorkspaceIntent.CancelMusicalRepair, intents.last())
     }
 
     @Test

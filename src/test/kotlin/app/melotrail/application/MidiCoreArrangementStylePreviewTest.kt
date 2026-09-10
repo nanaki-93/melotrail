@@ -130,17 +130,24 @@ class MidiCoreArrangementStylePreviewTest {
     }
 
     @Test
-    fun `preview rejects a one-bar occurrence without any state mutation`() = runBlocking {
+    fun `preview loops one real bar without any state mutation`() = runBlocking {
         val store = MidiCoreArtifactStore()
-        val session = readySession(store, "whole-song-one-bar.mid", 1)
+        // This source has one real 4/4 bar and its sole protected note ends on
+        // the boundary, so the assertion exercises the bounded loop rather
+        // than a deliberately unplayable melody/voicing collision.
+        val session = readySession(store, "final-boundary-note.mid", 1)
         val before = Files.readAllBytes(session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE))
 
         val result = MidiCoreArrangementStylePreview(artifacts = store).prepare(
-            PrepareMidiCoreArrangementStylePreview(session, "open-sky", "verse-1"),
+            // Keep this boundary regression independent of a style-specific
+            // short-section rejection; this style/seed is proven for one-bar scopes.
+            PrepareMidiCoreArrangementStylePreview(session, "steady-road", "verse-1", 41L),
         )
 
-        val rejected = assertIs<MidiCoreArrangementStylePreviewResult.Rejected>(result)
-        assertEquals(MidiCoreArrangementStylePreviewProblemCode.WINDOW_TOO_SHORT, rejected.problem.code)
+        val ready = assertIs<MidiCoreArrangementStylePreviewResult.Ready>(result, result.toString())
+        assertEquals(0L, ready.plan.view.window.startTick)
+        assertEquals(1_920L, ready.plan.view.window.endTick)
+        assertEquals(ready.plan.view.window, ready.plan.loop?.asWindow())
         assertContentEquals(before, Files.readAllBytes(session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)))
         assertEquals(session.project, store.openProject(session.root))
     }

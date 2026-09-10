@@ -111,7 +111,7 @@ sealed interface MidiCoreArrangementStylePreviewResult {
 data class MidiCoreArrangementStylePreviewCacheStats(val hits: Int, val misses: Int, val entries: Int)
 
 /**
- * Creates an exact two-to-four-bar MIDI preview for one style and occurrence.
+ * Creates an exact one-to-four-bar MIDI preview for one style and occurrence.
  * It reads immutable source/project evidence, calls only the pure role engines,
  * and keeps the result in memory for the persistent audition player. It never
  * creates candidates, artifacts, acceptance records, revisions, or audio.
@@ -227,8 +227,8 @@ class MidiCoreArrangementStylePreview(
         if (previewEnd - occurrence.startTick < MINIMUM_PREVIEW_BARS * ticksPerBar) {
             return PreviewLoad.Rejected(rejected(
                 MidiCoreArrangementStylePreviewProblemCode.WINDOW_TOO_SHORT,
-                "The selected section needs at least two complete bars for a style preview.",
-                "Choose a section with two or more bars, or extend this section in Structure & Harmony.",
+                "The selected section needs at least one complete bar for a style preview.",
+                "Choose a section with one or more complete bars, or extend this section in Structure & Harmony.",
             ))
         }
         val melody = try {
@@ -417,7 +417,8 @@ class MidiCoreArrangementStylePreview(
     private companion object {
         const val PREVIEW_GENERATOR_ID = "midi-core-style-preview"
         const val PREVIEW_BARS = 4L
-        const val MINIMUM_PREVIEW_BARS = 2L
+        /** A one-bar occurrence is a valid real loop; no source material is fabricated. */
+        const val MINIMUM_PREVIEW_BARS = 1L
         const val DEFAULT_CACHE_CAPACITY = 24
     }
 }

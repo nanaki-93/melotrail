@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import app.melotrail.application.MidiCoreCandidateReviewItem
+import app.melotrail.application.MidiCoreMusicalRepairIntent
 import app.melotrail.arrangement.core.MidiCoreArrangementStyle
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.arrangement.core.MidiCoreBassDrumCoordination
@@ -62,7 +63,10 @@ internal object MidiCoreArrangePageTags {
     const val CANCEL = "midi-core-arrange-cancel"
     const val RETRY_DRAFT = "midi-core-arrange-retry-draft"
     const val INSPECTOR = "midi-core-arrange-section-inspector"
-    const val REGENERATE_SECTION = "midi-core-arrange-regenerate-section"
+    const val REPAIR = "midi-core-arrange-repair"
+    const val REPAIR_PREFIX = "midi-core-arrange-repair-"
+    const val APPLY_REPAIR = "midi-core-arrange-apply-repair"
+    const val CANCEL_REPAIR = "midi-core-arrange-cancel-repair"
     const val ADVANCED = "midi-core-arrange-advanced"
     const val ROLE_PREFIX = "midi-core-arrange-role-"
     const val PROFILE_MENU = "midi-core-arrange-profile-menu"
@@ -80,6 +84,7 @@ internal object MidiCoreArrangePageTags {
     fun pattern(id: String): String = PATTERN_PREFIX + id
     fun candidate(id: String): String = CANDIDATE_PREFIX + id
     fun style(id: String): String = STYLE_PREFIX + id
+    fun repair(intent: MidiCoreMusicalRepairIntent): String = REPAIR_PREFIX + intent.name.lowercase()
 }
 
 internal data class MidiCoreArrangementScope(val role: CandidateRole, val occurrence: ProjectSectionOccurrence)
@@ -212,11 +217,11 @@ internal fun MidiCoreArrangeSelectedSectionInspector(
         previousOccurrence = mapOccurrences.getOrNull(selectedMapIndex - 1),
         nextOccurrence = mapOccurrences.getOrNull(selectedMapIndex + 1),
         occurrencePlan = project.arrangementPlan?.occurrences?.singleOrNull { it.occurrenceId == selectedOccurrence.id },
-        operation = state.operation,
-        styleId = state.stylePreview.selectedStyleId,
-        enabled = !state.busy,
+        state = state,
         onSelectOccurrence = { onIntent(MidiCoreWorkspaceIntent.SelectArrangementOccurrence(it.occurrence.id)) },
-        onRegenerate = { styleId -> onIntent(MidiCoreWorkspaceIntent.RegenerateArrangementSection(selectedOccurrence.id, styleId, state.arrangement.rootSeed)) },
+        onPreviewRepair = { intent -> onIntent(MidiCoreWorkspaceIntent.PreviewMusicalRepair(selectedOccurrence.id, intent)) },
+        onApplyRepair = { onIntent(MidiCoreWorkspaceIntent.ApplyMusicalRepair) },
+        onCancelRepair = { onIntent(MidiCoreWorkspaceIntent.CancelMusicalRepair) },
     )
 }
 
@@ -419,15 +424,15 @@ private fun ArrangeSelectedSectionInspector(
     previousOccurrence: MidiCoreSongMapOccurrence?,
     nextOccurrence: MidiCoreSongMapOccurrence?,
     occurrencePlan: MidiCoreOccurrenceArrangementPlan?,
-    operation: MidiCoreWorkspaceOperation,
-    styleId: String?,
-    enabled: Boolean,
+    state: MidiCoreWorkspaceState,
     onSelectOccurrence: (MidiCoreSongMapOccurrence) -> Unit,
-    onRegenerate: (String) -> Unit,
+    onPreviewRepair: (MidiCoreMusicalRepairIntent) -> Unit,
+    onApplyRepair: () -> Unit,
+    onCancelRepair: () -> Unit,
 ) {
     ArrangeCard(MidiCoreArrangePageTags.INSPECTOR, "${mapOccurrence.displayLabel} · selected section") {
         Text("${mapOccurrence.barRange} · ${mapOccurrence.chordSummary}", color = MusicWorkspaceTokens.TextSecondary)
-        ArrangeSelectedSectionPlan(occurrencePlan, mapOccurrence.roleStates, operation)
+        ArrangeSelectedSectionPlan(occurrencePlan, mapOccurrence.roleStates, state.operation)
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             OutlinedButton(
                 onClick = { previousOccurrence?.let(onSelectOccurrence) },
@@ -448,15 +453,114 @@ private fun ArrangeSelectedSectionInspector(
                 },
             ) { Text("Next") }
         }
-        Button(
-            onClick = { onRegenerate(requireNotNull(styleId)) }, enabled = enabled && styleId != null,
-            shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
-            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                testTag = MidiCoreArrangePageTags.REGENERATE_SECTION
-                contentDescription = if (styleId == null) "Choose a style before regenerating ${mapOccurrence.displayLabel}" else "Regenerate ${mapOccurrence.displayLabel} with the selected style"
-            },
-        ) { Text("Regenerate section") }
-        if (styleId == null) Text("Choose a style before repairing this section.", color = MusicWorkspaceTokens.TextSecondary)
+        ArrangeContextualRepair(
+            occurrence = mapOccurrence,
+            state = state,
+            onPreview = onPreviewRepair,
+            onApply = onApplyRepair,
+            onCancel = onCancelRepair,
+        )
+    }
+}
+
+/**
+ * A repair stays reviewable session state until Apply confirms the exact plan
+ * adjustment.  The controls deliberately expose only the bounded M09 intents;
+ * they never start the retired section-wide generation path.
+ */
+@Composable
+private fun ArrangeContextualRepair(
+    occurrence: MidiCoreSongMapOccurrence,
+    state: MidiCoreWorkspaceState,
+    onPreview: (MidiCoreMusicalRepairIntent) -> Unit,
+    onApply: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val repair = state.musicalRepair
+    val prepared = repair.prepared
+    Column(
+        Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.REPAIR },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+    ) {
+        if (prepared == null) {
+            Text("Repair this selected section", style = MaterialTheme.typography.titleSmall)
+            Text(
+                if (state.project?.arrangementPlan == null) "Confirm a song plan before previewing a bounded repair."
+                else "Preview an exact affected scope before generating any alternatives.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MusicWorkspaceTokens.TextSecondary,
+            )
+            repairActions(occurrence, state.busy, onPreview)
+        } else {
+            val settings = prepared.proposal.settings
+            val sameOccurrence = settings.occurrenceId == occurrence.occurrence.id
+            Text(
+                if (repair.applied) "Repair plan saved · alternatives not accepted"
+                else if (sameOccurrence) "Repair preview · not saved" else "Repair preview for ${settings.occurrenceId} · not saved",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(settings.description, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+            Text(
+                "Affected: ${prepared.invalidation.affectedScopes.joinToString { "${it.occurrenceId} ${it.role.displayName}" }}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MusicWorkspaceTokens.TextSecondary,
+            )
+            if (repair.noResultReason != null) {
+                Text(repair.noResultReason, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                Button(
+                    onClick = onApply,
+                    enabled = !state.busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreArrangePageTags.APPLY_REPAIR
+                        contentDescription = if (repair.applied) "Retry this exact musical repair" else "Apply this reviewed musical repair"
+                    },
+                ) { Text(if (repair.applied) "Retry repair" else "Apply repair") }
+                OutlinedButton(
+                    onClick = onCancel,
+                    enabled = !state.busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreArrangePageTags.CANCEL_REPAIR
+                        contentDescription = "Cancel this unaccepted musical repair"
+                    },
+                ) { Text("Cancel") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun repairActions(
+    occurrence: MidiCoreSongMapOccurrence,
+    busy: Boolean,
+    onPreview: (MidiCoreMusicalRepairIntent) -> Unit,
+) {
+    val actions = listOf(
+        MidiCoreMusicalRepairIntent.LEAVE_MORE_MELODY_SPACE to "Leave more melody space",
+        MidiCoreMusicalRepairIntent.SIMPLIFY_PIANO to "Simplify piano",
+        MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER to "Lower piano register",
+        MidiCoreMusicalRepairIntent.SMOOTH_TRANSITION to "Smooth transition",
+        MidiCoreMusicalRepairIntent.REDUCE_BASS_MOVEMENT to "Reduce bass movement",
+        MidiCoreMusicalRepairIntent.CALMER_DRUMS to "Calmer drums",
+    )
+    actions.chunked(2).forEach { row ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            row.forEach { (intent, label) ->
+                OutlinedButton(
+                    onClick = { onPreview(intent) },
+                    enabled = !busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreArrangePageTags.repair(intent)
+                        contentDescription = "$label for ${occurrence.displayLabel}"
+                    },
+                ) { Text(label, maxLines = 2) }
+            }
+            if (row.size == 1) Box(Modifier.weight(1f))
+        }
     }
 }
 
