@@ -271,6 +271,21 @@ and current accepted candidates retain precedence over a simultaneous draft rest
 Full workflow/preview repair behavior remains U05b/U05; these captures are
 engineering evidence, not a recorded human visual approval.
 
+M08's retained baseline/current comparison packages are at
+`~/.codex/melotrail-terra/m08-repair-evidence/comparison-packages/review.md`.
+An explicit uncached run of `MidiCoreComparisonHarnessTest`,
+`MidiCoreBassGeneratorTest` and `MidiCoreDrumGeneratorTest` generated three
+pairs: repeated chorus/bridge, 3/4 and 6/8. The coordinator verified all 30 MIDI
+file hashes, six export-manifest hashes and matching protected-source hashes.
+Frozen baseline metadata retains its historical authority hash; the harness
+compares current-contract authority without rewriting the baseline files.
+Each current package has `coordination.json` with terminal role states, planned
+rests and exact role-generator versions. The four-bar case preserves melody
+and all MIDI track end markers at tick 7680 while its final Bass/Drums scopes
+are planned rests from tick 5760. Focused/full/build logs and digest verification
+are retained beside the packages. Human A/B ratings and Logic playback remain
+Q01/Q02; these fixtures do not establish musical acceptance.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

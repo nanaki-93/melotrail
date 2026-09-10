@@ -12,6 +12,7 @@ import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
@@ -205,7 +206,50 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
             sourceUnchanged = sourceBefore.contentEquals(sourceAfter) && sourceBefore.contentEquals(Files.readAllBytes(preservedSource)),
         )
         Files.writeString(packageDirectory.resolve("comparison.json"), captureManifest(capture))
+        writeCoordinationEvidence(packageDirectory, current, completed.draft)
         return capture
+    }
+
+    /**
+     * Records the assembled candidate's terminal role state alongside its MIDI
+     * package. This is an M08 development observation, not an acceptance score:
+     * a planned rest is distinct from a failed or missing role candidate.
+     */
+    private fun writeCoordinationEvidence(
+        packageDirectory: Path,
+        session: MidiCoreProjectSession,
+        draft: app.melotrail.project.MidiCoreArrangementDraft,
+    ) {
+        val authority = requireNotNull(session.project.authority)
+        val plan = requireNotNull(session.project.arrangementPlan)
+        val terminal = plan.occurrences.last()
+        val terminalScope = authority.occurrences.last()
+        val restScopes = draft.plannedRests
+            .sortedWith(compareBy({ it.occurrenceId }, { it.role.ordinal }))
+            .map { "${it.occurrenceId}:${it.role.name}" }
+        val terminalRoles = CandidateRole.entries.associate { role ->
+            val inactive = terminal.roleSettings.single { it.role == role }.activity == MidiCoreRoleActivity.INACTIVE
+            role.name.lowercase() to if (inactive && "${terminal.occurrenceId}:${role.name}" in restScopes) "planned-rest" else "generated"
+        }
+        val generatorVersions = draft.candidateReferences
+            .map { reference -> requireNotNull(session.project.candidates.singleOrNull { it.id == reference.candidateId }) }
+            .groupBy { it.role }
+            .mapValues { (_, candidates) -> candidates.map { it.generatorVersion }.distinct().single() }
+        val lastMelodyNoteEndTick = JdkMidiReader().inspect(packageDirectory.resolve("melody.mid"))
+            .sequence.orderedEvents().filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>()
+            .maxOf(app.melotrail.midi.domain.MidiNoteEvent::endTick)
+
+        Files.writeString(packageDirectory.resolve("coordination.json"), buildString {
+            appendLine("{")
+            appendLine("  \"songEndTick\": ${authority.arrangementEndTick},")
+            appendLine("  \"lastMelodyNoteEndTick\": $lastMelodyNoteEndTick,")
+            appendLine("  \"terminalOccurrenceId\": \"${terminalScope.id}\",")
+            appendLine("  \"terminalPurpose\": \"${terminal.purpose}\",")
+            appendLine("  \"terminalRoles\": {${terminalRoles.entries.joinToString(", ") { (role, state) -> "\"$role\": \"$state\"" }}},")
+            appendLine("  \"plannedRestScopes\": [${restScopes.joinToString(", ") { "\"$it\"" }}],")
+            appendLine("  \"roleGeneratorVersions\": {${generatorVersions.entries.sortedBy { it.key.ordinal }.joinToString(", ") { (role, version) -> "\"${role.name.lowercase()}\": \"$version\"" }}}")
+            appendLine("}")
+        })
     }
 
     fun writeSideBySideReview(cases: List<M01ComparisonCase>, outputRoot: Path): M01ComparisonReview {
@@ -247,6 +291,7 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
         appendLine()
         appendLine("Development fixtures only; they are not unseen acceptance songs. The only supplied subjective result remains the user's 5/10 average (timing good; piano/melody fit and complete-song development inconsistent).")
         appendLine("Use the same preview mapping for each A/B pair: Melody + Chords = GM Acoustic Grand Piano, Bass = GM Electric Bass (finger), Drums = GM standard kit on channel 10. Compare the listed piano+melody loop before the full arrangement at the same role levels.")
+        appendLine("Each current candidate package also includes `coordination.json`, recording its terminal plan state, planned rests, and exact Bass/Drums generator identities. It is engineering evidence only, not a listening score.")
         appendLine()
         appendLine("| Case | Required loops | Baseline package | Candidate package | Captured source / authority / engine inputs | Baseline output hashes | Semantic result | Reviewer score & notes |")
         appendLine("| --- | --- | --- | --- | --- | --- | --- |")

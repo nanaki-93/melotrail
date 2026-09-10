@@ -14,6 +14,11 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 
 class MidiCoreComparisonHarnessTest {
     @TempDir lateinit var root: Path
@@ -34,6 +39,7 @@ class MidiCoreComparisonHarnessTest {
         assertTrue(form.contains("5/10 average"))
         assertTrue(form.contains("___ / 10"))
         assertFalse(form.contains("8/10"))
+        assertTrue(form.contains("coordination.json"))
         assertTrue(form.contains("Baseline: steady-road / seed 901 / `midi-core-style-v1` / style catalog 1"))
         assertTrue(form.contains("Candidate: steady-road / seed 901 / `midi-core-style-v5-patterns-v2-comping-v1` / style catalog 5"))
         review.baseline.filterIsInstance<M01ComparisonCapture.Published>().forEach { capture ->
@@ -53,6 +59,7 @@ class MidiCoreComparisonHarnessTest {
         review.candidate.filterIsInstance<M01ComparisonCapture.Published>().forEach { capture ->
             assertTrue(capture.sourceUnchanged, capture.case.id)
             assertTrue(capture.packageDirectory.startsWith(output.resolve("candidate")), capture.case.id)
+            assertTrue(Files.isRegularFile(capture.packageDirectory.resolve("coordination.json")), capture.case.id)
         }
     }
 
@@ -182,6 +189,37 @@ class MidiCoreComparisonHarnessTest {
         assertEquals("chorus-1", fixture.occurrences.first { it.sectionId == "chorus" }.id)
         assertEquals("chorus-2", fixture.occurrences.last { it.sectionId == "chorus" }.id)
         assertEquals(7680L, notes.maxOf(MidiNoteEvent::endTick))
+    }
+
+    @Test
+    fun `full song comparison candidate records coordinated terminal rests without shortening the melody`() {
+        val fixture = M01ComparisonFixtures.cases.single { it.id == "repeated-chorus-bridge" }
+        val capture = assertIs<M01ComparisonCapture.Published>(
+            MidiCoreComparisonHarness(root.resolve("work")).captureCandidate(fixture, root.resolve("output")),
+        )
+        val evidence = Json.parseToJsonElement(Files.readString(capture.packageDirectory.resolve("coordination.json"))).jsonObject
+        val terminalRoles = evidence.getValue("terminalRoles").jsonObject
+        val rests = evidence.getValue("plannedRestScopes").jsonArray.map { it.jsonPrimitive.content }.toSet()
+        val versions = evidence.getValue("roleGeneratorVersions").jsonObject
+        val bass = JdkMidiReader().inspect(capture.packageDirectory.resolve("bass.mid"))
+        val drums = JdkMidiReader().inspect(capture.packageDirectory.resolve("drums.mid"))
+        val melody = JdkMidiReader().inspect(capture.packageDirectory.resolve("melody.mid"))
+
+        assertTrue(capture.sourceUnchanged)
+        assertEquals(7_680L, evidence.getValue("songEndTick").jsonPrimitive.long)
+        assertEquals(7_680L, evidence.getValue("lastMelodyNoteEndTick").jsonPrimitive.long)
+        assertEquals("chorus-2", evidence.getValue("terminalOccurrenceId").jsonPrimitive.content)
+        assertEquals("OUTRO", evidence.getValue("terminalPurpose").jsonPrimitive.content)
+        assertEquals("planned-rest", terminalRoles.getValue("bass").jsonPrimitive.content)
+        assertEquals("planned-rest", terminalRoles.getValue("drums").jsonPrimitive.content)
+        assertTrue(setOf("chorus-2:BASS", "chorus-2:DRUMS").all(rests::contains))
+        assertTrue(versions.getValue("bass").jsonPrimitive.content.endsWith("-bass-drums-v1"))
+        assertTrue(versions.getValue("drums").jsonPrimitive.content.endsWith("-bass-drums-v1-drums-transitions-v2"))
+        assertEquals(7_680L, melody.sourceEndTick)
+        assertEquals(7_680L, bass.sourceEndTick)
+        assertEquals(7_680L, drums.sourceEndTick)
+        assertTrue(bass.sequence.orderedEvents().filterIsInstance<MidiNoteEvent>().none { it.orderingKey.tick >= 5_760L })
+        assertTrue(drums.sequence.orderedEvents().filterIsInstance<MidiNoteEvent>().none { it.orderingKey.tick >= 5_760L })
     }
 
     @Test
