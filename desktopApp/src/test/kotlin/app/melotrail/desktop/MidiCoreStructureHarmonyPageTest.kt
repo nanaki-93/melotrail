@@ -195,13 +195,13 @@ class MidiCoreStructureHarmonyPageTest {
             }
         }
 
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_TABS).performScrollTo().assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SHARED_SECTION_STRIP).assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT).assertTextContains("Verse one · bar 1 · beat 1–bar 2 · beat 1")
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.MELODY_CONTEXT).assertTextContains("2 protected melody notes overlap this section.")
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.sectionTab(1)).performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.sharedSection("chorus-1")).performClick()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT).assertTextContains("Chorus · bar 2 · beat 1–bar 3 · beat 1")
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, 0)).assertDoesNotExist()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.sectionTab(0)).performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.sharedSection("verse-1")).performClick()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, 0)).performTextReplacement("3")
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, 1)).performTextReplacement("1")
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.CHORD_SPANS).assertTextContains("C bars 1.1–1.3  ·  Dbmaj9/F bars 1.4–1.4")
@@ -300,6 +300,23 @@ class MidiCoreStructureHarmonyPageTest {
     }
 
     @Test
+    fun `new section selection never displays another occurrences chord editor`() = runComposeUiTest {
+        val state = authorityState()
+        val newSection = MidiCoreAuthorityDrafting.nextSection(
+            MidiCoreAuthorityDrafting.sectionDrafts(state.authority.confirmed, state.source.ppq),
+            state.source.sourceEndTick, state.source.ppq, state.authority.draft.meter,
+        )
+        setContent { MelotrailTheme { MidiCoreStructureHarmonyPage(state, {}, androidx.compose.ui.Modifier) } }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_SECTION).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SHARED_SECTION_STRIP).performScrollTo()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.sharedSection(newSection.occurrenceId)).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT)
+            .assertTextContains("Save sections, then select a section", substring = true)
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordSymbol(0, 0)).assertDoesNotExist()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_HARMONY).assertIsNotEnabled()
+    }
+
+    @Test
     fun `purpose and phrase suggestions require impact review before confirmation`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent {
@@ -341,8 +358,17 @@ class MidiCoreStructureHarmonyPageTest {
         listOf(1536 to 1024, 1280 to 900, 720 to 900).forEach { (width, height) ->
             androidx.compose.ui.test.v2.runSkikoComposeUiTest(size = androidx.compose.ui.geometry.Size(width.toFloat(), height.toFloat())) {
                 setContent { MelotrailTheme { MidiCoreWorkspaceShell(state = authorityStateWithConfirmedPlan(), initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY) } }
-                val folder = java.nio.file.Path.of("build/test-results/u04b-visual")
+                val folder = java.nio.file.Path.of("build/test-results/u04-visual")
                 java.nio.file.Files.createDirectories(folder)
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.SHARED_SECTION_STRIP).assertIsDisplayed()
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_STRUCTURE).assertIsDisplayed()
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.sectionName(0)).assertIsDisplayed()
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.sharedSection("chorus-1"))
+                    .performSemanticsAction(SemanticsActions.RequestFocus)
+                    .assertIsFocused()
+                    .performKeyInput { pressKey(Key.Enter) }
+                onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT).assertTextContains("Chorus", substring = true)
+                javax.imageio.ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", folder.resolve("${width}-shared-strip.png").toFile())
                 onNodeWithTag(MidiCoreStructureHarmonyPageTags.duplicateSection(0)).performScrollTo()
                 javax.imageio.ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", folder.resolve("${width}-sections.png").toFile())
                 onNodeWithTag(MidiCoreStructureHarmonyPageTags.removeSection(0)).assertIsDisplayed()
@@ -393,6 +419,8 @@ class MidiCoreStructureHarmonyPageTest {
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_SECTION).performScrollTo().performClick()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.section(3)).assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.STRUCTURE_FINDINGS).assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.TOTAL_RECOVERY).assertExists()
+        onNodeWithText("Remove a section or shorten a row by 1 bar; nothing has been saved.").assertExists()
         assertTrue(intents.isEmpty())
     }
 
@@ -440,6 +468,8 @@ class MidiCoreStructureHarmonyPageTest {
 
         onNodeWithText("Saving these changes will mark only the affected generated work as stale.").assertExists()
         onNodeWithText("Changes · timing").assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.UNSAVED_CHANGES).assertExists()
+        onNodeWithText("Unsaved changes").assertExists()
     }
 
     private fun authorityState(): MidiCoreWorkspaceState {

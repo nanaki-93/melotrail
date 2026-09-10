@@ -4,6 +4,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +15,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -78,7 +80,11 @@ internal object MidiCoreStructureHarmonyPageTags {
     const val PAD_ARRANGEMENT = "midi-core-arrangement-extent-pad"
     const val CANCEL_PADDING = "midi-core-arrangement-extent-cancel"
     const val STRUCTURE = "midi-core-structure"
+    const val UNSAVED_CHANGES = "midi-core-authority-unsaved-changes"
     const val BAR_SUMMARY = "midi-core-structure-bar-summary"
+    const val TOTAL_RECOVERY = "midi-core-structure-total-recovery"
+    const val SHARED_SECTION_STRIP = "midi-core-structure-shared-section-strip"
+    const val SHARED_SECTION_PREFIX = "midi-core-structure-shared-section-"
     const val SECTION_PREFIX = "midi-core-structure-section-"
     const val SECTION_NAME_PREFIX = "midi-core-structure-section-name-"
     const val SECTION_BARS_PREFIX = "midi-core-structure-section-bars-"
@@ -97,8 +103,6 @@ internal object MidiCoreStructureHarmonyPageTags {
     const val CONFIRM_ARRANGEMENT_INTENT = "midi-core-arrangement-intent-confirm"
     const val CANCEL_ARRANGEMENT_INTENT = "midi-core-arrangement-intent-cancel"
     const val HARMONY = "midi-core-harmony"
-    const val SECTION_TABS = "midi-core-harmony-section-tabs"
-    const val SECTION_TAB_PREFIX = "midi-core-harmony-section-tab-"
     const val SECTION_CONTEXT = "midi-core-harmony-section-context"
     const val MELODY_CONTEXT = "midi-core-harmony-melody-context"
     const val CHORD_SPANS = "midi-core-harmony-chord-spans"
@@ -121,6 +125,7 @@ internal object MidiCoreStructureHarmonyPageTags {
     const val RETRY = "midi-core-authority-retry"
 
     fun section(index: Int) = SECTION_PREFIX + index
+    fun sharedSection(id: String) = SHARED_SECTION_PREFIX + id
     fun sectionName(index: Int) = SECTION_NAME_PREFIX + index
     fun occurrenceBars(index: Int) = SECTION_BARS_PREFIX + index
     fun duplicateSection(index: Int) = DUPLICATE_SECTION_PREFIX + index
@@ -131,7 +136,6 @@ internal object MidiCoreStructureHarmonyPageTags {
     fun purpose(index: Int) = PURPOSE_PREFIX + index
     fun phrase(index: Int) = PHRASE_PREFIX + index
     fun progression(index: Int) = PROGRESSION_PREFIX + index
-    fun sectionTab(index: Int) = SECTION_TAB_PREFIX + index
     fun chordSymbol(sectionIndex: Int, rowIndex: Int) = "$CHORD_SYMBOL_PREFIX$sectionIndex-$rowIndex"
     fun chordDuration(sectionIndex: Int, rowIndex: Int) = "$CHORD_DURATION_PREFIX$sectionIndex-$rowIndex"
     fun removeChord(sectionIndex: Int, rowIndex: Int) = "$REMOVE_CHORD_PREFIX$sectionIndex-$rowIndex"
@@ -211,6 +215,43 @@ internal fun MidiCoreStructureHarmonyPage(
                 Text("Open or create a project, then import the complete melody MIDI.")
             }
         } else {
+            SharedSectionStrip(
+                sections = sections,
+                selectedOccurrenceId = selectedProgressionId,
+                ppq = ppq,
+                meter = meter,
+                onSelected = { selectedProgressionId = it },
+            )
+            UnsavedChangesCard(
+                pendingMutation = pendingMutation,
+                structureError = structureError,
+                preview = preview,
+            )
+            StructureCard(
+                state = state,
+                sections = sections,
+                ppq = ppq,
+                meter = meter,
+                expectedSongEndTick = expectedSongEndTick,
+                structureError = structureError,
+                structureDirty = structureDirty,
+                selectedOccurrenceId = selectedProgressionId,
+                onSectionSelected = { selectedProgressionId = it },
+                onSectionChanged = { index, section -> sections = sections.updated(index, section) },
+                onAddSection = {
+                    sections = sections + MidiCoreAuthorityDrafting.nextSection(sections, expectedSongEndTick, ppq, meter)
+                },
+                onDuplicateSection = { index -> sections = MidiCoreAuthorityDrafting.duplicateSection(sections, index) },
+                onSplitSection = { index -> sections = MidiCoreAuthorityDrafting.splitSection(sections, index) },
+                onMoveSection = { index, delta -> sections = sections.reordered(index, delta) },
+                onRemoveSection = { index -> sections = sections.filterIndexed { current, _ -> current != index } },
+                onSave = {
+                    parsedStructure?.let { parsed ->
+                        onIntent(MidiCoreWorkspaceIntent.ReplaceStructure(parsed.definitions, parsed.placements))
+                    }
+                },
+                enabled = !state.busy && state.authority.confirmed != null && parsedStructure != null && structureDirty,
+            )
             AuthorityCard(
                 state = state,
                 bpmText = bpmText,
@@ -247,29 +288,6 @@ internal fun MidiCoreStructureHarmonyPage(
                 onPad = { onIntent(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(true)) },
                 onCancelPadding = { onIntent(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(false)) },
             )
-            StructureCard(
-                state = state,
-                sections = sections,
-                ppq = ppq,
-                meter = meter,
-                expectedSongEndTick = expectedSongEndTick,
-                structureError = structureError,
-                structureDirty = structureDirty,
-                onSectionChanged = { index, section -> sections = sections.updated(index, section) },
-                onAddSection = {
-                    sections = sections + MidiCoreAuthorityDrafting.nextSection(sections, expectedSongEndTick, ppq, meter)
-                },
-                onDuplicateSection = { index -> sections = MidiCoreAuthorityDrafting.duplicateSection(sections, index) },
-                onSplitSection = { index -> sections = MidiCoreAuthorityDrafting.splitSection(sections, index) },
-                onMoveSection = { index, delta -> sections = sections.reordered(index, delta) },
-                onRemoveSection = { index -> sections = sections.filterIndexed { current, _ -> current != index } },
-                onSave = {
-                    parsedStructure?.let { parsed ->
-                        onIntent(MidiCoreWorkspaceIntent.ReplaceStructure(parsed.definitions, parsed.placements))
-                    }
-                },
-                enabled = !state.busy && state.authority.confirmed != null && parsedStructure != null && structureDirty,
-            )
             ArrangementIntentCard(
                 state = state,
                 onPreview = { onIntent(MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit(it)) },
@@ -288,7 +306,6 @@ internal fun MidiCoreStructureHarmonyPage(
                 defaultChord = state.authority.draft.key.spelling.symbol,
                 sourceEvidence = (state.visualEvidence?.source as? MidiCoreVisualEvidence.Available)?.value,
                 selectedProgressionId = selectedProgressionId,
-                onProgressionSelected = { selectedProgressionId = it },
                 onRowsChanged = { index, rows -> progressions = progressions.updated(index, progressions[index].copy(rows = rows)) },
                 onUseOneChord = { index ->
                     val occurrence = persistedAuthority?.occurrences?.singleOrNull { it.id == progressions[index].occurrenceId }
@@ -357,6 +374,87 @@ private fun ArrangementExtentCard(
                 modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
                     .semantics { testTag = MidiCoreStructureHarmonyPageTags.CANCEL_PADDING },
             ) { Text("Use source end") }
+        }
+    }
+}
+
+/** One selection control drives both the editable rows and the chord inspector. */
+@Composable
+private fun SharedSectionStrip(
+    sections: List<MidiCoreSectionDraft>,
+    selectedOccurrenceId: String?,
+    ppq: Int?,
+    meter: ProjectMeter,
+    onSelected: (String) -> Unit,
+) {
+    if (sections.isEmpty()) return
+    Card(
+        Modifier.fillMaxWidth().semantics {
+            testTag = MidiCoreStructureHarmonyPageTags.SHARED_SECTION_STRIP
+            contentDescription = "Section strip shared by the section rows and chord inspector"
+        },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            Text("SONG SECTIONS", color = MusicWorkspaceTokens.Primary, style = MaterialTheme.typography.labelLarge)
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
+            ) {
+                sections.forEachIndexed { index, section ->
+                    val selected = section.occurrenceId == selectedOccurrenceId
+                    val bars = section.barsText.toIntOrNull()?.takeIf { it > 0 }
+                    OutlinedButton(
+                        onClick = { onSelected(section.occurrenceId) },
+                        colors = workspaceSelectableButtonColors(selected),
+                        shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                        modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                            testTag = MidiCoreStructureHarmonyPageTags.sharedSection(section.occurrenceId)
+                            this.selected = selected
+                            contentDescription = buildString {
+                                append("Section ${index + 1}: ${section.name.ifBlank { "Unnamed section" }}")
+                                bars?.let { append(", $it bars") }
+                                if (selected) append(", selected")
+                            }
+                        },
+                    ) {
+                        Text("${index + 1} · ${section.name.ifBlank { "Section" }}${bars?.let { " · $it bars" }.orEmpty()}")
+                    }
+                }
+            }
+            val selected = sections.singleOrNull { it.occurrenceId == selectedOccurrenceId }
+            selected?.let { section ->
+                val position = sectionStripPosition(sections, section.occurrenceId, ppq, meter)
+                Text(
+                    "Selected · ${section.name.ifBlank { "Unnamed section" }}${position?.let { " · $it" }.orEmpty()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MusicWorkspaceTokens.TextSecondary,
+                )
+            }
+        }
+    }
+}
+
+/** Draft-only warning placed before any save action; it never reports a mutation as completed. */
+@Composable
+private fun UnsavedChangesCard(
+    pendingMutation: Boolean,
+    structureError: String?,
+    preview: MidiCoreInvalidationPreview?,
+) {
+    if (!pendingMutation) return
+    Card(
+        Modifier.fillMaxWidth().semantics { testTag = MidiCoreStructureHarmonyPageTags.UNSAVED_CHANGES },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.DisabledSurface),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            Text("Unsaved changes", fontWeight = FontWeight.SemiBold, color = MusicWorkspaceTokens.Warning)
+            when {
+                structureError != null -> Text("Fix the section total before saving. The protected melody, accepted work, and exports remain unchanged.")
+                preview == null -> Text("Review this draft before saving. The protected melody and current MIDI artifacts remain unchanged.")
+                preview.hasImpact -> Text("Saving affects ${preview.affectedScopes.size} generation scope${if (preview.affectedScopes.size == 1) "" else "s"}; ${preview.staleTargets.size} existing artifact${if (preview.staleTargets.size == 1) "" else "s"} will become stale. Accepted MIDI is preserved for review.")
+                else -> Text("This edit has no affected generated work. Saving still requires your explicit confirmation.")
+            }
         }
     }
 }
@@ -484,6 +582,8 @@ private fun StructureCard(
     expectedSongEndTick: Long?,
     structureError: String?,
     structureDirty: Boolean,
+    selectedOccurrenceId: String?,
+    onSectionSelected: (String) -> Unit,
     onSectionChanged: (Int, MidiCoreSectionDraft) -> Unit,
     onAddSection: () -> Unit,
     onDuplicateSection: (Int) -> Unit,
@@ -495,8 +595,8 @@ private fun StructureCard(
 ) {
     val requiredBars = MidiCoreAuthorityDrafting.sourceBarCount(expectedSongEndTick, ppq, meter)
     val enteredBars = sections.sumOf { it.barsText.toIntOrNull()?.coerceAtLeast(0) ?: 0 }
-    AuthorityPanel(MidiCoreStructureHarmonyPageTags.STRUCTURE, "3 · Sections") {
-        Text("Build the song from top to bottom. Each row needs only a name and its length in whole bars. Reordering changes accompaniment boundaries over the fixed melody timeline; it never moves the protected melody.", color = MusicWorkspaceTokens.TextSecondary)
+    AuthorityPanel(MidiCoreStructureHarmonyPageTags.STRUCTURE, "Sections") {
+        Text("Edit section names and bar lengths. Reordering changes accompaniment boundaries; the protected melody stays fixed.", color = MusicWorkspaceTokens.TextSecondary)
         Card(
             Modifier.fillMaxWidth().semantics {
                 testTag = MidiCoreStructureHarmonyPageTags.BAR_SUMMARY
@@ -510,14 +610,31 @@ private fun StructureCard(
             }
         }
         if (sections.isEmpty()) Text("Add the first section to begin.", color = MusicWorkspaceTokens.Warning)
+        totalRecoveryMessage(enteredBars, requiredBars)?.let { message ->
+            Text(
+                message,
+                modifier = Modifier.semantics { testTag = MidiCoreStructureHarmonyPageTags.TOTAL_RECOVERY },
+                style = MaterialTheme.typography.bodySmall,
+                color = MusicWorkspaceTokens.Warning,
+            )
+        }
         if (state.project?.arrangementPlan != null && structureDirty && structureError == null) {
             Text("Changing section identity or order clears the confirmed arrangement plan; your protected source and existing MIDI remain available for review.", color = MusicWorkspaceTokens.Warning)
         }
+        Button(
+            onClick = onSave,
+            enabled = enabled,
+            colors = workspacePrimaryButtonColors(),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+                .semantics { testTag = MidiCoreStructureHarmonyPageTags.SAVE_STRUCTURE },
+        ) { Text(if (structureError == null) "Save sections" else "Match the song length to continue") }
         sections.forEachIndexed { index, section ->
             SectionRow(
                 state = state,
                 index = index,
                 section = section,
+                selected = section.occurrenceId == selectedOccurrenceId,
+                onSelected = { onSectionSelected(section.occurrenceId) },
                 onChanged = { onSectionChanged(index, it) },
                 onDuplicate = { onDuplicateSection(index) },
                 onSplit = { onSplitSection(index) },
@@ -534,21 +651,17 @@ private fun StructureCard(
                 .semantics { testTag = MidiCoreStructureHarmonyPageTags.ADD_SECTION },
         ) { Text("+ Add section") }
         structureError?.let { BlockingNote(MidiCoreStructureHarmonyPageTags.STRUCTURE_FINDINGS, it) }
-        Button(
-            onClick = onSave,
-            enabled = enabled,
-            colors = workspacePrimaryButtonColors(),
-            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
-                .semantics { testTag = MidiCoreStructureHarmonyPageTags.SAVE_STRUCTURE },
-        ) { Text(if (structureError == null) "Save sections" else "Match the song length to continue") }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SectionRow(
     state: MidiCoreWorkspaceState,
     index: Int,
     section: MidiCoreSectionDraft,
+    selected: Boolean,
+    onSelected: () -> Unit,
     onChanged: (MidiCoreSectionDraft) -> Unit,
     onDuplicate: () -> Unit,
     onSplit: () -> Unit,
@@ -560,13 +673,19 @@ private fun SectionRow(
     Card(
         Modifier.fillMaxWidth().semantics {
             testTag = MidiCoreStructureHarmonyPageTags.section(index)
-            contentDescription = "Section ${index + 1}, ${section.name}, ${section.barsText} bars"
+            this.selected = selected
+            contentDescription = "Section ${index + 1}, ${section.name}, ${section.barsText} bars${if (selected) ", selected" else ""}"
         },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
     ) {
         Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                Text("${index + 1}", color = MusicWorkspaceTokens.Primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
+                OutlinedButton(
+                    onClick = onSelected,
+                    enabled = !state.busy,
+                    colors = workspaceSelectableButtonColors(selected),
+                    modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget),
+                ) { Text("${index + 1}") }
                 OutlinedTextField(
                     value = section.name,
                     onValueChange = { onChanged(section.copy(name = it, definitionName = it)) },
@@ -585,7 +704,10 @@ private fun SectionRow(
                     enabled = !state.busy,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            FlowRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+            ) {
                 OutlinedButton(
                     onClick = onMoveEarlier,
                     enabled = !state.busy && index > 0,
@@ -753,7 +875,6 @@ private fun HarmonyCard(
     defaultChord: String,
     sourceEvidence: MidiCoreVisualEvidenceAvailable?,
     selectedProgressionId: String?,
-    onProgressionSelected: (String) -> Unit,
     onRowsChanged: (Int, List<MidiCoreChordRowDraft>) -> Unit,
     onUseOneChord: (Int) -> Unit,
     onSave: () -> Unit,
@@ -765,31 +886,19 @@ private fun HarmonyCard(
             color = MusicWorkspaceTokens.TextSecondary,
         )
         if (structureDirty) Text("Save section changes first so each progression keeps the correct range.", color = MusicWorkspaceTokens.Warning)
-        val selectedIndex = progressions.indexOfFirst { it.occurrenceId == selectedProgressionId }.takeIf { it >= 0 } ?: 0
-        if (progressions.isNotEmpty()) {
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()).semantics { testTag = MidiCoreStructureHarmonyPageTags.SECTION_TABS },
-                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
-            ) {
-                progressions.forEachIndexed { index, progression ->
-                    val selected = index == selectedIndex
-                    OutlinedButton(
-                        onClick = { onProgressionSelected(progression.occurrenceId) },
-                        colors = workspaceSelectableButtonColors(selected),
-                        shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
-                        modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                            testTag = MidiCoreStructureHarmonyPageTags.sectionTab(index)
-                            this.selected = selected
-                            contentDescription = "${progression.sectionName} chord-duration inspector${if (selected) ", selected" else ""}"
-                        },
-                    ) { Text(progression.sectionName) }
-                }
-            }
+        val selectedIndex = progressions.indexOfFirst { it.occurrenceId == selectedProgressionId }
+        if (selectedIndex < 0 && progressions.isNotEmpty()) {
+            Text("Save sections, then select a section to edit its chords.",
+                modifier = Modifier.semantics { testTag = MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT },
+                color = MusicWorkspaceTokens.Warning)
+        }
+        if (selectedIndex >= 0) {
             val progression = progressions[selectedIndex]
             val occurrence = authority?.occurrences?.singleOrNull { it.id == progression.occurrenceId }
             val meter = authority?.meter
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface)) {
                 Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Text("Chord-duration editor · ${progression.sectionName}", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.Primary)
                     SectionHarmonyContext(occurrence, sourceEvidence, ppq, meter)
                     progression.rows.forEachIndexed { rowIndex, row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
@@ -1065,6 +1174,33 @@ private fun barSummary(entered: Int, required: Int?): String = when {
     entered == required -> "$entered / $required bars · Ready"
     entered < required -> "$entered / $required bars · ${required - entered} remaining"
     else -> "$entered / $required bars · ${entered - required} too many"
+}
+
+private fun totalRecoveryMessage(entered: Int, required: Int?): String? = when {
+    required == null || entered == required -> null
+    entered < required -> "${required - entered} bar${if (required - entered == 1) "" else "s"} still need a section. Add one or increase an existing row; nothing has been saved."
+    else -> "Remove a section or shorten a row by ${entered - required} bar${if (entered - required == 1) "" else "s"}; nothing has been saved."
+}
+
+private fun sectionStripPosition(
+    sections: List<MidiCoreSectionDraft>,
+    occurrenceId: String,
+    ppq: Int?,
+    meter: ProjectMeter,
+): String? {
+    val selectedIndex = sections.indexOfFirst { it.occurrenceId == occurrenceId }
+    val resolution = ppq ?: return null
+    if (selectedIndex < 0) return null
+    val barTicks = runCatching { MidiCoreOccurrenceTimeline.ticksPerBar(MidiPpq(resolution), meter) }.getOrNull() ?: return null
+    var precedingBars = 0L
+    for (section in sections.take(selectedIndex)) {
+        val bars = section.barsText.toLongOrNull()?.coerceAtLeast(0L) ?: return null
+        precedingBars = runCatching { Math.addExact(precedingBars, bars) }.getOrNull() ?: return null
+    }
+    val selectedBars = sections[selectedIndex].barsText.toLongOrNull()?.takeIf { it > 0L } ?: return null
+    val start = runCatching { Math.multiplyExact(precedingBars, barTicks) }.getOrNull() ?: return null
+    val end = runCatching { Math.addExact(start, Math.multiplyExact(selectedBars, barTicks)) }.getOrNull() ?: return null
+    return "${formatSongPosition(start, resolution, meter)}–${formatSongPosition(end, resolution, meter)}"
 }
 
 private fun barSummaryColor(entered: Int, required: Int?) = when {

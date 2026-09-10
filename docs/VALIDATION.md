@@ -295,7 +295,7 @@ U04b automated checks cover section identity operations, explicit purpose/phrase
 review and confirmation, invalid phrase entry, concurrent section/plan saves,
 and source/candidate/accepted-rest preservation after section removal and reopen.
 Section/purpose controls were inspected at 1536×1024, 1280×900 and 720×900.
-Full page-density/shared-strip work remains U04; human visual/Logic gates remain pending.
+Human visual/Logic gates remain pending.
 
 ## Retained historical Logic evidence
 
@@ -396,3 +396,12 @@ writable/new destination and semantic validation. Never rename an old candidate
 to make it current or overwrite a snapshot. For bad musical fit, report bars,
 melody+piano/full-song comparison, candidate IDs and audible reason rather than
 only “in tempo”. Unsupported old audio projects are intentionally not migrated.
+
+U04 recovery verifies the shared section/chord selection, unsaved impact and
+bar-total recovery. Native Compose captures at 1536×1024, 1280×900 and 720×900
+show first-viewport name editing and Save, with wrapped section actions reachable
+by scroll and keyboard. Selecting an unsaved new occurrence shows save guidance
+instead of another occurrence’s chord editor. The focused workflow and 411-test
+suite pass; reference 03 and actual captures were inspected. Evidence:
+`~/.codex/melotrail-terra/u04-repair-evidence/visual`. This is technical UI evidence,
+not final visual approval or a new Logic playback decision.
