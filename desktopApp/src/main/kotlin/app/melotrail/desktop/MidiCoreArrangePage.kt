@@ -164,7 +164,16 @@ internal fun MidiCoreArrangePage(
             state = state,
             occurrenceLabel = selectedMapOccurrence.displayLabel,
             onPreview = { style -> onIntent(MidiCoreWorkspaceIntent.PreviewArrangementStyle(style.id, selectedOccurrence.id)) },
-            onDraft = { onIntent(MidiCoreWorkspaceIntent.CreateArrangementDraft(requireNotNull(state.stylePreview.selectedStyleId), state.arrangement.rootSeed)) },
+            onDraft = { styleId ->
+                val proposal = state.arrangementPlanProposal.proposal
+                onIntent(
+                    if (proposal?.styleId == styleId) {
+                        MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft(styleId, state.arrangement.rootSeed)
+                    } else {
+                        MidiCoreWorkspaceIntent.CreateArrangementDraft(styleId, state.arrangement.rootSeed)
+                    },
+                )
+            },
             onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
             onRetry = { retry -> onIntent(retry) },
             onProposePlan = { styleId -> onIntent(MidiCoreWorkspaceIntent.ProposeArrangementPlan(styleId)) },
@@ -240,7 +249,7 @@ private fun ArrangeStyleGallery(
     state: MidiCoreWorkspaceState,
     occurrenceLabel: String,
     onPreview: (MidiCoreArrangementStyle) -> Unit,
-    onDraft: () -> Unit,
+    onDraft: (String) -> Unit,
     onCancel: () -> Unit,
     onRetry: (MidiCoreWorkspaceIntent.CreateArrangementDraft) -> Unit,
     onProposePlan: (String) -> Unit,
@@ -261,23 +270,33 @@ private fun ArrangeStyleGallery(
                     Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.DRAFT },
                     horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
                 ) {
+                    val planLabel = when (state.stylePreview.planState) {
+                        app.melotrail.application.MidiCoreArrangementStylePreviewPlanState.EPHEMERAL_STYLE_PROPOSAL -> "ephemeral plan"
+                        app.melotrail.application.MidiCoreArrangementStylePreviewPlanState.CONFIRMED -> "confirmed plan"
+                        null -> null
+                    }
+                    val proposalMatchesStyle = state.arrangementPlanProposal.proposal?.styleId == styleId
                     Text(
-                        state.stylePreview.cacheStatus?.let { "Preview ${it.name.lowercase()}" } ?: "Choose one of five styles",
+                        state.stylePreview.cacheStatus?.let { "Preview ${it.name.lowercase()}${planLabel?.let { label -> " · $label" }.orEmpty()}" }
+                            ?: "Choose one of five styles",
                         modifier = Modifier.weight(1f),
                         color = MusicWorkspaceTokens.TextSecondary,
                         maxLines = 2,
                     )
                     Button(
-                        onClick = onDraft,
+                        onClick = { styleId?.let(onDraft) },
                         enabled = styleId != null && !state.busy,
                         shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                         contentPadding = PaddingValues(horizontal = MusicWorkspaceTokens.Spacing.Sm),
                         modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                             testTag = MidiCoreArrangePageTags.CREATE_DRAFT
-                            contentDescription = styleId?.let { "Create full ${arrangementStyleDisplayName(it)} arrangement draft from $occurrenceLabel" }
+                            contentDescription = styleId?.let {
+                                if (proposalMatchesStyle) "Confirm the proposed plan and create full ${arrangementStyleDisplayName(it)} arrangement draft from $occurrenceLabel"
+                                else "Create full ${arrangementStyleDisplayName(it)} arrangement draft from $occurrenceLabel"
+                            }
                                 ?: "Choose a style before creating a full arrangement draft"
                         },
-                    ) { Text("Create full draft", maxLines = 1) }
+                    ) { Text(if (proposalMatchesStyle) "Confirm plan & create" else "Create full draft", maxLines = 1) }
                 }
                 Row(
                     Modifier.fillMaxWidth(),

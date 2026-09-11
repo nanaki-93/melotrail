@@ -5,6 +5,7 @@ import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
+import java.time.Instant
 
 /** Immutable target aggregate for a MIDI-only Melotrail project. */
 data class MidiCoreProject(
@@ -121,7 +122,7 @@ data class MidiCoreProject(
         require(acceptanceHistory.map(CandidateAcceptanceHistory::id).distinct().size == acceptanceHistory.size) {
             "Acceptance history IDs must be unique"
         }
-        require(acceptanceHistory == acceptanceHistory.sortedWith(compareBy(CandidateAcceptanceHistory::recordedAt))) {
+        require(acceptanceHistory == acceptanceHistory.sortedBy { Instant.parse(it.recordedAt) }) {
             "Acceptance history must be ordered chronologically"
         }
         acceptanceHistory.forEach { history ->
@@ -133,7 +134,7 @@ data class MidiCoreProject(
         require(arrangementDraftAcceptanceHistory.map(MidiCoreArrangementDraftAcceptanceHistory::id).distinct().size == arrangementDraftAcceptanceHistory.size) {
             "Arrangement draft acceptance history IDs must be unique"
         }
-        require(arrangementDraftAcceptanceHistory == arrangementDraftAcceptanceHistory.sortedBy(MidiCoreArrangementDraftAcceptanceHistory::recordedAt)) {
+        require(arrangementDraftAcceptanceHistory == arrangementDraftAcceptanceHistory.sortedBy { Instant.parse(it.recordedAt) }) {
             "Arrangement draft acceptance history must be ordered chronologically"
         }
         arrangementDraftAcceptanceHistory.forEach { history ->

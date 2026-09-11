@@ -633,6 +633,85 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `reviewed plan confirms and starts the full draft in the third Arrange action`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewArrangementStyle("late-night", "verse-1"))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft("late-night", 17L))
+        advanceUntilIdle()
+
+        assertEquals(1, fake.stylePreviewRequests.size)
+        assertEquals(1, fake.proposeArrangementPlanRequests.size)
+        assertEquals(1, fake.confirmArrangementPlanRequests.size)
+        assertEquals(1, fake.draftRequests.size)
+        assertEquals("late-night", fake.draftRequests.single().styleId)
+        assertEquals(17L, fake.draftRequests.single().rootSeed)
+        assertNull(viewModel.state.value.arrangementPlanProposal.proposal)
+        assertEquals(MidiCoreWorkspaceIntent.CreateArrangementDraft("late-night", 17L, "draft-incomplete"), viewModel.state.value.operation.retry)
+        viewModel.close()
+    }
+
+    @Test
+    fun `thrown generation after confirmation retains saved plan and retries only the draft`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val vm = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        vm.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root)); advanceUntilIdle()
+        vm.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night")); advanceUntilIdle()
+        fake.draftFailure = IllegalStateException("owned generation failure")
+        vm.accept(MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft("late-night", 17L)); advanceUntilIdle()
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, vm.state.value.operation.phase)
+        assertEquals(fake.persistedSession().project, vm.state.value.project)
+        assertNotNull(vm.state.value.project?.arrangementPlan)
+        assertNull(vm.state.value.arrangementPlanProposal.proposal)
+        val retry = kotlin.test.assertIs<MidiCoreWorkspaceIntent.CreateArrangementDraft>(vm.state.value.operation.retry)
+        assertNotNull(retry.draftId)
+        fake.draftFailure = null
+        vm.accept(retry); advanceUntilIdle()
+        assertEquals(1, fake.confirmArrangementPlanRequests.size)
+        assertEquals(fake.draftRequests.first().draftId, fake.draftRequests.last().draftId)
+        vm.close()
+    }
+
+    @Test
+    fun `cancel at draft preparation or playback boundary stops playback and keeps confirmed plan`() = runTest {
+        for (afterPlay in listOf(false, true)) {
+            val fake = FakeMidiCoreWorkspaceUseCases()
+            fake.seedPersistedSong()
+            val vm = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+            vm.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root)); advanceUntilIdle()
+            vm.accept(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night")); advanceUntilIdle()
+            val draft = app.melotrail.project.MidiCoreArrangementDraft(
+                "complete-draft", "late-night", 1, "a".repeat(64), 17L, emptyList(),
+                app.melotrail.project.MidiCoreArrangementDraftValidationSummary(1, 0, true, "b".repeat(64)),
+                "2026-09-11T00:00:00Z",
+                listOf(app.melotrail.project.MidiCorePlannedRest("verse-1", CandidateRole.CHORDS, "a".repeat(64))),
+            )
+            fake.draftGenerationResult = app.melotrail.application.MidiCoreArrangementDraftGenerationResult.Completed(
+                fake.persistedSession(), draft,
+                app.melotrail.application.MidiCoreArrangementDraftProgress(draft.id, 1, emptyList()),
+            )
+            val cancel = { vm.accept(MidiCoreWorkspaceIntent.CancelOperation) }
+            if (afterPlay) fake.audition.onPlay = cancel else fake.onPrepareDraft = cancel
+            vm.accept(MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft("late-night", 17L)); advanceUntilIdle()
+            assertEquals(MidiCoreWorkspaceOperationPhase.CANCELLED, vm.state.value.operation.phase)
+            assertEquals(MidiAuditionPlaybackState.STOPPED, fake.audition.state.playback)
+            assertEquals(MidiAuditionPlaybackState.STOPPED, vm.state.value.audition.playback)
+            assertEquals(fake.persistedSession().project, vm.state.value.project)
+            assertNotNull(vm.state.value.project?.arrangementPlan)
+            assertNull(vm.state.value.arrangementPlanProposal.proposal)
+            vm.close()
+        }
+    }
+
+    @Test
     fun `export collision preserves the current project and offers the same safe retry`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         fake.exportResult = MidiCoreMidiPackageExportResult.Rejected(
@@ -847,6 +926,8 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     var sourceImportResult: MidiCoreSourceImportResult? = null
     val openResults = ArrayDeque<MidiCoreProjectLifecycleResult>()
     var pendingGeneration: CompletableDeferred<MidiCoreCandidateGenerationResult>? = null
+    var draftFailure: Exception? = null
+    var onPrepareDraft: () -> Unit = {}
     val draftRequests = mutableListOf<app.melotrail.application.GenerateMidiCoreArrangementDraft>()
     var draftGenerationResult: app.melotrail.application.MidiCoreArrangementDraftGenerationResult =
         app.melotrail.application.MidiCoreArrangementDraftGenerationResult.Incomplete(
@@ -928,8 +1009,10 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     override fun prepareAcceptedArrangementAudition(request: app.melotrail.application.PrepareMidiCoreAcceptedArrangementAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
         app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
 
-    override fun prepareArrangementDraftAudition(request: app.melotrail.application.PrepareMidiCoreArrangementDraftAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
-        app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
+    override fun prepareArrangementDraftAudition(request: app.melotrail.application.PrepareMidiCoreArrangementDraftAudition): app.melotrail.application.MidiCoreReviewAuditionResult {
+        onPrepareDraft()
+        return app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
+    }
 
     override suspend fun previewArrangementStyle(
         request: app.melotrail.application.PrepareMidiCoreArrangementStylePreview,
@@ -1098,7 +1181,15 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         request: app.melotrail.application.GenerateMidiCoreArrangementDraft,
     ): app.melotrail.application.MidiCoreArrangementDraftGenerationResult {
         draftRequests += request
-        return draftGenerationResult
+        draftFailure?.let { throw it }
+        // The real draft service returns the exact session passed to it when
+        // no candidate is published. Keep this fake revision-accurate after a
+        // combined plan-confirmation/draft request.
+        return when (val result = draftGenerationResult) {
+            is app.melotrail.application.MidiCoreArrangementDraftGenerationResult.Incomplete -> result.copy(session = request.session)
+            is app.melotrail.application.MidiCoreArrangementDraftGenerationResult.Cancelled -> result.copy(session = request.session)
+            is app.melotrail.application.MidiCoreArrangementDraftGenerationResult.Completed -> result.copy(session = request.session)
+        }
     }
 
     override fun useArrangementDraft(request: app.melotrail.application.UseMidiCoreArrangementDraft): app.melotrail.application.MidiCoreArrangementDraftAcceptanceResult =
@@ -1158,6 +1249,7 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
 }
 
 private class FakeMidiAudition : MidiAuditionPort {
+    var onPlay: () -> Unit = {}
     private var current = MidiAuditionState()
     private val history = mutableListOf(current)
 
@@ -1184,6 +1276,7 @@ private class FakeMidiAudition : MidiAuditionPort {
         playProblem?.let { return MidiAuditionResult.Failed(it, current) }
         selectScope(plan)
         record(current.copy(playback = MidiAuditionPlaybackState.PLAYING, sessionId = 1L))
+        onPlay()
         return MidiAuditionResult.Applied(app.melotrail.audition.MidiAuditionAction.PLAY, current)
     }
 
@@ -1275,6 +1368,7 @@ private fun fakeStylePreviewResult(styleId: String = "open-sky"): app.melotrail.
         ),
         emptyList(),
         app.melotrail.application.MidiCoreArrangementStylePreviewCacheStatus.COLD,
+        app.melotrail.application.MidiCoreArrangementStylePreviewPlanState.EPHEMERAL_STYLE_PROPOSAL,
     )
 }
 

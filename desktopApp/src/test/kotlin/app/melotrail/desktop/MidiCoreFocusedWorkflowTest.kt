@@ -11,6 +11,11 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -43,6 +48,10 @@ import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Comparator
 import javax.imageio.ImageIO
 import javax.sound.midi.MetaMessage
@@ -53,6 +62,7 @@ import javax.sound.midi.ShortMessage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -60,12 +70,60 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreFocusedWorkflowTest {
     @Test
+    fun `ready authority reaches an audible full draft in three Arrange actions`() {
+        val temporaryRoot = Files.createTempDirectory("melotrail-u05-")
+        val projectRoot = temporaryRoot.resolve("project")
+        val artifacts = MidiCoreArtifactStore()
+        val audition = WorkflowFakeMidiAudition()
+        val workspace = newWorkspace(artifacts, audition, WorkflowPreferences())
+        fun apply(intent: MidiCoreWorkspaceIntent) {
+            workspace.accept(intent)
+            awaitWorkspaceCompletion(workspace, intent.toString())
+            assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, workspace.state.value.operation.phase,
+                "${intent}: ${workspace.state.value.blockers}")
+        }
+        try {
+            apply(MidiCoreWorkspaceIntent.CreateProject(projectRoot, "Arrange fixture"))
+            apply(MidiCoreWorkspaceIntent.ImportSource(writeSourceMidi(temporaryRoot.resolve("source.mid"), pitch = 84)))
+            apply(MidiCoreWorkspaceIntent.ConfirmAuthority)
+            apply(MidiCoreWorkspaceIntent.ReplaceStructure(
+                listOf(ProjectSectionDefinition("verse", "Verse")),
+                listOf(
+                    MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse 1", 1),
+                    MidiCoreBarOccurrencePlacement("verse-2", "verse", "Verse 2", 1),
+                ),
+            ))
+            apply(MidiCoreWorkspaceIntent.ReplaceHarmony(listOf(
+                AuthoritativeChordEvent("c1", "verse-1", "C", 0, 1920),
+                AuthoritativeChordEvent("c2", "verse-2", "F", 1920, 3840),
+            )))
+
+            // 1. hear the style with its ephemeral plan; 2. review the plan;
+            // 3. explicitly confirm it and create/play the full draft.
+            apply(MidiCoreWorkspaceIntent.PreviewArrangementStyle("steady-road", "verse-1", 41L))
+            assertEquals(app.melotrail.application.MidiCoreArrangementStylePreviewPlanState.EPHEMERAL_STYLE_PROPOSAL,
+                workspace.state.value.stylePreview.planState)
+            apply(MidiCoreWorkspaceIntent.ProposeArrangementPlan("steady-road"))
+            apply(MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft("steady-road", 41L))
+
+            assertNotNull(workspace.state.value.project?.arrangementPlan)
+            assertEquals(1, workspace.state.value.project?.arrangementDrafts?.size)
+            assertEquals(MidiAuditionPlaybackState.PLAYING, workspace.state.value.audition.playback)
+            assertTrue(workspace.state.value.audition.scope is app.melotrail.audition.MidiAuditionScope.ArrangementDraft)
+        } finally {
+            workspace.close()
+            deleteTree(temporaryRoot)
+        }
+    }
+
+    @Test
     fun `real musical repair covers neighboring scopes and atomically accepts matching dependencies`() {
         val temporaryRoot = Files.createTempDirectory("melotrail-m09-")
         val projectRoot = temporaryRoot.resolve("project")
         val artifacts = MidiCoreArtifactStore()
         val source = writeSourceMidi(temporaryRoot.resolve("source.mid"), pitch = 84)
-        val workspace = newWorkspace(artifacts, WorkflowFakeMidiAudition(), WorkflowPreferences())
+        val acceptanceClock = WorkflowAcceptanceClock()
+        val workspace = newWorkspace(artifacts, WorkflowFakeMidiAudition(), WorkflowPreferences(), acceptanceClock)
         fun apply(intent: MidiCoreWorkspaceIntent) {
             workspace.accept(intent)
             awaitWorkspaceCompletion(workspace, intent.toString())
@@ -136,8 +194,14 @@ class MidiCoreFocusedWorkflowTest {
             assertTrue(collided is app.melotrail.application.MidiCoreCandidateLifecycleResult.Rejected)
             assertTrue(validProjectBytes.contentEquals(Files.readAllBytes(projectFile)), "History collisions must leave the whole batch untouched")
 
+            acceptanceClock.next = Instant.parse("2027-01-01T00:00:00.123Z")
             apply(MidiCoreWorkspaceIntent.UseMusicalRepair(ids))
             val accepted = artifacts.openProject(projectRoot)
+            assertEquals(listOf("2027-01-01T00:00:00.123Z", "2027-01-01T00:00:00.123001Z"),
+                accepted.acceptanceHistory.takeLast(ids.size).take(2).map { it.recordedAt })
+            assertFailsWith<IllegalArgumentException> {
+                accepted.copy(acceptanceHistory = accepted.acceptanceHistory.reversed())
+            }
             assertEquals(generated.revision + 1, accepted.revision, "The complete repair must commit in one revision")
             assertTrue(ids.all { id -> accepted.acceptances.any { it.candidateId == id } })
             assertTrue(sourceBytes.contentEquals(Files.readAllBytes(projectRoot.resolve(requireNotNull(accepted.sourceMidi).original.path.value))))
@@ -322,16 +386,16 @@ class MidiCoreFocusedWorkflowTest {
             assertEquals(draftsBeforePlan, workspace.state.value.project?.arrangementDrafts)
             onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).performScrollTo().performClick()
             awaitWorkspaceSuccess("re-propose arrangement plan after cancellation")
-            onNodeWithTag(MidiCoreArrangePageTags.CONFIRM_PLAN).performClick()
-            awaitWorkspaceSuccess("explicitly confirm arrangement plan")
+            onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().assertIsEnabled()
+                .performSemanticsAction(SemanticsActions.RequestFocus)
+                .performKeyInput { pressKey(Key.Enter) }
+            awaitWorkspaceSuccess("explicitly confirm arrangement plan and create complete draft")
             onNodeWithTag(MidiCoreArrangePageTags.CONFIRMED_PLAN).performScrollTo().assertIsDisplayed()
             onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).assertDoesNotExist()
             assertNotNull(workspace.state.value.project?.arrangementPlan)
             assertEquals(sourceBeforePlan, workspace.state.value.project?.sourceMidi)
-            assertEquals(draftsBeforePlan, workspace.state.value.project?.arrangementDrafts)
-            onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().assertIsEnabled().performClick()
-            awaitWorkspaceSuccess("create complete arrangement draft")
             assertEquals(1, workspace.state.value.project?.arrangementDrafts?.size)
+            assertEquals(MidiAuditionPlaybackState.PLAYING, workspace.state.value.audition.playback)
             onNodeWithTag(MidiCoreVerifiedTimelineTags.ROOT).performScrollTo()
             captureFixture("arrange-top")
             val projectBeforeRepairPreview = checkNotNull(workspace.state.value.project)
@@ -493,9 +557,10 @@ private fun newWorkspace(
     artifacts: MidiCoreArtifactStore,
     audition: MidiAuditionPort,
     preferences: MidiCoreDesktopPreferences,
+    acceptanceClock: Clock = Clock.systemUTC(),
 ): MidiCoreWorkspaceViewModel {
     val lifecycle = MidiCoreProjectLifecycle(artifacts)
-    val candidateLifecycle = MidiCoreCandidateLifecycle(artifacts)
+    val candidateLifecycle = MidiCoreCandidateLifecycle(artifacts, clock = acceptanceClock)
     val generation = MidiCoreCandidateGeneration(artifacts = artifacts, lifecycle = candidateLifecycle)
     val review = MidiCoreCandidateReview(artifacts = artifacts, lifecycle = candidateLifecycle, generation = generation)
     val useCases = DefaultMidiCoreWorkspaceUseCases(
@@ -571,4 +636,11 @@ private class WorkflowFakeMidiAudition : MidiAuditionPort {
         current = next
         history += next
     }
+}
+
+private class WorkflowAcceptanceClock : Clock() {
+    var next: Instant = Instant.parse("2027-01-01T00:00:00Z")
+    override fun getZone(): ZoneId = ZoneOffset.UTC
+    override fun withZone(zone: ZoneId): Clock = this
+    override fun instant(): Instant = next.also { next = it.plusNanos(1_000) }
 }

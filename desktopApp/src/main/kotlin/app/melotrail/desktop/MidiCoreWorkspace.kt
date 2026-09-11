@@ -496,6 +496,8 @@ data class MidiCoreArrangementStyleUiState(
     val selectedStyleId: String? = null,
     val occurrenceId: String? = null,
     val cacheStatus: app.melotrail.application.MidiCoreArrangementStylePreviewCacheStatus? = null,
+    /** Explicitly distinguishes a session-only style plan from saved authority. */
+    val planState: app.melotrail.application.MidiCoreArrangementStylePreviewPlanState? = null,
     val key: app.melotrail.application.MidiCoreArrangementStylePreviewKey? = null,
 )
 
@@ -605,6 +607,11 @@ sealed interface MidiCoreWorkspaceIntent {
         val rootSeed: Long = 1L,
         val draftId: String? = null,
     ) : MidiCoreWorkspaceIntent
+    /** One explicit confirmation can save the reviewed plan and create its full draft. */
+    data class ConfirmPlanAndCreateArrangementDraft(
+        val styleId: String,
+        val rootSeed: Long = 1L,
+    ) : MidiCoreWorkspaceIntent
     data class RegenerateArrangementSection(
         val occurrenceId: String,
         val styleId: String,
@@ -707,6 +714,7 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.UseMusicalRepair -> useMusicalRepair(intent)
             is MidiCoreWorkspaceIntent.SelectArrangementOccurrence -> selectArrangementOccurrence(intent)
             is MidiCoreWorkspaceIntent.CreateArrangementDraft -> generateArrangementDraft(intent)
+            is MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft -> confirmPlanAndCreateArrangementDraft(intent)
             is MidiCoreWorkspaceIntent.RegenerateArrangementSection -> regenerateArrangementSection(intent)
             is MidiCoreWorkspaceIntent.UseArrangementDraft -> useArrangementDraft(intent)
             is MidiCoreWorkspaceIntent.UndoArrangementDraftAcceptance -> undoArrangementDraftAcceptance(intent)
@@ -1231,6 +1239,7 @@ class MidiCoreWorkspaceViewModel(
                                     selectedStyleId = intent.styleId,
                                     occurrenceId = intent.occurrenceId,
                                     cacheStatus = prepared.cacheStatus,
+                                    planState = prepared.planState,
                                     key = prepared.key,
                                 ),
                                 blockers = baseBlockers(session?.project),
@@ -1631,53 +1640,133 @@ class MidiCoreWorkspaceViewModel(
             "Creating ${intent.styleId.replace('-', ' ')} complete draft…",
             intent.copy(draftId = draftId),
         ) { cancellation ->
-            val result = useCases.generateArrangementDraft(
-                GenerateMidiCoreArrangementDraft(
-                    session = current,
-                    styleId = intent.styleId,
-                    rootSeed = intent.rootSeed,
-                    draftId = draftId,
-                    cancellation = app.melotrail.application.MidiCoreGenerationCancellation { cancellation.get() },
-                    onProgress = { progress -> publishDraftProgress(progress) },
-                ),
+            generateArrangementDraftOutcome(current, intent.copy(draftId = draftId), cancellation)
+        }
+    }
+
+    /** Confirming a reviewed proposal and creating its draft remains two explicit authorities but one musician action. */
+    private fun confirmPlanAndCreateArrangementDraft(intent: MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft) {
+        val current = requireSessionOrBlock() ?: return
+        val proposal = state.value.arrangementPlanProposal.proposal ?: return failImmediately(blocker(
+            MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED,
+            "There is no reviewed arrangement plan to create from.",
+            "Preview a style and propose its whole-song plan first.",
+        ))
+        if (proposal.styleId != intent.styleId) return failImmediately(blocker(
+            MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT,
+            "The selected style no longer matches the reviewed arrangement plan.",
+            "Preview and propose the selected style again before creating its full draft.",
+        ))
+        val draftIntent = MidiCoreWorkspaceIntent.CreateArrangementDraft(intent.styleId, intent.rootSeed, "draft-${java.util.UUID.randomUUID()}")
+        startOperation(
+            MidiCoreWorkspaceOperationKind.DRAFT_GENERATION,
+            "Confirming plan and creating ${intent.styleId.replace('-', ' ')} complete draft…",
+            intent,
+        ) { cancellation ->
+            when (val confirmed = useCases.confirmArrangementPlan(ConfirmMidiCoreArrangementPlanProposal(current, proposal))) {
+                is MidiCoreArrangementPlanProposalResult.Confirmed -> {
+                    val outcome = try {
+                        generateArrangementDraftOutcome(confirmed.session, draftIntent, cancellation)
+                    } catch (error: Exception) {
+                        if (error is CancellationException) throw error
+                        val saved = useCases.readCurrent(confirmed.session.root) ?: confirmed.session
+                        failure(
+                            blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+                                "The plan was saved, but creating or playing its draft failed.",
+                                "Retry the saved draft; the plan does not need confirmation again.", error.javaClass.simpleName),
+                            if (saved.project.arrangementDrafts.any { it.id == draftIntent.draftId })
+                                MidiCoreWorkspaceIntent.PlayArrangementDraft(requireNotNull(draftIntent.draftId)) else draftIntent,
+                            saved,
+                        )
+                    }
+                    when (outcome) {
+                        is WorkspaceOutcome.Success -> outcome.copy(apply = combineApply(outcome.apply) {
+                            _state.value = _state.value.copy(arrangementPlanProposal = MidiCoreArrangementPlanProposalUiState())
+                        })
+                        is WorkspaceOutcome.Failure -> outcome.copy(apply = combineApply(outcome.apply) {
+                            _state.value = _state.value.copy(arrangementPlanProposal = MidiCoreArrangementPlanProposalUiState())
+                        })
+                        is WorkspaceOutcome.Cancelled -> outcome.copy(apply = combineApply(outcome.apply) {
+                            _state.value = _state.value.copy(arrangementPlanProposal = MidiCoreArrangementPlanProposalUiState())
+                        })
+                    }
+                }
+                is MidiCoreArrangementPlanProposalResult.Rejected -> failure(arrangementPlanBlocker(confirmed.problem), intent)
+                else -> error("Arrangement-plan confirmation returned an unexpected result")
+            }
+        }
+    }
+
+    /** Create a complete draft, then immediately prepare and start its real complete-draft audition. */
+    private suspend fun generateArrangementDraftOutcome(
+        current: app.melotrail.application.MidiCoreProjectSession,
+        intent: MidiCoreWorkspaceIntent.CreateArrangementDraft,
+        cancellation: AtomicBoolean,
+    ): WorkspaceOutcome {
+        val result = useCases.generateArrangementDraft(
+            GenerateMidiCoreArrangementDraft(
+                session = current,
+                styleId = intent.styleId,
+                rootSeed = intent.rootSeed,
+                draftId = intent.draftId,
+                cancellation = app.melotrail.application.MidiCoreGenerationCancellation { cancellation.get() },
+                onProgress = { progress -> publishDraftProgress(progress) },
+            ),
+        )
+        return when (result) {
+            is MidiCoreArrangementDraftGenerationResult.Completed -> completeDraftPlaybackOutcome(result, intent, cancellation)
+            is MidiCoreArrangementDraftGenerationResult.Incomplete -> failure(
+                draftBlocker(result.problem, intent.copy(draftId = result.draftId)),
+                intent.copy(draftId = result.draftId),
+                result.session,
+                arrangementProgressApply(result.draftId, intent.styleId, intent.rootSeed),
             )
-            when (result) {
-                is MidiCoreArrangementDraftGenerationResult.Completed -> success(
-                    "Complete draft ready for Review.",
-                    result.session,
-                ) {
-                    _state.value = _state.value.copy(
-                        arrangement = _state.value.arrangement.copy(
-                            incompleteDraftId = null,
-                            incompleteDraftStyleId = null,
-                            rootSeed = intent.rootSeed,
-                        ),
-                    )
+            is MidiCoreArrangementDraftGenerationResult.Cancelled -> cancelled(
+                result.session,
+                arrangementProgressApply(result.draftId, intent.styleId, intent.rootSeed),
+            )
+        }
+    }
+
+    private fun completeDraftPlaybackOutcome(
+        result: MidiCoreArrangementDraftGenerationResult.Completed,
+        intent: MidiCoreWorkspaceIntent.CreateArrangementDraft,
+        cancellation: AtomicBoolean,
+    ): WorkspaceOutcome {
+        val draftApply = arrangementProgressApply(null, null, intent.rootSeed)
+        if (cancellation.get()) return cancelled(result.session, draftApply)
+        val retry = MidiCoreWorkspaceIntent.PlayArrangementDraft(result.draft.id)
+        return when (val prepared = useCases.prepareArrangementDraftAudition(PrepareMidiCoreArrangementDraftAudition(result.session, result.draft.id))) {
+            is MidiCoreReviewAuditionResult.Rejected -> failure(reviewAuditionBlocker(prepared.problem), retry, result.session, draftApply)
+            is MidiCoreReviewAuditionResult.Ready -> {
+                if (cancellation.get()) return cancelled(result.session, draftApply)
+                when (val played = useCases.audition.play(prepared.plan)) {
+                is MidiAuditionResult.Applied -> success("Complete draft is ready and playing.", result.session) {
+                    draftApply()
+                    _state.value = _state.value.copy(audition = played.state, blockers = baseBlockers(session?.project))
                 }
-                is MidiCoreArrangementDraftGenerationResult.Incomplete -> failure(
-                    draftBlocker(result.problem, intent.copy(draftId = result.draftId)),
-                    intent.copy(draftId = result.draftId),
+                is MidiAuditionResult.Failed -> failure(
+                    blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, played.problem.message, played.problem.nextAction, played.problem.code.name),
+                    retry,
                     result.session,
-                ) {
-                    _state.value = _state.value.copy(
-                        arrangement = _state.value.arrangement.copy(
-                            incompleteDraftId = result.draftId,
-                            incompleteDraftStyleId = intent.styleId,
-                            rootSeed = intent.rootSeed,
-                        ),
-                    )
-                }
-                is MidiCoreArrangementDraftGenerationResult.Cancelled -> cancelled(result.session) {
-                    _state.value = _state.value.copy(
-                        arrangement = _state.value.arrangement.copy(
-                            incompleteDraftId = result.draftId,
-                            incompleteDraftStyleId = intent.styleId,
-                            rootSeed = intent.rootSeed,
-                        ),
-                    )
+                    combineApply(draftApply) { _state.value = _state.value.copy(audition = played.state) },
+                )
                 }
             }
         }
+    }
+
+    private fun arrangementProgressApply(draftId: String?, styleId: String?, rootSeed: Long): () -> Unit = {
+        _state.value = _state.value.copy(arrangement = _state.value.arrangement.copy(
+            incompleteDraftId = draftId,
+            incompleteDraftStyleId = styleId,
+            rootSeed = rootSeed,
+        ))
+    }
+
+    private fun combineApply(first: (() -> Unit)?, second: () -> Unit): () -> Unit = {
+        first?.invoke()
+        second()
     }
 
     /** Marshal synchronous generation callbacks onto Compose state without admitting stale operations. */
@@ -1965,10 +2054,23 @@ class MidiCoreWorkspaceViewModel(
     private fun finishOperation(
         operationId: Long,
         admission: Admission,
-        outcome: WorkspaceOutcome,
+        rawOutcome: WorkspaceOutcome,
         persisted: MidiCoreProjectSession?,
     ) {
         if (state.value.operation.id != operationId) return
+        val cancellingDraft = state.value.operation.phase == MidiCoreWorkspaceOperationPhase.CANCELLING &&
+            state.value.operation.kind == MidiCoreWorkspaceOperationKind.DRAFT_GENERATION
+        val outcome = if (cancellingDraft) {
+            useCases.audition.stop()
+            val cancelledOutcome = when (rawOutcome) {
+                is WorkspaceOutcome.Success -> cancelled(rawOutcome.session, rawOutcome.apply)
+                is WorkspaceOutcome.Failure -> cancelled(rawOutcome.session, rawOutcome.apply)
+                is WorkspaceOutcome.Cancelled -> rawOutcome
+            }
+            cancelledOutcome.copy(apply = combineApply(cancelledOutcome.apply) {
+                _state.value = _state.value.copy(audition = useCases.audition.state)
+            })
+        } else rawOutcome
         if (state.value.operation.phase == MidiCoreWorkspaceOperationPhase.CANCELLING && outcome !is WorkspaceOutcome.Cancelled) {
             finishCancelled(operationId)
             return

@@ -33,6 +33,7 @@ import app.melotrail.midi.domain.MidiSemanticEventKind
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAcceptedDependency
 import app.melotrail.project.MidiCoreGeneratorInput
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineDispatcher
@@ -77,6 +78,15 @@ data class PrepareMidiCoreArrangementStylePreview(
 /** Cache evidence is explicit so callers and tests can distinguish cold and warm preview paths. */
 enum class MidiCoreArrangementStylePreviewCacheStatus { COLD, WARM }
 
+/** Identifies whether previewed arrangement intent is session-only or saved authority. */
+enum class MidiCoreArrangementStylePreviewPlanState {
+    /** The preview resolved the exact style proposal that has not yet been written. */
+    EPHEMERAL_STYLE_PROPOSAL,
+
+    /** The preview consumed the project's explicitly confirmed arrangement plan. */
+    CONFIRMED,
+}
+
 /** Preview failures are recoverable and deliberately contain no candidate or artifact reference. */
 data class MidiCoreArrangementStylePreviewProblem(
     val code: MidiCoreArrangementStylePreviewProblemCode,
@@ -102,6 +112,7 @@ sealed interface MidiCoreArrangementStylePreviewResult {
         val plan: MidiAuditionPlaybackPlan,
         val validation: List<MidiCoreRoleValidationReport>,
         val cacheStatus: MidiCoreArrangementStylePreviewCacheStatus,
+        val planState: MidiCoreArrangementStylePreviewPlanState,
     ) : MidiCoreArrangementStylePreviewResult
 
     data class Rejected(val problem: MidiCoreArrangementStylePreviewProblem) : MidiCoreArrangementStylePreviewResult
@@ -156,7 +167,13 @@ class MidiCoreArrangementStylePreview(
         synchronized(this) {
             cache[key]?.let { cached ->
                 hits += 1
-                return MidiCoreArrangementStylePreviewResult.Ready(key, cached.plan, cached.validation, MidiCoreArrangementStylePreviewCacheStatus.WARM)
+                return MidiCoreArrangementStylePreviewResult.Ready(
+                    key,
+                    cached.plan,
+                    cached.validation,
+                    MidiCoreArrangementStylePreviewCacheStatus.WARM,
+                    loaded.planState,
+                )
             }
             misses += 1
         }
@@ -205,8 +222,20 @@ class MidiCoreArrangementStylePreview(
                 "Choose one of the displayed styles and try again.",
             ))
         }
+        val planState = if (project.arrangementPlan == null) {
+            MidiCoreArrangementStylePreviewPlanState.EPHEMERAL_STYLE_PROPOSAL
+        } else {
+            MidiCoreArrangementStylePreviewPlanState.CONFIRMED
+        }
+        // Resolve exactly the plan that a later full draft will consume. A
+        // pre-confirmation preview uses this derived value only in memory.
+        val planResolvedProject = if (planState == MidiCoreArrangementStylePreviewPlanState.CONFIRMED) {
+            project
+        } else {
+            project.copy(arrangementPlan = MidiCoreArrangementPlanProposalFactory.create(requireNotNull(project.authority), style))
+        }
         val authority = try {
-            app.melotrail.arrangement.core.MidiCoreAuthoritySnapshot.from(project)
+            app.melotrail.arrangement.core.MidiCoreAuthoritySnapshot.from(planResolvedProject)
         } catch (error: IllegalArgumentException) {
             return PreviewLoad.Rejected(rejected(
                 MidiCoreArrangementStylePreviewProblemCode.AUTHORITY_REQUIRED,
@@ -248,7 +277,7 @@ class MidiCoreArrangementStylePreview(
                 "Restore the immutable source MIDI or import it into a new project.",
             ))
         }
-        return PreviewLoad.Ready(LoadedPreview(project, authority, style, request.occurrenceId, occurrence.startTick, previewEnd, melody))
+        return PreviewLoad.Ready(LoadedPreview(planResolvedProject, authority, style, request.occurrenceId, occurrence.startTick, previewEnd, melody, planState))
     }
 
     private suspend fun render(
@@ -259,6 +288,10 @@ class MidiCoreArrangementStylePreview(
         val dependencyNotes = mutableListOf<MidiCoreAcceptedDependencyContext>()
         CandidateRole.entries.forEach { role ->
             coroutineContext.ensureActive()
+            val activity = requireNotNull(loaded.project.arrangementPlan).occurrences
+                .single { it.occurrenceId == loaded.occurrenceId }.roleSettings
+                .single { it.role == role }.activity
+            if (activity == MidiCoreRoleActivity.INACTIVE) return@forEach
             val choice = loaded.style.role(role)
             val context = try {
                 MidiCoreGenerationContext.from(
@@ -344,6 +377,7 @@ class MidiCoreArrangementStylePreview(
             plan,
             roles.map(Pair<MidiCoreRoleCandidate, MidiCoreRoleValidationReport>::second),
             MidiCoreArrangementStylePreviewCacheStatus.COLD,
+            loaded.planState,
         )
     }
 
@@ -354,17 +388,18 @@ class MidiCoreArrangementStylePreview(
                 else -> event.orderingKey.tick < loaded.endTick
             }
         }
-        val generatedTracks = candidates.map { candidate ->
-            val role = when (candidate.role) {
+        val generatedTracks = CandidateRole.entries.map { candidateRole ->
+            val role = when (candidateRole) {
                 CandidateRole.CHORDS -> MidiExportRole.CHORDS
                 CandidateRole.BASS -> MidiExportRole.BASS
                 CandidateRole.DRUMS -> MidiExportRole.DRUMS
             }
-            MidiExportRoleTrack(role, candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().mapIndexed { index, note ->
+            val candidate = candidates.singleOrNull { it.role == candidateRole }
+            MidiExportRoleTrack(role, candidate?.events.orEmpty().filterIsInstance<MidiCoreCandidateEvent.Note>().mapIndexed { index, note ->
                 MidiNoteEvent(
                     MidiEventOrderingKey(note.startTick, MidiSemanticEventKind.NOTE, generatedEventKey = index.toLong()),
                     note.endTick,
-                    candidate.channel,
+                    candidate?.channel ?: role.channel,
                     note.pitch,
                     note.velocity,
                 )
@@ -407,6 +442,7 @@ class MidiCoreArrangementStylePreview(
         val startTick: Long,
         val endTick: Long,
         val melody: MidiProtectedMelodyView,
+        val planState: MidiCoreArrangementStylePreviewPlanState,
     )
 
     private sealed interface PreviewLoad {

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
@@ -140,6 +141,15 @@ class MidiCoreArrangementDraftTest {
         assertEquals(emptyList(), accepted.history.previousAcceptances)
         assertEquals(3, accepted.history.appliedAcceptances.size)
         assertEquals(1, accepted.session.project.arrangementDraftAcceptanceHistory.size)
+        val chronologicalHistory = listOf(
+            accepted.history.copy(id = "precision-first", recordedAt = "2027-01-01T00:00:00.123Z"),
+            accepted.history.copy(id = "precision-second", recordedAt = "2027-01-01T00:00:00.123001Z"),
+        )
+        val precisionProject = accepted.session.project.copy(arrangementDraftAcceptanceHistory = chronologicalHistory)
+        assertEquals(precisionProject, MidiCoreProjectSchema.decode(MidiCoreProjectSchema.encode(precisionProject)))
+        assertFailsWith<IllegalArgumentException> {
+            precisionProject.copy(arrangementDraftAcceptanceHistory = chronologicalHistory.reversed())
+        }
         assertIs<MidiCoreAcceptedSongAssemblyResult.Assembled>(
             MidiCoreAcceptedSongAssembly(artifacts = store).assemble(AssembleMidiCoreSong(accepted.session)),
         )

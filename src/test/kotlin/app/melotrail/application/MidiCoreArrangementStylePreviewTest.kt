@@ -4,6 +4,8 @@ import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.midi.OwnedMidiFixtures
 import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.project.AuthoritativeChordEvent
+import app.melotrail.project.CandidateRole
+import app.melotrail.project.MidiCoreRoleActivity
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
@@ -153,6 +155,62 @@ class MidiCoreArrangementStylePreviewTest {
     }
 
     @Test
+    fun `style preview resolves the same plan before and after explicit confirmation`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val session = readySession(store, "whole-song-three-bars.mid", 3, splitBars = true)
+        val request = PrepareMidiCoreArrangementStylePreview(session, "late-night", "verse-1", 41L)
+        val preview = MidiCoreArrangementStylePreview(artifacts = store)
+
+        val ephemeral = assertIs<MidiCoreArrangementStylePreviewResult.Ready>(preview.prepare(request))
+        assertEquals(MidiCoreArrangementStylePreviewPlanState.EPHEMERAL_STYLE_PROPOSAL, ephemeral.planState)
+        assertTrue(ephemeral.plan.view.song.role(MidiExportRole.BASS).events.isEmpty())
+        assertTrue(ephemeral.plan.view.song.role(MidiExportRole.DRUMS).events.isEmpty())
+
+        val proposals = MidiCoreArrangementPlanProposalUseCase(store)
+        val proposal = assertIs<MidiCoreArrangementPlanProposalResult.Proposed>(
+            proposals.propose(ProposeMidiCoreArrangementPlan(session, "late-night")),
+        ).proposal
+        val confirmed = assertIs<MidiCoreArrangementPlanProposalResult.Confirmed>(
+            proposals.confirm(ConfirmMidiCoreArrangementPlanProposal(session, proposal)),
+        ).session
+        val persisted = assertIs<MidiCoreArrangementStylePreviewResult.Ready>(
+            preview.prepare(request.copy(session = confirmed)),
+        )
+
+        assertEquals(MidiCoreArrangementStylePreviewPlanState.CONFIRMED, persisted.planState)
+        val confirmedOccurrence = requireNotNull(confirmed.project.arrangementPlan).occurrences
+            .single { it.occurrenceId == "verse-1" }
+        assertEquals(
+            setOf(CandidateRole.BASS, CandidateRole.DRUMS),
+            confirmedOccurrence.roleSettings.filter { it.activity == MidiCoreRoleActivity.INACTIVE }.map { it.role }.toSet(),
+        )
+        assertEquals(ephemeral.key.authorityHash, persisted.key.authorityHash)
+        assertEquals(ephemeral.plan.view.song, persisted.plan.view.song)
+        assertEquals(ephemeral.plan.loop, persisted.plan.loop)
+
+        // Confirmation may reuse the identical resolved plan, but an actual plan edit
+        // must invalidate the warm preview and preserve planned silence.
+        assertEquals(MidiCoreArrangementStylePreviewCacheStatus.WARM, persisted.cacheStatus)
+        val silentPlan = requireNotNull(confirmed.project.arrangementPlan).let { plan ->
+            plan.copy(occurrences = plan.occurrences.map { occurrence ->
+                if (occurrence.occurrenceId != "verse-1") occurrence else occurrence.copy(
+                    roleSettings = occurrence.roleSettings.map { it.copy(activity = MidiCoreRoleActivity.INACTIVE, density = 0) },
+                )
+            })
+        }
+        val edited = assertIs<MidiCoreArrangementPlanEditResult.Confirmed>(
+            MidiCoreArrangementPlanEdit(store).confirm(ConfirmMidiCoreArrangementPlanEdit(confirmed, silentPlan)),
+        ).session
+        val silent = assertIs<MidiCoreArrangementStylePreviewResult.Ready>(preview.prepare(request.copy(session = edited)))
+        assertEquals(MidiCoreArrangementStylePreviewCacheStatus.COLD, silent.cacheStatus)
+        assertFalse(silent.key.authorityHash == persisted.key.authorityHash)
+        listOf(MidiExportRole.CHORDS, MidiExportRole.BASS, MidiExportRole.DRUMS).forEach { role ->
+            assertTrue(silent.plan.view.song.role(role).events.isEmpty())
+        }
+        assertEquals(persisted.plan.view.song.role(MidiExportRole.MELODY), silent.plan.view.song.role(MidiExportRole.MELODY))
+    }
+
+    @Test
     fun `style preview preparation stays within cold and warm p95 budgets`() = runBlocking {
         val store = MidiCoreArtifactStore()
         val session = readySession(store, "whole-song-three-bars.mid", 3)
@@ -180,7 +238,7 @@ class MidiCoreArrangementStylePreviewTest {
         assertTrue(warmP95 <= 300L, "Warm preview p95 was ${warmP95}ms; budget is 300ms. Samples: $warmMillis")
     }
 
-    private fun readySession(store: MidiCoreArtifactStore, fixtureName: String, bars: Int): MidiCoreProjectSession {
+    private fun readySession(store: MidiCoreArtifactStore, fixtureName: String, bars: Int, splitBars: Boolean = false): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(store, idFactory = { "style-preview-project" }).create(
                 CreateMidiCoreProject(root.resolve("project-$bars"), "Style Preview", "style-preview-project"),
@@ -205,7 +263,8 @@ class MidiCoreArrangementStylePreviewTest {
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", bars)),
+                    if (splitBars) (1..bars).map { MidiCoreBarOccurrencePlacement("verse-$it", "verse", "Verse $it", 1) }
+                    else listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", bars)),
                 ),
             ),
         ).session
@@ -213,7 +272,8 @@ class MidiCoreArrangementStylePreviewTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     structured,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, bars * 1920L)),
+                    if (splitBars) (1..bars).map { AuthoritativeChordEvent("chord-$it", "verse-$it", "C", (it - 1) * 1920L, it * 1920L) }
+                    else listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, bars * 1920L)),
                 ),
             ),
         ).session

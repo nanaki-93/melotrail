@@ -334,6 +334,23 @@ player. The failed-Apply regression distinguishes a saved plan from unaccepted
 alternatives and dispatches the same repair on Retry. These are technical checks;
 full Arrange completion remains U05 and human musical/Logic approval stays pending.
 
+U05 recovery evidence is retained at `~/.codex/melotrail-terra/u05-repair-evidence`.
+Uncached focused checks and full test/build execution cover a real three-action
+ready-authority → playing draft path, keyboard Enter on Confirm plan & create,
+plan-confirmation cache parity, changed-plan silence and protected melody.
+The intro regression uses three separate occurrences, rather than mistaking one
+three-bar section for an intro. Injected post-confirm generation failure retains
+the saved plan and same draft retry; cancellation at preparation and playback
+boundaries stops both the actual transport and displayed state. A deterministic
+clock reproduces the intermittent repair-batch failure at mixed fractional
+timestamp precision; both history lists now compare parsed instants. Batch
+accept/reopen and draft-history schema roundtrips pass, while reversed
+chronology remains rejected. Three-size
+proposal/playing-draft captures were inspected. For Q02, audition the complete
+draft before acceptance, then Use/export with identical Logic instruments and
+verify melody preservation, planned rests, section boundaries and role alignment.
+Musical/visual approval remains human evidence.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

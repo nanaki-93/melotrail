@@ -320,3 +320,14 @@ versions. Lower piano uses a −12-semitone voicing-center preference, preservin
 legal ranges and chord identity; constraints may yield no distinct result.
 Changing the intent mapping requires a new repair-policy version. Q01 listening
 and Q02 Logic checks remain human evidence, not a consequence of these tests.
+
+U05 style previews resolve the same arrangement-plan proposal policy as full
+creation before confirmation, entirely in memory. Confirmed plans remain
+authoritative; inactive roles produce empty preview lanes. The resolved plan
+participates in the authority/cache hash: identical confirmation can reuse MIDI,
+but a changed plan cannot. Preview status distinguishes ephemeral and confirmed
+inputs. Preview then Propose then Confirm plan & create reaches full-draft
+playback through the existing single player; acceptance/export remain separate.
+If creation fails after confirmation, the saved plan remains visible and retry
+reuses its draft identity. Cancelling during playback preparation or admission
+stops transport and preserves the confirmed plan and completed artifacts.
