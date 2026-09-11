@@ -4,6 +4,17 @@ Owner: automated checks, real listening/visual acceptance and Logic Pro evidence
 Implementation status is in [TASKS](../TASKS.md). The old participant/holdout
 queues are superseded; their incomplete gates are not passes.
 
+## Final manual review
+
+Per the user's 2026-09-11 decision, run listening scores, manual Logic tests,
+foreground compositor capture and human visual/video review after all unpaid
+engineering. Q03b refreshes the integrated evidence and supplies one review entry
+point here. Until then U07, Q01–Q03 and production video approval gates stay
+WAITING_USER; missing human evidence must not trigger automatic repair attempts.
+Automated tests/builds, semantic checks, real-window frame replay and independent
+code review continue for each implementation. Paid generation and production
+asset use still require their explicit budget/rights/identity authorization.
+
 ## Required automated checks
 
 ```bash
@@ -405,10 +416,11 @@ Actual desktop pixels require a separate fresh check on a visible, capturable de
 ./gradlew :desktopApp:nativeDesktopCapture
 ```
 
-This is mandatory for U07, Q03a and Q03 visual/release evidence, independently of
+This is mandatory during the final U07/Q03 manual visual/release review, independently of
 `make test`. It uses Robot with the same guards, **without fallback**, writing only
 `native-screen/`; failures retain `last-capture.png` and INCOMPLETE observations.
-It is not a prerequisite for Q01a/Q02a MIDI evidence preparation. Earlier U07b
+By the user's final-review order it is not a prerequisite for Q01a/Q02a/Q03a/
+Q03b or other independent engineering; its failure is retained for final review. Earlier U07b
 screen captures remain historical: subsequent scheduler runs captured wallpaper,
 so they cannot establish current compositor success. Recovery evidence is in
 `~/.codex/melotrail-terra/q01a-q02a-repair-evidence/`; the explicit screen check

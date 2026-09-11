@@ -1,6 +1,6 @@
 # Implementation tasks
 
-Authority: [PLAN](PLAN.md). Updated: 2026-09-08. Task status is authoritative in the integration branch queue.
+Authority: [PLAN](PLAN.md). Updated: 2026-09-11. Task status is authoritative in the integration branch queue.
 The old MC/UI/VID queues are retired. Reuse existing code and tests; do not
 replay completed import, draft, acceptance, export or UI-foundation work.
 
@@ -38,8 +38,19 @@ replay completed import, draft, acceptance, export or UI-foundation work.
 
 States: TODO, RUNNING, REVIEW, WAITING_USER, BLOCKED, DONE, OPTIONAL.
 Only the coordinator updates the queue when parallel workers are explicitly used.
-A manual gate stays WAITING_USER until actual evidence arrives. It never blocks
-an unrelated task. A failed dependent gate cannot be bypassed.
+A manual gate stays WAITING_USER until actual evidence arrives. Per the user's
+2026-09-11 decision, perform all listening scores, Logic import/play/reopen,
+foreground desktop capture and human visual/video review at the end of unpaid
+engineering. Do not admit these rows to automatic worker/retry/review runs merely
+to rediscover missing evidence. Automated tests, builds and technical review still
+run for every implementation; code failures retain their normal recovery policy.
+Production rights, identity and spending authorization remain required before
+production media use or paid generation; they do not block owned-fixture code.
+
+Remaining automatic order: **Q03a → V07a → Q03b**. Q03b prepares one final review
+handoff using the integrated code. Then notify once that manual review is ready
+and leave the gates pending until the user starts it. Real code/environment
+blockers still get reported; an unchanged deferred human gate is not a failure.
 
 ## Queue
 
@@ -86,21 +97,22 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | U06 | Finish whole-song Review and Logic export handoff | U06a | DONE | e4d2990b8f05; Corrected the reported compilation error by calculating bounds width from right minus left, preserving the 407 dp regression assertion. Changes remain uncommitted.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T05-44-43-333Z-U06 |
 | U07a | Pin visual comparisons and accessibility regressions | U06 | DONE | Recovered exact image comparisons, geometry and accessibility guards; added 24 coherent accepted/ready and scrolled Review/Export captures, preserving existing baselines (69 total). Uncached focused checks, 537 tests, build, diff check and independent Astra Extra High review passed. Evidence ~/.codex/melotrail-terra/u07a-repair-evidence; native responsiveness/scaling remains U07b and human visual approval U07. |
 | U07b | Measure responsiveness and prepare visual review | U07a | DONE | Recovered native resize/capture lifecycle and verified selection retention; 20-sample preview/draft/cancellation measurements meet preparation/generation targets. 28 historical screen captures and 66 six-page comparisons prepared; 543 tests and build passed then. Current automatic native evidence uses explicit frame replay; fresh compositor capture is a separate U07/Q03 gate (Validation). Evidence ~/.codex/melotrail-terra/u07b-repair-evidence; acoustic onset unmeasured, human visual decision remains U07. |
-| U07 | Prove visuals, accessibility and responsiveness | U07b | BLOCKED | The documentation-only diff preserves completed children. Supplied coordinator checks pass, but user visual approval is absent and the new validation record contradicts the exact candidate’s evidence packet. WAITING_USER: all six pages remain unscored. Coordinator evidence documentation also needs reconciliation.; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T10-52-16-914Z-U07 |
+| U07 | Prove visuals, accessibility and responsiveness | U07b, Q03b | WAITING_USER | Final manual review deferred by user until engineering ends. Q03b reconciles current six-page evidence; foreground compositor capture and genuine visual scores remain required, including the recorded capture limitation. Prior failed candidate preserved. |
 | Q01a | Prepare frozen musical evaluation packages | U06, M09 | DONE | Recovered immutable evaluation freeze/export and M01 comparison commands; input integrity, reproduction and accepted-only export regressions pass. Focused/full checks, build and independent review recorded in ~/.codex/melotrail-terra/q01a-q02a-repair-evidence. Five final songs (three unseen) and real scores remain Q01. |
-| Q01 | Evaluate musical improvement and fix failures | Q01a | BLOCKED | The documentation-only diff accurately records WAITING_USER. No implementation defect identified; required musical acceptance evidence remains missing. WAITING_USER: five varied final songs, including at least three unseen, and genuine listening records are unavailable. Independent engineering may continue.; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T14-51-14-528Z-Q01 |
+| Q01 | Evaluate musical improvement and fix failures | Q01a, Q03b | WAITING_USER | Final listening deferred by user until engineering ends. Five owned/licensed full songs (three unseen) and genuine scores remain required. Preserve Q01 candidate and Q01a outputs; do not retry missing scores as code failures. |
 | Q02a | Generate current Logic matrix and manifests | U06, M03, M07, M08 | DONE | Recovered 21 deterministic probes (20 current packages and one expected import rejection), semantic re-import/project reopen and immutable inventories. Export copies omit bank hints while protected source/expression survives. Focused/full checks, build and independent review: ~/.codex/melotrail-terra/q01a-q02a-repair-evidence. Actual Logic import/play/reopen remains Q02. |
-| Q02 | Run the current Logic Pro matrix | Q02a | TODO | |
+| Q02 | Run the current Logic Pro matrix | Q02a, Q03b | WAITING_USER | Final manual Logic import/play/save/reopen deferred by user until engineering ends. Q02a packages are prepared; Q03b refreshes final build identity and instructions. No Logic pass claimed. |
 | Q03a | Prove clean native build and startup | F06, U06 | TODO | |
-| Q03 | Prove clean install and obtain MIDI release decision | Q03a, U07, Q01, Q02 | TODO | |
+| Q03b | Prepare the final manual-review handoff | Q03a, V07a | TODO | Refresh integrated evidence and one concise review entry point after all unpaid engineering; never invent songs, scores or approvals. |
+| Q03 | Prove clean install and obtain MIDI release decision | Q03b, U07, Q01, Q02 | WAITING_USER | Final MIDI release decision waits for the end-of-engineering manual review. No release approval inferred from automatic checks. |
 | V01a | Prove an independently built companion boundary | F01 | DONE | Host ProRes/PCM encode, decoded preview timestamps and byte-preserved soundtrack proven; temporary-only outputs. Focused checks, Swift release build, 363 MIDI tests, absent-companion build/tests and fresh Terra review PASS. Evidence ~/.codex/melotrail-terra/v01a-repair-evidence. |
-| V01 | Prove the isolated video/media boundary | V01a | WAITING_USER | Technical recovery: native Swift validation replaces stale Gradle check; provider/encoder choices and eight-request US$4.80 pre-tax pilot proposal recorded. Budget, rights and identity approvals remain pending. Evidence ~/.codex/melotrail-terra/video-recovery-evidence. |
+| V01 | Prove the isolated video/media boundary | V01a | WAITING_USER | Engineering boundary complete; production provider/budget/rights/identity authorization remains pending. Review together at the end; no paid generation authorized. |
 | V02a | Implement immutable asset manifest and validation | V01a | DONE | Recovered Swift manifest; fixed typed-error compilation and no-overwrite snapshot publication. Native library regressions and MIDI test/build checked; production kit/rights approval remains V02. Evidence ~/.codex/melotrail-terra/video-recovery-evidence. |
 | V02b | Import and inspect the pilot asset kit | V02a | DONE | Recovered local import/inspection; fixed infinite Git ancestry traversal and symlink write escape. Native owned-fixture regressions and MIDI test/build validated; production rights/identity remain V02. Evidence ~/.codex/melotrail-terra/v02b-repair-evidence. |
-| V02 | Build the approved TABI asset library | V02b | BLOCKED | The candidate changes only the TABI specification. Its new section expressly labels the identity packet as proposed and WAITING_USER, with no production manifest, imported production files, rights evidence, or real approval record. V02 cannot satisfy its human-owned pilot-kit gate until the user provides rights/permitted-use statements and approves the identity, after which separate external production files must be imported, inspected, and approved in an immutable manifest.; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09 |
+| V02 | Build the approved TABI asset library | V02b | WAITING_USER | Production asset rights and identity approval remain pending for final review. Local import/inspection code is complete; use owned fixtures for independent engineering. Prior candidate preserved. |
 | V03a | Implement resumable cost-bounded animation jobs | V02b | DONE | Recovered durable job coordinator with cross-process ledger locking and concurrent duplicate/budget/in-flight regressions. Native checks and MIDI test/build validated; no live provider request. Evidence ~/.codex/melotrail-terra/v03a-repair-evidence. |
 | V03b | Implement one provider adapter and manual clip import | V03a | DONE | Recovered adapter and manual import; fixed staged MOV/MP4 probing and CLI encoder. Native fake-HTTP/owned-media regressions, MIDI test/build and fresh review checked. No live request or paid pilot. Evidence ~/.codex/melotrail-terra/v03b-repair-evidence. |
-| V03 | Add one cost-bounded generative-animation adapter | V03b, V01, V02 | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V03 | Add one cost-bounded generative-animation adapter | V03b, V01, V02 | WAITING_USER | Provider/job implementation complete in V03a/V03b. Production micro-action identity/loop review and paid pilot wait for final review plus explicit rights/budget authorization. |
 | V04a | Plan deterministic soundtrack and scene timing | V03a | DONE | Recovered rational timing planner and fixed Swift assertions; validated decoded durations, pinned soundtrack changes, explicit alignment and CLI caller. Native debug/release regressions, 410 JVM tests, build and fresh Terra review passed. Evidence ~/.codex/melotrail-terra/v04a-repair-evidence. |
 | V04 | Implement deterministic scene composition | V04a | DONE | ecfa75607cdd; Repaired all five reported Swift compile errors by evaluating throwing scene-resolution, frame, and file-read operations before passing their results to the non-throwing assertion autoclosure. Regression semantics remain unchanged.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T12-00-00-939Z-V04 |
 | V05a | Build real scene preview and soundtrack transport | V04 | DONE | fb33495b7612; Repaired preview synchronization within V05a scope. Public current-frame rendering now derives from the sole AVPlayer’s actual time, the CLI caller uses that snapshot, and regression coverage plays across a scene boundary while checking advancing frame/time pairs and shared frame-rate mapping. Changes remain uncommitted; TASKS was not edited.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T12-16-36-129Z-V05a |
@@ -111,7 +123,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | V06a | Implement bounded encoder process and output staging | V01a | DONE | Recovered native encoder process; repaired Swift compile errors, pre-launch cancellation, isolated input snapshots, process-group teardown, bounded diagnostics/callbacks, redaction and cleanup. Owned process regressions, native release and MIDI test/build checked. Episode codec/parity remains V06. Evidence ~/.codex/melotrail-terra/video-recovery-evidence. |
 | V06 | Encode, validate and publish local video outputs | V06a, V05 | DONE | Recovered candidate; repaired Swift types, transparent-buffer noise, A/V backpressure, late cancellation and paired publication. Selected ProRes/PCM MOV proven at 320×180 mono/1s and 1920×1080 stereo/12s, with exact decoded PCM, frame/timeline probes and provenance. Native/release CLI, 433 MIDI tests, build and fresh Terra review passed; evidence ~/.codex/melotrail-terra/v06-repair-evidence. Full-song/production approval remains V07. |
 | V07a | Add capability-checked optional Export handoff | V06, U06 | TODO | |
-| V07 | Complete a TABI music-video pilot and optional handoff | V07a, V03, V02, Q03 | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V07 | Complete a TABI music-video pilot and optional handoff | V07a, V03, V02, Q03 | WAITING_USER | Real full-song pilot and human artistic/sound/rights decision deferred until final review and required production authorizations. Optional handoff implementation remains independently runnable as V07a. |
 
 ## Foundation and removal
 
@@ -651,10 +663,35 @@ an export test alone cannot complete this task.
 
 ### Q03a — Prove clean native build and startup
 
-**Scope:** Run isolated clean install/package/startup, `:desktopApp:nativeDesktopCapture` and the six-page MIDI path without worker/model/sound library. Record build identity, reduction and any concrete install regressions; preserve source media and prior evidence.
+**Scope:** Run isolated clean install/package/startup and the automated six-page MIDI path without worker/model/sound library. Foreground `:desktopApp:nativeDesktopCapture` is deferred to U07 final manual review; keep automated real-window frame replay and all other technical checks. Record build identity, reduction and any concrete install regressions; preserve source media and prior evidence.
 **Inspect:** the Q03 contract below and its relevant source/test owners.
 **Done:** this slice works through its real caller, focused regressions and required
 coordinator checks pass; leave later slices to their queue owners.
+
+### Q03b — Prepare the final manual-review handoff
+
+**Dependencies:** Q03a, V07a. This is unpaid evidence preparation, not release approval.
+**Owners:** existing Q01a evaluation commands, Q02a Logic matrix, U07 visual/timing
+fixtures, companion owned-media checks, README and docs/VALIDATION.md.
+**Work:** use the integrated implementation after optional handoff lands. Run
+focused checks, `make test`, `make build`, diff check and independent review.
+Regenerate Q01 development comparisons and Q02 matrix into new retained output
+directories; verify hashes and actual build/runtime identity. Freeze final songs
+only if the user has supplied the required ownership/exposure/settings; otherwise
+retain missing-song counts and a blank request/score form. Refresh six-page image,
+real-window frame replay and timing evidence; reconcile stale U07 documentation.
+Prepare the existing owned-media companion demonstration and instructions for
+installed/absent optional handoff. Retain old outputs and failed evidence.
+**Handoff:** update one compact section of Validation linking current artifacts,
+actual commands and limitations, ordered manual steps: install/six-page visual
+review and foreground compositor check (U07), listening/scores (Q01), Logic
+import/play/save/reopen (Q02), MIDI release decision (Q03), then authorized TABI
+production/pilot review (V01/V02/V03/V07). No extra tracked plan or report file.
+Foreground capture remains NOT_MEASURED/INCOMPLETE until actually run; do not
+launch human-gate rows or retry them just to report missing decisions.
+**Done:** current reproducible packets, technical checks and independent review
+pass; the user gets one clear final-review entry point. Unavailable human media,
+ratings or approval remain explicit pending items, not a failed preparation task.
 
 ### Q03 — Prove clean install and obtain MIDI release decision
 
@@ -1084,7 +1121,8 @@ node --test tools/terra-runner.test.mjs tools/terra-throughput.test.mjs
 ```
 
 Human musical ratings, visual/Logic decisions, asset rights/approval and paid
-pilot budget remain gates. Their evidence-preparation children run automatically.
+pilot budget remain deferred final gates, excluded from automatic admission.
+Their evidence-preparation children run automatically, ending with Q03b.
 Unpaid companion plumbing uses owned fixtures and does not depend on a paid
 pilot or final MIDI release. V01/V02/V03/V07 keep their real human gates; public
 upload and paid generation are never inferred from a request to implement code.
@@ -1096,6 +1134,8 @@ required input. Local scheduled execution needs this computer and app running.
 
 ```text
 Implement only the assigned dependency-ready TASKS row and its explicit slice.
+Complete unpaid engineering and Q03b before requesting manual review. Do not
+retry WAITING_USER rows or treat missing scores/approvals as implementation defects.
 Read AGENTS, PLAN, README, Architecture and relevant task-owner references once.
 Inspect current callers/tests. Reuse completed child tasks and the preserved
 candidate; do not rebuild the whole parent feature. Do not edit PLAN/TASKS or

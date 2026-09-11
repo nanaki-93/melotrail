@@ -1,6 +1,6 @@
 # Melotrail improvement plan
 
-Updated: 2026-09-08. Status: implementation underway in bounded slices; musical acceptance pending.
+Updated: 2026-09-11. Status: implementation underway in bounded slices; musical acceptance pending.
 
 This is the only roadmap. [TASKS.md](TASKS.md) owns implementation order and
 status. It replaces the MIDI Core and UI task suites; their history stays in
@@ -26,8 +26,8 @@ were supplied in this request. Do not invent them or translate 5/10 into a pass
 on the old 1–5 rubric. Capture reproducible examples while improving the system.
 
 The former five-participant and ten-project gates no longer block development
-or legacy removal. Replace them with frequent small listening comparisons and
-the focused release checks in [Validation](docs/VALIDATION.md). Human listening
+or legacy removal. Replace them with automated comparison preparation and final manual listening,
+visual and Logic release checks in [Validation](docs/VALIDATION.md). Human listening
 still determines musical acceptance; passing tests cannot award that acceptance.
 
 TABI animation is a second, downstream workstream. Plan an **optional separate
@@ -374,9 +374,11 @@ variants and direct upload wait until one full-song pilot is convincing.
 | Validation | U07, Q01–Q03 | Visual approval, improvement on frozen music cases, fresh Logic checks and clean build/install |
 | Optional video | V01–V07 | Isolated companion, cost-bounded generation, identity-consistent pilot with finished soundtrack |
 
-TASKS defines exact dependencies; independently ready work may continue while
-a human listens to a prepared milestone. Release and dependent acceptance stay
-pending. Never claim the current 5/10 result has improved before comparison.
+The user chose on 2026-09-11 to perform manual listening, scores, Logic tests
+and visual/video review only after all unpaid engineering. TASKS parks these
+gates as WAITING_USER and excludes them from automatic attempts. Complete
+Q03a (clean build/startup), V07a (optional companion handoff), then Q03b (final
+evidence and review handoff). Release and production authorizations stay pending. Never claim the current 5/10 result has improved before comparison.
 
 Proposed release targets: median overall and piano/melody-fit scores at least
 8/10 across five varied songs, every song at least 7/10, zero melody mutation,
@@ -399,13 +401,11 @@ split the remaining large features. Each unsuffixed row finishes its remaining
 slice and checks the combined parent acceptance criteria. Dependencies remain
 explicit; completed children are reused. No extra task or execution-log documents.
 
-**Near-term order:** recover M03's retained candidate through current checks and
-fresh review; expose compact chord-duration/source-end editing in U04a; improve
-piano voicing/rhythm in M04/M05; persist the song plan in M06; then finish
-plan-aware drafts/rests, coordinated roles, scoped repairs and Arrange/Review/
-Export. Each slice produces an implementation commit and a queue update. UI
-slices supply actual captures at the three guideline sizes; engine milestones
-supply playable baseline/new MIDI packages.
+**Remaining engineering order:** Q03a → V07a → Q03b. Reuse completed MIDI,
+UI and companion implementations. Q03b refreshes artifacts against the integrated
+code and presents one final manual-review entry point in Validation. User scores,
+Logic playback and foreground compositor capture run afterward; ordinary automated
+tests, builds, frame/semantic checks and independent code review remain per-task.
 
 **Execution:** the existing 20-minute heartbeat runs the tested local runner's
 `advance` command. One Astra Extra High writer implements; the host coordinator runs
@@ -436,7 +436,7 @@ checked-out branch ref without updating its files/index. Restart `make desktop`
 to run the latest integrated app. Remove successful dedicated worker worktrees;
 keep unresolved work recoverable.
 
-**Finish engineering without faking acceptance:** Q01a/Q02a/U07a–b/Q03a prepare
+**Finish engineering without faking acceptance:** Q01a/Q02a/U07a–b/Q03a/Q03b prepare
 musical, Logic, visual and clean-install evidence independently of the final user
 decisions. The selected unpaid companion work uses a separately built
 `companion/` directory, owned media and provider fakes until actual generation
