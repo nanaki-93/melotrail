@@ -272,6 +272,53 @@ four-role, 4/4 fixture and an additional 3/4/6/8 smoke set:
 Targets missing on the reference machine require profiling and an explicit
 budget decision with evidence. Agents must not claim measurements they did not run.
 
+### U07b responsiveness and visual-review preparation
+
+Recovery evidence: `~/.codex/melotrail-terra/u07b-repair-evidence/u07/`.
+Open `visual-review/index.html` for all six pages: 66 unchanged U07a target/
+actual/difference comparisons at three guideline sizes, original references,
+and blank per-page scores. **Human visual approval remains U07; acoustic onset
+is UNMEASURED** because the real audition controller uses a silent output adapter.
+No golden, musical score or Logic result is changed by these checks.
+
+Run on a graphical host with the configured JDK before `make test`, `make build`
+and `git diff --check`; force fresh measurements with these desktop selectors:
+
+```bash
+./gradlew :desktopApp:test --rerun-tasks \
+  --tests '*MidiCoreResponsivenessTest' --tests '*MidiCoreNativeResponsivenessTest' \
+  --tests '*MidiCoreVisualReviewTest' --tests '*MidiCorePinnedVisualTest' \
+  --tests '*MidiCoreFocusedWorkflowTest'
+```
+
+`responsiveness.json` retains 20 raw samples and nearest-rank p95 for cold/warm
+preview preparation (targets 1,000/300 ms), 64-bar draft generation (10,000 ms),
+UI completion and cancel-to-terminal latency. Cold means a fresh service graph
+and preview cache, not flushed OS/JIT caches. Generation includes validation and
+publication; UI completion includes IO/state delivery but excludes paint. An EDT
+heartbeat records queue delay, and use-case/projection assertions reject UI-thread
+work. Cancellation follows one published scope; source/candidates, acceptances
+and export snapshots survive without publishing an incomplete draft. Separate
+3/4 and 6/8 smoke cases explicitly confirm meter; rapid previews prove latest-wins
+and one output session. Missed budgets fail after writing evidence.
+
+`native/observations.json` binds 28 real Metal client captures of a 256-bar,
+8,192-note, 64-occurrence song with long Unicode names. It requests 1280×720,
+1024×768, 720×900 and back to wide; actual client size and detected density are
+recorded. Only excess beyond usable display/frame bounds is reduced. The native
+minimum permits 720-wide layout. Checks cover one player/inspector, lane alignment,
+48 dp transport controls, selection surviving resize and scrolled/focused draft
+creation. The repair keeps the window origin fixed and uses normal AWT resize/
+repaint events: combined relocation and forced layout left Metal content displaced
+by the prior height delta. Header/footer/palette guards still reject clipping or
+obscuration, and `native/last-capture.png` preserves rejected pixels before failure.
+
+Reports include exact input-file hashes, Git identity and actual machine facts;
+verify matching `inputTreeSha256` across timing, meter, native and review reports.
+The repair host is Apple M5 Pro / 48 GiB, macOS 26.6.2, JDK 21.0.11, APFS,
+with native density 2. Interrupted measurements remain INCOMPLETE. Consult the
+retained raw reports for timings and actual display-constrained dimensions.
+
 M08a repair evidence is retained at
 `~/.codex/melotrail-terra/m08a-repair-evidence`. Reduced-density held-melody
 regressions keep Bass attacks at ticks 0 and 960 across C/F windows at densities

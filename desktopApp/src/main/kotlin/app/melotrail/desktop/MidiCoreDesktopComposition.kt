@@ -172,13 +172,18 @@ object MidiCoreDesktopEntrypoint {
                 },
                 title = "Melotrail",
             ) {
-                window.minimumSize = java.awt.Dimension(900, 620)
+                configureMidiCoreDesktopWindow(window)
                 MelotrailTheme {
                     MidiCoreStartupSurface(workspace, projectActions, midiActions, exportActions)
                 }
             }
         }
     }
+}
+
+/** Keep the supported compact workspace reachable by native window resizing. */
+internal fun configureMidiCoreDesktopWindow(window: java.awt.Window) {
+    window.minimumSize = java.awt.Dimension(720, 620)
 }
 
 /** Target shell with only the six MIDI Core workflow destinations. */
