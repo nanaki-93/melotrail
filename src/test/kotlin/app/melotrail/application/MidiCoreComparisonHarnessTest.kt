@@ -24,6 +24,30 @@ class MidiCoreComparisonHarnessTest {
     @TempDir lateinit var root: Path
 
     @Test
+    fun `development command publishes portable comparisons without replacing an earlier package`() {
+        val parent = Path.of("build/q01-development")
+        Files.createDirectories(parent)
+        val evidence = Files.createTempDirectory(parent, "comparison-")
+        val output = evidence.resolve("packages")
+        val messages = mutableListOf<String>()
+        assertEquals(0, MidiCoreComparisonCommand.run(listOf(output.toString()), messages::add))
+        assertTrue(messages.single().contains("Final songs: 0/5; unseen songs: 0/3"))
+        val review = Files.readAllBytes(output.resolve("review.md"))
+        val form = review.decodeToString()
+        assertTrue(form.contains("Development only") && form.contains("missing unseen songs: 3/3"))
+        assertFalse(form.contains(".q01-"), "Moving the staged package must not leave broken temporary paths")
+        M01ComparisonFixtures.cases.forEach { case ->
+            assertTrue(form.contains("baseline/${case.id}") && form.contains("candidate/${case.id}"))
+            assertTrue(Files.isRegularFile(output.resolve("baseline/${case.id}/complete-song.mid")))
+            assertTrue(Files.isRegularFile(output.resolve("candidate/${case.id}/complete-song.mid")))
+        }
+        assertTrue(Files.isRegularFile(output.resolve("versions.json")))
+        assertEquals(1, MidiCoreComparisonCommand.run(listOf(output.toString()), messages::add))
+        kotlin.test.assertContentEquals(review, Files.readAllBytes(output.resolve("review.md")))
+        System.out.println("Q01 M01 development comparison: ${output.toAbsolutePath()}")
+    }
+
+    @Test
     fun `freezes deterministic side by side packages and an unscored review form`() {
         val output = Path.of("build", "m01-comparison")
         val review = MidiCoreComparisonHarness(root.resolve("work")).writeSideBySideReview(M01ComparisonFixtures.cases, output)

@@ -39,6 +39,12 @@ Output: an immutable complete-song MIDI file, aligned role files and a manifest.
 Import at song start in Logic Pro, confirm tempo/meter and choose instruments.
 Logic Pro performs all audio production. GarageBand is not a supported target.
 
+For musical evaluation, `musicalEvaluation` freezes supplied owned projects before
+generating from isolated copies, and `musicalComparison` exports the separate M01
+development comparisons. Both require new output directories. See the
+[evaluation commands and score forms](docs/VALIDATION.md#frozen-musical-evaluation-commands-q01a).
+No final songs or new listening scores are bundled; missing songs remain explicit.
+
 ## Documentation
 
 - [PLAN](PLAN.md): findings, product design, priorities and agent workflow.

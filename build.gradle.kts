@@ -25,3 +25,19 @@ tasks.test {
     inputs.files("AGENTS.md", "README.md", "PLAN.md", "TASKS.md")
     inputs.dir("docs")
 }
+
+tasks.register<JavaExec>("musicalEvaluation") {
+    group = "verification"
+    description = "Freeze supplied owned musical cases or export a hash-pinned frozen set (use --args)."
+    dependsOn(tasks.classes)
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.melotrail.application.MidiCoreMusicalEvaluationCommand")
+}
+
+tasks.register<JavaExec>("musicalComparison") {
+    group = "verification"
+    description = "Export separate M01 synthetic baseline/current comparisons to a new directory (use --args)."
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("app.melotrail.application.MidiCoreComparisonCommand")
+}

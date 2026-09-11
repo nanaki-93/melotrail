@@ -44,3 +44,16 @@ compose.desktop {
         }
     }
 }
+
+// Foreground evidence is a separate mandatory visual/release gate, never an unattended-test fallback.
+tasks.register<Test>("nativeDesktopCapture") {
+    group = "verification"
+    description = "Capture the real desktop window for U07/native release review; requires a visible, capturable desktop."
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching("app.melotrail.desktop.MidiCoreNativeResponsivenessTest") }
+    systemProperty("melotrail.nativeScreenCapture", "true")
+    mustRunAfter(tasks.test)
+    outputs.upToDateWhen { false }
+}

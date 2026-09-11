@@ -38,7 +38,7 @@ class MidiCoreVisualReviewTest {
             Acoustic onset is unmeasured. Listening and Logic results are separate.</p>
             <p><a href="../responsiveness.json">64-bar timing measurements</a> ·
             <a href="../meter-smoke.json">3/4 and 6/8 smoke</a> ·
-            <a href="../native/observations.json">Native density, short windows and large song captures</a>.
+            <a href="../native/observations.json">Real-window density, geometry and frame replay (not screen pixels)</a>.
             These links require their focused tests to execute in the same candidate tree.</p><nav>
             """.trimIndent())
         midiCoreWorkspaceDestinations.forEach { html.append("<a href=\"#${it.route}\">${it.label}</a>") }

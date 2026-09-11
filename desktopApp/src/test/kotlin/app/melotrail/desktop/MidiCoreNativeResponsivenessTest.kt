@@ -14,6 +14,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.Density
 import app.melotrail.application.MidiCoreVisualEvidence
 import app.melotrail.midi.domain.MidiExportRole
+import java.awt.Component
+import java.awt.Container
 import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Robot
@@ -23,13 +25,16 @@ import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import javax.imageio.ImageIO
+import javax.swing.SwingUtilities
+import org.jetbrains.skiko.SkiaLayer
+import org.jetbrains.skia.Image
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Timeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Real AWT window, native display density, production font fallback, actual window-only captures. */
+/** Real AWT geometry/density and recorded-frame replay; explicit nativeDesktopCapture uses screen pixels. */
 @OptIn(ExperimentalComposeUiApi::class)
 class MidiCoreNativeResponsivenessTest {
     @Test
@@ -39,7 +44,12 @@ class MidiCoreNativeResponsivenessTest {
         val captures = mutableListOf<JsonObject>()
         val resizes = mutableListOf<JsonObject>()
         val density = AtomicReference(Density(1f))
-        val path = U07Evidence.root.resolve("native")
+        val screenCapture = when (val mode = System.getProperty("melotrail.nativeScreenCapture", "false")) {
+            "true" -> true
+            "false" -> false
+            else -> error("Invalid explicit screen capture mode: $mode")
+        }
+        val path = U07Evidence.root.resolve(if (screenCapture) "native-screen" else "native")
         Files.createDirectories(path)
         MidiCoreResponsivenessFixture(bars = 256, notesPerBar = 32, sectionBars = 4, longNames = true).use { fixture ->
             fixture.prepare()
@@ -68,7 +78,7 @@ class MidiCoreNativeResponsivenessTest {
             }
             var completed = false
             try {
-                val robot = onEdt { Robot(window.graphicsConfiguration.device) }
+                val robot = if (screenCapture) onEdt { Robot(window.graphicsConfiguration.device) } else null
                 // Select once: resizing must preserve this selection without restoring it in the test.
                 onEdt { fixture.workspace.accept(MidiCoreWorkspaceIntent.SelectArrangementOccurrence("section-63")) }
                 listOf(1280 to 720, 1024 to 768, 720 to 900, 1280 to 720).forEachIndexed { resize, (requestedWidth, requestedHeight) ->
@@ -124,7 +134,7 @@ class MidiCoreNativeResponsivenessTest {
                             }
                         }
                         val filename = "$resize-${width}x$height-${destination.route}.png"
-                        val image = captureWindow(window, robot, scale)
+                        val image = captureWindow(window, robot, scale, path)
                         check(image.width == (width * scale).toInt() && image.height == (height * scale).toInt())
                         // A denied screen capture or an obscured window must never become visual evidence.
                         assertTrue(hasWorkspacePalette(image), "Native capture did not contain the workspace; inspect screen-capture access")
@@ -155,7 +165,7 @@ class MidiCoreNativeResponsivenessTest {
                             settle(window)
                             onEdt { assertTrue(node(window, MidiCoreArrangePageTags.CREATE_DRAFT).config[SemanticsProperties.Focused]) }
                             val actionFile = "$resize-arrange-action.png"
-                            ImageIO.write(captureWindow(window, robot, scale), "png", path.resolve(actionFile).toFile())
+                            ImageIO.write(captureWindow(window, robot, scale, path), "png", path.resolve(actionFile).toFile())
                             captures += buildJsonObject {
                                 put("file", actionFile); put("sha256", U07Evidence.sha256(Files.readAllBytes(path.resolve(actionFile))))
                                 put("destination", destination.route); put("state", "action-focused")
@@ -179,7 +189,9 @@ class MidiCoreNativeResponsivenessTest {
                     put("status", if (completed) "MEASURED" else "INCOMPLETE")
                     put("fixture", "Owned 256-bar source; 8192 verified notes; 64 four-bar occurrences; 120-character project name and long Unicode section labels")
                     put("largePreviewUiCompletionMs", largePreviewMs)
-                    put("captureMethod", "Robot multi-resolution capture restricted to this test window's client area")
+                    put("captureMethod", if (screenCapture) "Robot multi-resolution client-area screen capture" else
+                        "Skia recorded-frame raster replay from the real window; NOT screen/compositor pixels")
+                    put("onscreenCompositorCapture", if (!screenCapture) "NOT_MEASURED" else if (completed) "MEASURED" else "INCOMPLETE")
                     put("nativeSizePolicy", "Requested client size is reduced only when it plus native frame insets exceeds the recorded usable display; realized client bounds must match exactly. Fixed-size goldens remain separate.")
                     put("humanVisualDecision", "NOT_RECORDED"); put("acousticOnset", "UNMEASURED")
                     put("resizes", JsonArray(resizes))
@@ -240,17 +252,35 @@ class MidiCoreNativeResponsivenessTest {
             ancestors.last().positionInRoot.y - scroll.boundsInRoot.top - 8f * scale))
     }
 
-    private fun captureWindow(window: ComposeWindow, robot: Robot, scale: Float): BufferedImage {
+    private fun captureWindow(window: ComposeWindow, robot: Robot?, scale: Float, path: java.nio.file.Path): BufferedImage {
         val rect = onEdt {
             java.awt.Rectangle(window.contentPane.locationOnScreen, window.contentPane.size).also {
                 check(usableDisplay(window).contains(it)) { "The native client capture extends beyond the usable display: $it" }
             }
         }
-        val image = robot.createMultiResolutionScreenCapture(rect)
-            .getResolutionVariant(rect.width * scale.toDouble(), rect.height * scale.toDouble()) as BufferedImage
+        // Choose the evidence boundary before capture. A rejected Robot image never falls back.
+        val image = if (robot != null) {
+            robot.createMultiResolutionScreenCapture(rect)
+                .getResolutionVariant(rect.width * scale.toDouble(), rect.height * scale.toDouble()) as BufferedImage
+        } else onEdt {
+            window.renderImmediately()
+            fun layers(component: Component): List<SkiaLayer> =
+                if (component is SkiaLayer) listOf(component)
+                else if (component is Container) component.components.flatMap(::layers) else emptyList()
+            val layer = layers(window.contentPane).single()
+            assertEquals(java.awt.Point(0, 0), SwingUtilities.convertPoint(layer, 0, 0, window.contentPane))
+            assertEquals(window.contentPane.size, layer.size)
+            checkNotNull(layer.screenshot()) { "The native window has no recorded frame" }.use { bitmap ->
+                Image.makeFromBitmap(bitmap).use { rendered ->
+                    checkNotNull(rendered.encodeToData()).use { data ->
+                        ImageIO.read(data.bytes.inputStream())
+                    }
+                }
+            }
+        }
         // Retain the exact failing capture before checking it, so native failures are diagnosable.
-        ImageIO.write(image, "png", U07Evidence.root.resolve("native/last-capture.png").toFile())
-        // Geometry alone cannot detect a native peer moving or clipping the window on resize.
+        ImageIO.write(image, "png", path.resolve("last-capture.png").toFile())
+        // Screen pixels additionally detect native peer movement/clipping; replay proves frame content only.
         // Check a broad interior band: a single corner pixel is not stable across native window
         // shapes/compositors, while a cropped or obscured client cannot supply this coverage.
         assertHorizontalColorCoverage(

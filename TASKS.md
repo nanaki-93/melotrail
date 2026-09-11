@@ -85,9 +85,9 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | U06a | Finish whole-song review and atomic decisions | U05 | DONE | Recovered exact Draft/Accepted identity, contextual melody playback, atomic mixed-rest Use/Undo/reuse and scoped blocker routing. Fixed confirmed-end test fixture and playback/candidate lane identity mismatch. Uncached focused checks, 456 tests/build, three-size inspection and fresh Terra High review passed. Evidence ~/.codex/melotrail-terra/u06a-repair-evidence; Logic/listening/visual gates pending; final Export handoff remains U06. |
 | U06 | Finish whole-song Review and Logic export handoff | U06a | DONE | e4d2990b8f05; Corrected the reported compilation error by calculating bounds width from right minus left, preserving the 407 dp regression assertion. Changes remain uncommitted.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T05-44-43-333Z-U06 |
 | U07a | Pin visual comparisons and accessibility regressions | U06 | DONE | Recovered exact image comparisons, geometry and accessibility guards; added 24 coherent accepted/ready and scrolled Review/Export captures, preserving existing baselines (69 total). Uncached focused checks, 537 tests, build, diff check and independent Astra Extra High review passed. Evidence ~/.codex/melotrail-terra/u07a-repair-evidence; native responsiveness/scaling remains U07b and human visual approval U07. |
-| U07b | Measure responsiveness and prepare visual review | U07a | DONE | Recovered native resize/capture lifecycle and verified selection retention; 20-sample preview/draft/cancellation measurements meet preparation/generation targets. 28 native captures and 66 six-page comparisons prepared; 543 tests and build pass. Evidence ~/.codex/melotrail-terra/u07b-repair-evidence; acoustic onset unmeasured, human visual decision remains U07. |
+| U07b | Measure responsiveness and prepare visual review | U07a | DONE | Recovered native resize/capture lifecycle and verified selection retention; 20-sample preview/draft/cancellation measurements meet preparation/generation targets. 28 historical screen captures and 66 six-page comparisons prepared; 543 tests and build passed then. Current automatic native evidence uses explicit frame replay; fresh compositor capture is a separate U07/Q03 gate (Validation). Evidence ~/.codex/melotrail-terra/u07b-repair-evidence; acoustic onset unmeasured, human visual decision remains U07. |
 | U07 | Prove visuals, accessibility and responsiveness | U07b | BLOCKED | The documentation-only diff preserves completed children. Supplied coordinator checks pass, but user visual approval is absent and the new validation record contradicts the exact candidate’s evidence packet. WAITING_USER: all six pages remain unscored. Coordinator evidence documentation also needs reconciliation.; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T10-52-16-914Z-U07 |
-| Q01a | Prepare frozen musical evaluation packages | U06, M09 | BLOCKED | test-2 failed (2); /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T11-35-11-395Z-Q01a/test-2.log ./gradlew test > Task :checkKotlinGradlePluginConfigurationErrors SKIPPED > Task :compileKotlin UP-TO-DATE > Task :compileJava NO-SOURCE > Task :processResources NO-SOURCE > Task :classes UP-TO-DATE > Task :jar UP-TO-DATE > Task :compileTestKotlin UP-TO-DATE > Task :compileTestJava NO-SOURCE > Task :processTestResources UP-TO-DATE > Task :testClasses UP-TO-DATE > Task :test > Task :desktopApp:checkKotlinGradlePluginConfigurationErrors SK |
+| Q01a | Prepare frozen musical evaluation packages | U06, M09 | DONE | Recovered immutable evaluation freeze/export and M01 comparison commands; input integrity, reproduction and accepted-only export regressions pass. Focused/full checks, build and independent review recorded in ~/.codex/melotrail-terra/q01a-q02a-repair-evidence. Five final songs (three unseen) and real scores remain Q01. |
 | Q01 | Evaluate musical improvement and fix failures | Q01a | TODO | |
 | Q02a | Generate current Logic matrix and manifests | U06, M03, M07, M08 | BLOCKED | test-3 failed (2); /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T12-58-42-693Z-Q02a/test-3.log ./gradlew test > Task :checkKotlinGradlePluginConfigurationErrors SKIPPED > Task :compileKotlin UP-TO-DATE > Task :compileJava NO-SOURCE > Task :processResources NO-SOURCE > Task :classes UP-TO-DATE > Task :jar UP-TO-DATE > Task :compileTestKotlin UP-TO-DATE > Task :compileTestJava NO-SOURCE > Task :processTestResources UP-TO-DATE > Task :testClasses UP-TO-DATE > Task :test UP-TO-DATE > Task :desktopApp:checkKotlinGradlePluginConfigurati |
 | Q02 | Run the current Logic Pro matrix | Q02a | TODO | |
@@ -597,7 +597,7 @@ performance measurements. Prepare six-page comparison for user visual review.
 **Tests:** comparator fails shifted panel, wrong primary color/radius and removed
 lane; font allowance cannot mask layout; long names/sections/large note counts;
 no duplicate player/inspector or undisclosed UI-thread work.
-**Done:** automated gates pass and genuine user visual decision is recorded.
+**Done:** automated gates, fresh `:desktopApp:nativeDesktopCapture` and genuine user visual decision pass. Frame replay cannot substitute for compositor evidence.
 Leave WAITING_USER if review is outstanding; Q01/Q02 preparation can continue.
 
 ## Product evidence
@@ -651,7 +651,7 @@ an export test alone cannot complete this task.
 
 ### Q03a — Prove clean native build and startup
 
-**Scope:** Run isolated clean install/package/startup and the six-page MIDI path without worker/model/sound library. Record build identity, reduction and any concrete install regressions; preserve source media and prior evidence.
+**Scope:** Run isolated clean install/package/startup, `:desktopApp:nativeDesktopCapture` and the six-page MIDI path without worker/model/sound library. Record build identity, reduction and any concrete install regressions; preserve source media and prior evidence.
 **Inspect:** the Q03 contract below and its relevant source/test owners.
 **Done:** this slice works through its real caller, focused regressions and required
 coordinator checks pass; leave later slices to their queue owners.
@@ -667,7 +667,7 @@ and native install/startup without worker, sound library or model. Walk all six
 pages and the full MIDI path, verify cleanup measurements and artifact identity.
 Recheck that Q01/Q02/U07 evidence applies to the final engine/UI/export versions.
 Update README to shipped behavior and keep only concise limitations/evidence.
-**Done:** fresh gates, native smoke, user musical/UI decision and applicable Logic
+**Done:** fresh gates including `:desktopApp:nativeDesktopCapture`, native smoke, user musical/UI decision and applicable Logic
 matrix pass. Record final build and user decision in Validation. Do not delete
 acceptance evidence or rewrite the source to obtain a pass.
 

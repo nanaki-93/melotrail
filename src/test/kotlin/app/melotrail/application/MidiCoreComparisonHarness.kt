@@ -258,7 +258,7 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
         val comparisons = baseline.zip(candidate).map { (left, right) -> compare(left, right) }
         val review = outputRoot.resolve("review.md")
         Files.createDirectories(outputRoot)
-        Files.writeString(review, reviewForm(baseline, candidate, comparisons))
+        Files.writeString(review, reviewForm(baseline, candidate, comparisons, outputRoot))
         return M01ComparisonReview(baseline, candidate, comparisons, review)
     }
 
@@ -286,6 +286,7 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
         baseline: List<M01ComparisonCapture>,
         candidate: List<M01ComparisonCapture>,
         comparisons: List<M01SemanticComparison>,
+        outputRoot: Path,
     ): String = buildString {
         appendLine("# M01 MIDI comparison review")
         appendLine()
@@ -304,7 +305,9 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
             } ?: "capture rejected"
             val hashes = published?.midiSha256?.entries?.joinToString("<br>") { (name, hash) -> "$name: `$hash`" } ?: "—"
             val loops = published?.case?.let { "Piano + melody: ${it.pianoMelodyLoop}; full arrangement: ${it.fullArrangementLoop}" } ?: "—"
-            appendLine("| ${left.caseId} | $loops | ${published?.packageDirectory ?: left.summary} | ${candidatePublished?.packageDirectory ?: right.summary} | $frozen | $hashes | ${if (comparison.equivalent) "same" else comparison.differences.joinToString(" ")} | ___ / 10; bars: ___; comments: ___ |")
+            val leftPath = published?.let { outputRoot.relativize(it.packageDirectory).toString() } ?: left.summary
+            val rightPath = candidatePublished?.let { outputRoot.relativize(it.packageDirectory).toString() } ?: right.summary
+            appendLine("| ${left.caseId} | $loops | $leftPath | $rightPath | $frozen | $hashes | ${if (comparison.equivalent) "same" else comparison.differences.joinToString(" ")} | ___ / 10; bars: ___; comments: ___ |")
         }
         appendLine()
         appendLine("Engine IDs and catalog versions above come from each captured package. No listening score is implied by this generated form.")
