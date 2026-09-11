@@ -1316,7 +1316,8 @@ internal fun previewInvalidation(
 private fun auditionStatus(scope: MidiAuditionScope?, playback: MidiAuditionPlaybackState, positionTick: Long): String = when (scope) {
     null -> "Ready to preview."
     MidiAuditionScope.SourceMelody -> "Full melody · ${playback.name.lowercase()} · position $positionTick"
-    is MidiAuditionScope.Occurrence -> "Section preview · ${playback.name.lowercase()} · position $positionTick"
+    is MidiAuditionScope.Occurrence ->
+        "${if (scope.candidateId == null) "Section preview" else "Repair comparison"} · ${playback.name.lowercase()} · position $positionTick"
     is MidiAuditionScope.StylePreview -> "Style preview · ${playback.name.lowercase()} · position $positionTick"
     is MidiAuditionScope.ArrangementDraft -> "Draft preview · ${playback.name.lowercase()} · position $positionTick"
     is MidiAuditionScope.Candidate -> "Candidate preview · ${playback.name.lowercase()}"

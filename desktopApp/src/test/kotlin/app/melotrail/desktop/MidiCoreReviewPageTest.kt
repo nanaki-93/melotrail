@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -24,6 +25,7 @@ import app.melotrail.project.MidiCoreArrangementDraftValidationSummary
 import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
+import app.melotrail.project.MidiCorePlannedRest
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.ProjectAuthority
@@ -71,11 +73,14 @@ class MidiCoreReviewPageTest {
     }
 
     @Test
-    fun `Review exposes undo only for the latest batch and Export only after strict acceptance`() = runComposeUiTest {
+    fun `Review identifies an accepted draft and exposes undo Export but not a redundant Use`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         val navigation = mutableListOf<MidiCoreWorkspaceDestination>()
         setContent { MelotrailTheme { MidiCoreReviewPage(reviewState(accepted = true), intents::add, navigation::add) } }
 
+        onNodeWithTag(MidiCoreReviewPageTags.DRAFT_IDENTITY).performScrollTo()
+        onNodeWithText("Accepted arrangement").assertExists()
+        onNodeWithTag(MidiCoreReviewPageTags.USE_DRAFT).assertDoesNotExist()
         onNodeWithTag(MidiCoreReviewPageTags.UNDO_DRAFT).performScrollTo().performClick()
         onNodeWithTag(MidiCoreReviewPageTags.EXPORT).performScrollTo().performClick()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.UndoArrangementDraftAcceptance("batch-review-draft")), intents)
@@ -84,6 +89,27 @@ class MidiCoreReviewPageTest {
         setContent { MelotrailTheme { MidiCoreReviewPage(reviewState(), {}, {}) } }
         onNodeWithTag(MidiCoreReviewPageTags.UNDO_DRAFT).assertDoesNotExist()
         onNodeWithTag(MidiCoreReviewPageTags.EXPORT).assertDoesNotExist()
+    }
+
+    @Test
+    fun `Review distinguishes a planned rest in a draft from the same accepted rest`() = runComposeUiTest {
+        val draftState = reviewState(plannedRest = true)
+        assertEquals(
+            MidiCoreSongMapRoleState.PLANNED_REST_IN_DRAFT,
+            midiCoreSongMap(requireNotNull(draftState.project)).first().roleStates[CandidateRole.BASS],
+        )
+        setContent { MelotrailTheme { MidiCoreReviewPage(draftState, {}, {}) } }
+        onNodeWithText("Draft arrangement").assertExists()
+        onNodeWithTag(MidiCoreReviewPageTags.USE_DRAFT).performScrollTo().assertIsEnabled()
+
+        val acceptedState = reviewState(accepted = true, plannedRest = true)
+        assertEquals(
+            MidiCoreSongMapRoleState.ACCEPTED_PLANNED_REST,
+            midiCoreSongMap(requireNotNull(acceptedState.project)).first().roleStates[CandidateRole.BASS],
+        )
+        setContent { MelotrailTheme { MidiCoreReviewPage(acceptedState, {}, {}) } }
+        onNodeWithText("Accepted arrangement").assertExists()
+        onNodeWithTag(MidiCoreReviewPageTags.USE_DRAFT).assertDoesNotExist()
     }
 
     @Test
@@ -96,6 +122,7 @@ class MidiCoreReviewPageTest {
         onNodeWithTag(MidiCoreReviewPageTags.OPEN_EXCEPTIONS).performScrollTo().performClick()
         waitForIdle()
         intents.clear()
+        onNodeWithContentDescription("Play the selected MIDI alternative with the protected melody at this section loop").assertExists()
         onNodeWithTag(MidiCoreReviewPageTags.PLAY_CANDIDATE).performScrollTo().performClick()
         onNodeWithTag(MidiCoreReviewPageTags.compare("review-alt")).performScrollTo().performClick()
         onNodeWithTag(MidiCoreReviewPageTags.MORE_ACTIONS).performScrollTo().performClick()
@@ -117,6 +144,30 @@ class MidiCoreReviewPageTest {
 
         onNodeWithTag(MidiCoreReviewPageTags.REPAIR).performScrollTo().performClick()
         assertEquals(listOf(MidiCoreWorkspaceDestination.ARRANGE), navigation)
+    }
+
+    @Test
+    fun `Review routes a shared-lane selection and scope blocker to the selected section`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        val state = reviewState().copy(
+            blockers = listOf(
+                MidiCoreWorkspaceBlocker(
+                    MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+                    "A locked acceptance prevents this complete draft.",
+                    "Unlock this scope before using the draft.",
+                    occurrenceId = "verse-1",
+                    role = CandidateRole.BASS,
+                ),
+            ),
+        )
+        setContent { MelotrailTheme { MidiCoreReviewPage(state, intents::add, {}) } }
+
+        onNodeWithTag(MidiCoreReviewPageTags.BLOCKERS).assertDoesNotExist()
+        onNodeWithTag(MidiCoreReviewPageTags.SECTION_BLOCKERS).assertExists()
+        onNodeWithText("Verse 1 · Bass: A locked acceptance prevents this complete draft. Next: Unlock this scope before using the draft.").assertExists()
+        onNodeWithTag(MidiCoreSongMapTags.occurrence("verse-2")).performClick()
+
+        assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.SelectArrangementOccurrence("verse-2")), intents)
     }
 
     @Test
@@ -178,7 +229,7 @@ class MidiCoreReviewPageTest {
         writeReviewFixture("compact-review-draft-scrolled.png", onRoot().captureToImage().toAwtImage())
     }
 
-    private fun reviewState(accepted: Boolean = false): MidiCoreWorkspaceState {
+    private fun reviewState(accepted: Boolean = false, plannedRest: Boolean = false): MidiCoreWorkspaceState {
         val authority = ProjectAuthority(
             key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR), tempo = ProjectTempo(500_000), meter = ProjectMeter(4, 2),
             sectionDefinitions = listOf(ProjectSectionDefinition("verse", "Verse")),
@@ -197,7 +248,9 @@ class MidiCoreReviewPageTest {
             SelectedMelodyTrack(0, 0, "c".repeat(64)), authority,
         )
         val hasher = MidiCoreAuthorityHasher.from(base)
-        val candidates = authority.occurrences.flatMap { occurrence -> CandidateRole.entries.map { role ->
+        val restedScope = "verse-1" to CandidateRole.BASS
+        val candidates = authority.occurrences.flatMap { occurrence -> CandidateRole.entries.mapNotNull { role ->
+            if (plannedRest && occurrence.id to role == restedScope) return@mapNotNull null
             MidiCoreCandidate(
                 id = "draft-${occurrence.id}-${role.name.lowercase()}", role = role, occurrenceId = occurrence.id, generatorVersion = "midi-core-v1",
                 authorityHash = hasher.scopeHash(occurrence.id, role), seed = role.ordinal.toLong() + 1L,
@@ -207,15 +260,34 @@ class MidiCoreReviewPageTest {
                 status = if (accepted) MidiCoreCandidateStatus.ACCEPTED else MidiCoreCandidateStatus.CURRENT,
             )
         } }
+        val plannedRests = if (plannedRest) listOf(
+            MidiCorePlannedRest(restedScope.first, restedScope.second, hasher.scopeHash(restedScope.first, restedScope.second)),
+        ) else emptyList()
         val draft = MidiCoreArrangementDraft(
             id = "review-draft", styleId = "open-sky", styleVersion = 1, authorityHash = hasher.sha256, rootSeed = 1L,
             candidateReferences = candidates.map { candidate -> MidiCoreArrangementDraftCandidateReference(candidate.occurrenceId, candidate.role, candidate.id, candidate.midi.sha256, candidate.validationReport.sha256, candidate.authorityHash) },
-            validation = MidiCoreArrangementDraftValidationSummary(candidates.size, 24, true, "f".repeat(64)), createdAt = "2026-09-04T00:00:00Z",
+            validation = MidiCoreArrangementDraftValidationSummary(candidates.size + plannedRests.size, 24, true, "f".repeat(64)), createdAt = "2026-09-04T00:00:00Z",
+            plannedRests = plannedRests,
         )
         val acceptances = if (accepted) candidates.map { CandidateAcceptance(it.occurrenceId, it.role, it.id, false) } else emptyList()
-        val batches = if (accepted) listOf(MidiCoreArrangementDraftAcceptanceHistory("batch-review-draft", draft.id, emptyList(), acceptances, "2026-09-04T00:01:00Z")) else emptyList()
+        val acceptedRests = if (accepted) plannedRests else emptyList()
+        val batches = if (accepted) listOf(MidiCoreArrangementDraftAcceptanceHistory(
+            "batch-review-draft",
+            draft.id,
+            emptyList(),
+            acceptances,
+            "2026-09-04T00:01:00Z",
+            appliedPlannedRests = acceptedRests,
+        )) else emptyList()
         return MidiCoreWorkspaceState(
-            project = base.copy(candidates = candidates, acceptances = acceptances, arrangementDrafts = listOf(draft), arrangementDraftAcceptanceHistory = batches, revision = 6L),
+            project = base.copy(
+                candidates = candidates,
+                acceptances = acceptances,
+                arrangementDrafts = listOf(draft),
+                arrangementDraftAcceptanceHistory = batches,
+                acceptedPlannedRests = acceptedRests,
+                revision = 6L,
+            ),
             arrangement = MidiCoreArrangementUiState(selectedOccurrenceId = "verse-1"),
         )
     }

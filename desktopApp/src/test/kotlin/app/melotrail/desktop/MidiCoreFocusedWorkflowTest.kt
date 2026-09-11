@@ -117,6 +117,88 @@ class MidiCoreFocusedWorkflowTest {
     }
 
     @Test
+    fun `real mixed draft Use Undo and reuse are atomic and preserve Review selection loop`() {
+        val temporaryRoot = Files.createTempDirectory("melotrail-u06a-")
+        val projectRoot = temporaryRoot.resolve("project")
+        val artifacts = MidiCoreArtifactStore()
+        val workspace = newWorkspace(artifacts, WorkflowFakeMidiAudition(), WorkflowPreferences())
+        fun apply(intent: MidiCoreWorkspaceIntent) {
+            workspace.accept(intent)
+            awaitWorkspaceCompletion(workspace, intent.toString())
+            assertEquals(
+                MidiCoreWorkspaceOperationPhase.SUCCEEDED,
+                workspace.state.value.operation.phase,
+                "${intent}: ${workspace.state.value.blockers}",
+            )
+        }
+        try {
+            apply(MidiCoreWorkspaceIntent.CreateProject(projectRoot, "Review rest fixture"))
+            apply(MidiCoreWorkspaceIntent.ImportSource(writeSourceMidi(temporaryRoot.resolve("source.mid"), pitch = 84)))
+            apply(MidiCoreWorkspaceIntent.ConfirmAuthority)
+            apply(MidiCoreWorkspaceIntent.ReplaceStructure(
+                listOf(ProjectSectionDefinition("verse", "Verse")),
+                listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 2)),
+            ))
+            apply(MidiCoreWorkspaceIntent.ReplaceHarmony(listOf(
+                AuthoritativeChordEvent("c1", "verse-1", "C", 0L, 3_840L),
+            )))
+            apply(MidiCoreWorkspaceIntent.ProposeArrangementPlan("steady-road"))
+            apply(MidiCoreWorkspaceIntent.ConfirmArrangementPlan)
+            val restingPlan = requireNotNull(workspace.state.value.project?.arrangementPlan).let { plan ->
+                plan.copy(occurrences = plan.occurrences.map { occurrence ->
+                    occurrence.copy(roleSettings = occurrence.roleSettings.map { settings ->
+                        if (settings.role == CandidateRole.BASS) settings.copy(
+                            activity = app.melotrail.project.MidiCoreRoleActivity.INACTIVE,
+                            density = 0,
+                        ) else settings
+                    })
+                })
+            }
+            apply(MidiCoreWorkspaceIntent.PreviewArrangementPlanEdit(restingPlan))
+            apply(MidiCoreWorkspaceIntent.ConfirmArrangementPlanEdit(restingPlan))
+            apply(MidiCoreWorkspaceIntent.CreateArrangementDraft("steady-road", 41L))
+
+            val beforeUse = requireNotNull(workspace.state.value.project)
+            val draft = beforeUse.arrangementDrafts.single()
+            assertEquals(listOf(CandidateRole.BASS), draft.plannedRests.map { it.role })
+            assertEquals(setOf(CandidateRole.CHORDS, CandidateRole.DRUMS), draft.candidateReferences.map { it.role }.toSet())
+            workspace.accept(MidiCoreWorkspaceIntent.SelectArrangementOccurrence("verse-1"))
+            val selectedLoop = MidiAuditionLoop(0L, 3_840L)
+            assertEquals("verse-1", workspace.state.value.arrangement.selectedOccurrenceId)
+            assertEquals(selectedLoop, workspace.state.value.audition.loop)
+
+            apply(MidiCoreWorkspaceIntent.UseArrangementDraft(draft.id))
+            val accepted = requireNotNull(workspace.state.value.project)
+            assertEquals(beforeUse.revision + 1L, accepted.revision)
+            assertEquals(2, accepted.acceptances.size)
+            assertEquals(listOf(CandidateRole.BASS), accepted.acceptedPlannedRests.map { it.role })
+            assertEquals(3, accepted.arrangementDraftAcceptanceHistory.single().appliedScopes.size)
+            assertEquals("verse-1", workspace.state.value.arrangement.selectedOccurrenceId)
+            assertEquals(selectedLoop, workspace.state.value.audition.loop)
+
+            val historyId = accepted.arrangementDraftAcceptanceHistory.single().id
+            apply(MidiCoreWorkspaceIntent.UndoArrangementDraftAcceptance(historyId))
+            val undone = requireNotNull(workspace.state.value.project)
+            assertEquals(accepted.revision + 1L, undone.revision)
+            assertTrue(undone.acceptances.isEmpty())
+            assertTrue(undone.acceptedPlannedRests.isEmpty())
+            assertTrue(undone.arrangementDraftAcceptanceHistory.isEmpty())
+            assertEquals(beforeUse.sourceMidi, undone.sourceMidi)
+            assertEquals(beforeUse.arrangementDrafts, undone.arrangementDrafts)
+            assertEquals("verse-1", workspace.state.value.arrangement.selectedOccurrenceId)
+            assertEquals(selectedLoop, workspace.state.value.audition.loop)
+
+            apply(MidiCoreWorkspaceIntent.UseArrangementDraft(draft.id))
+            val reused = requireNotNull(workspace.state.value.project)
+            assertEquals(2, reused.acceptances.size)
+            assertEquals(listOf(CandidateRole.BASS), reused.acceptedPlannedRests.map { it.role })
+        } finally {
+            workspace.close()
+            deleteTree(temporaryRoot)
+        }
+    }
+
+    @Test
     fun `real musical repair covers neighboring scopes and atomically accepts matching dependencies`() {
         val temporaryRoot = Files.createTempDirectory("melotrail-m09-")
         val projectRoot = temporaryRoot.resolve("project")

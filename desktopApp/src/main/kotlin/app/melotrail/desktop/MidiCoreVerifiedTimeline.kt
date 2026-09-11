@@ -39,6 +39,7 @@ import app.melotrail.application.MidiCoreVisualEvidence
 import app.melotrail.application.MidiCoreVisualEvidenceAvailable
 import app.melotrail.application.MidiCoreVisualEvidenceProjection
 import app.melotrail.application.MidiCoreVisualEvidenceScope
+import app.melotrail.application.MidiCoreVisualEvidenceUnavailable
 import app.melotrail.application.MidiCoreVisualEvidenceTiming
 import app.melotrail.audition.MidiAuditionScope
 import app.melotrail.audition.MidiAuditionState
@@ -134,11 +135,23 @@ internal fun midiCoreVisibleTimelineEvidence(
     audition: MidiAuditionState,
 ): MidiCoreVisualEvidence? {
     projection ?: return null
-    val fromScope = when (audition.scope) {
-        is MidiAuditionScope.Candidate -> projection.selectedCandidate
+    fun candidateEvidence(candidateId: String): MidiCoreVisualEvidence {
+        val evidence = projection.selectedCandidate
+        if (evidence is MidiCoreVisualEvidence.Available &&
+            evidence.value.identity.candidateIds == listOf(candidateId)) return evidence
+        return MidiCoreVisualEvidence.Unavailable(MidiCoreVisualEvidenceUnavailable(
+            MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE,
+            "PLAYING_CANDIDATE_EVIDENCE_MISMATCH",
+            "Verified lanes for the alternative in the player are unavailable.",
+            "Review the selected alternative’s findings, then play it to align lanes with playback.",
+        ))
+    }
+    val fromScope = when (val scope = audition.scope) {
+        is MidiAuditionScope.Candidate -> candidateEvidence(scope.candidateId)
         is MidiAuditionScope.ArrangementDraft -> projection.draft
         MidiAuditionScope.AcceptedArrangement, is MidiAuditionScope.Role -> projection.accepted
-        MidiAuditionScope.SourceMelody, is MidiAuditionScope.Occurrence -> projection.source
+        MidiAuditionScope.SourceMelody -> projection.source
+        is MidiAuditionScope.Occurrence -> scope.candidateId?.let(::candidateEvidence) ?: projection.source
         is MidiAuditionScope.StylePreview, null -> null
     }
     // Never hide a stale/missing/digest failure for the scope the player actually selected.

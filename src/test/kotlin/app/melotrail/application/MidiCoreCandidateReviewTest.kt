@@ -95,7 +95,10 @@ class MidiCoreCandidateReviewTest {
             ),
         )
 
-        assertEquals(MidiAuditionScope.Occurrence("verse-1"), ready.plan.view.scope)
+        assertEquals(
+            MidiAuditionScope.Occurrence("verse-1", generated.candidate.id, MidiExportRole.CHORDS),
+            ready.plan.view.scope,
+        )
         assertEquals(0L, ready.plan.view.window.startTick)
         assertEquals(1920L, ready.plan.view.window.endTick)
         assertEquals(listOf(MidiExportRole.MELODY, MidiExportRole.CHORDS), ready.plan.view.roles)

@@ -15,9 +15,19 @@ sealed interface MidiAuditionScope {
             require(role != MidiExportRole.MELODY) { "A protected melody is not a generated candidate" }
         }
     }
-    data class Occurrence(val occurrenceId: String) : MidiAuditionScope {
+    data class Occurrence(
+        val occurrenceId: String,
+        /** Present only when Review is comparing this immutable candidate with the protected melody. */
+        val candidateId: String? = null,
+        val candidateRole: MidiExportRole? = null,
+    ) : MidiAuditionScope {
         init {
             require(occurrenceId.isNotBlank()) { "Occurrence audition ID must not be blank" }
+            require((candidateId == null) == (candidateRole == null)) {
+                "Occurrence candidate context must bind candidate and role together"
+            }
+            require(candidateId == null || candidateId.isNotBlank()) { "Occurrence candidate ID must not be blank" }
+            require(candidateRole != MidiExportRole.MELODY) { "The protected melody is not a generated candidate" }
         }
     }
     /** Ephemeral full-role MIDI preview selected from the Arrange style gallery. */
@@ -112,6 +122,20 @@ data class MidiAuditionView(
         /** Select one exact occurrence window without rewriting any event ticks. */
         fun occurrence(occurrenceId: String, song: MidiExportSong, startTick: Long, endTick: Long): MidiAuditionView =
             MidiAuditionView(MidiAuditionScope.Occurrence(occurrenceId), song, MidiAuditionWindow(startTick, endTick))
+
+        /** Compare one generated alternative with the protected melody at its exact song position. */
+        fun candidateInContext(
+            candidateId: String,
+            role: MidiExportRole,
+            occurrenceId: String,
+            song: MidiExportSong,
+            startTick: Long,
+            endTick: Long,
+        ): MidiAuditionView = MidiAuditionView(
+            MidiAuditionScope.Occurrence(occurrenceId, candidateId, role),
+            song,
+            MidiAuditionWindow(startTick, endTick),
+        )
 
         /** Select a non-persistent all-role style preview over one exact occurrence window. */
         fun stylePreview(

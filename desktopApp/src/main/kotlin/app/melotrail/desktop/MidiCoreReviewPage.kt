@@ -39,6 +39,7 @@ internal object MidiCoreReviewPageTags {
     const val ROOT = "midi-core-review-page"
     const val EMPTY = "midi-core-review-empty"
     const val DRAFT = "midi-core-review-draft"
+    const val DRAFT_IDENTITY = "midi-core-review-draft-identity"
     const val PLAY_DRAFT = "midi-core-review-play-draft"
     const val USE_DRAFT = "midi-core-review-use-draft"
     const val UNDO_DRAFT = "midi-core-review-undo-draft"
@@ -60,6 +61,8 @@ internal object MidiCoreReviewPageTags {
     const val UNLOCK_CANDIDATE = "midi-core-review-unlock-candidate"
     const val REPAIR = "midi-core-review-repair-section"
     const val BLOCKERS = "midi-core-review-blockers"
+    const val SECTION_BLOCKERS = "midi-core-review-section-blockers"
+    const val ROLE_BLOCKERS = "midi-core-review-role-blockers"
 
     fun role(role: CandidateRole): String = ROLE_PREFIX + role.name.lowercase()
     fun candidate(id: String): String = CANDIDATE_PREFIX + id
@@ -147,6 +150,7 @@ private fun ReviewDraftDecision(
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
     onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
 ) {
+    val identity = draft?.let { reviewDraftIdentity(requireNotNull(state.project), it) }
     ReviewCard(MidiCoreReviewPageTags.DRAFT, "Complete draft") {
         when (draft) {
             null -> {
@@ -161,8 +165,20 @@ private fun ReviewDraftDecision(
                 ) { Text("Create a draft in Arrange") }
             }
             else -> {
+                Text(
+                    if (identity == MidiCoreReviewDraftIdentity.ACCEPTED) "Accepted arrangement" else "Draft arrangement",
+                    color = if (identity == MidiCoreReviewDraftIdentity.ACCEPTED) MusicWorkspaceTokens.Success else MusicWorkspaceTokens.Primary,
+                    modifier = Modifier.semantics { testTag = MidiCoreReviewPageTags.DRAFT_IDENTITY },
+                )
                 Text("${arrangementStyleDisplayName(draft.styleId)} · ${draft.validation.scopeCount} validated parts", style = MaterialTheme.typography.titleMedium)
-                Text("Playback does not require accepting each role first.", color = MusicWorkspaceTokens.TextSecondary)
+                Text(
+                    if (identity == MidiCoreReviewDraftIdentity.ACCEPTED) {
+                        "These exact candidate and planned-rest selections are accepted. Export uses this arrangement."
+                    } else {
+                        "Playback does not require accepting each role first. Use this draft to accept every selection atomically."
+                    },
+                    color = MusicWorkspaceTokens.TextSecondary,
+                )
                 Button(
                     onClick = { onIntent(MidiCoreWorkspaceIntent.PlayArrangementDraft(draft.id)) },
                     enabled = !state.busy,
@@ -172,15 +188,17 @@ private fun ReviewDraftDecision(
                         contentDescription = "Play complete ${arrangementStyleDisplayName(draft.styleId)} MIDI draft"
                     },
                 ) { Text("Play complete draft") }
-                Button(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.UseArrangementDraft(draft.id)) },
-                    enabled = !state.busy,
-                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                        testTag = MidiCoreReviewPageTags.USE_DRAFT
-                        contentDescription = "Use this complete draft as the accepted arrangement"
-                    },
-                ) { Text("Use this draft") }
+                if (identity != MidiCoreReviewDraftIdentity.ACCEPTED) {
+                    Button(
+                        onClick = { onIntent(MidiCoreWorkspaceIntent.UseArrangementDraft(draft.id)) },
+                        enabled = !state.busy,
+                        shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                            testTag = MidiCoreReviewPageTags.USE_DRAFT
+                            contentDescription = "Use this complete draft as the accepted arrangement"
+                        },
+                    ) { Text("Use this draft") }
+                }
             }
         }
         val latestBatch = state.project?.arrangementDraftAcceptanceHistory?.lastOrNull()
@@ -206,7 +224,7 @@ private fun ReviewDraftDecision(
         } else {
             Text("${progress.accepted} of ${progress.total} roles accepted. Export remains locked until the complete accepted arrangement is ready.", color = MusicWorkspaceTokens.TextSecondary)
         }
-        ReviewBlockers(state.blockers)
+        ReviewBlockers(state.blockers.filter { it.occurrenceId == null }, MidiCoreReviewPageTags.BLOCKERS)
     }
 }
 
@@ -222,7 +240,7 @@ private fun ReviewSelectedSectionInspector(
         val localBlockers = state.blockers.filter { it.occurrenceId == occurrence.occurrence.id }
         if (localBlockers.isNotEmpty()) {
             Text("This section needs attention.", color = MusicWorkspaceTokens.Warning)
-            localBlockers.forEach { blocker -> Text("${blocker.message} Next: ${blocker.nextAction}", color = MusicWorkspaceTokens.Warning) }
+            ReviewBlockers(localBlockers, MidiCoreReviewPageTags.SECTION_BLOCKERS, occurrence.displayLabel)
         }
         Button(
             onClick = { onNavigate(MidiCoreWorkspaceDestination.ARRANGE) }, enabled = !state.busy,
@@ -334,13 +352,14 @@ private fun ReviewCandidateDetails(
                     if (!selected.authorityCurrent || selected.candidate.status == MidiCoreCandidateStatus.STALE) "Needs regeneration." else "${blockers.size} blocking findings.",
                 color = if (blockers.isEmpty() && selected.authorityCurrent) MusicWorkspaceTokens.TextSecondary else MusicWorkspaceTokens.Warning,
             )
+            Text("Alternative playback keeps the protected melody at this section's exact loop position.", color = MusicWorkspaceTokens.TextSecondary)
             Button(
                 onClick = { onIntent(MidiCoreWorkspaceIntent.PlayCandidate(selected.candidate.id, selected.candidate.role, selected.candidate.occurrenceId)) }, enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreReviewPageTags.PLAY_CANDIDATE
-                    contentDescription = "Play the selected MIDI alternative"
+                    contentDescription = "Play the selected MIDI alternative with the protected melody at this section loop"
                 },
-            ) { Text("Play alternative") }
+            ) { Text("Play with melody in this section") }
             if (!selected.accepted && selected.authorityCurrent && selected.candidate.status == MidiCoreCandidateStatus.CURRENT && blockers.isEmpty()) {
                 OutlinedButton(
                     onClick = { onIntent(MidiCoreWorkspaceIntent.AcceptCandidate(selected.candidate.id)) }, enabled = !state.busy,
@@ -371,6 +390,16 @@ private fun ReviewCandidateDetails(
                 },
             ) { Text(if (moreOpen) "Hide more actions" else "More actions") }
             if (moreOpen) ReviewCandidateLifecycleActions(selected, restorable, !state.busy, onIntent)
+            ReviewBlockers(
+                state.blockers.filter { blocker ->
+                    blocker.occurrenceId == selected.candidate.occurrenceId &&
+                        (blocker.role == null || blocker.role == selected.candidate.role)
+                },
+                MidiCoreReviewPageTags.ROLE_BLOCKERS,
+                state.project?.let(::midiCoreSongMap)
+                    ?.singleOrNull { it.occurrence.id == selected.candidate.occurrenceId }
+                    ?.displayLabel,
+            )
         }
     }
 }
@@ -405,16 +434,53 @@ private fun ReviewCandidateLifecycleActions(
 }
 
 @Composable
-private fun ReviewBlockers(blockers: List<MidiCoreWorkspaceBlocker>) {
+private fun ReviewBlockers(
+    blockers: List<MidiCoreWorkspaceBlocker>,
+    tag: String = MidiCoreReviewPageTags.BLOCKERS,
+    occurrenceDisplayLabel: String? = null,
+) {
     if (blockers.isEmpty()) return
-    Column(Modifier.fillMaxWidth().semantics { testTag = MidiCoreReviewPageTags.BLOCKERS }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-        blockers.forEach { blocker -> Text("${blocker.message} Next: ${blocker.nextAction}", color = MusicWorkspaceTokens.Warning) }
+    Column(Modifier.fillMaxWidth().semantics { testTag = tag }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        blockers.forEach { blocker ->
+            val scope = listOfNotNull(blocker.occurrenceId?.let { occurrenceDisplayLabel ?: it }, blocker.role?.displayName).joinToString(" · ")
+            Text("${if (scope.isBlank()) "" else "$scope: "}${blocker.message} Next: ${blocker.nextAction}", color = MusicWorkspaceTokens.Warning)
+        }
     }
 }
 
 private fun currentArrangementDraft(project: MidiCoreProject): MidiCoreArrangementDraft? = runCatching {
     app.melotrail.project.MidiCoreAuthorityHasher.from(project).sha256
 }.getOrNull()?.let { hash -> project.arrangementDrafts.lastOrNull { it.authorityHash == hash } }
+
+/** A draft remains visible after Use, so derive its status from the exact accepted selections. */
+private fun reviewDraftIdentity(project: MidiCoreProject, draft: MidiCoreArrangementDraft): MidiCoreReviewDraftIdentity {
+    val currentScopes = project.authority?.occurrences.orEmpty().flatMap { occurrence ->
+        CandidateRole.entries.map { occurrence.id to it }
+    }.toSet()
+    val acceptedCandidates = project.acceptances
+        .filter { it.occurrenceId to it.role in currentScopes }
+        .associateBy { it.occurrenceId to it.role }
+    val acceptedRests = project.acceptedPlannedRests
+        .filter { it.occurrenceId to it.role in currentScopes }
+        .associateBy { it.occurrenceId to it.role }
+    val candidatesMatch = draft.candidateReferences.all { reference ->
+        acceptedCandidates[reference.occurrenceId to reference.role]?.candidateId == reference.candidateId &&
+            project.candidates.singleOrNull { it.id == reference.candidateId }?.status == MidiCoreCandidateStatus.ACCEPTED
+    }
+    val restsMatch = draft.plannedRests.all { rest ->
+        acceptedRests[rest.occurrenceId to rest.role]?.authorityHash == rest.authorityHash
+    }
+    return if (candidatesMatch && restsMatch &&
+        draft.selections.map { it.occurrenceId to it.role }.toSet() == currentScopes &&
+        draft.candidateReferences.size == acceptedCandidates.size && draft.plannedRests.size == acceptedRests.size
+    ) {
+        MidiCoreReviewDraftIdentity.ACCEPTED
+    } else {
+        MidiCoreReviewDraftIdentity.DRAFT
+    }
+}
+
+private enum class MidiCoreReviewDraftIdentity { DRAFT, ACCEPTED }
 
 @Composable
 private fun ReviewCard(tag: String, title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {

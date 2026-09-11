@@ -95,8 +95,40 @@ class MidiCoreVerifiedTimelineTest {
         assertIs<MidiCoreVisualEvidence.Available>(visible)
         assertEquals(MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE, visible.value.scope)
 
+        val contextual = assertIs<MidiCoreVisualEvidence.Available>(midiCoreVisibleTimelineEvidence(
+            projection,
+            MidiAuditionState(
+                scope = MidiAuditionScope.Occurrence("verse-1", "candidate-1", MidiExportRole.CHORDS),
+            ),
+        ))
+        assertEquals(MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE, contextual.value.scope)
+
         val idle = assertIs<MidiCoreVisualEvidence.Available>(midiCoreVisibleTimelineEvidence(projection, MidiAuditionState()))
         assertEquals(MidiCoreVisualEvidenceScope.DRAFT, idle.value.scope)
+    }
+
+    @Test
+    fun `selecting another alternative cannot relabel the playing candidate lanes`() {
+        val candidate = available(MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE)
+        val projection = MidiCoreVisualEvidenceProjection(
+            source = available(MidiCoreVisualEvidenceScope.PROTECTED_SOURCE),
+            selectedCandidate = candidate.copy(value = candidate.value.copy(
+                identity = candidate.value.identity.copy(candidateIds = listOf("candidate-2")),
+            )),
+            draft = available(MidiCoreVisualEvidenceScope.DRAFT),
+            accepted = available(MidiCoreVisualEvidenceScope.ACCEPTED),
+        )
+        for (scope in listOf(
+            MidiAuditionScope.Candidate("candidate-1", MidiExportRole.CHORDS),
+            MidiAuditionScope.Occurrence("verse-1", "candidate-1", MidiExportRole.CHORDS),
+        )) {
+            val player = MidiAuditionState(scope = scope)
+            val evidence = assertIs<MidiCoreVisualEvidence.Unavailable>(
+                midiCoreVisibleTimelineEvidence(projection, player),
+            )
+            assertEquals("PLAYING_CANDIDATE_EVIDENCE_MISMATCH", evidence.value.code)
+            assertEquals(scope, player.scope)
+        }
     }
 
     @Test
@@ -121,7 +153,10 @@ class MidiCoreVerifiedTimelineTest {
             MidiAuditionState(scope = MidiAuditionScope.Candidate("candidate-1", MidiExportRole.CHORDS)),
         )
 
-        assertEquals(unavailableCandidate, visible)
+        val unavailable = assertIs<MidiCoreVisualEvidence.Unavailable>(visible)
+        assertEquals("PLAYING_CANDIDATE_EVIDENCE_MISMATCH", unavailable.value.code)
+        assertTrue(!unavailable.value.message.contains("digest"),
+            "A failure without candidate identity must not be attributed to the playing candidate")
     }
 
     @Test
@@ -180,7 +215,8 @@ class MidiCoreVerifiedTimelineTest {
     private fun available(scope: MidiCoreVisualEvidenceScope): MidiCoreVisualEvidence.Available = MidiCoreVisualEvidence.Available(
         MidiCoreVisualEvidenceAvailable(
             scope = scope,
-            identity = MidiCoreVisualEvidenceIdentity("timeline-project", "a".repeat(64), authorityHash = null),
+            identity = MidiCoreVisualEvidenceIdentity("timeline-project", "a".repeat(64), authorityHash = null,
+                candidateIds = if (scope == MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE) listOf("candidate-1") else emptyList()),
             timing = timing(),
             lanes = MidiExportRole.entries.map { role ->
                 MidiCoreVisualEvidenceLane(

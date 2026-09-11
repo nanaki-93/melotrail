@@ -480,6 +480,45 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `whole-draft use routes a locked scope to its Review section and role`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedReviewSong()
+        fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan(3_840L))
+        fake.useArrangementDraftResult = app.melotrail.application.MidiCoreArrangementDraftAcceptanceResult.Rejected(
+            app.melotrail.application.MidiCoreArrangementDraftProblem(
+                app.melotrail.application.MidiCoreArrangementDraftProblemCode.LOCKED,
+                "A locked acceptance prevents using this complete draft at 'verse-1' bass.",
+                "Explicitly unlock that scoped acceptance before using the draft.",
+                app.melotrail.application.MidiCoreArrangementDraftScope("verse-1", CandidateRole.BASS),
+            ),
+        )
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.SelectArrangementOccurrence("verse-2"))
+        assertEquals("verse-2", viewModel.state.value.arrangement.selectedOccurrenceId)
+        assertEquals(MidiAuditionLoop(1_920L, 3_840L), viewModel.state.value.audition.loop)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.UseArrangementDraft("review-draft"))
+        advanceUntilIdle()
+
+        val blocker = viewModel.state.value.blockers.first()
+        assertEquals(MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED, blocker.code)
+        assertEquals("LOCKED", blocker.sourceCode)
+        assertEquals("verse-1", blocker.occurrenceId)
+        assertEquals(CandidateRole.BASS, blocker.role)
+        assertEquals("verse-1", viewModel.state.value.arrangement.selectedOccurrenceId)
+        assertEquals("verse-1", viewModel.state.value.review.occurrenceId)
+        assertEquals(CandidateRole.BASS, viewModel.state.value.review.role)
+        assertEquals(MidiAuditionLoop(0L, 1_920L), viewModel.state.value.audition.loop)
+        assertEquals(MidiAuditionPlaybackState.PLAYING, viewModel.state.value.audition.playback)
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
+        viewModel.close()
+    }
+
+    @Test
     fun `Review audition prepares candidate and accepted arrangement scopes without project mutation`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
@@ -927,6 +966,7 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     val openResults = ArrayDeque<MidiCoreProjectLifecycleResult>()
     var pendingGeneration: CompletableDeferred<MidiCoreCandidateGenerationResult>? = null
     var draftFailure: Exception? = null
+    var useArrangementDraftResult: app.melotrail.application.MidiCoreArrangementDraftAcceptanceResult? = null
     var onPrepareDraft: () -> Unit = {}
     val draftRequests = mutableListOf<app.melotrail.application.GenerateMidiCoreArrangementDraft>()
     var draftGenerationResult: app.melotrail.application.MidiCoreArrangementDraftGenerationResult =
@@ -1193,7 +1233,7 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     }
 
     override fun useArrangementDraft(request: app.melotrail.application.UseMidiCoreArrangementDraft): app.melotrail.application.MidiCoreArrangementDraftAcceptanceResult =
-        error("not used")
+        useArrangementDraftResult ?: error("not used")
 
     override fun undoArrangementDraftAcceptance(request: app.melotrail.application.UndoMidiCoreArrangementDraftAcceptance): app.melotrail.application.MidiCoreArrangementDraftAcceptanceUndoResult =
         error("not used")
@@ -1244,6 +1284,25 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
                 authority = authority,
                 revision = currentSession.project.revision + 1L,
             ),
+        )
+    }
+
+    fun seedPersistedReviewSong() {
+        seedPersistedSong()
+        val authority = requireNotNull(currentSession.project.authority).copy(
+            arrangementEndTick = 3_840L,
+            occurrences = listOf(
+                ProjectSectionOccurrence("verse-1", "verse", "Verse 1", 0L, 1_920L),
+                ProjectSectionOccurrence("verse-2", "verse", "Verse 2", 1_920L, 3_840L),
+            ),
+            chordEvents = listOf(
+                app.melotrail.project.AuthoritativeChordEvent("chord-1", "verse-1", "C", 0L, 1_920L),
+                app.melotrail.project.AuthoritativeChordEvent("chord-2", "verse-2", "G", 1_920L, 3_840L),
+            ),
+        )
+        currentSession = MidiCoreProjectSession(
+            currentSession.root,
+            currentSession.project.copy(authority = authority, revision = currentSession.project.revision + 1L),
         )
     }
 }
@@ -1322,7 +1381,7 @@ private class FakeMidiAudition : MidiAuditionPort {
     }
 }
 
-private fun fakeSourcePlan(): MidiAuditionPlaybackPlan = MidiAuditionPlaybackPlan(
+private fun fakeSourcePlan(songEndTick: Long = 1L): MidiAuditionPlaybackPlan = MidiAuditionPlaybackPlan(
     app.melotrail.audition.MidiAuditionView.sourceMelody(
         app.melotrail.midi.domain.MidiExportSong(
             app.melotrail.midi.domain.MidiPpq(480),
@@ -1332,7 +1391,7 @@ private fun fakeSourcePlan(): MidiAuditionPlaybackPlan = MidiAuditionPlaybackPla
             2,
             emptyList(),
             listOf(app.melotrail.midi.domain.MidiExportRoleTrack(app.melotrail.midi.domain.MidiExportRole.MELODY, emptyList())),
-            1L,
+            songEndTick,
         ),
     ),
 )

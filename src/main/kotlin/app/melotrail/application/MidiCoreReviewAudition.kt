@@ -98,9 +98,18 @@ class MidiCoreReviewAudition(
         val occurrence = authority.occurrences.singleOrNull { it.id == request.occurrenceId }
             ?: return rejected("The candidate occurrence is no longer authoritative.", "Reload the project and retry this same repair scope.")
         return MidiCoreReviewAuditionResult.Ready(
-            // Occurrence scope preserves the common melody and exact bar
-            // position for a before/after repair A/B; it never alters state.
-            MidiAuditionPlaybackPlan(MidiAuditionView.occurrence(occurrence.id, song, occurrence.startTick, occurrence.endTick)),
+            // Candidate-in-context scope preserves the common melody, immutable
+            // alternative identity, and exact bar position for repair A/B.
+            MidiAuditionPlaybackPlan(
+                MidiAuditionView.candidateInContext(
+                    item.candidate.id,
+                    exportRole(request.role),
+                    occurrence.id,
+                    song,
+                    occurrence.startTick,
+                    occurrence.endTick,
+                ),
+            ),
         )
     }
 

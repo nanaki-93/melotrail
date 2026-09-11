@@ -1894,7 +1894,11 @@ class MidiCoreWorkspaceViewModel(
                         review = _state.value.review.copy(comparison = null),
                     )
                 }
-                is MidiCoreArrangementDraftAcceptanceResult.Rejected -> failure(draftBlocker(result.problem, intent), intent)
+                is MidiCoreArrangementDraftAcceptanceResult.Rejected -> failure(
+                    draftBlocker(result.problem, intent),
+                    intent,
+                    apply = { routeDraftProblemScope(result.problem) },
+                )
             }
         }
     }
@@ -1909,9 +1913,37 @@ class MidiCoreWorkspaceViewModel(
                 is MidiCoreArrangementDraftAcceptanceUndoResult.Applied -> success("The prior accepted arrangement was restored.", result.session) {
                     _state.value = _state.value.copy(review = _state.value.review.copy(comparison = null))
                 }
-                is MidiCoreArrangementDraftAcceptanceUndoResult.Rejected -> failure(draftBlocker(result.problem, intent), intent)
+                is MidiCoreArrangementDraftAcceptanceUndoResult.Rejected -> failure(
+                    draftBlocker(result.problem, intent),
+                    intent,
+                    apply = { routeDraftProblemScope(result.problem) },
+                )
             }
         }
+    }
+
+    /** Keep a scoped batch blocker visible in Review without discarding the active full-song player. */
+    private fun routeDraftProblemScope(problem: MidiCoreArrangementDraftProblem) {
+        val scope = problem.scope ?: return
+        val occurrence = state.value.project?.authority?.occurrences?.singleOrNull { it.id == scope.occurrenceId } ?: return
+        var routedAudition = state.value.audition
+        val window = routedAudition.window
+        if (window != null && occurrence.startTick >= window.startTick && occurrence.endTick <= window.endTick) {
+            routedAudition = runCatching {
+                useCases.audition.setLoop(MidiAuditionLoop(occurrence.startTick, occurrence.endTick)).state
+            }.getOrDefault(routedAudition)
+        }
+        _state.value = _state.value.copy(
+            arrangement = _state.value.arrangement.copy(selectedOccurrenceId = occurrence.id),
+            review = _state.value.review.copy(
+                role = scope.role,
+                occurrenceId = occurrence.id,
+                candidates = emptyList(),
+                comparison = null,
+                selectedCandidateId = null,
+            ),
+            audition = routedAudition,
+        )
     }
 
     private fun publishSectionProgress(completed: Int, activeRole: CandidateRole) {

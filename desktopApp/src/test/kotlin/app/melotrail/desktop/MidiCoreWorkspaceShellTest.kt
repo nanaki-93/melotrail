@@ -5,6 +5,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -195,6 +196,22 @@ class MidiCoreWorkspaceShellTest {
         onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_RECOVERY).assertExists()
         onNodeWithText("Retry playback").performClick()
         assertEquals(MidiCoreWorkspaceIntent.Retry, intents.single())
+    }
+
+    @Test
+    fun `repair comparison player names the alternative with melody and exposes both roles`() = runSkikoComposeUiTest(size = Size(720f, 900f)) {
+        val audition = MidiAuditionState(
+            scope = MidiAuditionScope.Occurrence("verse-1", "candidate-1", MidiExportRole.CHORDS),
+            window = MidiAuditionWindow(0L, 1_920L),
+            playback = MidiAuditionPlaybackState.PLAYING,
+        )
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(targetState().copy(audition = audition)) } }
+
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_TARGET)
+            .assertContentDescriptionEquals("Current playback target: Chords alternative with melody")
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OPTIONS).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.mute(MidiExportRole.MELODY)).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.mute(MidiExportRole.CHORDS)).assertExists()
     }
 
     @Test

@@ -351,6 +351,18 @@ draft before acceptance, then Use/export with identical Logic instruments and
 verify melody preservation, planned rests, section boundaries and role alignment.
 Musical/visual approval remains human evidence.
 
+U06a recovery evidence is retained at `~/.codex/melotrail-terra/u06a-repair-evidence`.
+Focused regressions cover exact Draft/Accepted identity including planned rests,
+atomic mixed-draft Use/Undo/reuse, section/loop continuity, locked-scope routing
+and melody-inclusive alternative playback. The two-section blocker fixture now
+sets its confirmed arrangement end consistently. Candidate lanes require the
+player's exact immutable candidate identity; changing selection cannot display
+another candidate's notes or attribute its unbound error to the playing one.
+Real-service Review captures at 1536×1024, 1280×900 and 720×900 were inspected.
+For Q02, compare alternatives against the same protected melody and section loop,
+then Use/Undo/reuse and verify accepted-only export in Logic. Musical, Logic and
+visual approval remain pending human evidence; final Export handoff belongs to U06.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

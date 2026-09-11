@@ -528,7 +528,10 @@ private fun auditionTargetDescription(state: MidiCoreWorkspaceState): String {
         null -> "No MIDI target selected"
         MidiAuditionScope.SourceMelody -> "Protected source melody"
         is MidiAuditionScope.Candidate -> "Current ${scope.role.trackName} alternative"
-        is MidiAuditionScope.Occurrence -> occurrenceLabel(state, scope.occurrenceId)?.let { "Current $it section" } ?: "Current selected section"
+        is MidiAuditionScope.Occurrence -> when (val role = scope.candidateRole) {
+            null -> occurrenceLabel(state, scope.occurrenceId)?.let { "Current $it section" } ?: "Current selected section"
+            else -> "${role.trackName} alternative with melody"
+        }
         is MidiAuditionScope.StylePreview -> "${arrangementStyleDisplayName(scope.styleId)} style preview"
         is MidiAuditionScope.ArrangementDraft -> "Complete draft"
         is MidiAuditionScope.Role -> "Current accepted ${scope.role.trackName}"
@@ -541,7 +544,8 @@ private fun auditionTargetDescription(state: MidiCoreWorkspaceState): String {
         else -> null
     }
     val selectedOccurrenceLabel = occurrenceId?.let { occurrenceLabel(state, it) }
-    return if (scope is MidiAuditionScope.Occurrence) target else selectedOccurrenceLabel?.let { "$target · $it" } ?: target
+    return if (scope is MidiAuditionScope.Occurrence && scope.candidateId == null) target
+    else selectedOccurrenceLabel?.let { "$target · $it" } ?: target
 }
 
 private fun auditionRoles(scope: MidiAuditionScope?): List<MidiExportRole> = when (scope) {
@@ -549,7 +553,8 @@ private fun auditionRoles(scope: MidiAuditionScope?): List<MidiExportRole> = whe
     MidiAuditionScope.SourceMelody -> listOf(MidiExportRole.MELODY)
     is MidiAuditionScope.Candidate -> listOf(scope.role)
     is MidiAuditionScope.Role -> listOf(scope.role)
-    is MidiAuditionScope.Occurrence -> listOf(MidiExportRole.MELODY)
+    is MidiAuditionScope.Occurrence -> scope.candidateRole?.let { listOf(MidiExportRole.MELODY, it).sortedBy(MidiExportRole::ordinal) }
+        ?: listOf(MidiExportRole.MELODY)
     is MidiAuditionScope.StylePreview -> MidiExportRole.entries
     is MidiAuditionScope.ArrangementDraft -> MidiExportRole.entries
     MidiAuditionScope.AcceptedArrangement -> MidiExportRole.entries
