@@ -53,7 +53,7 @@ Original UI/TABI/train references and Logic Pro captures remain in `docs/picture
 and `docs/checks`. Git is the archive for retired plans and logs. License: MIT.
 
 Automatic Terra execution is configured in [TASKS](TASKS.md#configured-automatic-execution):
-20-minute wakes, small executable slices, Terra High with one retry then Sol High,
+20-minute wakes, small executable slices, Astra Extra High with one retry then Sol High,
 and fresh review. Successful commits advance `codex/terra-batched-implementation`
 and fast-forward the clean `codex/terra-live` project checkout. Tracked edits are
 preserved and reported if they prevent syncing. Restart `make desktop` to see new

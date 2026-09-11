@@ -408,9 +408,9 @@ slices supply actual captures at the three guideline sizes; engine milestones
 supply playable baseline/new MIDI packages.
 
 **Execution:** the existing 20-minute heartbeat runs the tested local runner's
-`advance` command. One Terra High writer implements; the host coordinator runs
-focused checks, test/build and diff checks; a fresh Terra High reviewer inspects
-the exact tested tree. A failed attempt gets one Terra repair, then Sol High
+`advance` command. One Astra Extra High writer implements; the host coordinator runs
+focused checks, test/build and diff checks; a fresh Astra Extra High reviewer inspects
+the exact tested tree. A failed attempt gets one Astra retry, then Sol High
 receives the original task, current diff and concrete terminal/test/review errors
 for one repair. Integrate only the reviewed tree. TASKS defines numeric bounds,
 paths, control commands and the reusable worker prompt.

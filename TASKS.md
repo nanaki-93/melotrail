@@ -1006,9 +1006,11 @@ reported after a call, so an in-flight call may cross the admission limit.
 Before admission, the heartbeat checks actual account limits and defers below
 10% remaining. No credit purchase/reset is authorized.
 
-One Terra High implementer works at a time. A concrete failure gets one focused
-Terra retry, then one **Sol High** repair with the original task contract, current
-`git diff`, and exact terminal/test/review errors. Checks and fresh Terra High
+One Astra Extra High (`gpt-6-astra`, `xhigh`) implementer works at a time.
+The runner reads `model` and `reasoningEffort` from its local configuration for
+implementation and independent review. A concrete failure gets one focused
+Astra retry, then one **Sol High** repair with the original task contract, current
+`git diff`, and exact terminal/test/review errors. Checks and fresh Astra Extra High
 review are coordinator-owned. Every changed candidate needs focused checks,
 `make test`, `make build` and `git diff --check` before review/integration.
 

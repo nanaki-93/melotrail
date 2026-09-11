@@ -329,8 +329,9 @@ ${ctx.originalDir ? 'This candidate reuses preserved work; inspect its current d
 ${repair ? 'Two implementation/validation attempts failed. Diagnose the concrete failures below and make only scoped repairs. Reuse the existing implementation.' : ''}
 Previous concrete feedback: ${(ctx.feedback || 'None.').slice(-8000)}
 Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit=${ctx.base}, candidate=${candidate}, summary, blocker, status, tests, artifacts. Do not claim completion or a test pass without coordinator evidence. Remaining batch time: ${Math.max(1, Math.floor((deadline - Date.now()) / 60000))} minutes.`;
-    const modelName = repair ? (cfg.repairModel ?? 'gpt-5.6-sol') : 'gpt-5.6-terra';
-    const common = ['--ignore-user-config', '-m', modelName, '-c', 'model_reasoning_effort="high"', '-c', 'approval_policy="never"'];
+    const modelName = repair ? (cfg.repairModel ?? 'gpt-5.6-sol') : (cfg.model ?? 'gpt-5.6-terra');
+    const reasoningEffort = repair ? (cfg.repairReasoningEffort ?? 'high') : (cfg.reasoningEffort ?? 'high');
+    const common = ['--ignore-user-config', '-m', modelName, '-c', `model_reasoning_effort=${JSON.stringify(reasoningEffort)}`, '-c', 'approval_policy="never"'];
     const args = ['exec', '--sandbox', review ? 'read-only' : 'workspace-write', '-C', ctx.worktree];
     if (resume) args.push('resume');
     args.push(...common);

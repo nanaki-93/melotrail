@@ -126,6 +126,23 @@ test('continuation reapplies preserved code onto a newer coordinator base and re
   } finally { f.close(); }
 });
 
+test('configured Astra extra-high reaches implementation retry and review while Sol repair stays high', () => {
+  const f = fixture({ config: { model: 'gpt-6-astra', reasoningEffort: 'xhigh' },
+    scenario: { failReviewTasks: ['M01'] } });
+  try {
+    assert.notEqual(f.call('advance').status, 0);
+    const workers = modelStarts(f, 'worker');
+    assert.deepEqual(workers.map(e => e.args[e.args.indexOf('-m') + 1]),
+      ['gpt-6-astra', 'gpt-6-astra', 'gpt-5.6-sol']);
+    for (const event of [...workers.slice(0, 2), ...modelStarts(f, 'review')]) {
+      assert.equal(event.args[event.args.indexOf('-m') + 1], 'gpt-6-astra');
+      assert.ok(event.args.includes('model_reasoning_effort="xhigh"'));
+    }
+    assert.ok(workers[2].args.includes('model_reasoning_effort="high"'));
+    assert.equal(workers.length, 3, 'model selection does not add repair attempts');
+  } finally { f.close(); }
+});
+
 test('advance defers an exhausted failure and admits unrelated work on its next wake', () => {
   const f = fixture({ markdown: independent, scenario: { failReviewTasks: ['M01'] } });
   try {
