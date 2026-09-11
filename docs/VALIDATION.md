@@ -363,6 +363,28 @@ For Q02, compare alternatives against the same protected melody and section loop
 then Use/Undo/reuse and verify accepted-only export in Logic. Musical, Logic and
 visual approval remain pending human evidence; final Export handoff belongs to U06.
 
+U06 candidate validation is **PENDING_COORDINATOR**. Focused desktop selectors:
+`MidiCoreExportPageTest`, `MidiCoreFocusedWorkflowTest`, `MidiCoreReviewPageTest`,
+`MidiCoreWorkspaceTest`, `MidiCoreArrangePageTest`, `MidiCoreWorkspaceShellTest`.
+Retain the root `MidiCoreMidiPackageExporterTest`, `MidiCoreAcceptedSongAssemblyTest`
+and `MidiCoreArrangementDraftTest` checks, then run the required full test/build
+and diff checks. No U06 test pass or visual approval is claimed here.
+The three-size real-service workflow now applies the Lower piano register repair,
+creates the whole draft under that confirmed plan, uses/undoes/reuses it, exports,
+reopens and publishes a second snapshot while comparing the first package's bytes.
+The complementary two-section standard-style fixture covers accepted whole-song
+Bass/Drums rests, inventory, atomic Use/Undo/reuse and omitted role files.
+Transport uses a test port; these checks cannot establish audible playback quality.
+After successful coordinator execution, captures and ready-to-import packages are
+under `desktopApp/build/test-results/midi-core-focused-workflow/` and
+`desktopApp/build/test-results/midi-core-export-rest/`, each with `reference-wide`,
+`wide`, `compact` and a `logic-package/` per size. Inspect the actual PNGs beside
+references 04/09; these output paths are preparation targets, not passed evidence.
+For Q02, import each package at bar 1, compare complete-song and individual-file
+alignment, verify the protected melody and exact ending, and verify Bass/Drums
+are absent in the rest package. Check playback and Logic save/close/reopen with
+fixed instrument choices. Record the real user's result before release.
+
 ## Logic Pro procedure
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or

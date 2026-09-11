@@ -118,6 +118,13 @@ complete/role/manifest file list, real export progress/result and reveal action.
 Instructions: import at song origin, confirm Logic tempo/meter behavior, assign
 instruments and check role alignment. No disabled audio/video format selector.
 Future companion launch appears only after its integration actually works.
+The package summary describes current accepted selections, with a section/bar
+inventory distinguishing accepted notes, accepted rests, locks and work needing
+attention. The saved result identifies whether it matches current accepted work;
+an earlier snapshot keeps its original files and reveal target. Keep hashes and
+candidate IDs in package details. Logic guidance occupies the Export inspector
+at reference width and stays inline at smaller widths. Atomic publication shows
+its actual result; it does not offer an unsupported cancellation boundary.
 
 ## Interaction and data
 

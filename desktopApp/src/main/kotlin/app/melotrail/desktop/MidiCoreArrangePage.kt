@@ -100,7 +100,8 @@ internal fun midiCoreArrangementScopes(project: MidiCoreProject): List<MidiCoreA
 
 internal fun midiCoreArrangementProgress(project: MidiCoreProject): MidiCoreArrangementProgress {
     val scopes = midiCoreArrangementScopes(project)
-    val acceptedScopes = project.acceptances.map { it.occurrenceId to it.role }.toSet()
+    val acceptedScopes = midiCoreAcceptedScopeSummary(project).filter { it.problem == null }
+        .map { it.occurrenceId to it.role }.toSet()
     return MidiCoreArrangementProgress(
         accepted = scopes.count { it.occurrence.id to it.role in acceptedScopes },
         total = scopes.size,

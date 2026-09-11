@@ -23,6 +23,17 @@ import app.melotrail.project.MidiCoreArrangementDraftAcceptanceHistory
 import app.melotrail.project.MidiCoreArrangementDraftCandidateReference
 import app.melotrail.project.MidiCoreArrangementDraftValidationSummary
 import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
+import app.melotrail.project.MidiCoreBoundaryIntent
+import app.melotrail.project.MidiCoreGrooveDrive
+import app.melotrail.project.MidiCoreGrooveFeel
+import app.melotrail.project.MidiCoreGrooveSubdivision
+import app.melotrail.project.MidiCoreOccurrenceArrangementPlan
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
+import app.melotrail.project.MidiCoreRolePlanSettings
+import app.melotrail.project.MidiCoreSharedGrooveIntent
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCorePlannedRest
@@ -110,6 +121,20 @@ class MidiCoreReviewPageTest {
         setContent { MelotrailTheme { MidiCoreReviewPage(acceptedState, {}, {}) } }
         onNodeWithText("Accepted arrangement").assertExists()
         onNodeWithTag(MidiCoreReviewPageTags.USE_DRAFT).assertDoesNotExist()
+        onNodeWithTag(MidiCoreReviewPageTags.EXPORT).performScrollTo().assertIsEnabled()
+        assertEquals(6, midiCoreArrangementProgress(requireNotNull(acceptedState.project)).accepted)
+    }
+
+    @Test
+    fun `Review never counts stale accepted pointers as export ready`() = runComposeUiTest {
+        val initial = reviewState(accepted = true)
+        val project = requireNotNull(initial.project)
+        val state = initial.copy(project = project.copy(candidates = project.candidates.map {
+            if (it.role == CandidateRole.BASS) it.copy(status = MidiCoreCandidateStatus.STALE) else it
+        }))
+        setContent { MelotrailTheme { MidiCoreReviewPage(state, {}, {}) } }
+        onNodeWithTag(MidiCoreReviewPageTags.EXPORT).assertDoesNotExist()
+        assertEquals(4, midiCoreArrangementProgress(requireNotNull(state.project)).accepted)
     }
 
     @Test
@@ -135,6 +160,18 @@ class MidiCoreReviewPageTest {
             ),
             intents,
         )
+    }
+
+    @Test
+    fun `Review alternatives retain the role selected by an Export blocker`() = runComposeUiTest {
+        val state = reviewState().copy(review = MidiCoreCandidateReviewUiState(role = CandidateRole.BASS, occurrenceId = "verse-1"))
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent { MelotrailTheme { MidiCoreReviewPage(state, intents::add, {}) } }
+        onNodeWithTag(MidiCoreReviewPageTags.OPEN_EXCEPTIONS).performScrollTo().performClick()
+        waitForIdle()
+        assertTrue(MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.BASS, "verse-1") in intents)
+        assertTrue(MidiCoreWorkspaceIntent.LoadCandidates(CandidateRole.BASS, "verse-1") in intents)
+        assertFalse(MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.CHORDS, "verse-1") in intents)
     }
 
     @Test
@@ -246,6 +283,20 @@ class MidiCoreReviewPageTest {
             ProjectId("review-project"), ProjectMetadata("Review project", "2026-09-04T00:00:00Z"),
             SourceMidiRecord("source.mid", "a".repeat(64), 1, 480, ProjectArtifact(ProjectRelativePath("source/original.mid"), "a".repeat(64)), ProjectArtifact(ProjectRelativePath("reports/import.json"), "b".repeat(64)), listOf(MidiTrackSummary(0, "Lead", emptyList(), 3840L)), 3840L),
             SelectedMelodyTrack(0, 0, "c".repeat(64)), authority,
+            arrangementPlan = if (plannedRest) MidiCoreArrangementPlan(
+                version = 1,
+                sharedGroove = MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.STEADY),
+                occurrences = authority.occurrences.map { occurrence -> MidiCoreOccurrenceArrangementPlan(
+                    occurrenceId = occurrence.id, purpose = MidiCoreArrangementPurpose.VERSE,
+                    phraseGroupId = occurrence.id, repeatFamilyId = occurrence.id, repeatOrdinal = 1, energy = 50,
+                    roleSettings = CandidateRole.entries.map { role ->
+                        val rest = occurrence.id == "verse-1" && role == CandidateRole.BASS
+                        MidiCoreRolePlanSettings(role, if (rest) MidiCoreRoleActivity.INACTIVE else MidiCoreRoleActivity.SUPPORTING,
+                            if (rest) 0 else 50, MidiCoreRegisterPreference.MID)
+                    },
+                    entryIntent = MidiCoreBoundaryIntent.NONE, exitIntent = MidiCoreBoundaryIntent.NONE,
+                ) },
+            ) else null,
         )
         val hasher = MidiCoreAuthorityHasher.from(base)
         val restedScope = "verse-1" to CandidateRole.BASS

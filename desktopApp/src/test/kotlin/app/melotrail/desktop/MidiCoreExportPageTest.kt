@@ -2,6 +2,8 @@ package app.melotrail.desktop
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -116,7 +118,7 @@ class MidiCoreExportPageTest {
     }
 
     @Test
-    fun `Export offers a cancellable boundary while publication is in progress`() = runComposeUiTest {
+    fun `Export shows atomic progress without offering a cancellation it cannot honor`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         val exporting = exportState(
             operation = MidiCoreWorkspaceOperation(
@@ -124,14 +126,15 @@ class MidiCoreExportPageTest {
                 kind = MidiCoreWorkspaceOperationKind.EXPORT,
                 phase = MidiCoreWorkspaceOperationPhase.RUNNING,
                 message = "Publishing MIDI package…",
-                cancellableAtBoundary = true,
+                cancellableAtBoundary = false,
             ),
         )
         setContent { MelotrailTheme { MidiCoreExportPage(exporting, intents::add) } }
 
         onNodeWithTag(MidiCoreExportPageTags.PROGRESS).assertExists()
-        onNodeWithTag(MidiCoreExportPageTags.CANCEL).performScrollTo().performClick()
-        assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.CancelOperation), intents)
+        onNodeWithTag(MidiCoreExportPageTags.CANCEL).assertDoesNotExist()
+        onNodeWithTag(MidiCoreExportPageTags.PUBLISH).assertDoesNotExist()
+        assertEquals(emptyList(), intents)
     }
 
     @Test
@@ -162,9 +165,74 @@ class MidiCoreExportPageTest {
         onNodeWithTag(MidiCoreExportPageTags.SUGGESTIONS).performScrollTo().assertExists()
         onNodeWithTag(MidiCoreExportPageTags.DAW_GUIDANCE).performScrollTo().assertExists()
         onNodeWithText("Logic Pro").assertExists()
-        onNodeWithText("Logic Pro: import complete-song.mid at bar 1, confirm whether to adopt its fixed tempo and meter, then assign instruments to Melody, Chords, Bass, and Drums.").assertExists()
+        onNodeWithText("1. Import complete-song.mid at bar 1. Alternatively, import the individual role files together at that same origin; their leading silence is intentional.").assertExists()
         assertEquals(Path.of("build/export-project/exports/export-ready"), revealed)
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.Retry), intents)
+    }
+
+    @Test
+    fun `Export readiness checks scoped authority even when candidate status still says accepted`() = runComposeUiTest {
+        val initial = exportState()
+        val project = requireNotNull(initial.project)
+        val state = initial.copy(project = project.copy(candidates = project.candidates.map {
+            if (it.role == CandidateRole.BASS) it.copy(authorityHash = "0".repeat(64)) else it
+        }))
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        var destination: MidiCoreWorkspaceDestination? = null
+        setContent { MelotrailTheme { MidiCoreExportPage(state, intents::add, onNavigate = { destination = it }) } }
+        onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsNotEnabled()
+        onNodeWithText("Review Verse 1 · Bar 1 · Bass").performScrollTo().performClick()
+        assertEquals(listOf(
+            MidiCoreWorkspaceIntent.SelectArrangementOccurrence("verse-1"),
+            MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.BASS, "verse-1"),
+        ), intents)
+        assertEquals(MidiCoreWorkspaceDestination.REVIEW, destination)
+    }
+
+    @Test
+    fun `Export never labels an empty structure ready`() = runComposeUiTest {
+        val initial = exportState(acceptances = emptyList())
+        val project = requireNotNull(initial.project)
+        val state = initial.copy(project = project.copy(
+            authority = requireNotNull(project.authority).copy(occurrences = emptyList(), chordEvents = emptyList()),
+            candidates = emptyList(),
+        ))
+        setContent { MelotrailTheme { MidiCoreExportPage(state, {}) } }
+        onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsNotEnabled()
+        onNodeWithText("Define the song sections before exporting.").assertExists()
+    }
+
+    @Test
+    fun `Export inventory distinguishes accepted whole-song rest and its lock from an omitted missing role`() = runComposeUiTest {
+        val initial = exportState(arrangementPlan = exportPlan(CandidateRole.BASS))
+        val project = requireNotNull(initial.project)
+        val rest = MidiCorePlannedRest("verse-1", CandidateRole.BASS,
+            app.melotrail.project.MidiCoreAuthorityHasher.from(project).scopeHash("verse-1", CandidateRole.BASS), locked = true)
+        val state = initial.copy(project = project.copy(
+            acceptances = project.acceptances.filterNot { it.role == CandidateRole.BASS },
+            acceptedPlannedRests = listOf(rest),
+        ))
+        setContent { MelotrailTheme { MidiCoreExportPage(state, {}) } }
+        onNodeWithText("Bass — 0 accepted · 1 rests · whole-song rest · file omitted").assertExists()
+        onNodeWithTag(MidiCoreExportPageTags.INVENTORY).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreExportPageTags.scope("verse-1", CandidateRole.BASS))
+            .assertTextContains("Verse 1 · Bar 1 · Bass: Accepted planned rest · Locked")
+        onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun `Export retains an earlier snapshot result and reports failed folder reveal`() = runComposeUiTest {
+        val snapshot = exportSnapshot()
+        val state = exportState(acceptances = emptyList(), snapshot = snapshot)
+        setContent { MelotrailTheme {
+            MidiCoreExportPage(state, {}, MidiCoreExportPageActions { error("Finder unavailable") })
+        } }
+        onNodeWithTag(MidiCoreExportPageTags.SNAPSHOT_STATUS).performScrollTo()
+            .assertTextContains("Earlier accepted work — this saved package is unchanged")
+        onNodeWithTag(MidiCoreExportPageTags.REVEAL).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreExportPageTags.REVEAL_ERROR).assertExists()
+        snapshot.files.forEach { onNodeWithTag(MidiCoreExportPageTags.file(it.kind)).assertExists() }
+        onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsNotEnabled()
     }
 
     @Test
@@ -238,7 +306,13 @@ class MidiCoreExportPageTest {
             projectRoot = Path.of("build/export-project"),
             export = MidiCoreExportUiState(latestSnapshot = snapshot),
             operation = operation,
-        )
+        ).let { state ->
+            val project = requireNotNull(state.project)
+            val fingerprint = app.melotrail.project.MidiCoreAuthorityHasher.from(project)
+            state.copy(project = project.copy(candidates = project.candidates.map {
+                it.copy(authorityHash = fingerprint.scopeHash(it.occurrenceId, it.role))
+            }))
+        }
     }
 
     private fun exportPlan(inactiveRole: CandidateRole? = null) = MidiCoreArrangementPlan(

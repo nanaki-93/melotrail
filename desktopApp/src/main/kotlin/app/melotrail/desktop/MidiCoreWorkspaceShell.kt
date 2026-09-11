@@ -111,9 +111,9 @@ internal enum class MidiCoreWorkspaceDestination(
 
 internal val midiCoreWorkspaceDestinations: List<MidiCoreWorkspaceDestination> = MidiCoreWorkspaceDestination.entries
 
-/** Arrange and Review own their selected-section inspector; the shell must not duplicate it. */
+/** Arrange, Review and Export own their context; the shell must not duplicate it. */
 private val MidiCoreWorkspaceDestination.usesShellInspector: Boolean
-    get() = this != MidiCoreWorkspaceDestination.ARRANGE && this != MidiCoreWorkspaceDestination.REVIEW
+    get() = this !in setOf(MidiCoreWorkspaceDestination.ARRANGE, MidiCoreWorkspaceDestination.REVIEW, MidiCoreWorkspaceDestination.EXPORT)
 
 private val MidiCoreWorkspaceDestination.usesSelectedSectionInspector: Boolean
     get() = this == MidiCoreWorkspaceDestination.ARRANGE || this == MidiCoreWorkspaceDestination.REVIEW
@@ -223,6 +223,10 @@ internal fun MidiCoreWorkspaceShell(
                             onDestinationSelected = onDestinationSelected,
                             modifier = Modifier.width(inspectorWidth).fillMaxHeight(),
                         )
+                    } else if (selectedDestination == MidiCoreWorkspaceDestination.EXPORT && referenceWide) {
+                        Column(Modifier.width(inspectorWidth).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                            MidiCoreExportHandoff()
+                        }
                     } else if (selectedDestination.usesShellInspector) {
                         MidiCoreWorkspaceContext(
                             destination = selectedDestination,
@@ -299,7 +303,7 @@ private fun MidiCoreWorkspacePlaybackDock(
     val audition = state.audition
     val window = audition.window
     val sourceAvailable = state.source.status == MidiCoreSourceStatus.IMPORTED && state.melody.selected != null
-    val acceptedAvailable = state.project?.let(::midiCoreArrangementProgress)?.complete == true
+    val acceptedAvailable = remember(state.project) { state.project?.let(::midiCoreArrangementProgress)?.complete == true }
     val currentAvailable = audition.scope != null
     val position = window?.let { audition.positionTick.coerceIn(it.startTick, it.endTick) } ?: 0L
     var optionsOpen by remember { mutableStateOf(false) }
@@ -770,12 +774,7 @@ private fun MidiCoreWorkspaceContext(
                     ContextFact("Candidate evidence", state.review.candidates.size.toString())
                     ContextFact("Accepted arrangement", if (state.project?.let(::midiCoreArrangementProgress)?.complete == true) "Complete" else "Pending")
                 }
-                MidiCoreWorkspaceDestination.EXPORT -> {
-                    ContextFact("Package status", if (state.export.latestSnapshot == null) "Not exported" else "Snapshot available")
-                    ContextFact("Snapshots", state.project?.exportSnapshots?.size?.toString() ?: "0")
-                    ContextFact("Destination", state.projectRoot?.fileName?.toString() ?: "Open a project")
-                    ContextFact("Logic Pro", "MIDI package only")
-                }
+                MidiCoreWorkspaceDestination.EXPORT -> Unit
             }
             val blocker = state.blockers.firstOrNull()
             WorkstationInlineMessage(
@@ -860,7 +859,7 @@ private fun MidiCoreWorkspacePage(
         return
     }
     if (destination == MidiCoreWorkspaceDestination.EXPORT) {
-        MidiCoreExportPage(state, onIntent, exportActions, modifier)
+        MidiCoreExportPage(state, onIntent, exportActions, modifier, onDestinationSelected, showSelectedSectionInspector)
         return
     }
     Column(

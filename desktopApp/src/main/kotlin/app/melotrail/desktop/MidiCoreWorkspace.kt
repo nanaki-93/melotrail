@@ -1097,7 +1097,7 @@ class MidiCoreWorkspaceViewModel(
 
     private fun exportPackage() {
         val current = requireSessionOrBlock() ?: return
-        startOperation(MidiCoreWorkspaceOperationKind.EXPORT, "Publishing MIDI package…", MidiCoreWorkspaceIntent.ExportPackage) { _ ->
+        startOperation(MidiCoreWorkspaceOperationKind.EXPORT, "Publishing MIDI package…", MidiCoreWorkspaceIntent.ExportPackage, cancellableAtBoundary = false) { _ ->
             when (val result = useCases.export(app.melotrail.application.ExportMidiCorePackage(current, expectedRevision = current.project.revision))) {
                 is MidiCoreMidiPackageExportResult.Exported -> success("MIDI package published.", result.packageResult.session) {
                     _state.value = _state.value.copy(export = MidiCoreExportUiState(result.packageResult, result.packageResult.snapshot))
@@ -2028,6 +2028,7 @@ class MidiCoreWorkspaceViewModel(
         message: String,
         retry: MidiCoreWorkspaceIntent?,
         supersedeActive: Boolean = false,
+        cancellableAtBoundary: Boolean = true,
         work: suspend (AtomicBoolean) -> WorkspaceOutcome,
     ) {
         if (state.value.operation.active) {
@@ -2053,7 +2054,7 @@ class MidiCoreWorkspaceViewModel(
                 kind = kind,
                 phase = MidiCoreWorkspaceOperationPhase.RUNNING,
                 message = message,
-                cancellableAtBoundary = true,
+                cancellableAtBoundary = cancellableAtBoundary,
                 retry = retry,
             ),
             notification = null,

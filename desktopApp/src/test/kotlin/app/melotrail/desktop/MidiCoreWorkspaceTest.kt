@@ -751,6 +751,22 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `atomic export cannot be cancelled and its actual result reaches the workspace`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.ExportPackage)
+        assertFalse(viewModel.state.value.operation.cancellableAtBoundary)
+        viewModel.accept(MidiCoreWorkspaceIntent.CancelOperation)
+        advanceUntilIdle()
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
+        assertEquals("EXPORT_NOT_READY", viewModel.state.value.blockers.first().sourceCode)
+        assertEquals(MidiCoreWorkspaceIntent.ExportPackage, viewModel.state.value.operation.retry)
+        viewModel.close()
+    }
+
+    @Test
     fun `export collision preserves the current project and offers the same safe retry`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         fake.exportResult = MidiCoreMidiPackageExportResult.Rejected(

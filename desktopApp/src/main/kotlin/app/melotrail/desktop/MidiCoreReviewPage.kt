@@ -89,7 +89,7 @@ internal fun MidiCoreReviewPage(
         return
     }
     val selectedOccurrence = occurrences.singleOrNull { it.id == state.arrangement.selectedOccurrenceId } ?: occurrences.first()
-    val progress = midiCoreArrangementProgress(project)
+    val progress = remember(project) { midiCoreArrangementProgress(project) }
     val draft = currentArrangementDraft(project)
     var exceptionsOpen by remember(project.id.value) { mutableStateOf(false) }
 
@@ -213,7 +213,7 @@ private fun ReviewDraftDecision(
             ) { Text("Undo last draft acceptance") }
         }
         if (progress.complete) {
-            Text("Every section and role is accepted. Export is ready.", color = MusicWorkspaceTokens.Success)
+            Text("Every section and role has an accepted selection. Export verifies the package.", color = MusicWorkspaceTokens.Success)
             OutlinedButton(
                 onClick = { onNavigate(MidiCoreWorkspaceDestination.EXPORT) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
@@ -275,7 +275,9 @@ private fun ReviewExceptionDetails(
     occurrenceId: String,
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
 ) {
-    var role by remember(state.project?.id?.value, occurrenceId) { mutableStateOf(CandidateRole.CHORDS) }
+    var role by remember(state.project?.id?.value, occurrenceId) {
+        mutableStateOf(state.review.role?.takeIf { state.review.occurrenceId == occurrenceId } ?: CandidateRole.CHORDS)
+    }
     val scopeMatches = state.review.role == role && state.review.occurrenceId == occurrenceId
     val candidates = if (scopeMatches) state.review.candidates else emptyList()
     var selectedCandidateId by remember(state.project?.id?.value, occurrenceId, role) { mutableStateOf(state.review.selectedCandidateId) }

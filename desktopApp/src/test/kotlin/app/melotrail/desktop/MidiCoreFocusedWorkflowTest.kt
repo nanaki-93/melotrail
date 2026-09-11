@@ -5,11 +5,14 @@ import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
@@ -66,6 +69,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertContentEquals
 
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreFocusedWorkflowTest {
@@ -324,6 +328,123 @@ class MidiCoreFocusedWorkflowTest {
         runFocusedWorkflow(Size(720f, 900f), "compact")
 
     @Test
+    fun `reference-wide whole-song rest inventory and immutable handoff use real services`() =
+        runRestExportWorkflow(Size(1536f, 1024f), "reference-wide")
+
+    @Test
+    fun `wide whole-song rest inventory and immutable handoff use real services`() =
+        runRestExportWorkflow(Size(1280f, 900f), "wide")
+
+    @Test
+    fun `compact whole-song rest inventory and immutable handoff use real services`() =
+        runRestExportWorkflow(Size(720f, 900f), "compact")
+
+    private fun runRestExportWorkflow(size: Size, fixtureSet: String) = runSkikoComposeUiTest(size = size) {
+        val temporaryRoot = Files.createTempDirectory("melotrail-u06-rest-")
+        val projectRoot = temporaryRoot.resolve("Song with spaces")
+        val source = writeSourceMidi(temporaryRoot.resolve("source.mid"), pitch = 84, endTick = 7_680L)
+        val sourceBytes = Files.readAllBytes(source)
+        val artifacts = MidiCoreArtifactStore()
+        val audition = WorkflowFakeMidiAudition()
+        val workspace = newWorkspace(artifacts, audition, WorkflowPreferences())
+        var revealed: Path? = null
+        fun apply(intent: MidiCoreWorkspaceIntent) {
+            workspace.accept(intent)
+            awaitWorkspaceCompletion(workspace, intent.toString())
+            assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, workspace.state.value.operation.phase,
+                "${intent}: ${workspace.state.value.blockers}")
+        }
+        fun capture(name: String) {
+            onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertIsDisplayed()
+            val image = onRoot().captureToImage().toAwtImage()
+            assertEquals(size.width.toInt(), image.width)
+            assertEquals(size.height.toInt(), image.height)
+            val target = Path.of("build/test-results/midi-core-export-rest/$fixtureSet/$name.png")
+            Files.createDirectories(target.parent)
+            assertTrue(ImageIO.write(image, "png", target.toFile()))
+        }
+        try {
+            apply(MidiCoreWorkspaceIntent.CreateProject(projectRoot, "Quiet beginning and ending"))
+            apply(MidiCoreWorkspaceIntent.ImportSource(source))
+            apply(MidiCoreWorkspaceIntent.ConfirmAuthority)
+            apply(MidiCoreWorkspaceIntent.ReplaceStructure(
+                listOf(ProjectSectionDefinition("a", "A"), ProjectSectionDefinition("b", "B")),
+                listOf(MidiCoreBarOccurrencePlacement("intro", "a", "Opening", 2),
+                    MidiCoreBarOccurrencePlacement("outro", "b", "Ending", 2)),
+            ))
+            apply(MidiCoreWorkspaceIntent.ReplaceHarmony(listOf(
+                AuthoritativeChordEvent("c1", "intro", "C", 0L, 3_840L),
+                AuthoritativeChordEvent("c2", "outro", "G", 3_840L, 7_680L),
+            )))
+            // These rests come from the standard style proposal, with no custom plan or generator settings.
+            apply(MidiCoreWorkspaceIntent.ProposeArrangementPlan("late-night"))
+            apply(MidiCoreWorkspaceIntent.ConfirmPlanAndCreateArrangementDraft("late-night", 41L))
+            val draft = requireNotNull(workspace.state.value.project).arrangementDrafts.single()
+            assertEquals(4, draft.plannedRests.size)
+            assertEquals(2, draft.candidateReferences.size)
+            workspace.accept(MidiCoreWorkspaceIntent.SelectArrangementOccurrence("outro"))
+            val loop = MidiAuditionLoop(3_840L, 7_680L)
+            assertEquals(loop, workspace.state.value.audition.loop)
+            setContent { MelotrailTheme { MidiCoreWorkspaceShell(
+                workspace = workspace,
+                exportActions = MidiCoreExportPageActions { revealed = it },
+            ) } }
+            val reviewNavigation = onNodeWithTag(MidiCoreWorkspaceShellTags.destination(MidiCoreWorkspaceDestination.REVIEW))
+            if (size.width < 1100f) reviewNavigation.performScrollTo()
+            reviewNavigation.performClick()
+            onNodeWithTag(MidiCoreReviewPageTags.USE_DRAFT).performScrollTo().performClick()
+            awaitWorkspaceCompletion(workspace, "use mixed draft")
+            val accepted = requireNotNull(workspace.state.value.project)
+            assertEquals(4, accepted.acceptedPlannedRests.size)
+            assertEquals(2, accepted.acceptances.size)
+            onNodeWithTag(MidiCoreReviewPageTags.EXPORT).performScrollTo().assertIsEnabled()
+            onNodeWithTag(MidiCoreReviewPageTags.UNDO_DRAFT).performScrollTo().performClick()
+            awaitWorkspaceCompletion(workspace, "undo mixed draft")
+            assertTrue(requireNotNull(workspace.state.value.project).acceptances.isEmpty())
+            assertTrue(requireNotNull(workspace.state.value.project).acceptedPlannedRests.isEmpty())
+            onNodeWithTag(MidiCoreReviewPageTags.USE_DRAFT).performScrollTo().performClick()
+            awaitWorkspaceCompletion(workspace, "reuse mixed draft")
+            assertEquals(loop, workspace.state.value.audition.loop)
+            assertEquals("outro", workspace.state.value.arrangement.selectedOccurrenceId)
+            onNodeWithTag(MidiCoreReviewPageTags.EXPORT).performScrollTo().performClick()
+            onAllNodesWithTag(MidiCoreExportPageTags.DAW_GUIDANCE).assertCountEquals(1)
+            onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_CONTEXT).assertDoesNotExist()
+            if (size.width >= 1440f) {
+                val handoffBounds = onNodeWithTag(MidiCoreExportPageTags.DAW_GUIDANCE).getUnclippedBoundsInRoot()
+                assertEquals(407f, handoffBounds.right.value - handoffBounds.left.value)
+            }
+            onNodeWithTag(MidiCoreExportPageTags.INVENTORY).performScrollTo().performClick()
+            onNodeWithText("Bass — 0 accepted · 2 rests · whole-song rest · file omitted").assertExists()
+            onNodeWithText("Ending · Bars 3–4 · Bass: Accepted planned rest").assertExists()
+            capture("accepted-inventory")
+            onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsEnabled().performClick()
+            awaitWorkspaceCompletion(workspace, "publish rest package")
+            val result = requireNotNull(workspace.state.value.export.latest)
+            assertEquals(listOf(CandidateRole.CHORDS), result.snapshot.enabledRoles)
+            assertTrue(midiCoreExportMatchesAcceptedWork(workspace.state.value, result.snapshot))
+            val withoutRestAcceptance = workspace.state.value.copy(project = result.session.project.copy(acceptedPlannedRests = emptyList()))
+            assertTrue(result.snapshot.isCurrent(requireNotNull(withoutRestAcceptance.project)), "Candidate references alone cannot establish rest acceptance")
+            kotlin.test.assertFalse(midiCoreExportMatchesAcceptedWork(withoutRestAcceptance, result.snapshot))
+            assertEquals(setOf("complete-song.mid", "melody.mid", "chords.mid"), result.files.map { it.filename }.toSet())
+            assertTrue(result.files.all { it.validation.songEndTick == 7_680L && it.validation.ppq == 480 })
+            onNodeWithTag(MidiCoreExportPageTags.REVEAL).performScrollTo().performClick()
+            assertEquals(result.directory, revealed)
+            capture("published-result")
+            assertContentEquals(sourceBytes, Files.readAllBytes(projectRoot.resolve(requireNotNull(accepted.sourceMidi).original.path.value)))
+            val evidence = Path.of("build/test-results/midi-core-export-rest/$fixtureSet/logic-package")
+            deleteTree(evidence)
+            Files.createDirectories(evidence)
+            result.snapshot.files.forEach { file ->
+                val saved = projectRoot.resolve(file.artifact.path.value)
+                Files.copy(saved, evidence.resolve(saved.fileName))
+            }
+        } finally {
+            workspace.close()
+            deleteTree(temporaryRoot)
+        }
+    }
+
+    @Test
     fun `real rejected tempo map reaches scoped MIDI findings without binding source artifacts`() =
         runSkikoComposeUiTest(size = Size(720f, 900f)) {
             val temporaryRoot = Files.createTempDirectory("melotrail-u03-rejected-import-")
@@ -371,6 +492,7 @@ class MidiCoreFocusedWorkflowTest {
         val midiActions = MidiCoreMidiPageActions(
             chooseMidiSource = { source },
         )
+        var revealedPackage: Path? = null
 
         try {
             setContent {
@@ -379,6 +501,7 @@ class MidiCoreFocusedWorkflowTest {
                         workspace = workspace,
                         projectActions = projectActions,
                         midiActions = midiActions,
+                        exportActions = MidiCoreExportPageActions { revealedPackage = it },
                     )
                 }
             }
@@ -491,6 +614,47 @@ class MidiCoreFocusedWorkflowTest {
             assertEquals(null, workspace.state.value.musicalRepair.prepared)
             captureFixture("arrange")
 
+            // An audible draft is still excluded from export, even while its player is running.
+            val originalDraft = requireNotNull(workspace.state.value.project).arrangementDrafts.single()
+            val originalCandidateBytes = requireNotNull(workspace.state.value.project).candidates.associate {
+                it.midi.path.value to Files.readAllBytes(projectRoot.resolve(it.midi.path.value))
+            }
+            navigateTo(MidiCoreWorkspaceDestination.EXPORT)
+            onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsNotEnabled()
+            captureFixture("export-draft-blocked")
+            assertEquals(MidiAuditionPlaybackState.PLAYING, audition.state.playback)
+            navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
+            onNodeWithTag(MidiCoreArrangePageTags.repair(app.melotrail.application.MidiCoreMusicalRepairIntent.LOWER_PIANO_REGISTER))
+                .performScrollTo().performClick()
+            awaitWorkspaceSuccess("review lower piano repair")
+            val repairPlan = requireNotNull(workspace.state.value.musicalRepair.prepared).proposal.plan
+            onNodeWithTag(MidiCoreArrangePageTags.APPLY_REPAIR).performScrollTo().performClick()
+            awaitWorkspaceSuccess("generate real lower piano alternatives")
+            assertTrue(workspace.state.value.musicalRepair.alternatives.isNotEmpty())
+            assertTrue(requireNotNull(workspace.state.value.project).acceptances.isEmpty())
+            assertEquals(repairPlan, workspace.state.value.project?.arrangementPlan)
+            navigateTo(MidiCoreWorkspaceDestination.REVIEW)
+            onNodeWithTag(MidiCoreReviewPageTags.OPEN_EXCEPTIONS).performScrollTo().performClick()
+            waitForIdle()
+            onNodeWithTag(MidiCoreReviewPageTags.PLAY_CANDIDATE).performScrollTo().performClick()
+            awaitWorkspaceSuccess("compare the real repair with the protected melody")
+            val repairPlayback = requireNotNull(audition.lastPlan)
+            assertEquals(listOf(MidiExportRole.MELODY, MidiExportRole.CHORDS), repairPlayback.view.roles)
+            val protectedNotes = repairPlayback.view.song.roles.single { it.role == MidiExportRole.MELODY }.events
+                .filterIsInstance<app.melotrail.midi.domain.MidiNoteEvent>()
+            assertEquals(listOf(60), protectedNotes.map { it.pitch })
+            assertEquals(0L, protectedNotes.single().orderingKey.tick)
+            assertEquals(sourceBeforePlan.sourceEndTick, protectedNotes.single().endTick)
+            captureFixture("review-repair")
+            navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
+            // Review the complete song under the explicitly confirmed repair plan.
+            onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().performClick()
+            awaitWorkspaceSuccess("create complete draft from the confirmed repair plan")
+            assertEquals(repairPlan, workspace.state.value.project?.arrangementPlan)
+            assertTrue(originalDraft in requireNotNull(workspace.state.value.project).arrangementDrafts)
+            originalCandidateBytes.forEach { (path, bytes) -> assertContentEquals(bytes, Files.readAllBytes(projectRoot.resolve(path))) }
+            assertEquals(2, workspace.state.value.project?.arrangementDrafts?.size)
+
             navigateTo(MidiCoreWorkspaceDestination.REVIEW)
             onNodeWithTag(MidiCoreVerifiedTimelineTags.ROOT).performScrollTo()
             captureFixture("review-top")
@@ -522,7 +686,7 @@ class MidiCoreFocusedWorkflowTest {
             assertTrue(reopened.authority?.chordEvents?.isNotEmpty() == true)
             assertNotNull(reopened.arrangementPlan)
             assertEquals(sourceBeforePlan, reopened.sourceMidi)
-            assertEquals(1, reopened.arrangementDrafts.size)
+            assertEquals(2, reopened.arrangementDrafts.size)
             navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
             onNodeWithTag(MidiCoreArrangePageTags.CONFIRMED_PLAN).performScrollTo().assertIsDisplayed()
             onNodeWithTag(MidiCoreArrangePageTags.PROPOSE_PLAN).assertDoesNotExist()
@@ -535,6 +699,36 @@ class MidiCoreFocusedWorkflowTest {
             val packageDirectory = projectRoot.resolve("exports").resolve(snapshot.id)
             assertTrue(Files.isRegularFile(packageDirectory.resolve("complete-song.mid")))
             assertTrue(Files.isRegularFile(packageDirectory.resolve("manifest.json")))
+            assertEquals(reopened.acceptances.map { it.candidateId }.toSet(), snapshot.acceptedCandidates.map { it.candidateId }.toSet())
+            assertTrue(snapshot.isCurrent(requireNotNull(workspace.state.value.project)))
+            val exportedBytes = snapshot.files.associate { file -> file.artifact.path.value to Files.readAllBytes(projectRoot.resolve(file.artifact.path.value)) }
+            onNodeWithTag(MidiCoreExportPageTags.REVEAL).performScrollTo().performClick()
+            assertEquals(packageDirectory, revealedPackage)
+            captureFixture("export-result")
+
+            // Reopening retains the exact saved result and reveal target without another write.
+            workspace.accept(MidiCoreWorkspaceIntent.CloseProject)
+            assertEquals(null, workspace.state.value.project)
+            workspace.accept(MidiCoreWorkspaceIntent.OpenProject(projectRoot))
+            awaitWorkspaceSuccess("reopen exported project")
+            assertEquals(snapshot, workspace.state.value.export.latestSnapshot)
+            navigateTo(MidiCoreWorkspaceDestination.EXPORT)
+            onNodeWithTag(MidiCoreExportPageTags.REVEAL).performScrollTo().performClick()
+            assertEquals(packageDirectory, revealedPackage)
+            captureFixture("export-reopened")
+            onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().performClick()
+            awaitWorkspaceSuccess("publish another immutable snapshot")
+            val nextSnapshot = requireNotNull(workspace.state.value.export.latestSnapshot)
+            assertTrue(nextSnapshot.id != snapshot.id)
+            exportedBytes.forEach { (path, bytes) -> assertContentEquals(bytes, Files.readAllBytes(projectRoot.resolve(path))) }
+            assertContentEquals(Files.readAllBytes(source), Files.readAllBytes(projectRoot.resolve(sourceBeforePlan.original.path.value)))
+            val evidencePackage = visualFixtureRoot(fixtureSet).resolve("logic-package")
+            deleteTree(evidencePackage)
+            Files.createDirectories(evidencePackage)
+            snapshot.files.forEach { file ->
+                val saved = projectRoot.resolve(file.artifact.path.value)
+                Files.copy(saved, evidencePackage.resolve(saved.fileName))
+            }
 
             // Repair uses explicit rest dependencies, and UI preview reports their downstream invalidation.
             workspace.accept(MidiCoreWorkspaceIntent.CloseProject)
@@ -574,7 +768,7 @@ class MidiCoreFocusedWorkflowTest {
                 preview.staleTargets.single { it.id == drums.id }.reasons)
 
             assertEquals(
-                listOf("arrange", "arrange-proposal", "arrange-repair-preview", "arrange-top", "export", "midi", "project", "review", "review-top", "structure-harmony"),
+                listOf("arrange", "arrange-proposal", "arrange-repair-preview", "arrange-top", "export", "export-draft-blocked", "export-reopened", "export-result", "midi", "project", "review", "review-repair", "review-top", "structure-harmony"),
                 capturedFixtureNames(fixtureSet),
             )
         } finally {
@@ -584,7 +778,8 @@ class MidiCoreFocusedWorkflowTest {
     }
 
     private fun capturedFixtureNames(fixtureSet: String): List<String> = Files.list(visualFixtureRoot(fixtureSet)).use { paths ->
-        paths.map { it.fileName.toString().removeSuffix(".png") }.sorted().toList()
+        paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".png") }
+            .map { it.fileName.toString().removeSuffix(".png") }.sorted().toList()
     }
 
     private fun visualFixtureRoot(fixtureSet: String): Path = Path.of(System.getProperty("user.dir"))
@@ -596,14 +791,14 @@ class MidiCoreFocusedWorkflowTest {
         Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
     }
 
-    private fun writeSourceMidi(path: Path, pitch: Int = 60): Path {
+    private fun writeSourceMidi(path: Path, pitch: Int = 60, endTick: Long = 3_840L): Path {
         Files.createDirectories(path.parent)
         val sequence = Sequence(Sequence.PPQ, 480)
         val track = sequence.createTrack()
         val name = "Lead".encodeToByteArray()
         track.add(MidiEvent(MetaMessage(0x03, name, name.size), 0L))
         track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, pitch, 96), 0L))
-        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, pitch, 0), 3_840L))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, pitch, 0), endTick))
         MidiSystem.write(sequence, 1, path.toFile())
         return path
     }
@@ -686,6 +881,8 @@ private class WorkflowPreferences : MidiCoreDesktopPreferences {
 private class WorkflowFakeMidiAudition : MidiAuditionPort {
     private var current = MidiAuditionState()
     private val history = mutableListOf(current)
+    var lastPlan: MidiAuditionPlaybackPlan? = null
+        private set
 
     override val state: MidiAuditionState get() = current
     override val stateHistory: List<MidiAuditionState> get() = history.toList()
@@ -695,6 +892,7 @@ private class WorkflowFakeMidiAudition : MidiAuditionPort {
     }
 
     override fun play(plan: MidiAuditionPlaybackPlan): MidiAuditionResult {
+        lastPlan = plan
         selectScope(plan)
         return apply(MidiAuditionAction.PLAY) { it.copy(playback = MidiAuditionPlaybackState.PLAYING, sessionId = 1L) }
     }

@@ -158,11 +158,9 @@ object MidiCoreDesktopEntrypoint {
             }
             val exportActions = remember(services) {
                 MidiCoreExportPageActions { directory ->
-                    runCatching {
-                        if (Desktop.isDesktopSupported() && directory.toFile().isDirectory) {
-                            Desktop.getDesktop().open(directory.toFile())
-                        }
-                    }
+                    check(Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN))
+                    check(directory.toFile().isDirectory)
+                    Desktop.getDesktop().open(directory.toFile())
                 }
             }
             val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)

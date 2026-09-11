@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -15,6 +16,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -24,6 +29,7 @@ import app.melotrail.project.CandidateRole
 import app.melotrail.project.ExportedFileKind
 import app.melotrail.project.MidiCoreExportSnapshot
 import java.nio.file.Path
+import java.util.Locale
 
 /** Local UI action for revealing an already-published, immutable package directory. */
 internal data class MidiCoreExportPageActions(
@@ -47,6 +53,13 @@ internal object MidiCoreExportPageTags {
     const val SUGGESTIONS = "midi-core-export-instrument-suggestions"
     const val DAW_GUIDANCE = "midi-core-export-daw-guidance"
     const val BLOCKERS = "midi-core-export-blockers"
+    const val SUMMARY = "midi-core-export-summary"
+    const val INVENTORY = "midi-core-export-inventory"
+    const val DETAILS = "midi-core-export-details"
+    const val SNAPSHOT_STATUS = "midi-core-export-snapshot-status"
+    const val REVEAL_ERROR = "midi-core-export-reveal-error"
+
+    fun scope(occurrenceId: String, role: CandidateRole) = "midi-core-export-scope-$occurrenceId-${role.name.lowercase()}"
 
     fun file(kind: ExportedFileKind): String = FILE_PREFIX + kind.name.lowercase()
 }
@@ -58,9 +71,11 @@ internal fun MidiCoreExportPage(
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
     actions: MidiCoreExportPageActions = MidiCoreExportPageActions(),
     modifier: Modifier = Modifier,
+    onNavigate: (MidiCoreWorkspaceDestination) -> Unit = {},
+    showHandoff: Boolean = true,
 ) {
     val project = state.project
-    val readiness = exportReadiness(state)
+    val readiness = remember(project) { exportReadiness(state) }
     val projectExportRoot = state.projectRoot?.resolve("exports")
     val latest = state.export.latest
     val snapshot = latest?.snapshot ?: state.export.latestSnapshot
@@ -80,39 +95,87 @@ internal fun MidiCoreExportPage(
             summary = "Validate the arrangement and publish an immutable MIDI package for Logic Pro.",
         )
         if (project == null) {
-            ExportEmptyCard(state)
+            ExportEmptyCard(state, onIntent, onNavigate)
             return@Column
         }
-        ExportReadinessCard(readiness, state, onIntent)
-        ExportDestinationCard(projectExportRoot, state, exporting, readiness.isEmpty(), onIntent)
-        ExportSnapshotCard(snapshot, latest, snapshotDirectory, actions)
-        ExportInstrumentSuggestionsCard()
-        ExportDawGuidanceCard()
+        ExportSummaryCard(state)
+        ExportDestinationCard(projectExportRoot, state, exporting, readiness.isEmpty() && !state.busy, onIntent)
+        ExportReadinessCard(readiness, state, onIntent, onNavigate)
+        ExportSnapshotCard(snapshot, latest, snapshotDirectory, actions, state)
+        if (showHandoff) MidiCoreExportHandoff()
     }
 }
 
 @Composable
-private fun ExportEmptyCard(state: MidiCoreWorkspaceState) {
+private fun ExportEmptyCard(
+    state: MidiCoreWorkspaceState,
+    onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+    onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
+) {
     ExportCard(MidiCoreExportPageTags.EMPTY, "Export") {
         Text("Open a MIDI Core project to inspect package readiness and publish a DAW MIDI package.", style = MaterialTheme.typography.bodyLarge)
-        ExportBlockers(state.blockers)
+        ExportBlockers(state.blockers, state, onIntent, onNavigate)
+    }
+}
+
+@Composable
+private fun ExportSummaryCard(state: MidiCoreWorkspaceState) {
+    val project = requireNotNull(state.project)
+    val scopes = remember(project) { midiCoreAcceptedScopeSummary(project) }
+    val authority = project.authority
+    ExportCard(MidiCoreExportPageTags.SUMMARY, "Accepted MIDI package") {
+        Text(project.metadata.name, style = MaterialTheme.typography.titleMedium)
+        authority?.let {
+            Text("${formatBpmDisplay(it.tempo)} BPM · ${it.meter.numerator}/${it.meter.denominator} · ${it.key.spelling.symbol} ${it.key.mode.displayName}")
+            val ppq = project.sourceMidi?.ppq
+            val duration = ppq?.let { resolution ->
+                String.format(Locale.ROOT, "%.1f s", it.arrangementEndTick.toDouble() * it.tempo.microsecondsPerQuarter / resolution / 1_000_000.0)
+            } ?: "—"
+            Text("${it.occurrences.size} sections · $duration · PPQ ${ppq ?: "—"}", style = MaterialTheme.typography.bodySmall)
+            Text("All files begin at song origin and retain the confirmed ending, including silence.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+        }
+        Text(if (project.selectedMelody == null) "Melody — protection required" else "Melody — protected source · melody.mid", style = MaterialTheme.typography.bodyMedium)
+        CandidateRole.entries.forEach { role ->
+            val selected = scopes.filter { it.role == role }
+            val accepted = selected.count { it.problem == null && !it.rest }
+            val rests = selected.count { it.problem == null && it.rest }
+            val pending = selected.size - accepted - rests
+            val file = when {
+                selected.isEmpty() || pending > 0 -> "not ready"
+                accepted == 0 -> "whole-song rest · file omitted"
+                else -> "${role.name.lowercase()}.mid"
+            }
+            Text("${role.exportDisplayName} — $accepted accepted · $rests rests${if (pending > 0) " · $pending need attention" else ""} · $file", style = MaterialTheme.typography.bodyMedium)
+        }
+        var inventoryOpen by remember(project.id) { mutableStateOf(false) }
+        OutlinedButton(
+            onClick = { inventoryOpen = !inventoryOpen },
+            shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+            modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreExportPageTags.INVENTORY },
+        ) { Text(if (inventoryOpen) "Hide section inventory" else "Section inventory") }
+        if (inventoryOpen) scopes.forEach { scope ->
+            Text(
+                "${scope.location} · ${scope.role.exportDisplayName}: ${if (scope.problem != null) "Needs attention" else if (scope.rest) "Accepted planned rest" else "Accepted"}${if (scope.locked) " · Locked" else ""}",
+                modifier = Modifier.semantics { testTag = MidiCoreExportPageTags.scope(scope.occurrenceId, scope.role) },
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 
 @Composable
 private fun ExportReadinessCard(
-    readiness: List<String>,
+    readiness: List<MidiCoreWorkspaceBlocker>,
     state: MidiCoreWorkspaceState,
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+    onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
 ) {
     ExportCard(MidiCoreExportPageTags.READINESS, "Export readiness") {
-        Text("Publishing revalidates the protected melody, authority, accepted candidate digests, SMF semantics, and manifest before a package becomes visible.", style = MaterialTheme.typography.bodyMedium)
+        Text("Only accepted work is included. Draft playback, mute and solo do not change the package. Publishing verifies the source, accepted files and MIDI alignment.", style = MaterialTheme.typography.bodyMedium)
         if (readiness.isEmpty()) {
-            Text("Ready to publish a new immutable snapshot. Existing packages will never be overwritten.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.Success)
-        } else {
-            readiness.forEach { message -> Text(message, style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.Warning) }
+            Text("Accepted selections are complete. File and dependency checks run on publication.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.Success)
         }
-        ExportBlockers(state.blockers)
+        ExportBlockers((readiness + state.blockers).distinct(), state, onIntent, onNavigate)
     }
 }
 
@@ -125,7 +188,7 @@ private fun ExportDestinationCard(
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
 ) {
     ExportCard(MidiCoreExportPageTags.DESTINATION, "Package destination") {
-        Text("New packages are written under the project-owned export directory as a fresh snapshot ID. Collision handling chooses a new snapshot; no MIDI file or prior snapshot is silently replaced.", style = MaterialTheme.typography.bodyMedium)
+        Text("Every export creates a new snapshot folder. Existing packages are preserved, including if publication fails.", style = MaterialTheme.typography.bodyMedium)
         Text(projectExportRoot?.toString() ?: "Project export directory will be available after opening a project.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
         Text(
             "Package files: complete-song.mid, melody.mid, each active generated role file, and manifest.json. A role inactive for the whole song is recorded in the manifest and omitted.",
@@ -140,17 +203,12 @@ private fun ExportDestinationCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MusicWorkspaceTokens.Information,
             )
-            OutlinedButton(
-                onClick = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                    testTag = MidiCoreExportPageTags.CANCEL
-                    contentDescription = "Cancel MIDI package publication"
-                },
-            ) { Text("Cancel export") }
+            Text("Finishing this atomic publication; the result will appear below.", style = MaterialTheme.typography.bodySmall)
         } else {
             Button(
                 onClick = { onIntent(MidiCoreWorkspaceIntent.ExportPackage) },
                 enabled = ready,
+                shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                 modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreExportPageTags.PUBLISH
                     contentDescription = "Publish a new immutable DAW MIDI package"
@@ -163,6 +221,8 @@ private fun ExportDestinationCard(
         if (!exporting && state.operation.retry == MidiCoreWorkspaceIntent.ExportPackage) {
             OutlinedButton(
                 onClick = { onIntent(MidiCoreWorkspaceIntent.Retry) },
+                enabled = ready,
+                shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                 modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreExportPageTags.RETRY
                     contentDescription = "Retry the last MIDI package publication without overwriting an existing snapshot"
@@ -178,67 +238,86 @@ private fun ExportSnapshotCard(
     latest: MidiCoreExportedPackage?,
     directory: Path?,
     actions: MidiCoreExportPageActions,
+    state: MidiCoreWorkspaceState,
 ) {
     ExportCard(MidiCoreExportPageTags.SNAPSHOT, "Latest immutable snapshot") {
         if (snapshot == null) {
             Text("No MIDI package has been published from this project yet.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
             return@ExportCard
         }
-        Text(snapshot.id, style = MaterialTheme.typography.titleMedium)
-        Text("Source SHA-256: ${snapshot.sourceSha256}", style = MaterialTheme.typography.bodySmall)
-        Text("Authority SHA-256: ${snapshot.authorityHash}", style = MaterialTheme.typography.bodySmall)
-        Text("Enabled roles: ${snapshot.enabledRoles.joinToString { it.exportDisplayName }}", style = MaterialTheme.typography.bodySmall)
+        Text("Published ${snapshot.createdAt}", style = MaterialTheme.typography.bodySmall)
+        val current = remember(snapshot, state.project) { midiCoreExportMatchesAcceptedWork(state, snapshot) }
+        Text(
+            if (current) "Matches current accepted work" else "Earlier accepted work — this saved package is unchanged",
+            modifier = Modifier.semantics { testTag = MidiCoreExportPageTags.SNAPSHOT_STATUS },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text("Included: Melody${snapshot.enabledRoles.joinToString(prefix = if (snapshot.enabledRoles.isEmpty()) "" else ", ") { it.exportDisplayName }}", style = MaterialTheme.typography.bodySmall)
         Text("Validation: generated MIDI files passed semantic re-import before this immutable snapshot was published.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Success)
-        snapshot.acceptedCandidates.forEach { candidate ->
-            Text("${candidate.role} ${candidate.occurrenceId}: ${candidate.candidateId} · ${candidate.midiSha256}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-        }
+        var details by remember(snapshot.id) { mutableStateOf(false) }
+        var revealError by remember(snapshot.id) { mutableStateOf<String?>(null) }
         val currentFiles = latest?.files?.associateBy { it.kind }.orEmpty()
         snapshot.files.sortedBy { it.kind }.forEach { file ->
             val generated = currentFiles[file.kind]
             Text(
-                "${file.kind.exportFilename}: ${file.artifact.sha256}${generated?.validation?.let { " · ${it.noteCount} notes · end ${it.songEndTick}" }.orEmpty()}",
+                "${file.kind.exportFilename}${generated?.validation?.let { " · ${it.noteCount} notes · SMF ${it.format}" }.orEmpty()}",
                 modifier = Modifier.fillMaxWidth().semantics {
                     testTag = MidiCoreExportPageTags.file(file.kind)
-                    contentDescription = "${file.kind.exportFilename}, SHA-256 ${file.artifact.sha256}"
+                    contentDescription = file.kind.exportFilename
                 },
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        latest?.let { Text("Manifest SHA-256: ${it.manifestSha256}", style = MaterialTheme.typography.bodySmall) }
         directory?.let { path ->
             Text(path.toString(), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
             OutlinedButton(
-                onClick = { actions.revealDirectory(path) },
+                onClick = {
+                    revealError = runCatching { actions.revealDirectory(path) }.exceptionOrNull()?.let {
+                        "Could not open the package folder. Open the saved path above in Finder."
+                    }
+                },
+                shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                 modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreExportPageTags.REVEAL
                     contentDescription = "Reveal published MIDI package folder"
                 },
             ) { Text("Reveal package folder") }
         }
+        revealError?.let { Text(it, modifier = Modifier.semantics { testTag = MidiCoreExportPageTags.REVEAL_ERROR }, color = MusicWorkspaceTokens.Warning) }
+        OutlinedButton(
+            onClick = { details = !details },
+            shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+            modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreExportPageTags.DETAILS },
+        ) { Text(if (details) "Hide package details" else "Package details") }
+        if (details) {
+            Text("Snapshot: ${snapshot.id}", style = MaterialTheme.typography.bodySmall)
+            Text("Source SHA-256: ${snapshot.sourceSha256}", style = MaterialTheme.typography.bodySmall)
+            Text("Authority SHA-256: ${snapshot.authorityHash}", style = MaterialTheme.typography.bodySmall)
+            snapshot.acceptedCandidates.forEach { candidate ->
+                Text("${candidate.role} ${candidate.occurrenceId}: ${candidate.candidateId}", style = MaterialTheme.typography.bodySmall)
+            }
+            snapshot.files.forEach { Text("${it.kind.exportFilename}: ${it.artifact.sha256}", style = MaterialTheme.typography.bodySmall) }
+        }
     }
 }
 
 @Composable
-private fun ExportInstrumentSuggestionsCard() {
-    ExportCard(MidiCoreExportPageTags.SUGGESTIONS, "DAW instrument suggestions") {
-        Text("Melody — Lead melody: search lead, flute, or vocal guide; preserve the source melody register.", style = MaterialTheme.typography.bodyMedium)
-        Text("Chords — Keys or electric piano: search electric piano, keys, or soft pad; leave the melody clear.", style = MaterialTheme.typography.bodyMedium)
-        Text("Bass — Electric or acoustic bass: search bass guitar, sub bass, or upright bass; keep the low register controlled.", style = MaterialTheme.typography.bodyMedium)
-        Text("Drums — GM drum kit: choose a dusty acoustic or electronic kit and retain General MIDI channel 10 mapping.", style = MaterialTheme.typography.bodyMedium)
-        Text("These are DAW-side suggestions; the MIDI Core project neither selects nor owns an instrument.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-    }
-}
-
-@Composable
-private fun ExportDawGuidanceCard() {
+internal fun MidiCoreExportHandoff() {
     ExportCard(MidiCoreExportPageTags.DAW_GUIDANCE, "Logic Pro") {
-        Text("Logic Pro: import complete-song.mid at bar 1, confirm whether to adopt its fixed tempo and meter, then assign instruments to Melody, Chords, Bass, and Drums.", style = MaterialTheme.typography.bodyMedium)
-        Text("Track names, timing, channels, and MIDI event content are package evidence. Destination instrument choices remain in the DAW.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+        Text("1. Import complete-song.mid at bar 1. Alternatively, import the individual role files together at that same origin; their leading silence is intentional.", style = MaterialTheme.typography.bodyMedium)
+        Text("2. Confirm Logic’s tempo and meter match the package manifest. Assign instruments to the included tracks.", style = MaterialTheme.typography.bodyMedium)
+        Text("3. Check section boundaries, role entries, planned rests and the final note. Play, save, close and reopen the Logic project to confirm alignment.", style = MaterialTheme.typography.bodyMedium)
+        Text("Instrument hints: Melody 1 · Chords 2 · Bass 3 · GM Drums 10 (MIDI channels). Choose the final instruments and sound in Logic.", modifier = Modifier.semantics { testTag = MidiCoreExportPageTags.SUGGESTIONS }, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
     }
 }
 
 @Composable
-private fun ExportBlockers(blockers: List<MidiCoreWorkspaceBlocker>) {
+private fun ExportBlockers(
+    blockers: List<MidiCoreWorkspaceBlocker>,
+    state: MidiCoreWorkspaceState,
+    onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+    onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
+) {
     if (blockers.isEmpty()) return
     Column(
         Modifier.fillMaxWidth().semantics {
@@ -248,7 +327,28 @@ private fun ExportBlockers(blockers: List<MidiCoreWorkspaceBlocker>) {
         verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
     ) {
         blockers.forEach { blocker ->
-            Text("${blocker.message} Next: ${blocker.nextAction}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+            Text(blocker.message, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+            Text(blocker.nextAction, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+            val location = state.project?.let { runCatching { midiCoreSongMap(it) }.getOrDefault(emptyList()) }
+                ?.singleOrNull { it.occurrence.id == blocker.occurrenceId }
+            OutlinedButton(
+                enabled = !state.busy,
+                shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget),
+                onClick = {
+                    blocker.occurrenceId?.let { id ->
+                        onIntent(MidiCoreWorkspaceIntent.SelectArrangementOccurrence(id))
+                        blocker.role?.let { onIntent(MidiCoreWorkspaceIntent.SelectReviewScope(it, id)) }
+                    }
+                    onNavigate(when (blocker.code) {
+                        MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED -> MidiCoreWorkspaceDestination.PROJECT
+                        MidiCoreWorkspaceBlockerCode.SOURCE_REQUIRED, MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED -> MidiCoreWorkspaceDestination.MIDI
+                        MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED, MidiCoreWorkspaceBlockerCode.STRUCTURE_REQUIRED,
+                        MidiCoreWorkspaceBlockerCode.HARMONY_REQUIRED -> MidiCoreWorkspaceDestination.STRUCTURE_HARMONY
+                        else -> MidiCoreWorkspaceDestination.REVIEW
+                    })
+                },
+            ) { Text(location?.let { "Review ${it.displayLabel} · ${it.barRange} · ${blocker.role?.exportDisplayName.orEmpty()}" } ?: "Review required work") }
         }
     }
 }
@@ -263,46 +363,11 @@ private fun ExportCard(tag: String, title: String, content: @Composable ColumnSc
             Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md),
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
         ) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
+            Text(title, style = MaterialTheme.typography.titleMedium)
             content()
         }
     }
 }
-
-private fun exportReadiness(state: MidiCoreWorkspaceState): List<String> {
-    val project = state.project ?: return listOf("Open a MIDI Core project before exporting.")
-    val authority = project.authority ?: return listOf("Confirm complete musical authority before exporting.")
-    val authorityFingerprint = runCatching { app.melotrail.project.MidiCoreAuthorityHasher.from(project) }.getOrNull()
-    return CandidateRole.entries.flatMap { role ->
-        authority.occurrences.mapNotNull { occurrence ->
-            val rest = project.acceptedPlannedRests.singleOrNull { selected ->
-                selected.role == role && selected.occurrenceId == occurrence.id
-            }
-            if (rest != null) {
-                val plannedInactive = project.arrangementPlan?.occurrences
-                    ?.singleOrNull { it.occurrenceId == occurrence.id }?.roleSettings
-                    ?.singleOrNull { it.role == role }?.activity == app.melotrail.project.MidiCoreRoleActivity.INACTIVE
-                val currentRest = plannedInactive && authorityFingerprint?.scopeHash(occurrence.id, role) == rest.authorityHash
-                return@mapNotNull if (currentRest) null else {
-                    "The planned ${role.exportDisplayName} rest for ${occurrence.label} is stale. Confirm the plan and use a current complete draft before exporting."
-                }
-            }
-            val acceptance = project.acceptances.singleOrNull { accepted ->
-                accepted.role == role && accepted.occurrenceId == occurrence.id
-            } ?: return@mapNotNull "Accept one current ${role.exportDisplayName} candidate for ${occurrence.label} before exporting."
-            val candidate = project.candidates.singleOrNull { candidate -> candidate.id == acceptance.candidateId }
-                ?: return@mapNotNull "The accepted ${role.exportDisplayName} evidence for ${occurrence.label} is unavailable. Reload the project and accept a current candidate before exporting."
-            when (candidate.status) {
-                app.melotrail.project.MidiCoreCandidateStatus.ACCEPTED -> null
-                app.melotrail.project.MidiCoreCandidateStatus.STALE -> "The accepted ${role.exportDisplayName} candidate for ${occurrence.label} is stale. Regenerate and explicitly accept a current candidate before exporting."
-                else -> "The ${role.exportDisplayName} candidate accepted for ${occurrence.label} is no longer accepted. Review and explicitly accept a current candidate before exporting."
-            }
-        }
-    }
-}
-
-private val CandidateRole.exportDisplayName: String
-    get() = name.lowercase().replaceFirstChar(Char::uppercaseChar)
 
 private val ExportedFileKind.exportFilename: String
     get() = when (this) {
