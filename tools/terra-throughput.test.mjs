@@ -40,6 +40,7 @@ process.stdin.on('end', () => {
   const task = prompt.match(/Assigned task: (\\w+)/)[1];
   const base = prompt.match(/Base commit: (\\w+)/)[1];
   const candidate = prompt.match(/Candidate tree: ([A-Za-z0-9_]+)/)[1];
+  const recovery = prompt.match(/Focused recovery subtask ([^:]+):/);
   const review = prompt.includes('Mode: Fresh independent REVIEW');
   const kind = review ? 'review' : 'worker';
   const args = process.argv.slice(2);
@@ -51,19 +52,30 @@ process.stdin.on('end', () => {
   emit({ type: 'start', kind, task, base, candidate, args, prompt, resultFile, session });
   if (!review && !args.includes('resume')) console.log(JSON.stringify({ type: 'thread.started', thread_id: session }));
   const complete = () => {
-    if (!review) fs.writeFileSync(path.join('src', task + '.txt'), 'implemented ' + task + '\\n');
+    if (!review && !recovery) fs.writeFileSync(path.join('src', task + '.txt'), 'implemented ' + task + '\\n');
+    if (!review && recovery && !scenario.recoveryNoChange) {
+      const index = Number(recovery[1].match(/R(\\d+)$/)[1]) - 1;
+      for (const file of scenario.recoveryFindings[index].files) fs.writeFileSync(file,
+        scenario.recoveryUnresolved ? 'different but still broken\\n' : 'fixed ' + scenario.recoveryFindings[index].id + '\\n');
+      if (scenario.recoveryExtraPath) fs.writeFileSync(scenario.recoveryExtraPath, 'unexpected extra change\\n');
+    }
     if (!review && scenario.extraWorkerPaths?.[task]) for (const file of scenario.extraWorkerPaths[task]) fs.writeFileSync(file, 'out-of-scope candidate edit\\n');
-    const fail = review && ((scenario.failReviewTasks || []).includes(task) || count < (scenario.failFirstReviews || 0));
+    let fail = review && ((scenario.failReviewTasks || []).includes(task) || count < (scenario.failFirstReviews || 0));
+    const structured = review && JSON.parse(fs.readFileSync(args[args.indexOf('--output-schema') + 1])).properties.findings;
+    const resolved = structured ? (scenario.recoveryFindings || []).filter(f => f.files.length && f.files.every(file => fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes('fixed ' + f.id))).map(f => f.id) : [];
+    const findings = structured ? (scenario.recoveryFindings || []).filter(f => !resolved.includes(f.id)) : [];
+    if (structured) fail = findings.length > 0;
     const result = { task, base, commit: base, candidate,
       status: review ? (fail ? 'FAIL' : 'PASS') : (scenario.workerStatuses?.[task] || scenario.workerStatus || 'READY_FOR_VALIDATION'),
       summary: fail ? 'Reproduced 6/8 accent defect' : 'Fixture candidate ' + task,
       blocker: fail ? 'Correct compound-meter accent weighting' : review ? '' : (scenario.workerBlocker || ''),
       tests: ['PENDING_COORDINATOR: required gates'], artifacts: [] };
+    if (structured) Object.assign(result, { findings, resolvedFindingIds: resolved });
     fs.writeFileSync(resultFile, JSON.stringify(result));
     emit({ type: 'end', kind, task, base, candidate, status: result.status });
     console.log(JSON.stringify({ type: 'turn.completed', usage: { input_tokens: 10, output_tokens: 2 } }));
   };
-  setTimeout(complete, review ? (scenario.reviewDelay || 0) : (scenario.workerDelays?.[task] ?? scenario.workerDelay ?? 0));
+  setTimeout(complete, review ? (scenario.reviewDelay || 0) : (recovery ? scenario.recoveryDelay || 0 : scenario.workerDelays?.[task] ?? scenario.workerDelay ?? 0));
 });
 `, { mode: 0o700 });
   fs.writeFileSync(path.join(bin, 'make'), `#!${process.execPath}
@@ -91,6 +103,167 @@ else console.log('coordinator-checked-' + process.argv[2]);
 }
 const completed = f => queue(f.git('show', 'codex/terra:TASKS.md')).filter(t => t.state === 'DONE').map(t => t.id);
 const modelStarts = (f, kind) => f.events().filter(e => e.type === 'start' && (!kind || e.kind === kind));
+
+const findingConfig = { maxFindingRecoveries: 3, findingRecoveryTokens: 150000, findingRecoveryMinutes: 20,
+  maxRecoveryRetries: 0, model: 'gpt-6-astra', reasoningEffort: 'xhigh' };
+const recoveryFindings = [
+  { id: 'accepted-review', kind: 'code', title: 'Accepted Review state missing', files: ['src/M01.txt'],
+    acceptance: 'Capture accepted Review with enabled Play and Undo and assert it in a regression.' },
+  { id: 'ready-export', kind: 'code', title: 'Ready Export result missing', files: ['src/export-test.txt'],
+    acceptance: 'Capture the ready Export result with enabled Publish and Reveal and verify its bounds.' },
+];
+function failedFindingFixture(config = {}, scenario = {}) {
+  const f = fixture({ config: { ...findingConfig, ...config }, scenario: { recoveryFindings, ...scenario } });
+  const result = f.call('advance');
+  assert.notEqual(result.status, 0);
+  assert.equal(f.readState().active.phase, 'RECOVERY_PENDING', result.stderr);
+  return f;
+}
+test('terminal review findings become ordered bounded subtasks; preserve code and integrate only after whole-parent review', () => {
+  const f = failedFindingFixture();
+  try {
+    const original = f.readState().active;
+    assert.equal(original.recoverySubtasks.length, 2);
+    assert.equal(modelStarts(f, 'worker').length, 3);
+    assert.equal(f.call('retry').status, 1, 'generic retry must not reset recovery');
+    const one = f.call('advance'); assert.equal(one.status, 0, one.stderr);
+    const pending = f.readState().active;
+    assert.equal(pending.worktree, original.worktree);
+    assert.deepEqual(pending.recoverySubtasks.map(s => s.status), ['DONE', 'TODO']);
+    assert.deepEqual(completed(f), ['F01']);
+    const first = modelStarts(f, 'worker').at(-1);
+    assert.ok(!first.args.includes('resume'), 'fresh focused session');
+    assert.equal(first.args[first.args.indexOf('-m') + 1], 'gpt-6-astra');
+    assert.match(first.prompt, /Focused recovery subtask M01\/R1/);
+    assert.match(first.prompt, /Accepted Review state missing/);
+    assert.match(first.prompt, /regression/);
+    assert.match(fs.readFileSync(pending.recoveryPatch, 'utf8'), /implemented M01/);
+    assert.equal(pending.recoverySubtasks[0].modelTokens, 24);
+    const two = f.call('advance'); assert.equal(two.status, 0, two.stderr);
+    const last = f.readState().last;
+    assert.equal(f.readState().active, undefined);
+    assert.deepEqual(last.recoverySubtasks.map(s => s.status), ['DONE', 'DONE']);
+    assert.equal(f.git('show', 'codex/terra:src/M01.txt'), 'fixed accepted-review');
+    assert.equal(f.git('show', 'codex/terra:src/export-test.txt'), 'fixed ready-export');
+    assert.deepEqual(completed(f), ['F01', 'M01']);
+    assert.deepEqual(f.readState().runs.slice(-2).map(r => r.findingRecovery), ['M01/R1', 'M01/R2']);
+    assert.equal(modelStarts(f, 'worker').length, 5);
+    assert.ok(modelStarts(f, 'review').every(r => r.args.includes('--ephemeral')));
+    assert.equal(modelStarts(f, 'review').at(-1).candidate, last.reviewedTree);
+    assert.ok(f.readState().batchHistory.every(b => b.modelTokens > 0), 'prior usage retained');
+  } finally { f.close(); }
+});
+test('unchanged or independently unresolved recovery stops; the next wake defers without another worker', () => {
+  for (const scenario of [{ recoveryNoChange: true }, { recoveryUnresolved: true }]) {
+    const f = failedFindingFixture({}, scenario);
+    try {
+      const r = f.call('advance'); assert.notEqual(r.status, 0);
+      assert.match(r.stderr, /no code progress|did not resolve/);
+      const failed = f.readState().active;
+      assert.equal(failed.findingRecoveryStopped, true);
+      assert.equal(failed.recoverySubtasks[0].status, 'BLOCKED');
+      const count = modelStarts(f).length;
+      assert.equal(f.call('advance').status, 0);
+      assert.equal(modelStarts(f).length, count);
+      assert.equal(queue(f.git('show', 'codex/terra:TASKS.md')).find(t => t.id === 'M01').state, 'BLOCKED');
+      assert.ok(fs.existsSync(failed.worktree));
+    } finally { f.close(); }
+  }
+});
+test('recovery cannot broaden file ownership, overwrite a changed checkpoint or bypass current authorization', () => {
+  for (const mode of ['scope', 'checkpoint', 'allowlist']) {
+    const f = failedFindingFixture({}, mode === 'scope' ? { recoveryExtraPath: 'src/baseline.txt' } : {});
+    try {
+      const ctx = f.readState().active;
+      if (mode === 'checkpoint') fs.writeFileSync(path.join(ctx.worktree, 'src/M01.txt'), 'external change\n');
+      if (mode === 'allowlist') f.setConfig({ ...findingConfig, allowedTasks: ['M02', 'M03'] });
+      const r = f.call('advance'); assert.notEqual(r.status, 0);
+      assert.match(r.stderr, /outside finding scope|preserved checkpoint|no longer authorized/);
+      assert.deepEqual(completed(f), ['F01']);
+      assert.ok(fs.existsSync(ctx.worktree));
+      if (mode !== 'scope') assert.equal(modelStarts(f, 'worker').length, 3);
+    } finally { f.close(); }
+  }
+});
+test('finding token/time budgets and pause are enforced without resetting parent history', () => {
+  for (const mode of ['tokens', 'time', 'pause', 'daily']) {
+    const f = failedFindingFixture(mode === 'tokens' ? { findingRecoveryTokens: 12 } : {},
+      mode === 'time' ? { recoveryDelay: 150 } : {});
+    try {
+      if (mode === 'time') f.setConfig({ ...findingConfig, findingRecoveryMinutes: 0.001 });
+      if (mode === 'pause') f.call('pause');
+      if (mode === 'daily') f.setConfig({ ...findingConfig, maxRunsPerDay: 1 });
+      const r = f.call('advance');
+      if (mode === 'pause') { assert.equal(r.status, 0); assert.equal(modelStarts(f, 'worker').length, 3); }
+      else {
+        assert.notEqual(r.status, 0); assert.match(r.stderr, /budget exhausted|deadline exhausted|Daily run/);
+        if (mode === 'daily') assert.equal(modelStarts(f, 'worker').length, 3);
+        else {
+          assert.equal(f.readState().active.findingRecoveryStopped, true);
+          const count = modelStarts(f).length; f.call('advance'); assert.equal(modelStarts(f).length, count);
+        }
+      }
+      assert.deepEqual(completed(f), ['F01']);
+    } finally { f.close(); }
+  }
+});
+test('human, environment, scope and too many findings never create recovery subtasks', () => {
+  for (const kind of ['human', 'environment', 'scope', 'too-many']) {
+    const findings = kind === 'too-many' ? Array.from({ length: 4 }, (_, i) => ({ ...recoveryFindings[0], id: `issue-${i}` }))
+      : [{ ...recoveryFindings[0], kind, files: [] }];
+    const f = fixture({ config: findingConfig, scenario: { recoveryFindings: findings } });
+    try {
+      assert.notEqual(f.call('advance').status, 0);
+      assert.equal(f.readState().active.recoverySubtasks, undefined);
+      const count = modelStarts(f).length;
+      f.call('advance'); assert.equal(modelStarts(f).length, count);
+    } finally { f.close(); }
+  }
+});
+test('a crashed in-flight recovery is preserved and deferred rather than resuming or resetting it', () => {
+  const f = failedFindingFixture();
+  try {
+    const s = f.readState();
+    s.active.recoverySubtasks[0].status = 'RUNNING';
+    s.active.phase = 'READY_FOR_VALIDATION'; s.active.resumeStage = 'validate';
+    s.active.interruptionReason = 'deadline';
+    atomic(path.join(f.state, 'state.json'), s);
+    const count = modelStarts(f).length;
+    const r = f.call('advance'); assert.equal(r.status, 0, r.stderr);
+    assert.equal(modelStarts(f).length, count);
+    assert.equal(f.readState().lastDeferred.recoverySubtasks[0].status, 'RUNNING');
+    assert.equal(f.readState().active, undefined);
+    assert.ok(fs.existsSync(s.active.worktree));
+  } finally { f.close(); }
+});
+test('final review usage crossing the finding cap preserves work; exact cap can integrate without another model call', () => {
+  for (const cap of [23, 24]) {
+    const f = failedFindingFixture({ findingRecoveryTokens: cap }, { recoveryFindings: [recoveryFindings[0]] });
+    try {
+      const r = f.call('advance');
+      if (cap === 23) {
+        assert.notEqual(r.status, 0); assert.match(r.stderr, /budget exhausted/);
+        assert.equal(f.readState().active.recoverySubtasks[0].modelTokens, 24);
+        assert.equal(f.readState().active.findingRecoveryStopped, true);
+        assert.deepEqual(completed(f), ['F01']);
+      } else {
+        assert.equal(r.status, 0, r.stderr);
+        assert.deepEqual(completed(f), ['F01', 'M01']);
+        assert.equal(f.readState().last.recoverySubtasks[0].modelTokens, 24);
+      }
+    } finally { f.close(); }
+  }
+});
+test('finding configuration cannot exceed authorized subtask count time or tokens', () => {
+  for (const config of [{ maxFindingRecoveries: 4 }, { findingRecoveryMinutes: 20.01 }, { findingRecoveryTokens: 150001 }]) {
+    const f = fixture({ config: { ...findingConfig, ...config } });
+    try {
+      const r = f.call('advance'); assert.notEqual(r.status, 0); assert.match(r.stderr, /Invalid finding recovery limits/);
+      assert.equal(modelStarts(f).length, 0);
+      assert.equal(fs.existsSync(path.join(f.state, 'state.json')), false);
+    } finally { f.close(); }
+  }
+});
 
 test('budget interruption resumes validation without replaying implementation or erasing usage', () => {
   const f = fixture({ config: { maxReportedTokens: 12, maxRecoveryRetries: 0 } });

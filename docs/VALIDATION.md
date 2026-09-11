@@ -185,6 +185,14 @@ Keep full transcripts outside model input; review only the current candidate's
 explicit completed check logs. Passing runner checks does not approve MIDI music,
 Logic behavior or visual output.
 
+Finding recovery additionally proves ordered partial repairs without premature
+integration; one fresh session and fixed file scope per finding; independent
+acceptance resolution; and preservation of the original implementation, diff,
+check errors and usage history. Regressions reject no-progress loops, malformed
+or omitted findings, scope/checkpoint changes, unauthorized/human recovery,
+exhausted time/tokens and replay after an interrupted attempt. Evidence for A03
+is retained at `~/.codex/melotrail-terra/finding-recovery-evidence`.
+
 ## Musical evaluation
 
 The user's 2026-09-06 **5/10 average** is qualitative baseline feedback: timing

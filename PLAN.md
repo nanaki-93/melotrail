@@ -412,8 +412,13 @@ supply playable baseline/new MIDI packages.
 focused checks, test/build and diff checks; a fresh Astra Extra High reviewer inspects
 the exact tested tree. A failed attempt gets one Astra retry, then Sol High
 receives the original task, current diff and concrete terminal/test/review errors
-for one repair. Integrate only the reviewed tree. TASKS defines numeric bounds,
-paths, control commands and the reusable worker prompt.
+for one repair. If the final review leaves up to three concrete code findings,
+recover them as ordered, exact-file subtasks on the preserved candidate. Each
+gets a fresh Astra session and a bounded budget; fresh review must verify its
+acceptance condition. Stop on no progress or exhausted recovery, retain human
+gates, and never grow a recursive repair chain. Integrate only when the whole
+parent passes. TASKS defines numeric bounds, paths, control commands and the
+reusable worker prompt.
 
 **Resume correctly:** budget/deadline stops preserve the candidate and its
 stage. A completed implementation continues at validation/review in the next

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { queue, select, mark, effectiveStatus, checkResult, lock, atomic, permitted, reportedUsage, validateAllowedPaths } from './terra-runner.mjs';
+import { queue, select, mark, effectiveStatus, checkResult, checkFindings, lock, atomic, permitted, reportedUsage, validateAllowedPaths } from './terra-runner.mjs';
 const md = '| F01 | Baseline | — | TODO | |\n| M01 | Music | F01 | TODO | |\n| A01 | Runner | F01 | TODO | |\n| V01 | Video | F01; selected | TODO | |';
 test('dependencies, bootstrap priority and selected video', () => {
   assert.equal(select(queue(md), false).id, 'F01');
@@ -45,6 +45,21 @@ test('task permissions reject paths that can escape or broadly cover a worktree'
   for (const paths of [[], [''], ['.'], ['./tools'], ['../outside'], ['/tmp/outside'], ['docs//'], ['.git/config'], ['README.md', 'README.md'], [false]]) {
     assert.throws(() => validateAllowedPaths(paths), /allowed path/);
   }
+});
+test('structured findings reject invented passes, omitted acceptance, unstable identity and unauthorized paths', () => {
+  const f = { id: 'ready-export', kind: 'code', title: 'Missing ready Export', files: ['src/Test.kt'], acceptance: 'Enabled Publish must be captured and asserted.' };
+  const review = { status: 'FAIL', findings: [f], resolvedFindingIds: [] };
+  assert.equal(checkFindings(review, ['src/']), review);
+  for (const patch of [{ id: null }, { id: undefined }, { acceptance: '' }, { files: [] }, { files: ['src/'] },
+    { files: ['../escape'] }, { files: ['README.md'] }, { kind: 'maybe' }, { surprise: true }])
+    assert.throws(() => checkFindings({ ...review, findings: [{ ...f, ...patch }] }, ['src/']));
+  for (const bad of [{ ...review, status: 'PASS' }, { ...review, findings: [] },
+    { ...review, findings: [f, f] }, { ...review, resolvedFindingIds: ['fabricated'] }])
+    assert.throws(() => checkFindings(bad, ['src/']));
+  const subtasks = [{ finding: f }];
+  assert.throws(() => checkFindings({ status: 'PASS', findings: [], resolvedFindingIds: [] }, ['src/'], subtasks), /omitted/);
+  assert.throws(() => checkFindings({ ...review, resolvedFindingIds: [f.id] }, ['src/'], subtasks));
+  assert.doesNotThrow(() => checkFindings({ status: 'PASS', findings: [], resolvedFindingIds: [f.id] }, ['src/'], subtasks));
 });
 test('lock excludes concurrent runs, retains evidence, permits explicit clean restart', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'terra-lock-'));

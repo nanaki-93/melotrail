@@ -71,14 +71,44 @@ export function reportedUsage(usage = {}) {
   const reasoning = Math.max(0, Number.isFinite(usage.reasoning_output_tokens) ? usage.reasoning_output_tokens : 0);
   return { input, cached, nonCachedInput: input - cached, output, reasoning, modelTokens: input - cached + output + reasoning };
 }
-export function checkResult(r, task, base, review = false, candidate = 'UNCOMMITTED') {
+export function checkResult(r, task, base, review = false, candidate = 'UNCOMMITTED', structured = false) {
   const allowed = review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED'];
-  if (!r || typeof r !== 'object' || Array.isArray(r) || Object.keys(r).length !== resultFields.size ||
-      Object.keys(r).some(key => !resultFields.has(key)) || r.task !== task || r.base !== base || !allowed.includes(r.status) ||
+  const fields = new Set([...resultFields, ...(review && structured ? ['findings', 'resolvedFindingIds'] : [])]);
+  if (!r || typeof r !== 'object' || Array.isArray(r) || Object.keys(r).length !== fields.size ||
+      Object.keys(r).some(key => !fields.has(key)) || r.task !== task || r.base !== base || !allowed.includes(r.status) ||
       !Array.isArray(r.tests) || !r.tests.every(test => typeof test === 'string') ||
       !Array.isArray(r.artifacts) || !r.artifacts.every(artifact => typeof artifact === 'string') || typeof r.summary !== 'string' ||
       !r.summary.trim() || typeof r.blocker !== 'string' || r.commit !== base || r.candidate !== candidate) throw Error('Invalid/stale agent result');
   return r;
+}
+const findingFields = ['id', 'kind', 'title', 'files', 'acceptance'];
+export function checkFindings(review, paths, recovery = []) {
+  if (!Array.isArray(review.findings) || review.findings.length > 8 ||
+      (review.status === 'PASS') !== (review.findings.length === 0) ||
+      !Array.isArray(review.resolvedFindingIds) ||
+      new Set(review.resolvedFindingIds).size !== review.resolvedFindingIds.length ||
+      review.resolvedFindingIds.some(id => !recovery.some(s => s.finding.id === id))) throw Error('Invalid review findings/resolutions');
+  const ids = new Set();
+  for (const f of review.findings) {
+    if (!f || Object.keys(f).length !== findingFields.length || Object.keys(f).some(k => !findingFields.includes(k)) ||
+        typeof f.id !== 'string' || !/^[a-zA-Z0-9_-]{1,40}$/.test(f.id) || ids.has(f.id) || review.resolvedFindingIds.includes(f.id) ||
+        !['code', 'human', 'environment', 'scope'].includes(f.kind) ||
+        ![f.title, f.acceptance].every(s => typeof s === 'string' && s.trim() && s.length <= 2000) ||
+        !Array.isArray(f.files) || f.files.length > 12 || (f.kind === 'code' && !f.files.length)) throw Error('Invalid concrete review finding');
+    if (f.files.length) validateAllowedPaths(f.files);
+    if (f.files.some(file => file.endsWith('/') || !permitted(file, paths) ||
+        ['AGENTS.md', 'PLAN.md', 'TASKS.md'].includes(file) || file.startsWith('docs/pictures/'))) throw Error('Finding exceeds authorized file scope');
+    ids.add(f.id);
+  }
+  // Every original finding remains explicitly open or independently resolved.
+  if (recovery.some(s => !ids.has(s.finding.id) && !review.resolvedFindingIds.includes(s.finding.id)))
+    throw Error('Review omitted an original recovery finding');
+  return review;
+}
+export function findingRecoverable(ctx, cfg) {
+  return cfg.maxFindingRecoveries > 0 && !ctx?.findingRecoveryStopped &&
+    !ctx?.recoverySubtasks?.some(s => ['RUNNING', 'BLOCKED'].includes(s.status)) &&
+    ctx?.recoverySubtasks?.some(s => s.status === 'TODO');
 }
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.hooksPath=/dev/null', ...args], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).trim();
 export function lock(dir) {
@@ -92,6 +122,15 @@ const schema = statuses => ({ type: 'object', additionalProperties: false,
     ['tests', { type: 'array', items: { type: 'string' } }],
     ['artifacts', { type: 'array', items: { type: 'string' } }]])),
   required: ['task', 'base', 'commit', 'candidate', 'summary', 'blocker', 'status', 'tests', 'artifacts'] });
+export function reviewSchema() {
+  const s = schema(['PASS', 'FAIL']);
+  s.properties.findings = { type: 'array', items: { type: 'object', additionalProperties: false,
+    properties: { id: { type: 'string' }, kind: { type: 'string', enum: ['code', 'human', 'environment', 'scope'] },
+      title: { type: 'string' }, files: { type: 'array', items: { type: 'string' } }, acceptance: { type: 'string' } }, required: findingFields } };
+  s.properties.resolvedFindingIds = { type: 'array', items: { type: 'string' } };
+  s.required.push('findings', 'resolvedFindingIds');
+  return s;
+}
 
 export function pathsOverlap(a, b) {
   return a.some(x => b.some(y => x === y || (x.endsWith('/') && y.startsWith(x)) || (y.endsWith('/') && x.startsWith(y))));
@@ -160,8 +199,14 @@ function validatePolicy(cfg, rows) {
 async function main() {
   let [command = 'status', configFile = path.join(os.homedir(), '.codex/melotrail-terra/config.json')] = process.argv.slice(2);
   const automatic = command === 'advance';
-  const cfg = { maxTasksPerBatch: 1, maxParallelWorkers: 1, maxRecoveryRetries: 1, maxContinuations: 3, parallelGroups: [], parallelPaths: {}, ...json(configFile) };
+  const cfg = { maxTasksPerBatch: 1, maxParallelWorkers: 1, maxRecoveryRetries: 1, maxContinuations: 3,
+    maxFindingRecoveries: 0, findingRecoveryMinutes: 20, findingRecoveryTokens: 150000,
+    parallelGroups: [], parallelPaths: {}, ...json(configFile) };
   if (!Number.isInteger(cfg.maxContinuations) || cfg.maxContinuations < 0 || cfg.maxContinuations > 5) throw Error('Invalid continuation limit');
+  if (!Number.isInteger(cfg.maxFindingRecoveries) || cfg.maxFindingRecoveries < 0 || cfg.maxFindingRecoveries > 3 ||
+      !Number.isFinite(cfg.findingRecoveryMinutes) || cfg.findingRecoveryMinutes <= 0 || cfg.findingRecoveryMinutes > 20 ||
+      !Number.isInteger(cfg.findingRecoveryTokens) || cfg.findingRecoveryTokens <= 0 || cfg.findingRecoveryTokens > 150000)
+    throw Error('Invalid finding recovery limits');
   const root = cfg.stateDir;
   for (const key of ['repo', 'stateDir', 'codex', 'javaHome', 'gradleHome'])
     if (typeof cfg[key] !== 'string' || !path.isAbsolute(cfg[key])) throw Error(`Absolute path required: ${key}`);
@@ -187,7 +232,7 @@ async function main() {
     if (fs.existsSync(lockDir) || s.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) {
       console.log('Already running or paused; no admission'); return;
     }
-    command = !s.active ? 'run' : continuable(s.active) && (s.active.continuationCount ?? 0) < cfg.maxContinuations
+    command = !s.active ? 'run' : s.active.recoverySubtasks ? (findingRecoverable(s.active, cfg) ? 'recover-finding' : 'defer') : continuable(s.active) && (s.active.continuationCount ?? 0) < cfg.maxContinuations
       ? 'continue' : !continuable(s.active) && !s.active.terminalFailure && !s.active.integrationConflict && (s.active.recoveryCount ?? 0) < cfg.maxRecoveryRetries ? 'retry' : 'defer';
   }
   if (command === 'pause' || command === 'resume') {
@@ -235,13 +280,16 @@ async function main() {
     const s = loadState();
     console.log(JSON.stringify({ branch: cfg.branch, head, next: select(queue(md), cfg.video, cfg.allowedTasks) ?? null,
       wave: selectWave(queue(md), cfg).map(t => t.id), locked: fs.existsSync(lockDir), paused: s.paused || (fs.existsSync(pauseFile) && !!read(pauseFile).trim()),
+      recoverySubtasks: (s.active?.recoverySubtasks ?? []).map(u => ({ id: u.id, title: u.finding.title, status: u.status,
+        modelTokens: u.modelTokens, maxTokens: u.maxTokens, maxMinutes: u.maxMinutes, blocker: u.blocker })),
       limits: { minutes: cfg.minutes, tasks: cfg.maxTasksPerBatch, workers: cfg.maxParallelWorkers, tokens: cfg.maxReportedTokens, dailyAdmissions: cfg.maxRunsPerDay }, state: s }, null, 2)); return;
   }
-  if (!['run', 'retry', 'continue'].includes(command)) throw Error('Use status, dry-run, advance, run, continue, retry, pause, resume, recover, or defer');
+  if (!['run', 'retry', 'continue', 'recover-finding'].includes(command)) throw Error('Use status, dry-run, advance, run, continue, retry, recover-finding, pause, resume, recover, or defer');
   const release = lock(lockDir), state = loadState();
   const retainedEntries = () => automatic || command === 'continue' ? entries(state).slice(0, 1) : entries(state);
   let batchAdmitted = false;
   const deadline = Date.now() + cfg.minutes * 60000, children = new Set();
+  let recoveryUnit, recoveryDeadline;
   const persist = () => atomic(stateFile, state);
   const stop = () => { for (const p of children) { try { process.kill(-p.pid, 'SIGTERM'); } catch {} } };
   const interrupt = () => { state.paused = true; persist(); stop(); };
@@ -250,6 +298,9 @@ async function main() {
     if (state.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw interruption('Paused; work preserved', 'pause');
     if (Date.now() >= deadline) throw interruption('Run deadline exhausted; work preserved', 'deadline');
     if (model && state.modelTokens >= cfg.maxReportedTokens) throw interruption('Batch model-call budget exhausted; work preserved', 'budget');
+    if (recoveryUnit && (Date.now() >= recoveryDeadline ||
+        (model ? recoveryUnit.modelTokens >= recoveryUnit.maxTokens : recoveryUnit.modelTokens > recoveryUnit.maxTokens)))
+      throw Error(`Recovery ${recoveryUnit.id} budget exhausted; candidate preserved`);
   };
   const assertHead = () => {
     verifyBranch();
@@ -259,6 +310,7 @@ async function main() {
     if (worker && event.type === 'thread.started' && typeof event.thread_id === 'string') { ctx.workerSession = event.thread_id; persist(); }
     if (event.type === 'turn.completed' && event.usage) {
       const u = reportedUsage(event.usage);
+      if (recoveryUnit) recoveryUnit.modelTokens += u.modelTokens;
       for (const key of ['input', 'cached', 'nonCachedInput', 'output', 'reasoning']) state.usage[key] += u[key];
       state.modelTokens += u.modelTokens; state.cachedInputTokens += u.cached; persist();
     }
@@ -288,10 +340,11 @@ async function main() {
       p.stdin.on('error', () => {}); p.stdin.end(input);
       timer = setTimeout(() => { timedOut = true; try { process.kill(-p.pid, 'SIGTERM'); } catch {}
         setTimeout(() => { try { process.kill(-p.pid, 'SIGKILL'); } catch {} }, 5000).unref();
-      }, Math.max(1, deadline - Date.now()));
+      }, Math.max(1, Math.min(deadline, recoveryDeadline ?? Infinity) - Date.now()));
       poll = setInterval(() => { if (fs.existsSync(pauseFile) && read(pauseFile).trim()) interrupt(); }, 1000);
       const code = await new Promise((resolve, reject) => { p.on('error', reject); p.on('close', resolve); });
       if (model && buffer.trim()) { try { account(JSON.parse(buffer), ctx, worker); } catch {} }
+      if (timedOut && recoveryUnit && Date.now() >= recoveryDeadline) throw Error(`Recovery ${recoveryUnit.id} deadline exhausted; candidate preserved`);
       if (timedOut) throw interruption(`${label} exceeded batch deadline`, 'deadline');
       guard();
       if (!model) ctx.checks.push({ label, argv: [exe, ...args], exitCode: code, durationMs: Date.now() - started, log: file, tail: boundedTail(file) });
@@ -306,22 +359,27 @@ async function main() {
   function evidence(ctx) {
     const p = path.join(ctx.dir, 'evidence', `attempt-${ctx.attempt}.json`);
     fs.mkdirSync(path.dirname(p), { recursive: true });
-    atomic(p, { task: ctx.task, base: ctx.base, candidate: ctx.tree ?? 'UNCOMMITTED', checks: ctx.checks.map(c => ({ ...c, tail: c.tail.slice(-2000) })), feedback: (ctx.feedback ?? '').slice(-8000) });
+    atomic(p, { task: ctx.task, base: ctx.base, candidate: ctx.tree ?? 'UNCOMMITTED',
+      recoverySubtasks: ctx.recoverySubtasks ?? [], candidateDiff: ctx.recoveryPatch,
+      checks: ctx.checks.map(c => ({ ...c, tail: c.tail.slice(-2000) })), feedback: (ctx.feedback ?? '').slice(-8000) });
     return p;
   }
   async function agent(ctx, review = false, repair = false) {
     const label = `${review ? 'review' : 'worker'}-${ctx.attempt}`;
     const schemaFile = path.join(ctx.dir, `${label}.schema.json`), resultFile = path.join(ctx.dir, `${label}.json`);
-    atomic(schemaFile, schema(review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED']));
+    const structured = review && cfg.maxFindingRecoveries > 0;
+    atomic(schemaFile, structured ? reviewSchema() : schema(review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED']));
     const candidate = review ? ctx.tree : 'UNCOMMITTED', packet = evidence(ctx);
     const taskMd = read(path.join(ctx.worktree, 'TASKS.md'));
-    const contract = taskMd.match(new RegExp(`^### ${ctx.task} [\\s\\S]*?(?=^### |^## |$(?![\\s\\S]))`, 'm'))?.[0] ?? '';
-    const resume = !review && !repair && ctx.workerSession;
+    const contract = ctx.originalTaskContract ??= taskMd.match(new RegExp(`^### ${ctx.task} [\\s\\S]*?(?=^### |^## |$(?![\\s\\S]))`, 'm'))?.[0] ?? '';
+    const resume = !review && !repair && !recoveryUnit && ctx.workerSession;
     const prompt = `Assigned task: ${ctx.task}: ${ctx.title}. Base commit: ${ctx.base}. Candidate tree: ${candidate}.
 Mode: ${review ? 'Fresh independent REVIEW. Inspect the exact candidate diff and acceptance requirements; return PASS only with no actionable defect or missing required evidence. Do not edit files or rerun checks.' : 'IMPLEMENT only this assigned task. Leave changes uncommitted. Return READY_FOR_VALIDATION, WAITING_USER for an actual human decision, or BLOCKED for a real implementation blocker.'}
 ${resume ? 'Continue your existing implementation context. Inspect only the new feedback and changed files; reuse the documentation and code already read. Re-read authority documents only if changed.' : 'Read AGENTS.md, PLAN.md, README.md, TASKS.md, docs/ARCHITECTURE.md and the task owner references before editing or reviewing. Read required documents once; use targeted source searches.'}
 Task contract:
 ${contract}
+${recoveryUnit ? `Focused recovery subtask ${recoveryUnit.id}: ${JSON.stringify(recoveryUnit.finding)}. Preserve the existing parent implementation. Change only these exact files: ${JSON.stringify(recoveryUnit.finding.files)}. The current binary git diff is ${ctx.recoveryPatch}. Add a regression proving the stated acceptance condition. Do not restart or expand the parent task. Remaining subtask budget: ${Math.max(0, recoveryUnit.maxTokens - recoveryUnit.modelTokens)} reported tokens, ${Math.max(0, Math.ceil((recoveryDeadline - Date.now()) / 60000))} minutes.` : ''}
+${structured ? `Return findings (at most eight) and resolvedFindingIds. Each finding needs a stable id, kind (code/human/environment/scope), concrete title, exact repository-relative files (include necessary regression-test files, no directories), and an independently verifiable acceptance condition. Never label missing user approval, rights, budget, credentials or machine capabilities as a code repair. PASS requires no findings; FAIL requires at least one. For every recovery finding in the evidence packet, keep its original id open or list it in resolvedFindingIds only after checking its acceptance condition against this exact tree and completed check evidence. A partial repair may resolve a finding while the parent still FAILs. Do not omit or rename unresolved original findings. No recovery findings means resolvedFindingIds must be empty.` : ''}
 Allowed changed paths: ${JSON.stringify(ctx.paths)}. The coordinator owns TASKS status and integration. Preserve source MIDI, accepted candidates, exports, authority and unrelated files. No paid generation or public push/upload. Do not launch other agents. Do not edit AGENTS.md, PLAN.md, TASKS.md, docs/pictures, .git or runner/config files (runner source is allowed only for A01/A02). No legacy compatibility or audio-production runtime.
 Validation ownership: the coordinator runs focused checks, make test, make build and git diff --check. Gradle sockets are unavailable in your sandbox: do not run Gradle/make or change permissions. Add regressions and truthfully report PENDING_COORDINATOR. Pending coordinator checks are not an implementation blocker. Human listening/Logic/visual/video decisions require real evidence.
 Evidence: read only this completed packet: ${packet}. It names the exact check logs for this candidate. If a check failed, read only that named log as needed. Never read worker/review transcript logs, including your own; never recursively search the run directory or historical execution logs. Limit tool output to relevant ranges (about 200 lines per call). Keep the fresh review tied to this exact Git tree using git diff ${ctx.base} ${review ? candidate : ''}.
@@ -341,7 +399,8 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     args.push('-');
     ctx.phase = review ? 'REVIEW' : 'worker'; persist();
     await run(ctx, cfg.codex, args, label, prompt, true, !review);
-    return checkResult(json(resultFile), ctx.task, ctx.base, review, candidate);
+    const result = checkResult(json(resultFile), ctx.task, ctx.base, review, candidate, structured);
+    return structured ? checkFindings(result, ctx.paths, ctx.recoverySubtasks ?? []) : result;
   }
   function stage(ctx) {
     if (git(ctx.worktree, 'rev-parse', 'HEAD') !== ctx.base) throw Error('Worker changed HEAD');
@@ -352,6 +411,10 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     const protectedPaths = ['AGENTS.md', 'PLAN.md', 'TASKS.md', 'docs/pictures', ...(['A01', 'A02'].includes(ctx.task) ? [] : ['tools/terra-runner.mjs', 'tools/terra-runner.test.mjs', 'tools/terra-throughput.test.mjs'])];
     if (git(ctx.worktree, 'diff', ctx.base, '--', ...protectedPaths)) throw Error('Worker changed coordinator-owned files');
     ctx.tree = git(ctx.worktree, 'write-tree');
+    if (recoveryUnit?.startTree) {
+      const delta = git(ctx.worktree, 'diff', '--name-only', '--no-renames', '-z', recoveryUnit.startTree, ctx.tree).split('\0').filter(Boolean);
+      if (delta.some(file => !recoveryUnit.finding.files.includes(file))) throw Error('Recovery changed files outside finding scope');
+    }
     if (ctx.result?.status === 'READY_FOR_VALIDATION' && ctx.tree === git(ctx.worktree, 'rev-parse', `${ctx.base}^{tree}`)) throw Error('No-change candidate requires coordinator verification');
     persist();
   }
@@ -400,7 +463,8 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     stage(ctx); if (ctx.tree !== tree) throw Error('Candidate changed during validation');
     const review = await agent(ctx, true);
     stage(ctx); if (ctx.tree !== tree) throw Error('Candidate changed after validation/review');
-    if (review.status !== 'PASS') throw Error(`${review.summary}\n${review.blocker}`);
+    ctx.lastReview = review; persist();
+    if (review.status !== 'PASS') throw Object.assign(new Error(`${review.summary}\n${review.blocker}`), { reviewFailure: true });
     ctx.reviewedTree = tree; persist();
   }
   function integrate(ctx) {
@@ -417,6 +481,7 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     git(cfg.repo, 'update-ref', `refs/heads/${cfg.branch}`, integrated, head);
     head = integrated; md = git(cfg.repo, 'show', `${head}:TASKS.md`);
     state.last = { task: ctx.task, status, implementation, integrated, reviewedTree: ctx.tree, dir: ctx.dir, worktree: ctx.worktree,
+      recoverySubtasks: ctx.recoverySubtasks ?? [],
       worktreeCleaned: false, modelTokens: state.modelTokens, cachedInputTokens: state.cachedInputTokens, usage: { ...state.usage } };
     ctx.phase = 'INTEGRATED'; ctx.integrated = integrated; ctx.implementation = implementation;
     persist(); // A crash after ref update is reconciled from this commit and queue, never reimplemented.
@@ -477,18 +542,72 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
         ctx.integrationConflict = e.integrationConflict;
         ctx.feedback = e.message; ctx.blocker = failureReason(ctx.result, ctx.feedback); ctx.phase = 'BLOCKED';
         if (localAttempt === 2 && !e.interruptionReason) ctx.terminalFailure = true;
+        if (localAttempt === 2 && e.reviewFailure && cfg.maxFindingRecoveries > 0 && !ctx.recoverySubtasks &&
+            ctx.lastReview.findings.length <= cfg.maxFindingRecoveries && ctx.lastReview.findings.every(f => f.kind === 'code')) {
+          ctx.recoverySourceTree = ctx.tree;
+          ctx.recoverySubtasks = ctx.lastReview.findings.map((finding, i) => ({
+            id: `${ctx.task}/R${i + 1}`, finding, status: 'TODO', modelTokens: 0,
+            maxTokens: cfg.findingRecoveryTokens, maxMinutes: cfg.findingRecoveryMinutes,
+          }));
+          ctx.phase = 'RECOVERY_PENDING';
+          atomic(path.join(ctx.dir, 'finding-recovery.json'), { parent: ctx.task, sourceTree: ctx.tree, subtasks: ctx.recoverySubtasks });
+        }
         persist();
         if (ctx.result?.status === 'BLOCKED' || e.interruptionReason || e.integrationConflict || /outside.*scope|coordinator-owned|Worker changed|Integration base changed|Candidate changed/.test(e.message) || localAttempt === 2) throw e;
         ctx.nextRepair = localAttempt + 1; ctx.resumeStage = 'implement'; ctx.attempt++; persist();
       }
     }
   }
+  async function recoverFinding(ctx) {
+    guard(true);
+    const preservedTree = ctx.tree;
+    stage(ctx);
+    if (ctx.tree !== preservedTree) throw Error('Recovery candidate changed outside its preserved checkpoint');
+    // Reapply only onto an authorized descendant base, preserving the old tree.
+    moveToIntegrationBase(ctx); stage(ctx);
+    const unit = ctx.recoverySubtasks.find(s => s.status === 'TODO');
+    unit.status = 'RUNNING'; unit.startTree = ctx.tree; unit.started = new Date().toISOString();
+    unit.maxTokens = Math.min(unit.maxTokens, cfg.findingRecoveryTokens);
+    unit.maxMinutes = Math.min(unit.maxMinutes, cfg.findingRecoveryMinutes);
+    recoveryUnit = unit; recoveryDeadline = Date.now() + unit.maxMinutes * 60000;
+    delete ctx.lastReview; delete ctx.reviewedTree; delete ctx.workerSession;
+    ctx.recoveryPatch = path.join(ctx.dir, `recovery-${ctx.attempt}.patch`);
+    fs.writeFileSync(ctx.recoveryPatch, execFileSync('git', ['-C', ctx.worktree, 'diff', '--binary', ctx.base], { maxBuffer: 16 * 1024 * 1024 }));
+    persist();
+    try {
+      await implement(ctx);
+      if (ctx.tree === unit.startTree) throw Error(`Recovery ${unit.id} made no code progress`);
+      try { await validate(ctx); }
+      catch (e) { if (!e.reviewFailure) throw e; }
+      const review = ctx.lastReview;
+      if (!review?.resolvedFindingIds.includes(unit.finding.id)) throw Error(`Recovery ${unit.id} did not resolve its acceptance condition; stopping repeated attempts`);
+      for (const subtask of ctx.recoverySubtasks) if (review.resolvedFindingIds.includes(subtask.finding.id)) {
+        subtask.status = 'DONE'; subtask.resolvedTree = ctx.tree;
+      }
+      unit.finished = new Date().toISOString();
+      unit.elapsedMs = Date.now() - Date.parse(unit.started); persist();
+      if (review.status === 'PASS') { integrate(ctx); return true; }
+      if (!ctx.recoverySubtasks.some(s => s.status === 'TODO')) throw Error('Original findings resolved, but new review defects remain; recovery limit reached');
+      ctx.feedback = `${review.summary}\n${review.blocker}`;
+      ctx.phase = 'RECOVERY_PENDING'; delete ctx.interruptionReason; persist();
+      console.log(JSON.stringify({ task: ctx.task, recovery: unit.id, status: 'DONE', parent: 'RECOVERY_PENDING', dir: ctx.dir }));
+      return false;
+    } catch (e) {
+      if (unit.status !== 'DONE') unit.status = 'BLOCKED';
+      unit.finished = new Date().toISOString(); unit.elapsedMs = Date.now() - Date.parse(unit.started);
+      unit.blocker = e.message; ctx.findingRecoveryStopped = true; ctx.terminalFailure = true;
+      persist(); throw e;
+    } finally {
+      atomic(path.join(ctx.dir, 'finding-recovery.json'), { parent: ctx.task, sourceTree: ctx.recoverySourceTree, subtasks: ctx.recoverySubtasks, stopped: !!ctx.findingRecoveryStopped });
+      recoveryUnit = undefined; recoveryDeadline = undefined;
+    }
+  }
   try {
     assertHead(); checkDeadChildren(state); delete state.childPid; state.childPids = [];
     if (command === 'run' && entries(state).length) throw Error(`Interrupted run retained at ${state.active.dir}; inspect and use bounded retry`);
-    if (['retry', 'continue'].includes(command) && !state.active) throw Error('No retained task to retry');
+    if (['retry', 'continue', 'recover-finding'].includes(command) && !state.active) throw Error('No retained task to retry');
     guard();
-    if (['retry', 'continue'].includes(command)) for (const ctx of retainedEntries()) {
+    if (['retry', 'continue', 'recover-finding'].includes(command)) for (const ctx of retainedEntries()) {
       if (!cfg.allowedTasks.includes(ctx.task) || (!cfg.video && ctx.task.startsWith('V')))
         throw Error(`Retained task is no longer authorized by the current allowlist/video policy: ${ctx.task}`);
       const currentPaths = ctx.parallelOwner ? cfg.parallelPaths[ctx.task] : cfg.allowedPaths[ctx.task];
@@ -497,10 +616,16 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
         throw Error(`Retained path ownership was narrowed; reconcile the preserved candidate: ${ctx.task}`);
       // Never let a saved wider path policy override current authorization.
       ctx.paths ??= currentPaths;
+      if (command === 'recover-finding') {
+        if (!findingRecoverable(ctx, cfg) || ctx.recoverySubtasks.length > cfg.maxFindingRecoveries)
+          throw Error('No authorized pending finding recovery');
+        for (const unit of ctx.recoverySubtasks) if (unit.finding.files.some(file => !permitted(file, currentPaths)))
+          throw Error('Finding ownership was narrowed; preserve candidate');
+      } else if (ctx.recoverySubtasks) throw Error('Use recover-finding or defer; parent retries cannot reset finding recovery');
     }
     // Refused recovery is not a new failure of the saved candidate. Check
     // admission before replacing its interruption checkpoint or batch usage.
-    if (['retry', 'continue'].includes(command)) {
+    if (['retry', 'continue', 'recover-finding'].includes(command)) {
       const retained = retainedEntries(), rows = queue(md);
       if (retained.length > cfg.maxTasksPerBatch) throw Error('Retained wave exceeds batch task limit');
       const today = new Date().toISOString().slice(0, 10);
@@ -510,7 +635,7 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
           throw Error('Retained integration base changed; reconcile manually');
         if (command === 'continue') {
           if (!continuable(ctx) || (ctx.continuationCount ?? 0) >= cfg.maxContinuations) throw Error('Continuation limit reached or failure requires repair');
-        } else if ((ctx.recoveryCount ?? 0) >= cfg.maxRecoveryRetries) throw Error('Recovery retry limit reached; inspect/defer instead of recycling');
+        } else if (command === 'retry' && (ctx.recoveryCount ?? 0) >= cfg.maxRecoveryRetries) throw Error('Recovery retry limit reached; inspect/defer instead of recycling');
         const row = rows.find(t => t.id === ctx.task);
         if (!row || row.state !== 'TODO' || !row.deps.every(id => rows.find(t => t.id === id)?.state === 'DONE')) throw Error('Retained task is not dependency-ready');
       }
@@ -521,6 +646,17 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     state.modelTokens = 0; state.cachedInputTokens = 0;
     state.usage = { input: 0, cached: 0, nonCachedInput: 0, output: 0, reasoning: 0 }; persist();
     let admitted = 0;
+    if (command === 'recover-finding') {
+      const ctx = state.active;
+      ctx.attempt++; ctx.feedback = ctx.feedback || ctx.blocker || state.error;
+      const unit = ctx.recoverySubtasks.find(s => s.status === 'TODO');
+      state.runs.push({ date: new Date().toISOString().slice(0, 10), task: ctx.task, dir: ctx.dir, findingRecovery: unit.id }); persist();
+      const integrated = await recoverFinding(ctx);
+      admitted++; if (integrated) state.batch.completed++; persist();
+      // One recovery subtask per wake, even if it completed its parent.
+      state.batch.finished = new Date().toISOString(); delete state.error; persist();
+      return;
+    }
     if (['retry', 'continue'].includes(command)) {
       const retained = retainedEntries();
       if (retained.length > cfg.maxTasksPerBatch) throw Error('Retained wave exceeds batch task limit');
@@ -591,9 +727,11 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     if (!batchAdmitted && state.active) throw e;
     state.error = e.message;
     if (state.active && state.active.phase !== 'INTEGRATED') {
+      if (command === 'recover-finding') { state.active.findingRecoveryStopped = true; state.active.terminalFailure = true; }
       state.active.interruptionReason = e.interruptionReason;
       state.active.integrationConflict = e.integrationConflict;
-      state.active.feedback = e.message; state.active.blocker = e.message; state.active.phase = 'BLOCKED';
+      state.active.feedback = e.message; state.active.blocker = e.message;
+      state.active.phase = findingRecoverable(state.active, cfg) ? 'RECOVERY_PENDING' : 'BLOCKED';
     }
     persist(); throw e;
   } finally {

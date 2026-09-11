@@ -18,7 +18,7 @@ replay completed import, draft, acceptance, export or UI-foundation work.
 - Dependencies in the queue are mandatory. The coordinator chooses the earliest
   ready mandatory task, skips an external wait, and records why. Optional tasks
   are excluded unless included in the implementation request.
-- Default implementer: GPT-5.6 Terra. Use a fresh review context and the same
+- Configured implementer: Astra Extra High. Use a fresh review context and the same
   task contract; reviewer approval requires evidence, not confidence language.
 - Inspect `git status` first. Preserve unrelated work. Use `codex/` branches and
   isolated worktrees from the approved integration base; never reset the user's
@@ -54,6 +54,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | F06 | Delete verified legacy data and measure repository reduction | F05 | DONE | `d6adb18ce53c`; 5,250,264 bytes removed (16.1%); `make test`, `make build`, diff check, Sol debug, and fresh Terra review passed. |
 | A01 | Harden and verify bounded agent execution runner | F01 | DONE | a139773cdf8f; Requires a non-empty allowed-path policy for every allowlisted task before selection/admission. Added end-to-end coverage proving a now-next A01 with no policy creates no state, run directory, or worktree. Fresh diff review found no reproduced issue.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T15-42-09-677Z-A01 |
 | A02 | Reduce runner overhead and recover retained work | A01 | DONE | 87963895d3a1; bounded evidence, saved repair sessions, three-task batches, disjoint M04/M06 workers, safe retained recovery; 39 runner regressions + application test/build, live CLI resume and fresh review passed. |
+| A03 | Recover concrete review findings as bounded subtasks | A02 | DONE | Structured findings, preserved candidate and exact-file recovery with independent acceptance checks; one attempt per finding, three findings maximum, 20 min/150k tokens each. 60 runner regressions, 537 application tests/build, live Astra schema smoke and independent Astra Extra High review passed. Evidence ~/.codex/melotrail-terra/finding-recovery-evidence. |
 | U01 | Finish verified lanes and live timeline projection | F06 | DONE | `d983d2098d93`; factual shared lanes, real-position observation, stale evidence and device-loss lifecycle coverage; `make test`, `make build`, diff check, Sol debug, and fresh Terra review passed. |
 | U02 | Compact shell, player and inspector | U01 | DONE | 7d661a7a8eb1; Fixed review-reproduced U02 gaps: Arrange/Review use one 332dp selected-section inspector column at ≥1440px, retain inline inspectors below that width, and Review draft controls use rectangular shapes. Added reference-width regression coverage. No commit made.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-07T10-37-44-445Z-U02 |
 | U03 | Refine Project and MIDI import | U02 | DONE | Native one-file MIDI drop, factual Project/MIDI facts, consistent fractional BPM, scoped accepted/rejected findings and honest recovery; Sol High fixes plus `make test`, `make build`, diff check and fresh Terra review passed. |
@@ -706,6 +707,23 @@ overlapping ownership, actual worker concurrency and combined-tree validation.
 **Done:** required checks and fresh reviews pass, installed script matches Git,
 M02 is recovered, and the existing heartbeat uses the tested bounded policy.
 
+### A03 — Recover concrete review findings as bounded subtasks
+
+**Scope:** Extend the existing runner after its normal retry/Sol repair sequence.
+A fresh reviewer returns concrete finding IDs, exact owned files and verifiable
+acceptance conditions. Up to three code findings become ordered execution
+subtasks under the retained parent; never create a second product queue.
+**Work:** one fresh Astra attempt per finding, one finding per wake, capped at
+20 minutes and 150,000 reported tokens. Preserve the original contract, diff,
+check errors and completed work. Validate the entire candidate and independently
+resolve each original finding; integrate only after the whole parent passes.
+Stop on unchanged/unresolved work, failed checks, scope violations, interruption
+or exhausted limits. Human/environment/scope blockers stay outside recovery.
+**Tests:** real-process fixtures for ordered partial repair and final integration,
+exact ownership, preserved checkpoints/history, budget/pause/admission controls,
+malformed reviews, interrupted recovery and no-progress deferral. Run the runner
+suites, application test/build and fresh review before installing the script.
+
 ## Optional TABI video companion
 
 All V tasks use [TABI_VIDEO](docs/TABI_VIDEO.md). Build in a separate repository
@@ -1018,8 +1036,28 @@ A budget/deadline interruption is distinct from an implementation failure.
 `advance` continues the preserved stage under a new bounded batch, retaining
 prior usage and evidence. A ready candidate resumes validation/review, not
 implementation. At most three such continuations are admitted per task. A
-completed three-attempt failure, or exhausted continuation, is recorded BLOCKED
-with its preserved candidate; the next wake selects independent ready work.
+completed three-attempt failure can enter finding recovery when its final review
+contains one to three concrete code findings, each with exact authorized files
+and a verifiable acceptance condition. Other failures and exhausted continuations
+are recorded BLOCKED with their preserved candidate.
+
+Finding recovery keeps the parent pending and stores an ordered checklist such
+as `U07b/R1` in the existing runner state/evidence, visible in `status`; these are
+execution steps under the TASKS row, not another product queue. Each wake admits
+one fresh Astra Extra High attempt for one finding, with **20 minutes / 150,000
+reported tokens** including its validation/review. The original contract, current
+binary diff and named check/review errors accompany the prompt. Exact finding
+files further narrow the parent path policy. All normal checks still run.
+
+A fresh reviewer must explicitly resolve the original finding against the tested
+tree. A resolved finding can unlock the next preserved finding while the parent
+remains pending; only a complete parent PASS permits integration. No-op edits,
+unresolved acceptance, failed checks, scope violations or interrupted/exhausted
+recovery stop the checklist. New defects do not generate another recovery chain.
+The next wake defers the parent and continues independent ready work. Never
+reset these budgets, replay completed findings or auto-revive historical blocked
+rows. Missing human approval, rights, credentials or environment capabilities
+cannot become code-recovery subtasks.
 Never clear state, erase usage history, weaken a gate or recycle the same task
 forever. A live lock or explicit pause causes no admission. A dead lock requires
 verified PID/process-group recovery; a conflicting changed base preserves work.
@@ -1069,7 +1107,8 @@ runs Gradle/make, diff checks and fresh review; unavailable worker sandbox socke
 mean PENDING_COORDINATOR, not failure. UI work includes actual image inspection;
 musical/export work prepares comparison/Logic evidence, never fictional ratings.
 Return the runner's structured task/base/candidate/status/summary/tests/artifacts/
-blocker result. WAITING_USER describes an actual missing human decision.
+blocker result. Review also returns structured findings and original finding
+resolutions when requested. WAITING_USER describes an actual missing human decision.
 Repairs receive the same task, current diff and concrete errors, and remain scoped.
 Never read model transcripts or recursively search execution directories; use
 only the bounded current evidence packet and its named failed check logs.
