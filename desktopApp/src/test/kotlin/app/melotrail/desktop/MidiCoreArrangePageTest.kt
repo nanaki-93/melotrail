@@ -19,23 +19,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
-import app.melotrail.arrangement.core.MidiCoreRoleValidationReport
-import app.melotrail.application.MidiCoreCandidateReviewItem
-import app.melotrail.application.MidiCoreVisualEvidence
-import app.melotrail.application.MidiCoreVisualEvidenceAvailable
-import app.melotrail.application.MidiCoreVisualEvidenceCacheStatus
-import app.melotrail.application.MidiCoreVisualEvidenceCurrentness
-import app.melotrail.application.MidiCoreVisualEvidenceEvent
-import app.melotrail.application.MidiCoreVisualEvidenceIdentity
-import app.melotrail.application.MidiCoreVisualEvidenceLane
-import app.melotrail.application.MidiCoreVisualEvidenceProjection
-import app.melotrail.application.MidiCoreVisualEvidenceScope
-import app.melotrail.application.MidiCoreVisualEvidenceTiming
 import app.melotrail.audition.MidiAuditionScope
 import app.melotrail.audition.MidiAuditionState
 import app.melotrail.audition.MidiAuditionWindow
 import app.melotrail.midi.domain.MidiExportRole
-import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateAcceptance
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreArrangementDraft
@@ -46,21 +33,8 @@ import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCorePlannedRest
 import app.melotrail.project.MidiCoreProject
-import app.melotrail.project.ProjectArtifact
-import app.melotrail.project.ProjectAuthority
 import app.melotrail.project.ProjectId
-import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectMetadata
-import app.melotrail.project.ProjectRelativePath
-import app.melotrail.project.ProjectSectionDefinition
-import app.melotrail.project.ProjectSectionOccurrence
-import app.melotrail.project.SelectedMelodyTrack
-import app.melotrail.project.SourceMidiRecord
-import app.melotrail.midi.domain.MidiTrackSummary
-import app.melotrail.music.core.ProjectKeySpelling
-import app.melotrail.music.core.ProjectMeter
-import app.melotrail.music.core.ProjectScaleMode
-import app.melotrail.music.core.ProjectTempo
 import java.nio.file.Files
 import java.nio.file.Path
 import java.awt.image.BufferedImage
@@ -490,9 +464,19 @@ class MidiCoreArrangePageTest {
             }
             val draftAction = onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).getUnclippedBoundsInRoot()
             val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
-            MidiExportRole.entries.forEach { role ->
-                val lane = onNodeWithTag(MidiCoreVerifiedTimelineTags.lane(role)).getUnclippedBoundsInRoot()
-                assertTrue(lane.top.value >= 0f && lane.bottom.value <= player.top.value, "The real ${role.trackName} lane must remain visible above the persistent player")
+            val laneBounds = MidiExportRole.entries.map { role ->
+                onNodeWithTag(MidiCoreVerifiedTimelineTags.lane(role)).getUnclippedBoundsInRoot()
+            }
+            assertEquals(4, laneBounds.size)
+            laneBounds.forEach { lane ->
+                assertEquals(52f, (lane.bottom - lane.top).value, "Each role keeps its independently specified 52 dp lane")
+                assertEquals(laneBounds.first().left, lane.left, "All roles share the same song origin")
+                assertEquals(laneBounds.first().right, lane.right, "All roles share the same song extent")
+                assertTrue(lane.top.value >= 0f && lane.bottom.value <= player.top.value,
+                    "Every role must remain visible above the persistent player")
+            }
+            laneBounds.zipWithNext().forEach { (previous, next) ->
+                assertEquals(previous.bottom, next.top, "No missing or shifted role lane")
             }
             MidiCoreArrangementStyleCatalog.styles.forEach { style ->
                 val card = onNodeWithTag(MidiCoreArrangePageTags.style(style.id)).getUnclippedBoundsInRoot()
@@ -553,68 +537,9 @@ class MidiCoreArrangePageTest {
         styleId: String? = null,
         selectedOccurrenceId: String? = "verse-1",
         operation: MidiCoreWorkspaceOperation = MidiCoreWorkspaceOperation.idle(),
-    ): MidiCoreWorkspaceState {
-        val authority = ProjectAuthority(
-            key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
-            tempo = ProjectTempo(500_000), meter = ProjectMeter(4, 2),
-            sectionDefinitions = listOf(ProjectSectionDefinition("verse", "Verse")),
-            occurrences = listOf(
-                ProjectSectionOccurrence("verse-1", "verse", "Verse", 0L, 1920L),
-                ProjectSectionOccurrence("verse-2", "verse", "Verse", 1920L, 3840L),
-            ),
-            chordEvents = listOf(
-                AuthoritativeChordEvent("chord-1", "verse-1", "C", 0L, 1920L),
-                AuthoritativeChordEvent("chord-2", "verse-2", "G", 1920L, 3840L),
-            ),
-        )
-        val candidate = MidiCoreCandidate(
-            id = "candidate-existing", role = CandidateRole.CHORDS, occurrenceId = "verse-1", generatorVersion = "midi-core-v1",
-            authorityHash = "a".repeat(64), seed = 5L,
-            midi = ProjectArtifact(ProjectRelativePath("candidates/chords/verse-1/candidate-existing.mid"), "b".repeat(64)),
-            validationReport = ProjectArtifact(ProjectRelativePath("reports/candidates/candidate-existing.json"), "c".repeat(64)),
-            createdAt = "2026-08-28T00:00:00Z", profileId = "chords.sustained", patternId = "chords.rhythm.sustained",
-            status = MidiCoreCandidateStatus.REJECTED, rejectionReason = "Try another rhythm.",
-        )
-        val report = MidiCoreRoleValidationReport(
-            contextSha256 = "d".repeat(64), candidateSha256 = "e".repeat(64), role = CandidateRole.CHORDS, occurrenceId = "verse-1", noteCount = 4,
-            findings = emptyList(),
-        )
-        return MidiCoreWorkspaceState(
-            project = MidiCoreProject(
-                id = ProjectId("arrange-project"), metadata = ProjectMetadata("Arrange", "2026-08-28T00:00:00Z"),
-                sourceMidi = SourceMidiRecord("source.mid", "f".repeat(64), 1, 480, ProjectArtifact(ProjectRelativePath("source/original.mid"), "f".repeat(64)), ProjectArtifact(ProjectRelativePath("reports/import.json"), "0".repeat(64)), listOf(MidiTrackSummary(0, "Lead", emptyList(), 3840L)), 3840L),
-                selectedMelody = SelectedMelodyTrack(0, 0, "1".repeat(64)), authority = authority, candidates = listOf(candidate), revision = 3L,
-            ),
-            stylePreview = MidiCoreArrangementStyleUiState(selectedStyleId = styleId, occurrenceId = selectedOccurrenceId),
-            arrangement = MidiCoreArrangementUiState(selectedOccurrenceId = selectedOccurrenceId),
-            review = MidiCoreCandidateReviewUiState(role = CandidateRole.CHORDS, occurrenceId = "verse-1", candidates = listOf(MidiCoreCandidateReviewItem(candidate, report, emptyList(), authorityCurrent = true, accepted = false, locked = false))),
-            operation = operation,
-        )
-    }
+    ) = MidiCoreVisualFixture.state(styleId, selectedOccurrenceId, operation)
 
-    private fun arrangeVisualEvidence(): MidiCoreVisualEvidenceProjection {
-        fun available(scope: MidiCoreVisualEvidenceScope) = MidiCoreVisualEvidence.Available(
-            MidiCoreVisualEvidenceAvailable(
-                scope = scope,
-                identity = MidiCoreVisualEvidenceIdentity("arrange-project", "f".repeat(64), authorityHash = "a".repeat(64)),
-                timing = MidiCoreVisualEvidenceTiming(480, 3840L, 500_000, 4, 2, authoritative = true),
-                lanes = MidiExportRole.entries.map { role ->
-                    MidiCoreVisualEvidenceLane(
-                        role,
-                        listOf(MidiCoreVisualEvidenceEvent(0L, 960L, role.channel, 60 + role.ordinal, 96, role == MidiExportRole.DRUMS)),
-                    )
-                },
-                currentness = MidiCoreVisualEvidenceCurrentness.CURRENT,
-                cacheStatus = MidiCoreVisualEvidenceCacheStatus.WARM,
-            ),
-        )
-        return MidiCoreVisualEvidenceProjection(
-            source = available(MidiCoreVisualEvidenceScope.PROTECTED_SOURCE),
-            selectedCandidate = available(MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE),
-            draft = available(MidiCoreVisualEvidenceScope.DRAFT),
-            accepted = available(MidiCoreVisualEvidenceScope.ACCEPTED),
-        )
-    }
+    private fun arrangeVisualEvidence() = MidiCoreVisualFixture.evidence()
 
     private fun sourceFile(relativePath: String): Path = sequenceOf(Path.of(relativePath), Path.of("desktopApp").resolve(relativePath)).first { Files.isRegularFile(it) }
 

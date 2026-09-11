@@ -583,3 +583,47 @@ instead of another occurrence’s chord editor. The focused workflow and 411-tes
 suite pass; reference 03 and actual captures were inspected. Evidence:
 `~/.codex/melotrail-terra/u04-repair-evidence/visual`. This is technical UI evidence,
 not final visual approval or a new Logic playback decision.
+
+### U07a visual regressions
+
+U07a pins 66 full-page PNGs: all six production destinations at 1536×1024,
+1280×900 and 720×900 in empty, partially accepted/stale and fully accepted states;
+Arrange progress/retry plus scrolled ready Review decisions and Export results.
+Three small control/panel goldens cover focus, primary fill, borders and corners.
+These are technical regression baselines; U07 owns human visual approval.
+
+The synthetic presentation fixtures hydrate imported MIDI, melody and authority
+consistently. The separate ready fixture has five current accepted candidates,
+one confirmed Bass rest, guarded batch Undo and a snapshot matching the accepted
+selection. Tests require enabled Play/Undo/Publish/Reveal, accepted identity,
+all snapshot files and visible scrolled decision/action bounds. Original stale
+fixtures remain separate. Real musical-service behavior remains covered by the
+focused workflow suite; synthetic fixtures do not establish Logic approval.
+
+The renderer uses macOS 26.6.2/aarch64, Compose UI 1.11.0/Skiko 0.144.6, software
+raster, density/font scale 1, fixed frame times/dates/seeds and stopped playback.
+System Arial regular/bold files are read in place, never redistributed.
+`visual/renderer.properties` pins OS, font, renderer-class and native digests.
+An environment change fails explicitly rather than skipping or updating goldens.
+
+`VisualImageComparator` compares every ARGB pixel with zero tolerance and no
+masking, resizing or registration. Tests write actual/expected/diff PNGs and a
+pixel-count report under `desktopApp/build/test-results/visual-shell`,
+`visual-primary`, `visual-panel` and `visual-comparator`. Missing baselines fail
+and retain actual captures. Tests never create or replace expected resources.
+Baseline changes require explicit image inspection and independent checks.
+
+Negative controls reject shifted panels, wrong primary fill, pill corners,
+erased drum lanes, single RGB/alpha changes and dimension changes. Independent
+checks cover shell/inspector geometry, four aligned 52 dp lanes, role colors,
+one player, 48 dp navigation/transport targets, contrast and keyboard focus/
+activation. The ready fixture's scrolled captures use un-clipped target positions
+so an offscreen Export result is brought into view before its bounds are checked.
+
+Recovery evidence: `~/.codex/melotrail-terra/u07a-repair-evidence`.
+The initial new-baseline run deliberately failed for all 24 absent ready images;
+state and geometry assertions passed before those images were explicitly
+inspected and added. Existing baselines were retained. Focused/full test/build
+results and technical image review are recorded with the final repair there.
+U07b owns native-density, large-song and responsiveness measurements; U07 retains
+the actual human visual decision.
