@@ -326,6 +326,9 @@ Q01a recovery checks and generated packets are retained at
 comparison, exporter and draft regressions, `make test`, `make build`, diff check
 and independent review validate preparation. `q01-frozen/` and `q01-evaluation/`
 record the empty supplied set; `q01-development/` contains synthetic M01 pairs.
+After Q02a changed export filtering, `q01-current-frozen/`,
+`q01-current-evaluation/` and `q01-current-development/` repeat preparation on
+the combined implementation; earlier packets retain their original runtime identity.
 No final-song freeze or human score is claimed.
 
 ## UI and performance acceptance
@@ -551,6 +554,78 @@ initial silence, sub-bar/unequal chords, CC64/pitch expression, repeated section
 and fills at the exact end. Include the six historical fixtures below where
 still valid. Update fixtures for changed contracts rather than reusing old
 hashes as evidence of a new exporter.
+
+### Q02a current matrix preparation
+
+The coordinator runs the current command from the repository root, with a **new**
+destination for each preparation:
+
+```bash
+./gradlew prepareLogicMatrix -PlogicMatrixDirectory=build/q02-logic-matrix/current-01
+```
+
+This test-classpath command calls the current import → explicit authority/padding
+→ generation → acceptance → export services, reopens each owned project and
+exports a second snapshot. It adds no production runtime or Logic automation.
+Existing destinations and symlink ancestors are rejected; failures retain an
+unpublished `.<destination>-incomplete-*` staging directory for inspection. No existing project,
+source, accepted candidate, export or historical packet is replaced or cleaned.
+
+The packet contains `matrix.json`, `review.md`, `SHA256SUMS` and 21 case folders:
+20 current packages plus the expected rejection of the historical extra-note-track
+input. Each positive case retains `source.mid`, its current `project/`, a portable
+`package/` and `case.json`. The six historical source fixtures are byte-preserved;
+short inputs receive explicit trailing padding. The historical
+`smf1-reference-tracks.mid` contains a second note-bearing track and is now an
+expected app rejection, with a separate supported meta-only-track probe.
+
+Coverage includes velocity-zero note-off, 1/2/3 bars, pickup and initial silence, 3+1+2+2-beat and sub-bar
+harmony, source end distinct from last note, explicit padding, 481 PPQ, whole-song
+and introductory Bass rests, CC64/CC11/bend/channel-pressure/channel remapping,
+release velocity, repeated occurrences, 3/4, 6/8, and an explicit final drum fill.
+The brief sub-bar probe uses explicit sustained role patterns, preserving its
+original C 0–240 / G7 240–1920 windows and 480-tick source. The pulsed style
+produces an empty Chords selection for this short phrase; that failure is not
+accepted as silence or repaired by moving the source/harmony. Its separate
+regression requires nonempty sustained candidates at both exact chord starts.
+The odd-PPQ package has explicitly accepted rests for all generated roles: import
+and export retain 481 PPQ, but the generation grid cannot represent sixteenths.
+It does not claim odd-PPQ pattern support. Bank-select CC0/32 and program hints
+are omitted from arranged exports; supported expression and original bytes remain
+protected. That policy is checked by the expressive channel-remapping case.
+
+`matrix.json` binds the Git commit, binary diff and working input-tree hashes
+(including untracked source), compiled classes, runtime jars/JDK, source and
+selected-melody identity, confirmed authority/plan, catalogs, candidate versions,
+settings/seeds, manifest hashes, MIDI byte hashes and semantic hashes. Every file
+is covered by `SHA256SUMS`. MIDI/package manifests and the matrix are deterministic
+for the same inputs/build; project lifecycle timestamps are observational and may
+differ. The fixed export timestamp is a fixture setting, not a review date.
+Re-import checks compare every note/expression field, track/channel order, conductor
+tempo/meter/markers, individual-track EOTs, role presence and common origin/end.
+Project reopen must preserve state and produce identical MIDI without changing
+the first snapshot or source/candidate bytes.
+
+Focused coordinator selectors: `MidiCoreLogicMatrixTest`,
+`MidiCoreMidiPackageExporterTest`, `MidiCoreAcceptedSongAssemblyTest`,
+`MidiCoreArrangementDraftTest`, `MidiCoreSourceImportTest`, and `JdkMidiWriterTest`,
+followed by the required `make test`, `make build` and `git diff --check`.
+The matrix test exercises the command and retains a fresh packet under
+`build/test-results/q02-logic-matrix/run-*/packet/`; it checks repeatability and
+detects corrupted notes/channels/controllers/end ticks, manifest/inventory changes,
+collisions and failed publication. Recovery checks and current packages are retained at
+`~/.codex/melotrail-terra/q01a-q02a-repair-evidence/`: `q02-focused.log`,
+`q02-test.log`, `q02-build.log` and `q02-logic-matrix/`. Independent review
+and automated semantic checks validate preparation; actual Logic remains pending.
+
+Use `review.md` for concise complete-file and separate-role imports at bar 1,
+instrument assignment, full/loop playback and Logic save/close/reopen. Verify
+`SHA256SUMS` before and after review. Keep the packet immutable and record results
+in a separate copy of the form, identifying `matrix.json` by SHA-256; attach actual
+coordinator check evidence separately. Exact macOS/Logic versions, reviewer/date,
+each import/play/reopen result, conditional actions and failure bars remain blank
+until a human supplies them. Q02 owns that decision; Q02a does not inherit the
+2026-08-28 approval or award a musical/release pass.
 
 M03 requires the current Logic fixture preparation to include an unequal
 3+1+2+2-beat harmony case, an odd-PPQ case, a source whose end-of-track trails

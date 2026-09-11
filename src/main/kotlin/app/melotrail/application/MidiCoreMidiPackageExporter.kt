@@ -234,6 +234,13 @@ class MidiCoreMidiPackageExporter(
         val exportSong = assembled.song.copy(
             roles = assembled.song.roles.filter { track ->
                 track.role == MidiExportRole.MELODY || exportedRoles.any { exportRole(it) == track.role }
+            }.map { track ->
+                // Bank select is an instrument hint, not portable expression.
+                // Keep the protected source/view intact; apply the documented
+                // omission policy only to this new export projection.
+                track.copy(events = track.events.filterNot { event ->
+                    event is MidiControlChangeEvent && event.controller in setOf(0, 32)
+                })
             },
         )
         val createdAt = try {

@@ -41,3 +41,19 @@ tasks.register<JavaExec>("musicalComparison") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("app.melotrail.application.MidiCoreComparisonCommand")
 }
+
+// Evidence preparation stays on the test classpath; it adds no desktop/runtime dependency.
+tasks.register<JavaExec>("prepareLogicMatrix") {
+    group = "verification"
+    description = "Prepare current owned Logic MIDI packages and an unfilled human review matrix."
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("app.melotrail.application.MidiCoreLogicMatrix")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+    workingDir(rootDir)
+    doFirst {
+        val destination = providers.gradleProperty("logicMatrixDirectory").orNull
+            ?: error("Choose a new output directory with -PlogicMatrixDirectory=build/q02-logic-matrix/<new-run>")
+        setArgs(listOf(rootDir.absolutePath, file(destination).absolutePath))
+    }
+}
