@@ -6,10 +6,21 @@ import app.melotrail.video.adapter.VideoMediaProcessException
 import app.melotrail.video.adapter.VideoMediaProcessFailure
 import app.melotrail.video.adapter.VideoMediaProcessRequest
 import app.melotrail.video.adapter.VideoMediaProcessTestHooks
+import app.melotrail.video.adapter.VideoMediaProbe
+import app.melotrail.video.adapter.VideoMediaProbeException
+import app.melotrail.video.adapter.VideoMediaProbeFailure
+import app.melotrail.video.adapter.VideoMediaProbeRequest
 import com.sun.jna.Library
 import com.sun.jna.Memory
 import com.sun.jna.Native
 import com.sun.jna.Pointer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Files
@@ -439,6 +450,181 @@ class VideoMediaProcessTest {
     }
 
     @Test
+    fun `media probe confines literal local input and creates distinct owned artifacts`() {
+        val tools = mediaTools()
+        val input = Files.write(root.resolve("source café 東京.mp4"), "immutable-owned-video".encodeToByteArray())
+        val before = Files.readAllBytes(input)
+        val requests = mutableListOf<VideoMediaProcessRequest>()
+        val probe = VideoMediaProbe { request, _ ->
+            requests += request
+            fakeMediaProcess(request)
+        }
+
+        val result = probe.run(VideoMediaProbeRequest(tools, input, root.resolve("evidence café")))
+
+        assertContentEquals(before, Files.readAllBytes(input))
+        assertTrue(Files.isRegularFile(result.report))
+        assertTrue(Files.isRegularFile(result.firstFrame))
+        assertTrue(Files.isRegularFile(result.seekFrame))
+        assertTrue(Files.isRegularFile(result.encodedVideo))
+        assertFalse(digest(result.firstFrame) == digest(result.seekFrame))
+        assertEquals(0, result.inputMetadata.audioStreamCount)
+        assertEquals("h264", result.encodedMetadata.videoCodec)
+        assertTrue(requests.all { it.arguments.none { argument -> argument.startsWith("http://") || argument.startsWith("https://") } })
+        assertTrue(requests.filter { "-i" in it.arguments }.all { request ->
+            val inputArguments = request.arguments.indices.filter { request.arguments[it] == "-i" }.map { request.arguments[it + 1] }
+            inputArguments.all { it == input.toRealPath().toString() || it == result.encodedVideo.toString() }
+        })
+        assertTrue(requests.filter { "-i" in it.arguments }.all { request ->
+            request.arguments.windowed(2).any { it == listOf("-protocol_whitelist", "file,pipe") }
+        })
+        assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(result.outputDirectory)))
+    }
+
+    @Test
+    fun `media probe rejects URLs missing tools and existing outputs before launch`() {
+        val tools = mediaTools()
+        val input = Files.write(root.resolve("fixture.mp4"), byteArrayOf(1, 2, 3))
+        var launches = 0
+        val probe = VideoMediaProbe { request, _ ->
+            launches += 1
+            fakeMediaProcess(request)
+        }
+
+        val url = assertFailsWith<VideoMediaProbeException> {
+            probe.run(VideoMediaProbeRequest(tools, Path.of("https://example.test/video.mp4"), root.resolve("url-output")))
+        }
+        assertEquals(VideoMediaProbeFailure.INVALID_REQUEST, url.failure)
+
+        val existing = Files.createDirectory(root.resolve("existing-output"))
+        Files.writeString(existing.resolve("keep.txt"), "keep")
+        val collision = assertFailsWith<VideoMediaProbeException> {
+            probe.run(VideoMediaProbeRequest(tools, input, existing))
+        }
+        assertEquals(VideoMediaProbeFailure.INVALID_REQUEST, collision.failure)
+        assertEquals("keep", Files.readString(existing.resolve("keep.txt")))
+
+        val missingTools = Files.createDirectory(root.resolve("missing-tools"))
+        Files.writeString(missingTools.resolve(VideoMediaProbe.MANIFEST_NAME), mediaManifest(
+            VideoMediaProbe.FFMPEG_SHA256,
+            VideoMediaProbe.FFPROBE_SHA256,
+        ))
+        val missing = assertFailsWith<VideoMediaProbeException> {
+            probe.run(VideoMediaProbeRequest(missingTools, input, root.resolve("missing-output")))
+        }
+        assertEquals(VideoMediaProbeFailure.TOOL_CONFIGURATION, missing.failure)
+
+        val wrongPins = mediaTools()
+        Files.writeString(wrongPins.resolve(VideoMediaProbe.MANIFEST_NAME), mediaManifest("0".repeat(64), VideoMediaProbe.FFPROBE_SHA256))
+        val pinFailure = assertFailsWith<VideoMediaProbeException> {
+            probe.run(VideoMediaProbeRequest(wrongPins, input, root.resolve("wrong-pin-output")))
+        }
+        assertEquals(VideoMediaProbeFailure.TOOL_CONFIGURATION, pinFailure.failure)
+        assertEquals(0, launches)
+    }
+
+    @Test
+    fun `media probe rejects malformed manifest types before launch or output creation`() {
+        val tools = mediaTools()
+        val manifestPath = tools.resolve(VideoMediaProbe.MANIFEST_NAME)
+        val valid = Json.parseToJsonElement(Files.readString(manifestPath)).jsonObject
+        val input = Files.write(root.resolve("immutable manifest fixture.mp4"), byteArrayOf(1, 2, 3))
+        val inputBytes = Files.readAllBytes(input)
+        val toolBytes = listOf("ffmpeg", "ffprobe").associateWith { Files.readAllBytes(tools.resolve(it)) }
+        var launches = 0
+        val probe = VideoMediaProbe { request, _ ->
+            launches += 1
+            fakeMediaProcess(request)
+        }
+        val wrongStringTypes = listOf<JsonElement>(
+            JsonNull, JsonPrimitive(1), JsonPrimitive(true), JsonObject(emptyMap()), JsonArray(emptyList()),
+        )
+        val cases = buildList<Pair<String, String>> {
+            fun field(name: String, value: JsonElement?) {
+                val fields = valid.toMutableMap()
+                if (value == null) fields.remove(name) else fields[name] = value
+                add("$name=$value" to JsonObject(fields).toString())
+            }
+            listOf<JsonElement?>(
+                null, JsonNull, JsonPrimitive("x"), JsonPrimitive("1"), JsonPrimitive(true),
+                JsonPrimitive(1.5), JsonPrimitive(2147483648L), JsonPrimitive(2),
+                JsonObject(emptyMap()), JsonArray(emptyList()),
+            ).forEach { field("version", it) }
+            listOf(
+                "schema", "distributionId", "installation", "sourceUrl", "sourceRevision",
+                "sourceSha256", "ffmpegSha256", "ffprobeSha256",
+            ).forEach { name ->
+                field(name, null)
+                wrongStringTypes.forEach { field(name, it) }
+            }
+            listOf("buildOptions", "notices").forEach { name ->
+                field(name, null)
+                listOf(JsonNull, JsonPrimitive("text"), JsonPrimitive(1), JsonPrimitive(true), JsonObject(emptyMap()))
+                    .forEach { field(name, it) }
+                val validEntries = valid.getValue(name) as JsonArray
+                // Retain required options so rejection proves the element type check itself.
+                wrongStringTypes.forEach { field(name, JsonArray(validEntries + it)) }
+            }
+            listOf("sourceSha256", "ffmpegSha256", "ffprobeSha256").forEach { name ->
+                listOf("x", "0".repeat(64), "A".repeat(64)).forEach { field(name, JsonPrimitive(it)) }
+            }
+            listOf("{", "[]", "null", "true", "1", "\"manifest\"").forEach { add("root=$it" to it) }
+        }
+
+        cases.forEachIndexed { index, (label, manifest) ->
+            Files.writeString(manifestPath, manifest)
+            val manifestBytes = Files.readAllBytes(manifestPath)
+            val output = root.resolve("rejected-manifest-$index")
+
+            val failure = assertFailsWith<VideoMediaProbeException>(label) {
+                probe.run(VideoMediaProbeRequest(tools, input, output))
+            }
+
+            assertEquals(VideoMediaProbeFailure.TOOL_CONFIGURATION, failure.failure, label)
+            assertEquals(0, launches, label)
+            assertFalse(Files.exists(output), label)
+            assertContentEquals(inputBytes, Files.readAllBytes(input), label)
+            assertContentEquals(manifestBytes, Files.readAllBytes(manifestPath), label)
+        }
+        toolBytes.forEach { (name, bytes) -> assertContentEquals(bytes, Files.readAllBytes(tools.resolve(name)), name) }
+    }
+
+    @Test
+    fun `media probe retains input and partial evidence on reported disk exhaustion`() {
+        val tools = mediaTools()
+        val input = Files.write(root.resolve("disk-fixture.mp4"), "owned".encodeToByteArray())
+        val before = Files.readAllBytes(input)
+        val output = root.resolve("disk-evidence")
+        val probe = VideoMediaProbe { request, _ ->
+            Files.createDirectory(request.workingDirectory)
+            if (request.arguments.lastOrNull() == "encoded-silent.mp4") {
+                throw VideoMediaProcessException(
+                    VideoMediaProcessFailure.NONZERO_EXIT,
+                    "Video media process exited with code 1: No space left on device",
+                    stderr = app.melotrail.video.adapter.VideoMediaProcessOutput(
+                        "av_interleaved_write_frame(): No space left on device",
+                        58,
+                        false,
+                    ),
+                    exitCode = 1,
+                )
+            }
+            fakeMediaProcess(request, createWorkingDirectory = false)
+        }
+
+        val failure = assertFailsWith<VideoMediaProbeException> {
+            probe.run(VideoMediaProbeRequest(tools, input, output))
+        }
+
+        assertEquals(VideoMediaProbeFailure.DISK_EXHAUSTED, failure.failure)
+        assertEquals("silent-h264-encode", failure.operation)
+        assertContentEquals(before, Files.readAllBytes(input))
+        assertTrue(Files.isDirectory(output))
+        assertTrue(Files.isRegularFile(output.resolve("first-frame/first-frame.png")))
+        assertFalse(Files.exists(output.resolve("video-media-probe-report.json")))
+    }
+
+    @Test
     fun `fixture cleanup preserves another invocation token`() {
         val foreignToken = "-Dmelotrail.fixture.owner=${UUID.randomUUID()}"
         val unrelated = ProcessBuilder(fixtureArguments("sleep", "30000").map {
@@ -485,6 +671,75 @@ class VideoMediaProcessTest {
         listOf(javaExecutable.toString(), fixtureOwnerArgument, "-cp", classpath, VideoMediaProcessFixture::class.java.name) + arguments
 
     private fun nextJob(label: String = "job-${jobNumber.incrementAndGet()}"): Path = root.resolve(label)
+
+    private fun mediaTools(): Path {
+        val tools = Files.createDirectory(nextJob("media tools ${jobNumber.incrementAndGet()}"))
+        listOf("ffmpeg", "ffprobe").forEach { name ->
+            val executable = Files.copy(javaExecutable, tools.resolve(name))
+            Files.setPosixFilePermissions(executable, PosixFilePermissions.fromString("rwx------"))
+        }
+        Files.writeString(tools.resolve(VideoMediaProbe.MANIFEST_NAME), mediaManifest(
+            VideoMediaProbe.FFMPEG_SHA256,
+            VideoMediaProbe.FFPROBE_SHA256,
+        ))
+        return tools
+    }
+
+    private fun mediaManifest(ffmpegSha256: String, ffprobeSha256: String): String = """
+        {
+          "schema": "melotrail-video-media-tools",
+          "version": 1,
+          "distributionId": "${VideoMediaProbe.DISTRIBUTION_ID}",
+          "installation": "${VideoMediaProbe.INSTALLATION_STRATEGY}",
+          "sourceUrl": "${VideoMediaProbe.SOURCE_URL}",
+          "sourceRevision": "${VideoMediaProbe.SOURCE_REVISION}",
+          "sourceSha256": "${VideoMediaProbe.SOURCE_SHA256}",
+          "ffmpegSha256": "$ffmpegSha256",
+          "ffprobeSha256": "$ffprobeSha256",
+          "buildOptions": [${VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString { "\"$it\"" }}],
+          "notices": ["FFmpeg LGPL-2.1-or-later; installed separately"]
+        }
+    """.trimIndent()
+
+    private fun fakeMediaProcess(
+        request: VideoMediaProcessRequest,
+        createWorkingDirectory: Boolean = true,
+    ): app.melotrail.video.adapter.VideoMediaProcessResult {
+        if (createWorkingDirectory) Files.createDirectory(request.workingDirectory)
+        val stdout = when {
+            "-version" in request.arguments -> buildString {
+                appendLine("${request.executable.fileName} version 9.0.1")
+                append("configuration: ")
+                append(VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" "))
+            }
+            request.executable.fileName.toString() == "ffprobe" -> """
+                {
+                  "streams": [{
+                    "codec_name": "h264",
+                    "codec_type": "video",
+                    "width": 320,
+                    "height": 180,
+                    "avg_frame_rate": "24/1",
+                    "nb_read_frames": "72"
+                  }],
+                  "format": {"duration": "3.000000"}
+                }
+            """.trimIndent()
+            else -> ""
+        }
+        when (request.arguments.lastOrNull()) {
+            "first-frame.png" -> Files.write(request.workingDirectory.resolve("first-frame.png"), byteArrayOf(1, 2, 3))
+            "seek-frame.png" -> Files.write(request.workingDirectory.resolve("seek-frame.png"), byteArrayOf(4, 5, 6))
+            "encoded-silent.mp4" -> Files.write(request.workingDirectory.resolve("encoded-silent.mp4"), byteArrayOf(7, 8, 9))
+        }
+        return app.melotrail.video.adapter.VideoMediaProcessResult(
+            0,
+            app.melotrail.video.adapter.VideoMediaProcessOutput(stdout, stdout.encodeToByteArray().size.toLong(), false),
+            app.melotrail.video.adapter.VideoMediaProcessOutput("", 0, false),
+            Duration.ofMillis(2),
+            request.workingDirectory,
+        )
+    }
 
     private fun awaitFile(path: Path) {
         val deadline = System.nanoTime() + Duration.ofSeconds(3).toNanos()

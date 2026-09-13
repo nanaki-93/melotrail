@@ -1,3 +1,5 @@
+import java.nio.file.Path
+
 plugins {
     kotlin("jvm") version "2.2.21"
     kotlin("plugin.serialization") version "2.2.21"
@@ -75,5 +77,31 @@ tasks.register<JavaExec>("videoLocalProbe") {
             "videoProbeRequest must be absolute: $request"
         }
         setArgs(listOf(request))
+    }
+}
+
+// V12 keeps native media proof on the test classpath and outside MIDI/app startup.
+tasks.register<JavaExec>("videoMediaProbe") {
+    group = "verification"
+    description = "Decode, seek and silently encode the owned video fixture with pinned local FFmpeg tools."
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("app.melotrail.video.VideoMediaHostCheck")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+    workingDir(rootDir)
+    doFirst {
+        val toolsDirectory = providers.gradleProperty("videoToolsDirectory").orNull
+            ?: error("Supply the separately installed tools with -PvideoToolsDirectory=/absolute/path/to/tools")
+        require(Path.of(toolsDirectory).isAbsolute) {
+            "videoToolsDirectory must be absolute: $toolsDirectory"
+        }
+        val arguments = mutableListOf(toolsDirectory)
+        providers.gradleProperty("videoMediaProbeOutput").orNull?.let { output ->
+            require(Path.of(output).isAbsolute) {
+                "videoMediaProbeOutput must be absolute: $output"
+            }
+            arguments += output
+        }
+        setArgs(arguments)
     }
 }

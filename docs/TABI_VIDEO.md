@@ -774,6 +774,105 @@ binaries and makes no codec, FFmpeg distribution, network, performance or visual
 quality claim. V12 owns the pinned FFmpeg distribution and real decode, seek,
 frame-access and silent-encode proof.
 
+## Selected video-only media runtime (V12)
+
+V12 selects FFmpeg 9.0.1 for macOS arm64 as an explicitly and separately
+installed local tool set. It is not bundled with the application or loaded by
+the MIDI workflow. The selected source is official FFmpeg commit
+`bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa`, reached through its GitHub
+repository commit archive after the release host did not return bytes. That
+archive's SHA-256 is
+`fb1931fd4eb29297ee1c1017a24f800c4d8fbea35b4f2aaeb28308a48a9149b4`.
+The annotated `n9.0.1` tag resolves to this commit. This is a minimal static
+LGPL-2.1-or-later configuration: GPL, nonfree components, network access and
+autodetection are disabled. It admits only the required local file/pipe
+protocols, MOV/image2 inputs, MP4/image2/null outputs, native
+H.264/PNG/MJPEG/raw-video decoding, PNG/raw-video and `h264_videotoolbox`
+encoding, selected video filters, zlib and Apple system frameworks. The tools
+remain outside the repository and application package. V27, rather than this
+320×180 technical proof, owns the final export dimensions and delivery preset.
+
+The recorded configure arguments are:
+
+```text
+--prefix=/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1
+--disable-everything --disable-autodetect --disable-network --disable-gpl
+--disable-nonfree --disable-version3 --disable-doc --disable-debug
+--disable-shared --enable-static --disable-avdevice --disable-ffplay
+--enable-ffmpeg --enable-ffprobe --enable-protocol=file,pipe
+--enable-demuxer=mov,image2 --enable-muxer=mp4,image2,null
+--enable-decoder=h264,png,mjpeg,rawvideo
+--enable-encoder=h264_videotoolbox,png,rawvideo --enable-parser=h264,png
+--enable-filter=scale,format,fps,trim,setpts,select,testsrc2,color,null
+--enable-videotoolbox --enable-zlib
+```
+
+The installed `bin` directory contains regular, non-symbolic `ffmpeg` and
+`ffprobe` executables plus `melotrail-video-tools.json`. That schema-v1 manifest
+records the distribution ID `ffmpeg-9.0.1-macos-arm64-melotrail-1`, the
+separate-install strategy, source revision/URL/archive digest, exact executable
+SHA-256 values, exact configure arguments and installed license/notices.
+The installed `ffmpeg` is 4,636,440 bytes with SHA-256
+`3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9`;
+`ffprobe` is 4,443,016 bytes with SHA-256
+`666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264`.
+`otool -L` reports only Apple system libraries/frameworks: libSystem, zlib,
+VideoToolbox, CoreFoundation, CoreMedia, CoreVideo and CoreServices. Installed
+copies of `COPYING.LGPLv2.1` and `LICENSE.md` accompany the separate tool set;
+future redistribution requires matching source and notices.
+`VideoMediaProbe` checks the selected source and required disabled/enabled
+capabilities, then delegates every launch to the V12a supervisor with the
+recorded executable hash. A mismatched or missing binary, manifest, version or
+configure argument fails before media work.
+
+The probe accepts only a regular, non-symbolic local input `Path`; FFmpeg and
+ffprobe also receive a `file,pipe` protocol whitelist. It creates one new
+owner-only evidence directory and separate private working directory per
+process. Existing output directories are rejected and supplied input bytes are
+checked again after success. The bounded sequence records tool identity, reads
+metadata while counting decoded frames, fully decodes the owned fixture, saves
+the first and one-second seek frames as PNG, strips every non-video stream while
+encoding H.264 through VideoToolbox, then independently counts and fully decodes
+the silent MP4. The JSON report retains executable/source pins, build options,
+notices, metadata, artifact hashes and elapsed time for each successful owned
+process. Cancellation, crash, timeout and bounded diagnostics retain V12a's
+typed failures; a native or filesystem `ENOSPC` diagnostic is surfaced as disk
+exhaustion without replacing the input or an existing output.
+
+The real host command is:
+
+```sh
+./gradlew :videoMediaProbe \
+  -PvideoToolsDirectory="/absolute/path/to/tools"
+```
+
+It uses a collision-free directory under `build/video/media-probe/`. To retain
+evidence at another fresh location, add
+`-PvideoMediaProbeOutput=/absolute/path/to/new-output`. The checked-in owned
+fixture is an authored three-second, 320×180, 24 fps silent H.264 MP4 with 72
+moving frames. Its 15,447 bytes have SHA-256
+`bc474eec8f0de89ed765aac902d0681b016ab9f59e8219e63c1404d42e1b3d35`.
+Success requires exact metadata and frame counts for both the
+fixture and re-encode, full decode of both files, decodable first/seek PNGs with
+the authored block at different horizontal positions, and no audio stream. The
+fixture is technical evidence only; it contains no user or character asset and
+awards no visual acceptance.
+
+Measured host result on 2026-09-14: the real `videoMediaProbe` passed on this
+macOS arm64 host using the pinned tools above and an output path containing
+spaces, accented Latin and Japanese characters. All nine supervised operations
+returned zero. Both input and encoded output decoded 72 frames at 24 fps,
+320×180, exactly three seconds, with zero audio streams. The first and one-second
+seek PNGs decoded successfully; their pixels showed the authored orange block
+moving horizontally. The input SHA-256 stayed unchanged. VideoToolbox encoding
+took 143 ms in this bounded fixture run, which is not a full-cut performance
+estimate. The report, extracted frames, encoded silent MP4 and coordinator frame
+inspection are retained in
+`~/.codex/melotrail-video-sequential/evidence/V12/validation-1/`.
+Focused lifecycle/error tests, `make test`, `make build` and `git diff --check`
+passed on that unchanged candidate. Generated-video fidelity, installed-app
+integration and final 1080p/3–5 minute delivery remain later tasks.
+
 ## Cost and job control
 
 Before submitting, prepare a reviewable batch: exact model/options, references,
