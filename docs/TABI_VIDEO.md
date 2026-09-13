@@ -225,6 +225,13 @@ therefore retain crisp contours, coherent internal lines and controlled paper
 grain. Use the [2560 × 1440 PNG](pictures/video/tabi-eki-channel-banner-final-v3-2560x1440.png)
 or compact [upload JPEG](pictures/video/tabi-eki-channel-banner-final-v3-upload.jpg).
 
+For the current bounded V11 trial, the user selected the compact v3 upload
+banner as the highest-priority style, palette and TABI-appearance reference.
+The character sheet is secondary anatomy evidence, and the style-trial images
+contribute Tokyo-window composition only; they do not override the banner's
+colors, clothing or rendering. This precedence belongs to that selected trial,
+not to the generic assets-and-prompt product contract.
+
 A fifth proposed [Paper Moon with Lilac window](pictures/video/style-trials/paper-moon-lilac-window.png)
 combines Paper Moon's character, cabin and tactile paper treatment with Lilac
 Sunday's pale limited-print Tokyo scenery. It is a hybrid comparison candidate,
@@ -422,12 +429,13 @@ Determinism applies to composition from pinned assets, not cloud generation.
 
 ## Local profile and bounded probe preparation (V11a)
 
-The bundled `video/local-profile.json` is a schema-v1 candidate profile for the
-`draw-things-cli` backend identity and the LTX-2.3 distilled image-to-video
-candidate. Both are explicitly `CANDIDATE_UNVERIFIED`: the resource contains no
-tool or model hashes, capability flags, measurements or selection claim. A later
-V11 host trial must pin the installed released tool and every model dependency,
-run real reference-conditioned inference, measure it and record the selection.
+V11a introduced `video/local-profile.json` as a schema-v1 unpinned candidate.
+V11 now pins the released `draw-things-cli` bytes/source revision, its observed
+single-image CLI capability, and the exact eight-file FLUX/LTX dependency bundle.
+The profile remains explicitly `CANDIDATE_UNVERIFIED`: those setup pins contain
+no runtime measurement, quality result or selection claim themselves. The first
+host observation is recorded below; reference-conditioned video completion is
+still unproven.
 
 `videoLocalProbe` accepts one schema-v1 JSON request through the absolute
 `-PvideoProbeRequest` path. The request pins a regular non-symlink tool file,
@@ -523,6 +531,195 @@ cat > "$request" <<JSON
 JSON
 ./gradlew :videoLocalProbe -PvideoProbeRequest="$request"
 ```
+
+## Pinned local execution and current decision (V11)
+
+The released Draw Things CLI `v1.20260430.0` is pinned by executable SHA-256
+`7e5fb3af7dd99916d7671354a11fd40182bc6a0d16e7faf06fda7740c24915cd`
+and official source revision
+`a187a319a7c13a97d4100d4a824cf9e2747094b2`. Its `generate` command accepts
+one `--image`. The aliases `--init-image` and `--input-image` merge into that
+same single value; the released source passes no reference/control hints or
+mask to generation. It therefore has no native CLI representation for several
+independent uploaded reference roles. A one-image request can be measured, but
+must not be described as multi-reference conditioning. A separately measured
+composite input or supported lower-level API could be assessed later; neither
+is part of this proof.
+
+A request with an `execution` block runs one profile through the V12a pinned
+process supervisor. It must pin the release/source revision, explicit models
+directory, all eight exact FLUX.2 klein 4B and LTX-2.3 22B distilled 1.1 model
+files, one reference binding, fixed stage settings and seeds, an absent output
+directory, and direct-child PNG/keyframe, MP4/take and JSON/report paths. The
+runner first generates a reference-conditioned FLUX keyframe, then passes that
+exact generated PNG as the sole image input to each LTX I2V take. It runs at
+most two prepared profiles and three takes per profile, although this released
+route executes one profile per preserved request. Every invocation includes
+`--offline`, `--no-download-missing` and `--disable-preview`; no configuration
+file, LoRA, control, hosted provider or automatic download is admitted. A fixed
+inline `JSGenerationConfiguration` supplies every field from the pinned source
+schema before the explicit stage flags, so mutable recommended settings cannot
+introduce optional models or change sampler/shift behavior.
+
+The real profile fixes FLUX and LTX dimensions, steps, CFG, strength, sampler,
+shift policy and seed in the request. The pinned released configuration uses
+FLUX sampler 16, shift 3, fixed shift and clip-skip 2; LTX distilled uses sampler
+19, shift 5, fixed shift and clip-skip 1. The bounded trial deliberately disables
+the official LTX 1280 × 768 two-pass hires-fix/upscaler path and records its
+single-pass 1024 × 576 deviation. LTX output uses H.264 MP4, 129 frames for each
+5.16-second take, and the pinned CLI source's 25 fps LTX-2.3 cadence. These are requested
+settings until the resulting file is independently inspected. The CLI's LTX
+path can generate synchronized audio and writes it when present, so a silent
+prompt cannot establish a silent stream. V12 owns stripping/encoding; the V11
+report keeps decoded frame count, actual cadence/duration and audio presence
+unset until the coordinator's read-only host inspection records them.
+
+The runner creates one owner-only output directory, never reuses it, writes its
+report with create-new semantics, and preserves successful and partial stage
+artifacts on failure. A keyframe failure prevents all video launches; a take
+failure prevents later takes. An optional absolute `cancellationFile` is watched
+during each stage and cancels the owned process group through V12a when it
+appears, allowing the host operator to stop on memory pressure or swap growth.
+Multiple reference bindings produce a `FAILED` capability report with no process
+launch and no reference marked consumed.
+
+Supervised stage wall time is recorded for each invocation or failed launch
+attempt. Cold/warm model-load time, peak memory and peak swap are explicitly unavailable from the supervisor
+and require host evidence; baseline swap must not be attributed to the trial.
+Successful processes report `COMPLETED_UNREVIEWED`, keep `selectedProfileId`
+null and recommend against selecting this released CLI for the multi-reference
+contract without further proof. Process success grants no visual approval. The
+candidate status is not a selected claim. The first real host request,
+`~/.codex/melotrail-video-sequential/evidence/V11/host-probe/cold-request-1.json`,
+produced a FLUX keyframe in 46.913 seconds of supervised wall time (44.55 seconds
+reported internally by the CLI), then failed the first 1024 × 576, 129-frame LTX
+take. The host observer cancelled on native memory-pressure level 2; no later
+take launched and no MP4 was produced. Baseline and peak swap were both
+4,003,662,397 bytes, so observed swap growth was zero. Host nonfree memory peaked
+at 51,476,217,856 bytes, including other applications and caches; this is not
+LTX process RSS. No denoising progress or model-load boundary was captured in
+the LTX stdout/stderr, and the failure cannot be attributed specifically to
+weights, sampling or decoding. The actual stage report is
+`host-probe/cold-run-1/probe-report.json`; host measurements and the cancellation
+reason are in `host-probe/cold-request-1-observation/{status.json,memory.jsonl}`
+under the same V11 evidence root. The keyframe has no human visual approval.
+
+The recorded cancellation also exposed a cleanup-reporting defect: a raced
+Darwin group signal returned EPERM after SIGTERM, but the supervisor retained
+that error even after confirming group completion and reaping the leader. The
+repair retains EPERM until bounded native cleanup establishes leader exit,
+scoped group removal, both output EOFs and final reaping. An unconfirmed cleanup
+still reports the original permission failure. This does not turn the cancelled
+video into a successful take.
+
+After repair validation, the recommendation is **at most one further diagnostic
+LTX take**, using the same installed models at **576 × 320, 129 frames, 25 fps
+(requested 5.16 seconds)**. Keep the existing 1024 × 576 banner-conditioned FLUX
+stage and all seeds, 8 LTX steps, CFG 1, strength 1, sampler 19, shift 5, fixed
+shift, single-pass `hiresFix: false` and disabled optional processing unchanged.
+Use fresh output/cancellation paths and one take only. This diagnostic's 9:5
+aspect ratio is close to, but not the final 16:9 delivery target. Its spatial
+pixel/latent area is 31.25% of the failed take's; this is not an estimate of total
+memory reduction. The pinned CLI source accepts dimensions in multiples of 64
+(`DrawThingsCLI.swift:3003–3016`), and its LTX path derives spatial latents at
+1/32 resolution and temporal latents as `(frames - 1) / 8 + 1`
+(`LocalImageGenerator.swift:5177–5184`). The pinned model catalog retains
+8 steps and guidance 1 (`ModelZoo.swift:864–876`). These support a bounded
+smaller spatial diagnostic, not an official quality recommendation or a
+guarantee that the unchanged weight-loading requirement fits this host.
+
+The second request did not start inference: the source pin guard rejected the
+installed Gemma checkpoint because its bytes had changed. The first CLI run had
+converted the Qwen and Gemma checkpoints into small SQLite metadata files plus
+adjacent `-tensordata` stores. This is released preprocessing behavior:
+[`LocalImageGenerator.swift`](https://github.com/drawthingsai/draw-things-community/blob/a187a319a7c13a97d4100d4a824cf9e2747094b2/Libraries/LocalImageGenerator/Sources/LocalImageGenerator.swift#L4011)
+requests text-encoder external storage, and
+[`TensorData.makeExternalData`](https://github.com/drawthingsai/draw-things-community/blob/a187a319a7c13a97d4100d4a824cf9e2747094b2/Libraries/SwiftDiffusion/Sources/TensorData.swift#L67)
+writes tensors into the adjacent store, changes the checkpoint and vacuums it.
+A transformed digest is derived evidence, never an upstream model pin. Preserve
+the converted pairs before restoring the exact approved downloads. That pin
+failure consumed no second LTX inference attempt.
+
+Each new probe now stages the complete eight-file bundle into its owner-only
+`.models` directory using independent, create-new **1 MiB streaming copies**.
+No links or installed sidecars are copied. Every copied file is checked against
+its original pin before any CLI launch; both stages receive only this private
+models directory. Empty `custom.json`, `custom_textual_inversions.json` and
+`custom_lora.json` registries shadow ModelZoo's internal custom-file fallback;
+all required exact model filenames must still exist before each stage. The
+fixed generation override continues to disable optional model consumers.
+Installed source files are never passed as writable model paths.
+
+Admission requires twice the 46,321,545,216-byte bundle plus 4 GiB free:
+**96,938,057,728 bytes**. During stages a metadata-only watchdog cancels on less
+than 4 GiB free, more than 64 private files, a non-regular model artifact, or
+private logical size above that admission allowance. This is a sampled guard,
+not a filesystem quota; other applications can consume space between samples.
+`.model-staging.json` records original pins and copying policy before copying.
+The final report records each verified copy, final installed-source digests,
+private file sizes/digests (including sidecars), and separate copy/verification
+and final-audit wall times. A sidecar's `sourceModelId` associates its filename
+with the copied checkpoint; it does not certify an upstream artifact hash.
+All private copies, metadata, partial outputs and sidecars remain in the job on
+success, failure or cancellation. No cache reuse or warm-load claim is made;
+a later probe copies originals again. Abrupt JVM/host termination can leave the
+initial manifest and partial files without a final audit; these remain evidence.
+The two stage dimensions are validated independently, so the unchanged
+1024 × 576 keyframe and 576 × 320 diagnostic video require no contract change.
+
+Keep the host stop threshold at pressure level ≥2 or swap growth ≥2 GiB, without
+closing user applications. Do not start while pressure is elevated, and do not
+automatically retry after another pressure cancellation. If it fails, record
+that this installed workflow has not completed a five-second shot within the
+current host guard; do not infer universal local infeasibility. `--memory-saver`
+and `--weights-memory` in the pinned CLI are LoRA training options, not generation
+flags. No model change, download, tiled setting, hosted fallback or paid trial is
+selected by this recommendation.
+
+### Measured local decision — 2026-09-14
+
+The single pending lower-resolution diagnostic has now run after both repairs
+and restoration of all eight approved originals. Request
+`host-probe/lower-memory-request-3.json` copied and verified the bundle in
+41.551 seconds. FLUX produced the 1024 × 576 keyframe in 14.252 seconds of
+supervised wall time (11.97 seconds reported by the CLI). The 576 × 320,
+129-frame LTX stage was cancelled after 23.254 seconds when macOS memory
+pressure reached level 2. The final source/derived-artifact audit took 35.361
+seconds; the overall observed command took 135.221 seconds. Baseline and peak
+swap were both 3,978,496,573 bytes, with zero observed growth. These are separate
+stage, copy, audit and whole-command measurements, not model-load timings.
+
+No MP4 was produced. Cancellation completed without the earlier cleanup error,
+and all eight installed source files still matched their approved SHA-256 pins.
+Qwen/Gemma conversion and tensor sidecars were confined to the job's private
+model copies. The report is `host-probe/lower-memory-run-3/probe-report.json`;
+the host trace is `host-probe/lower-memory-request-3-observation/` under the V11
+evidence root. Request 2 failed preflight and did not execute a video model;
+requests 1 and 3 are the two actual LTX attempts.
+
+**Decision:** do not select this LTX-2.3 configuration for the current 48 GiB Mac
+workload. Both bounded resolutions reached the unchanged pressure stop. This
+is a measured negative result, not proof that every local model or workload
+fails. The bundled video profile stays unverified/unselected; successful local
+keyframes do not establish video or multi-reference feasibility. No further
+LTX retry is automatic. Decoded duration/cadence, audio stream count, temporal
+quality, cold/warm video timing and a four-minute rendering estimate remain
+unavailable because no video completed. The keyframes have not received user
+visual approval. `measured-decision.json` in the V11 evidence root pins the
+actual report and observer record.
+
+A smaller [Wan2.2 TI2V 5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B)
+workflow is an untested local alternative requiring a separate explicit model
+setup choice; the released Draw Things CLI's one-image input limitation still
+needs an independently measured solution for multiple reference assets.
+An optional hosted proposal is Runway `gen4.5` image-to-video using the local
+keyframe. Its [published API pricing](https://docs.dev.runwayml.com/guides/pricing/)
+on this check is $0.12 per generated second: a pilot of at most three five-second
+clips has a $1.80 base generation estimate, and 240 generated seconds would be
+$28.80 before retries, taxes, upscaling or other services. This is a proposal,
+not a provider selection, quality guarantee or authorized spend. No asset upload
+or paid job may run without explicit selection and a bounded budget. Independent
+engineering can continue while the next generation workflow is chosen.
 
 ## Bounded native media-process supervision (V12a)
 

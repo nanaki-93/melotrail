@@ -477,6 +477,7 @@ private class OwnedDarwinProcess private constructor(
     private var leaderExited = false
     private var leaderReaped = false
     private var signalingClosed = false
+    private var signalPermissionFailure: VideoMediaProcessException? = null
 
     fun pollOutput() {
         stdoutDrain.poll()
@@ -605,9 +606,11 @@ private class OwnedDarwinProcess private constructor(
                     "Owned process $pid cleanup exceeded ${STOP_WAIT.toMillis()} ms " +
                         "(leader reaped=$leaderReaped, group gone=$groupGone, " +
                         "stdout EOF=${stdoutDrain.isFinished()}, stderr EOF=${stderrDrain.isFinished()}); " +
-                        "output descriptors were closed. Termination/reaping could not be fully confirmed.",
+                        "output descriptors were closed. Termination/reaping could not be fully confirmed." +
+                        signalPermissionFailure?.let { " ${it.message}" }.orEmpty(),
                 )
                 firstFailure?.let { failure.addSuppressed(it) }
+                signalPermissionFailure?.let { failure.addSuppressed(it) }
                 firstFailure = failure
             }
         } finally {
@@ -659,6 +662,8 @@ private class OwnedDarwinProcess private constructor(
 
     private fun signalGroup(requestedSignal: Int) {
         if (groupGone || signalingClosed) return
+        pollLeader()
+        if (!groupExists()) return
         testHooks.onLifecycle("signal:$requestedSignal", pid)
         try {
             val result = LibC.instance.kill(-pid, requestedSignal)
@@ -669,8 +674,20 @@ private class OwnedDarwinProcess private constructor(
     }
 
     private fun signalFailure(requestedSignal: Int, error: Int, cause: Throwable? = null) {
+        testHooks.onLifecycle("signal-error:$error", pid)
         if (error == ESRCH) {
             groupGone = true
+        } else if (error == EPERM) {
+            // Darwin killpg excludes zombies and can return EPERM after the last live member
+            // exits between our observation and kill. This is not proof that the group is gone.
+            // Retain the error unless finish confirms WNOWAIT exit, the scoped group gone,
+            // both pipe EOFs and the final reap, all within the original cleanup deadline.
+            if (signalPermissionFailure == null) {
+                signalPermissionFailure = supervision(
+                    "Cannot signal owned process group $pid with signal $requestedSignal: ${errnoMessage(error)}",
+                    cause,
+                )
+            }
         } else {
             throw supervision(
                 "Cannot signal owned process group $pid with signal $requestedSignal: ${errnoMessage(error)}",
@@ -1027,6 +1044,7 @@ private const val O_RDONLY = 0
 private const val POSIX_SPAWN_SETPGROUP = 0x0002
 private const val POSIX_SPAWN_CLOEXEC_DEFAULT = 0x4000
 private const val WNOHANG = 0x00000001
+private const val EPERM = 1
 private const val ESRCH = 3
 private const val EINTR = 4
 private const val SIGKILL = 9

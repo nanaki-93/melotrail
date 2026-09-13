@@ -187,6 +187,58 @@ class VideoMediaProcessTest {
     }
 
     @Test
+    fun `exit racing group signal clears Darwin EPERM only after confirmed cleanup`() {
+        // Exercise both initial termination and escalation with real kernel calls. The hook
+        // creates an exit after the supervisor's liveness query, without reaping its leader.
+        listOf(15 to false, 9 to false, 9 to true).forEach { (racedSignal, holdEof) ->
+            val ready = root.resolve("signal-race-$racedSignal-$holdEof.txt")
+            val cancellation = VideoMediaProcessCancellation()
+            val events = mutableListOf<String>()
+            val future = CompletableFuture.supplyAsync {
+                runCatching {
+                    VideoMediaProcess(VideoMediaProcessTestHooks(holdOutputEof = holdEof, onLifecycle = { event, pid ->
+                        events.add(event)
+                        if (event == "signal:$racedSignal") {
+                            check(FixtureLibC.instance.kill(pid, 9) == 0)
+                            val deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos()
+                            var waitable = false
+                            Memory(104).use { info ->
+                                while (!waitable && System.nanoTime() < deadline) {
+                                    info.clear()
+                                    check(FixtureLibC.instance.waitid(1, pid, info, 4 or 1 or 32) == 0)
+                                    waitable = info.getInt(12) == pid
+                                    if (!waitable) Thread.sleep(1)
+                                }
+                            }
+                            check(waitable) { "Owned leader must be a real unreaped zombie before the raced signal" }
+                        }
+                    })).run(request(nextJob(), "ignore-term-and-sleep", listOf(ready.toString())), cancellation)
+                }.exceptionOrNull()
+            }
+            awaitFile(ready)
+            cancellation.cancel()
+            val failure = future.get(6, TimeUnit.SECONDS)
+            assertTrue(failure is VideoMediaProcessException)
+            assertEquals(VideoMediaProcessFailure.CANCELLED, failure.failure)
+            assertEquals(9, failure.signal, "Final waitpid must retain the actual native exit status")
+            assertTrue("signal-error:1" in events, "Fixture must reproduce Darwin group-kill EPERM")
+            if (holdEof) {
+                assertTrue(failure.message.orEmpty().contains("Cleanup incomplete"))
+                assertTrue(failure.message.orEmpty().contains("Operation not permitted"))
+                assertTrue(failure.suppressed.flatMap { it.suppressed.toList() }.any {
+                    it.message.orEmpty().contains("Operation not permitted")
+                }, "Unconfirmed cleanup must retain the original group permission failure")
+            } else {
+                assertTrue(failure.suppressed.isEmpty(), "Confirmed cleanup must not retain a stale permission failure")
+                assertFalse(failure.message.orEmpty().contains("Cleanup incomplete"))
+            }
+            assertEquals("reaped", events.last(), "No group observation or signal may follow the final reap")
+            assertEquals(1, events.count { it == "reaped" })
+            awaitProcessExit(Files.readString(ready).trim().toLong())
+        }
+    }
+
+    @Test
     fun `cancellation before or racing launch creates no surviving child`() {
         val beforeLaunch = VideoMediaProcessCancellation().also { it.cancel() }
         val absentJob = nextJob()
@@ -487,6 +539,11 @@ object VideoMediaProcessFixture {
                 Files.writeString(Path.of(arguments[1]), ProcessHandle.current().pid().toString())
                 Thread.sleep(arguments[2].toLong())
             }
+            "ignore-term-and-sleep" -> {
+                FixtureLibC.instance.signal(15, Pointer(1)) // SIG_IGN; force the supervisor's bounded escalation.
+                Files.writeString(Path.of(arguments[1]), ProcessHandle.current().pid().toString())
+                Thread.sleep(30_000)
+            }
             "exit" -> exitProcess(arguments[1].toInt())
             "disk-error" -> {
                 System.err.println("write failed: No space left on device (owned fixture)")
@@ -521,6 +578,7 @@ object VideoMediaProcessFixture {
 
 private interface FixtureLibC : Library {
     fun kill(pid: Int, signal: Int): Int
+    fun signal(signal: Int, handler: Pointer): Pointer?
     fun pipe(descriptors: IntArray): Int
     fun close(descriptor: Int): Int
     fun fcntl(descriptor: Int, command: Int, vararg arguments: Any): Int

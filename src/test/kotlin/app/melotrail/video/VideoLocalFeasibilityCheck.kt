@@ -1,11 +1,12 @@
 package app.melotrail.video
 
 import app.melotrail.video.adapter.LocalVideoProfileBoundary
+import app.melotrail.video.adapter.LocalVideoProbeRunStatus
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 
-/** V11a preparation entry point. Real process invocation and measurements remain owned by V11. */
+/** V11 preparation or explicit real-host probe entry point, selected by the request execution block. */
 object VideoLocalFeasibilityCheck {
     @JvmStatic
     fun main(args: Array<String>) {
@@ -21,7 +22,14 @@ object VideoLocalFeasibilityCheck {
         }
         val profile = LocalVideoProfileBoundary.loadBundledProfile()
         val request = LocalVideoProfileBoundary.decodeRequest(Files.readString(requestPath))
-        val report = LocalVideoProfileBoundary.prepare(profile, request)
-        println(LocalVideoProfileBoundary.encodeReport(report))
+        if (request.execution == null) {
+            println(LocalVideoProfileBoundary.encodeReport(LocalVideoProfileBoundary.prepare(profile, request)))
+        } else {
+            val report = LocalVideoProfileBoundary.run(profile, request)
+            println(LocalVideoProfileBoundary.encodeReport(report))
+            check(report.status == LocalVideoProbeRunStatus.COMPLETED_UNREVIEWED) {
+                "Local video probe failed: ${report.reason}; report preserved at ${request.reportPath}"
+            }
+        }
     }
 }

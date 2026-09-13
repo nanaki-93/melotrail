@@ -4,7 +4,12 @@
   "id": "draw-things-local-candidate-v1",
   "backend": {
     "id": "draw-things-cli",
-    "label": "Draw Things CLI candidate"
+    "label": "Draw Things CLI released single-image candidate",
+    "release": "v1.20260430.0",
+    "executableSha256": "7e5fb3af7dd99916d7671354a11fd40182bc6a0d16e7faf06fda7740c24915cd",
+    "sourceRevision": "a187a319a7c13a97d4100d4a824cf9e2747094b2",
+    "maxInputImagesPerInvocation": 1,
+    "supportsMultipleReferenceRoles": false
   },
   "evidence": {
     "status": "CANDIDATE_UNVERIFIED"
@@ -12,10 +17,86 @@
   "videoProfiles": [
     {
       "id": "ltx-2.3-distilled-candidate",
-      "label": "LTX-2.3 distilled image-to-video candidate",
+      "label": "FLUX.2 klein 4B keyframe plus LTX-2.3 22B distilled 1.1 I2V candidate",
       "evidence": {
         "status": "CANDIDATE_UNVERIFIED"
-      }
+      },
+      "keyframeModelId": "flux_2_klein_4b_q6p.ckpt",
+      "videoModelId": "ltx_2.3_22b_distilled_1.1_q6p.ckpt",
+      "requiredModels": [
+        {
+          "id": "flux_2_klein_4b_q6p.ckpt",
+          "fileName": "flux_2_klein_4b_q6p.ckpt",
+          "sha256": "ba42005a6d4e6c48430787db98ae8913aced4654682b59d0d0f1d9ccf820fe30",
+          "bytes": 3117088768,
+          "quantization": "6-bit",
+          "purpose": "FLUX.2 klein 4B keyframe transformer",
+          "terms": "FLUX.2 klein 4B Apache-2.0 model card"
+        },
+        {
+          "id": "qwen_3_4b_q8p.ckpt",
+          "fileName": "qwen_3_4b_q8p.ckpt",
+          "sha256": "a24e3f832917aafe7f6186e6dfb96ab19a4a0729cdf60a875b5da20024333350",
+          "bytes": 4535328768,
+          "quantization": "8-bit",
+          "purpose": "FLUX.2 text encoder",
+          "terms": "Qwen model terms"
+        },
+        {
+          "id": "flux_2_vae_f16.ckpt",
+          "fileName": "flux_2_vae_f16.ckpt",
+          "sha256": "48369d4b1495aec3df0579591f4bf9c199a73cc288130df2359c4a173c5ae864",
+          "bytes": 168534016,
+          "quantization": "f16",
+          "purpose": "FLUX.2 image autoencoder",
+          "terms": "FLUX.2 model dependency terms"
+        },
+        {
+          "id": "ltx_2.3_22b_distilled_1.1_q6p.ckpt",
+          "fileName": "ltx_2.3_22b_distilled_1.1_q6p.ckpt",
+          "sha256": "f7c804dd0e4ae14af2ff200fc96b2848b2967f7595bac830bf270ea39b47a611",
+          "bytes": 21448011776,
+          "quantization": "6-bit",
+          "purpose": "LTX-2.3 22B distilled 1.1 video transformer and clip encoder",
+          "terms": "LTX-2.3 community license"
+        },
+        {
+          "id": "gemma_3_12b_it_qat_q8p.ckpt",
+          "fileName": "gemma_3_12b_it_qat_q8p.ckpt",
+          "sha256": "9292a7107d30b6eef8282654c9746ac2e868a6d00704bdb9cfdadf45d4c325af",
+          "bytes": 13140815872,
+          "quantization": "8-bit QAT",
+          "purpose": "LTX-2.3 text encoder",
+          "terms": "Gemma terms"
+        },
+        {
+          "id": "ltx_2.3_audio_video_vae_f16.ckpt",
+          "fileName": "ltx_2.3_audio_video_vae_f16.ckpt",
+          "sha256": "72e4c23b34e631599773b05beb7e355c00d36feb983fe9746d351b58a4be4f02",
+          "bytes": 1820950528,
+          "quantization": "f16",
+          "purpose": "LTX-2.3 audio-video autoencoder",
+          "terms": "LTX-2.3 community license"
+        },
+        {
+          "id": "ltx_2.3_spatial_upscaler_x2_1.1_f16.ckpt",
+          "fileName": "ltx_2.3_spatial_upscaler_x2_1.1_f16.ckpt",
+          "sha256": "30f695c0b24a59a6490f1552c025124d713f61d4e6a90da6b0def038c8caa845",
+          "bytes": 998080512,
+          "quantization": "f16",
+          "purpose": "LTX-2.3 x2 spatial upscaler",
+          "terms": "LTX-2.3 community license"
+        },
+        {
+          "id": "ltx_2.3_spatial_upscaler_x1.5_f16.ckpt",
+          "fileName": "ltx_2.3_spatial_upscaler_x1.5_f16.ckpt",
+          "sha256": "249f5bd521472a952775e0cb9729836d2fc9ab488ca64e08329e19dd07060157",
+          "bytes": 1092734976,
+          "quantization": "f16",
+          "purpose": "LTX-2.3 x1.5 spatial upscaler",
+          "terms": "LTX-2.3 community license"
+        }
+      ]
     }
   ],
   "limits": {

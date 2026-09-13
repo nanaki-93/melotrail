@@ -59,10 +59,10 @@ tasks.register<JavaExec>("prepareLogicMatrix") {
     }
 }
 
-// V11a validates a pinned request only. The test-classpath command cannot invoke a video backend.
+// V11 keeps this explicit host probe on the test classpath so model startup stays outside app startup.
 tasks.register<JavaExec>("videoLocalProbe") {
     group = "verification"
-    description = "Validate and prepare a bounded local-video probe request without running inference."
+    description = "Prepare a pinned request, or run its explicit bounded local-video execution block."
     dependsOn(tasks.testClasses)
     classpath = sourceSets.test.get().runtimeClasspath
     mainClass.set("app.melotrail.video.VideoLocalFeasibilityCheck")
