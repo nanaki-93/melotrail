@@ -126,7 +126,8 @@ replacement tasks. No docs/tasks.md or second implementation queue.
 | Q03b | Prepare the final manual-review handoff | Q03a | DONE | Fresh c20aecf583 implementation packets: empty final-song set (5/3 missing), development comparisons, 20 Logic packages/1 expected rejection/571 verified hashes, 66 pinned UI comparisons, 28 frame replays, timing and owned-video demos. Technical checks/build and independent review passed; README/Architecture/Validation reconciled. Evidence ~/.codex/melotrail-terra/final-review-2026-09-13; all human gates remain pending. |
 | Q03 | Prove clean install and obtain MIDI release decision | Q03b, U07, Q01, Q02 | WAITING_USER | Final MIDI release decision waits for the end-of-engineering manual review. No release approval inferred from automatic checks. |
 | V10 | Align video contracts and queue guards | — | DONE | Owner contracts aligned to planned assets-and-prompt Video tab; V24/V33 guarded and OPTIONAL V25 excluded. 61 Node tests, documentation check, make test/build and diff check passed; fresh Sol High review PASS after one Astra High repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V10. Video runtime/visual acceptance remain later tasks. |
-| V11 | Prove one local generation workflow | V10 | TODO | Planned 2026-09-13; not implemented. |
+| V11a | Validate local profile and prepare bounded probe requests | V10 | DONE | Pinned request/profile preparation reports NOT_RUN with path, collision and preservation checks. 598 tests, owned probe, make test/build and diff check passed; fresh Sol High review PASS after three Astra repairs (third explicitly authorized by user). Evidence ~/.codex/melotrail-video-sequential/evidence/V11a. Real inference remains V11. |
+| V11 | Prove one local generation workflow | V11a | WAITING_USER | Real host trial needs explicit model setup/download choice and selected references; V11a prepares validation without claiming inference evidence. |
 | V12 | Prove video-only media runtime | V10 | TODO | Planned 2026-09-13; not implemented. |
 | V13 | Persist independent video projects | V10 | TODO | Planned 2026-09-13; not implemented. |
 | V14 | Import reference assets | V13 | TODO | Planned 2026-09-13; not implemented. |
@@ -840,6 +841,34 @@ future allowlist with exact row paths; retire old V IDs from that run.
 **Done:** all owner guidance describes the same new product, and automated agents
 cannot mark V24/V33 complete or run an unchosen cloud task.
 
+### V11a — Validate local profiles and prepare bounded probe requests
+
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoProfile.kt`
+(new), `src/test/kotlin/app/melotrail/video/VideoLocalFeasibilityCheck.kt` (new),
+`src/test/kotlin/app/melotrail/video/LocalVideoProfileTest.kt` (new),
+`src/main/resources/video/local-profile.json` (new), `build.gradle.kts`,
+`docs/TABI_VIDEO.md` (local profile/probe preparation section only).
+**Inputs / dependencies:** V10. Setup-independent slice of V11; no model download,
+installed inference executable, production references or paid account required.
+**Implementation rules:** Define a versioned local-profile/probe-request contract
+and validate required tool/model/reference pins, supported local backend identity,
+reference bindings, prompt, bounded attempts and explicit output locations. Keep
+candidate/unverified configuration separate from measured/selected facts; never
+ship invented model digests, supported flags or runtime/quality measurements.
+Register `videoLocalProbe` on the test classpath to validate and prepare a supplied
+request, reporting missing setup or NOT_RUN explicitly. Preparation is read-only
+for tools/models/references, rejects missing/mismatched files and preserves existing
+outputs. It never executes arbitrary commands, downloads, starts inference or
+contacts a provider. Tests use small owned files and malformed requests to prove
+pin validation, reference preservation, bounds and honest unmeasured outcomes.
+Document exact preparation usage and that real invocation, measurement and model
+selection remain V11. Do not implement the V17 provider adapter or V12 media runtime.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoProfileTest'`;
+`./gradlew :videoLocalProbe` must fail with actionable missing-request guidance;
+prepare an owned fixture request and verify an explicit NOT_RUN/setup report.
+**Done:** the local request/profile boundary and preparation command are tested
+and usable without a model, with no fake inference or production-readiness claim.
+
 ### V11 — Prove and pin one local generation workflow
 
 **Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoProfile.kt`
@@ -847,9 +876,9 @@ cannot mark V24/V33 complete or run an unchosen cloud task.
 `src/test/kotlin/app/melotrail/video/LocalVideoProfileTest.kt` (new),
 `src/main/resources/video/local-profile.json` (new), `build.gradle.kts`,
 `docs/TABI_VIDEO.md` (measured local decision section only).
-**Inputs / dependencies:** V10. User-selected references and an explicit local
-model setup/download choice for real inference; pure capability code can proceed
-without those inputs. Initial machine: M5 Pro, 20 GPU cores, 48 GB memory.
+**Inputs / dependencies:** V11a. User-selected references and an explicit local
+model setup/download choice for real inference; preparation is already owned by
+V11a and does not establish model feasibility. Initial machine: M5 Pro, 20 GPU cores, 48 GB memory.
 Missing setup is WAITING_USER for the real host probe; do not label a fake probe
 as measured local evidence.
 **Implementation rules:** Register `videoLocalProbe` on the test classpath. Test

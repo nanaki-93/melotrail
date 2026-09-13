@@ -420,6 +420,110 @@ explicit scene policy. Rejected takes remain excluded from production. Provider
 seeds may help traceability but do not promise identical video on rerun.
 Determinism applies to composition from pinned assets, not cloud generation.
 
+## Local profile and bounded probe preparation (V11a)
+
+The bundled `video/local-profile.json` is a schema-v1 candidate profile for the
+`draw-things-cli` backend identity and the LTX-2.3 distilled image-to-video
+candidate. Both are explicitly `CANDIDATE_UNVERIFIED`: the resource contains no
+tool or model hashes, capability flags, measurements or selection claim. A later
+V11 host trial must pin the installed released tool and every model dependency,
+run real reference-conditioned inference, measure it and record the selection.
+
+`videoLocalProbe` accepts one schema-v1 JSON request through the absolute
+`-PvideoProbeRequest` path. The request pins a regular non-symlink tool file,
+every model artifact and at least one reference by lowercase SHA-256. Reference
+roles are optional (`SUBJECT`, `CHARACTER`, `ENVIRONMENT`, `STYLE` or
+`COMPLETE_SCENE`), as are profile-specific reference bindings. The prompt remains
+free-form. A request may contain at most two
+candidate video profiles and three explicitly named output takes per profile.
+The report and take paths must be distinct, absent children of one absolute
+output directory, and must not contain or overlap any pinned input.
+Tool, model and reference pin paths, the output directory, report path and every
+take path must be absolute and contain no `.` or `..` components. Preparation
+rejects these components before resolving or hashing that path; it never removes
+them lexically, which could change the target when an earlier component is a symlink.
+Every not-yet-existing path component (including the output directory) must use
+only ASCII letters, digits, dots, underscores or hyphens. Collision checks treat
+these names as case-insensitive even on case-sensitive volumes, including
+ancestor/descendant conflicts. New Unicode names, including composed/decomposed
+equivalents, are rejected rather than guessing a filesystem's Unicode rules.
+Existing directory names and input filenames may contain Unicode; aliases of
+existing prefixes are checked by native file identity without writable probes.
+Resolved containment still rejects escapes into distinct directories, and the
+report preserves requested output spelling.
+
+Preparation reads and hashes those inputs, validates the unused output names and
+prints a JSON report with `status: "NOT_RUN"`, null measurements and no selected
+profile. It creates no directory or file, launches no executable, downloads
+nothing and contacts no provider. Missing setup, changed pins, unknown bindings,
+existing outputs and unsupported schema/backend/profile IDs fail with the exact
+item that needs correction. Running the task without a request is intentionally
+an actionable failure:
+
+```sh
+./gradlew :videoLocalProbe
+```
+
+This owned-fixture command reproduces a complete preparation without installing
+or invoking a model. It also serves as the request schema example; replace the
+three stub paths and hashes only after the explicit V11 setup choice:
+
+```sh
+probe_root=$(mktemp -d "${TMPDIR:-/tmp}/melotrail-v11a.XXXXXX")
+printf '%s' 'owned tool stub' > "$probe_root/tool.bin"
+printf '%s' 'owned model stub' > "$probe_root/model.bin"
+printf '%s' 'owned reference stub' > "$probe_root/reference.png"
+tool_sha=$(shasum -a 256 "$probe_root/tool.bin" | awk '{print $1}')
+model_sha=$(shasum -a 256 "$probe_root/model.bin" | awk '{print $1}')
+reference_sha=$(shasum -a 256 "$probe_root/reference.png" | awk '{print $1}')
+request="$probe_root/request.json"
+output="$probe_root/planned-output"
+cat > "$request" <<JSON
+{
+  "schema": "melotrail-local-video-probe-request",
+  "version": 1,
+  "profileId": "draw-things-local-candidate-v1",
+  "backendId": "draw-things-cli",
+  "tool": {
+    "id": "draw-things-cli",
+    "path": "$probe_root/tool.bin",
+    "sha256": "$tool_sha"
+  },
+  "prompt": "Animate the supplied subject turning toward a softly moving landscape.",
+  "references": [
+    {
+      "id": "subject-reference",
+      "pin": {
+        "id": "reference-image",
+        "path": "$probe_root/reference.png",
+        "sha256": "$reference_sha"
+      },
+      "role": "SUBJECT"
+    }
+  ],
+  "profiles": [
+    {
+      "profileId": "ltx-2.3-distilled-candidate",
+      "modelPins": [
+        {
+          "id": "model-bundle",
+          "path": "$probe_root/model.bin",
+          "sha256": "$model_sha"
+        }
+      ],
+      "referenceBindings": ["subject-reference"],
+      "takes": [
+        {"id": "take-1", "outputPath": "$output/take-1.mp4"}
+      ]
+    }
+  ],
+  "outputDirectory": "$output",
+  "reportPath": "$output/preparation-report.json"
+}
+JSON
+./gradlew :videoLocalProbe -PvideoProbeRequest="$request"
+```
+
 ## Cost and job control
 
 Before submitting, prepare a reviewable batch: exact model/options, references,

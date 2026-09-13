@@ -1,0 +1,25 @@
+{
+  "schema": "melotrail-local-video-profile",
+  "version": 1,
+  "id": "draw-things-local-candidate-v1",
+  "backend": {
+    "id": "draw-things-cli",
+    "label": "Draw Things CLI candidate"
+  },
+  "evidence": {
+    "status": "CANDIDATE_UNVERIFIED"
+  },
+  "videoProfiles": [
+    {
+      "id": "ltx-2.3-distilled-candidate",
+      "label": "LTX-2.3 distilled image-to-video candidate",
+      "evidence": {
+        "status": "CANDIDATE_UNVERIFIED"
+      }
+    }
+  ],
+  "limits": {
+    "maxVideoProfiles": 2,
+    "maxTakesPerProfile": 3
+  }
+}
