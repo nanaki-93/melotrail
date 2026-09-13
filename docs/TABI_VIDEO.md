@@ -524,6 +524,59 @@ JSON
 ./gradlew :videoLocalProbe -PvideoProbeRequest="$request"
 ```
 
+## Bounded native media-process supervision (V12a)
+
+`VideoMediaProcess` is the lazy macOS-arm64 process boundary used by later video
+media work. Calling it pins the actual executable bytes with lowercase SHA-256,
+rejects symbolic executable files and raw `.`/`..` path components, and creates
+a new owner-only working directory for that invocation. An existing directory is
+never reused, so previous jobs and supplied input bytes are outside the adapter's
+write surface. Arguments are passed as an argv array directly to `posix_spawn`;
+there is no shell parsing.
+
+The Darwin launch creates a new process group atomically with
+`POSIX_SPAWN_SETPGROUP` and closes unlisted descriptors with
+`POSIX_SPAWN_CLOEXEC_DEFAULT`. Nonblocking native reads on the supervisor thread
+keep stdout and stderr flowing, with a bounded read budget per polling turn.
+Each has a caller-selected limit of 64 bytes through 4 MiB; exceeding a
+limit terminates the group while retaining bounded beginning/end diagnostics.
+The supervisor observes direct-child exit with Darwin `waitid(WNOWAIT)` and
+retains that waitable child until every signaling decision is finished. A bounded
+`libproc` query lists only the owned process group, excluding the exited leader;
+an early parent exit with a remaining descendant terminates that group and fails
+honestly. There is no global process or descendant discovery. The final `waitpid`
+reaps only the direct child, after permanently disabling further group signals,
+so a recycled leader PID/group number cannot be targeted by later cleanup.
+Cancellation is serialized with launch and records a stop request; the supervisor
+alone signals and reaps. Runtime deadlines are bounded to 24 hours. Shutdown has
+a separate fixed three-second budget and escalates from `SIGTERM` to `SIGKILL`
+after 200 ms. Missing EOF or unconfirmed group termination cannot extend that
+budget. Cleanup always closes its descriptors without background drain threads,
+preserves the original cancellation/deadline/output failure, and attaches explicit
+cleanup diagnostics when termination or reaping cannot be confirmed. Interrupted
+supervision completes the same bounded cleanup and restores the interrupt flag.
+Only the negative process-group ID returned by the owned spawn is signaled.
+After the owned group has no remaining live work, that group number is never
+signaled again. Every pipe descriptor has
+one close owner, including failed launches; closed descriptor numbers are never
+retried. Native regression hooks can withhold EOF/completion observations or
+observe descriptor closure/lifecycle, but native launch, reads, signals and waits remain
+real. These hooks make bounded failure paths reproducible without claiming to
+reproduce an unkillable kernel process.
+
+The native bridge is [JNA 5.17.0](https://github.com/java-native-access/jna/tree/5.17.0)
+(`net.java.dev.jna:jna:5.17.0`), loaded only when this adapter is called. The
+version is pinned from Maven Central (the resolved 2,002,589-byte jar has SHA-256
+`b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0`); its tagged
+[license](https://github.com/java-native-access/jna/blob/5.17.0/LICENSE) offers
+Apache-2.0 or LGPL-2.1-or-later terms. The binding follows the
+installed Apple SDK ABI where `posix_spawnattr_t` and
+`posix_spawn_file_actions_t` are opaque pointers passed by address. This layer
+supervises a trusted, selected local executable; it is not a sandbox for hostile
+binaries and makes no codec, FFmpeg distribution, network, performance or visual
+quality claim. V12 owns the pinned FFmpeg distribution and real decode, seek,
+frame-access and silent-encode proof.
+
 ## Cost and job control
 
 Before submitting, prepare a reviewable batch: exact model/options, references,

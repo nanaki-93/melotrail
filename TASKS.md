@@ -128,7 +128,8 @@ replacement tasks. No docs/tasks.md or second implementation queue.
 | V10 | Align video contracts and queue guards | — | DONE | Owner contracts aligned to planned assets-and-prompt Video tab; V24/V33 guarded and OPTIONAL V25 excluded. 61 Node tests, documentation check, make test/build and diff check passed; fresh Sol High review PASS after one Astra High repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V10. Video runtime/visual acceptance remain later tasks. |
 | V11a | Validate local profile and prepare bounded probe requests | V10 | DONE | Pinned request/profile preparation reports NOT_RUN with path, collision and preservation checks. 598 tests, owned probe, make test/build and diff check passed; fresh Sol High review PASS after three Astra repairs (third explicitly authorized by user). Evidence ~/.codex/melotrail-video-sequential/evidence/V11a. Real inference remains V11. |
 | V11 | Prove one local generation workflow | V11a | WAITING_USER | Real host trial needs explicit model setup/download choice and selected references; V11a prepares validation without claiming inference evidence. |
-| V12 | Prove video-only media runtime | V10 | TODO | Planned 2026-09-13; not implemented. |
+| V12a | Supervise bounded owned media processes | V10 | DONE | Pinned native launch, private jobs, owned process groups and bounded cleanup; 13 real native cases, 611 total tests, build, diff check and fresh Sol High review PASS after one Astra High repair. Evidence: ~/.codex/melotrail-video-sequential/evidence/V12a. Real media proof remains V12. |
+| V12 | Prove video-only media runtime | V12a | TODO | Remaining slice: select/pin FFmpeg tools and prove real decode, seek, frame access and silent encode using V12a supervision. |
 | V13 | Persist independent video projects | V10 | TODO | Planned 2026-09-13; not implemented. |
 | V14 | Import reference assets | V13 | TODO | Planned 2026-09-13; not implemented. |
 | V15 | Compile asset prompts and shot proposal | V13, V14 | TODO | Planned 2026-09-13; not implemented. |
@@ -900,15 +901,47 @@ an endless model search or a fabricated pass; it need not block independent code
 **Done:** a versioned, automatable profile and measured recommendation, or a
 concrete local failure with the optional hosted proposal. Visual acceptance is V24.
 
-### V12 — Prove the video-only media process boundary
+### V12a — Supervise bounded owned media processes
 
 **Target files:** `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProcess.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProbe.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt` (new),
+(new), `src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt` (new),
+`build.gradle.kts` (one pinned native-access dependency only if required),
+`docs/TABI_VIDEO.md` (bounded media-process section only).
+**Inputs / dependencies:** V10. Native owned child-process fixtures; no models,
+character assets or installed FFmpeg build required.
+**Implementation rules:** Add a lazy video-only process supervisor for macOS
+arm64. Pin the selected executable's actual bytes, pass argument arrays without
+shell interpolation, use a private per-job working directory, and bound time and
+captured stdout/stderr. Validate path identity before launch; never silently
+normalize dot/dot-dot through symlinks or replace supplied inputs/previous jobs.
+Launch children in an atomically owned process group (or equivalent proven
+ownership); a post-launch group assignment or descendant-polling race must not
+lose children when a parent exits. Support cancellation before/during launch and
+execution, timeout, output overflow, failed launch and nonzero/crash exit; drain
+pipes and terminate/reap owned work without hanging or touching unrelated
+processes. Preserve bounded diagnostics and report failure honestly, including a
+child-reported disk error. Native access may use one version-pinned JNA dependency
+loaded only by this video adapter; do not link Swift, introduce an inference or
+media framework, or add startup work to MIDI. Inspect historical supervision only
+for proven behavior, without calling or importing the companion. Tests launch
+small owned fixtures on the real host for Unicode/spaced paths, path/pin rejection,
+stdout/stderr limits, deadline/cancel, early parent exit with a live descendant,
+nonzero/disk diagnostics, input preservation and unrelated-process survival.
+Do not implement the V12 media decode/encode API or claim codec/network/visual
+acceptance from process fixtures.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMediaProcessTest'`;
+all required native cases must actually run on this Mac, plus normal project checks.
+**Done:** bounded native process ownership/lifecycle and failure behavior are
+proven; FFmpeg distribution and real media operations remain V12.
+
+### V12 — Prove the video-only media process boundary
+
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProcess.kt`, `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProbe.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt`,
 `src/test/kotlin/app/melotrail/video/VideoMediaHostCheck.kt` (new),
 `src/test/resources/fixtures/video/owned-motion.mp4` (new), `build.gradle.kts`,
 `docs/TABI_VIDEO.md` (media runtime decision only).
-**Inputs / dependencies:** V10. Owned generated fixture; no character assets/model.
+**Inputs / dependencies:** V12a. Reuse its proven process supervisor. Owned generated fixture; no character assets/model.
 **Implementation rules:** Select a pinned FFmpeg/ffprobe build for macOS arm64,
 record its source/distribution/digest/build options and notices, and prove decode,
 frame access, seek and silent H.264 encode (prefer available VideoToolbox).
