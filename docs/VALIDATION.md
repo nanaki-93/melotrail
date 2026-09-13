@@ -46,6 +46,73 @@ Keep deterministic fixtures small and owned. Test actual outcomes/invariants;
 source-text absence scans supplement behavior tests rather than replace them.
 Every fixed bug receives a regression that would fail before the fix.
 
+### Q03a clean native installation and startup
+
+Recovery on 2026-09-13 **PASS**: clean uncached architecture and 22 focused
+startup/install/six-page/frame checks, then 581 full tests, build and the actual
+private DMG installation. Evidence: `~/.codex/melotrail-terra/final-engineering-recovery-evidence/`
+(`q03-clean-architecture.log`, `q03-focused.log`, `q03-repaired-test.log`,
+`q03-build.log`, `q03-native-install.log`, `q03-native-install/native-install.json`).
+The installed launcher used bundled Adoptium 21.0.11+10-LTS on macOS 26.6.2/arm64,
+opened an 802×621 native window, exposed all six routes and closed its MIDI session.
+Every installed payload byte/symlink and protected input remained unchanged.
+Current MIDI production Kotlin: 73 files / 27,702 lines, 62.4% fewer lines than
+PLAN's baseline; the independently packaged Swift companion is excluded. The
+installed MIDI image is 182,911,648 bytes; no package-size reduction is inferred.
+
+The first full run exposed a companion early-exit race: 150 ms could expire
+before a failing process exited on a loaded host. The bounded observation is now
+two seconds, with delayed-crash and persistent-GUI regressions. This detects early
+failure, not later crashes or application readiness. The original failure log/XML
+are retained; focused repair checks and the full rerun pass. Independent review
+resolved the finding. Human visual, listening, Logic and release gates stay pending.
+
+On the graphical macOS coordinator, use the isolated candidate checkout with
+fresh build outputs and the configured JDK 21/Kotlin 2.2.21 toolchain. Keep older
+evidence outside this checkout before cleaning; never clean a user project or
+reuse an earlier evidence destination. Run from the repository root:
+
+```bash
+Q03_EVIDENCE="$(mktemp -d "${TMPDIR:-/tmp}/melotrail-q03a.XXXXXX")"
+./gradlew clean
+./gradlew :test --no-build-cache --rerun-tasks --tests '*TargetArchitectureRulesTest'
+./gradlew :desktopApp:test --no-build-cache --rerun-tasks \
+  --tests '*MidiCoreDesktopStartupCheckTest' --tests '*MidiCoreNativeInstallCheckTest' \
+  --tests '*MidiCoreDesktopCompositionTest' --tests '*MidiCoreFocusedWorkflowTest' \
+  --tests '*MidiCoreNativeResponsivenessTest'
+make test
+make build
+./gradlew :desktopApp:nativeInstallSmoke --no-build-cache \
+  -PnativeInstallDirectory="$Q03_EVIDENCE/native-install"
+git diff --check
+```
+
+Retain the command logs and executed/cached task outcomes alongside
+`native-install/native-install.json`. Also retain the fresh six-page workflow
+captures/packages in `desktopApp/build/test-results/midi-core-focused-workflow/`
+and real-window frame replays in `desktopApp/build/test-results/u07/native/`.
+
+`nativeInstallSmoke` packages the DMG, mounts it read-only, copies its app into a
+new private installation directory, compares every payload byte/symlink, detaches
+the image, then invokes that installed native executable. It uses an empty
+working directory, a restricted environment and the explicit `--startup-check`
+argument, which isolates preferences/logs and exits after the production shell
+has crossed frame boundaries and released its sole MIDI session. Success requires
+the bundled JVM and installed application classes, a realized supported-size
+window, a complete startup report and a zero process exit within 60 seconds.
+The ordinary launcher still opens the interactive workspace.
+
+The report binds Git/diff/input hashes (including new uncommitted source), actual
+macOS/JVM identity, DMG and installed-file hashes/sizes, dependency JARs, current
+source counts against PLAN's 73,677-line baseline, and unchanged protected MIDI,
+UI/TABI references and Logic captures. Tracked payload, source-line reduction and
+package size are separate measures; no historical package-size delta or new data
+deletion is inferred. Failed checks retain INCOMPLETE evidence and diagnostic logs.
+The existing real-service workflow tests own the full six-page MIDI path; startup
+alone does not establish it. Acoustic playback and foreground compositor pixels
+remain NOT_MEASURED here. `nativeDesktopCapture` and human review remain the final
+U07/Q03 gates; Q03b owns the integrated review handoff.
+
 ## Optional companion preflight
 
 V07a recovery (2026-09-13) passed 572 JVM tests, required build, focused

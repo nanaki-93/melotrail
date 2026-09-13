@@ -57,3 +57,20 @@ tasks.register<Test>("nativeDesktopCapture") {
     mustRunAfter(tasks.test)
     outputs.upToDateWhen { false }
 }
+
+// Host coordinator only: install the actual DMG into a new private directory and launch its bundled JVM.
+tasks.register<JavaExec>("nativeInstallSmoke") {
+    group = "verification"
+    description = "Install and start the macOS DMG without user preferences or an external JVM/runtime."
+    dependsOn("packageDmg", tasks.testClasses)
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("app.melotrail.desktop.MidiCoreNativeInstallCheck")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+    workingDir(rootDir)
+    doFirst {
+        val destination = providers.gradleProperty("nativeInstallDirectory").orNull
+            ?: error("Choose a new evidence directory with -PnativeInstallDirectory=<new-directory>; its parent must exist")
+        setArgs(listOf(rootDir.absolutePath, layout.buildDirectory.dir("compose/binaries/main/dmg").get().asFile.absolutePath,
+            file(destination).absolutePath))
+    }
+}

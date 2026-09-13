@@ -50,8 +50,8 @@ class MidiCoreDesktopCompositionTest {
     @Test
     fun `default main delegates to target entrypoint and target graph has no worker construction`() {
         val mainSource = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/DesktopMain.kt"))
-        val defaultMain = mainSource.substringAfter("fun main()").substringBefore("/**")
-        assertTrue(defaultMain.contains("MidiCoreDesktopEntrypoint.run()"))
+        val defaultMain = mainSource.substringAfter("fun main(").substringBefore("/**")
+        assertTrue(defaultMain.contains("MidiCoreDesktopEntrypoint.run("))
         assertFalse(defaultMain.contains("WorkerClient"))
         assertFalse(defaultMain.contains("WorkspaceViewModel"))
         assertFalse(defaultMain.contains("DefaultArrangementApplicationService"))

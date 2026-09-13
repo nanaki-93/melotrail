@@ -1,7 +1,9 @@
 package app.melotrail.desktop
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
@@ -138,10 +140,10 @@ object MidiCoreDesktopComposition {
 
 /** Target application launcher used by the desktop module's default entrypoint. */
 object MidiCoreDesktopEntrypoint {
-    /** Start a minimal target window while the focused workflow surfaces are composed by later tasks. */
-    fun run() {
+    /** Start the production six-page shell; an explicit check closes it after startup evidence. */
+    fun run(startupCheck: MidiCoreDesktopStartupCheck? = null) {
         application {
-            val services = remember { MidiCoreDesktopComposition.create() }
+            val services = remember { startupCheck?.createServices() ?: MidiCoreDesktopComposition.create() }
             val workspace = remember(services) {
                 MidiCoreWorkspaceViewModel(services.workspace, services.preferences, services.logger)
             }
@@ -175,6 +177,16 @@ object MidiCoreDesktopEntrypoint {
                 configureMidiCoreDesktopWindow(window)
                 MelotrailTheme {
                     MidiCoreStartupSurface(workspace, projectActions, midiActions, exportActions)
+                }
+                if (startupCheck != null) {
+                    LaunchedEffect(window) {
+                        // Cross frame boundaries on the real native window, not a class-loading probe.
+                        withFrameNanos { }
+                        withFrameNanos { }
+                        workspace.close()
+                        startupCheck.complete(window.width, window.height, window.isShowing, services.audition.state.isClosed)
+                        exitApplication()
+                    }
                 }
             }
         }

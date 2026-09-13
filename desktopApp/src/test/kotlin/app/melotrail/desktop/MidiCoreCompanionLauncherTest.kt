@@ -52,7 +52,27 @@ class MidiCoreCompanionLauncherTest {
         assertEquals(Path.of(System.getProperty("java.io.tmpdir")).toRealPath(), Path.of(lines.last()).toRealPath())
         assertFalse(Files.exists(root.resolve("injected")))
         assertFailsWith<IllegalStateException> {
-            MidiCoreCompanionLauncher(script("crash", "exit 7")).launchProcess(reference)
+            MidiCoreCompanionLauncher(script("crash", "sleep 0.25\nexit 7")).launchProcess(reference)
+        }
+    }
+
+    @Test
+    fun `startup observation returns while a persistent companion remains alive`() {
+        val pidFile = root.resolve("companion.pid")
+        val executable = script("persistent", "echo \$\$ > '${pidFile}'\nexec sleep 30")
+        val reference = MidiCoreExportHandoffReference(root.resolve("manifest.json"), "a".repeat(64), "snapshot-1")
+        val started = System.nanoTime()
+        try {
+            MidiCoreCompanionLauncher(executable).launchProcess(reference)
+            assertTrue((System.nanoTime() - started) / 1_000_000 < 10_000, "launch must not wait for GUI exit")
+            assertTrue(ProcessHandle.of(Files.readString(pidFile).trim().toLong()).orElseThrow().isAlive)
+        } finally {
+            if (Files.exists(pidFile)) {
+                ProcessHandle.of(Files.readString(pidFile).trim().toLong()).ifPresent { child ->
+                    child.destroyForcibly()
+                    child.onExit().get(5, java.util.concurrent.TimeUnit.SECONDS)
+                }
+            }
         }
     }
 

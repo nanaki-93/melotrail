@@ -61,7 +61,9 @@ internal class MidiCoreCompanionLauncher(
             .redirectOutput(ProcessBuilder.Redirect.DISCARD)
             .redirectError(ProcessBuilder.Redirect.DISCARD).start()
         process.outputStream.close()
-        check(!process.waitFor(150, TimeUnit.MILLISECONDS) || process.exitValue() == 0) {
+        // Native initialization and even a shell failure can exceed a frame-sized
+        // delay on a busy host. Observe early failure without waiting for GUI exit.
+        check(!process.waitFor(2, TimeUnit.SECONDS) || process.exitValue() == 0) {
             "TABI could not start. Open the companion directly, then retry."
         }
     }

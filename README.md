@@ -30,6 +30,11 @@ make build
 Use the JDK selected by the Gradle toolchain. The project uses JDK 21 and Kotlin
 2.2.21. Python and sound libraries are not part of the MIDI workflow.
 
+The coordinator's [clean native installation check](docs/VALIDATION.md#q03a-clean-native-installation-and-startup)
+packages a macOS DMG and launches a private installed copy with its bundled JVM.
+The 2026-09-13 clean check passed; user listening, Logic and visual release
+approval remain separate final-review gates.
+
 Input: one SMF 0/1 file, one note-bearing track/channel, fixed tempo/meter.
 Additional meta-only tracks are allowed. Current structure uses whole bars.
 M03 plans explicit chord-duration editing and optional trailing-silence padding;
