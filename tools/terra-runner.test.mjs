@@ -4,29 +4,41 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { queue, select, mark, effectiveStatus, checkResult, checkFindings, lock, atomic, permitted, reportedUsage, validateAllowedPaths } from './terra-runner.mjs';
-const md = '| F01 | Baseline | — | TODO | |\n| M01 | Music | F01 | TODO | |\n| A01 | Runner | F01 | TODO | |\n| V01 | Video | F01; selected | TODO | |';
+const md = '| F01 | Baseline | — | TODO | |\n| M01 | Music | F01 | TODO | |\n| A01 | Runner | F01 | TODO | |\n| V11 | Local video | F01 | TODO | |\n| V24 | Video review | V11 | WAITING_USER | |\n| V25 | Hosted fallback | V11 | OPTIONAL | |\n| V33 | Final video review | V24 | WAITING_USER | |';
 test('dependencies, bootstrap priority and selected video', () => {
   assert.equal(select(queue(md), false).id, 'F01');
   const after = mark(md, 'F01', 'DONE', 'abc');
   assert.equal(select(queue(after), false).id, 'A01');
   const waiting = mark(mark(after, 'A01', 'BLOCKED', 'fault'), 'M01', 'WAITING_USER', 'listen');
   assert.equal(select(queue(waiting), false), undefined);
-  assert.equal(select(queue(waiting), true).id, 'V01');
+  assert.equal(select(queue(waiting), true).id, 'V11');
 });
 test('in-progress tasks block duplicate selection', () => {
   assert.throws(() => select(queue(mark(md, 'F01', 'RUNNING', '')), true), /in-progress/);
 });
 test('malformed queue cannot silently skip dependencies', () => {
   assert.throws(() => queue(''), /Invalid/);
-  assert.throws(() => queue(md.replace('F01; selected', 'Q99')), /Unknown/);
+  assert.throws(() => queue(md.replace('| V11 | Local video | F01 |', '| V11 | Local video | Q99 |')), /Unknown/);
   assert.throws(() => queue(md + '\n| F01 | Duplicate | — | TODO | |'), /Invalid/);
   assert.throws(() => queue(md.replace('| TODO | |', '| invented | |')), /Invalid/);
   assert.equal(queue(md.replace('| A01 | Runner | F01 | TODO | |', '| A01 | Runner | F01 | OPTIONAL | |')).find(task => task.id === 'A01').state, 'OPTIONAL');
 });
 test('human gates cannot auto-complete', () => {
-  for (const id of ['U07', 'Q01', 'Q02', 'Q03', 'V01', 'V02', 'V03', 'V07']) assert.equal(effectiveStatus(id, 'DONE'), 'WAITING_USER');
+  for (const id of ['U07', 'Q01', 'Q02', 'Q03', 'V24', 'V33']) {
+    assert.equal(effectiveStatus(id, 'READY_FOR_VALIDATION'), 'WAITING_USER');
+    assert.equal(effectiveStatus(id, 'DONE'), 'WAITING_USER');
+  }
+  for (const id of ['V01', 'V02', 'V03', 'V07']) assert.equal(effectiveStatus(id, 'DONE'), 'DONE');
   assert.equal(effectiveStatus('M04', 'DONE'), 'DONE');
   assert.equal(effectiveStatus('Q01', 'BLOCKED'), 'BLOCKED');
+});
+test('optional hosted fallback is never selected without a queue state change', () => {
+  const ready = mark(mark(mark(md, 'F01', 'DONE', 'base'), 'A01', 'DONE', 'runner'), 'M01', 'DONE', 'music');
+  assert.equal(select(queue(ready), true).id, 'V11');
+  const localDone = mark(ready, 'V11', 'DONE', 'local evidence');
+  assert.equal(select(queue(localDone), true), undefined);
+  const chosen = mark(localDone, 'V25', 'TODO', 'user selected hosted fallback');
+  assert.equal(select(queue(chosen), true).id, 'V25');
 });
 test('status updates preserve other rows and contain multiline output', () => {
   const updated = mark(md, 'F01', 'DONE', 'one|two\nthree');
@@ -104,7 +116,7 @@ process.stdin.on('end', () => {
 });`, { mode: 0o700 });
   git('add', '.'); git('commit', '-m', 'fixture'); git('branch', 'codex/terra');
   const config = path.join(root, 'config.json');
-  const cfg = { allowedPaths: { F01: ['probe.txt'], M01: ['music-probe.txt'], A01: ['runner-probe.txt'], V01: ['video-probe.txt'] }, allowedTasks: ['F01', 'M01', 'A01', 'V01'], repo, stateDir: state, branch: 'codex/terra', minutes: 1, maxRunsPerDay: 2, maxReportedTokens: 1000, video: true, codex: fake, javaHome: root, gradleHome: root };
+  const cfg = { allowedPaths: { F01: ['probe.txt'], M01: ['music-probe.txt'], A01: ['runner-probe.txt'], V11: ['video-probe.txt'] }, allowedTasks: ['F01', 'M01', 'A01', 'V11'], repo, stateDir: state, branch: 'codex/terra', minutes: 1, maxRunsPerDay: 2, maxReportedTokens: 1000, video: true, codex: fake, javaHome: root, gradleHome: root };
   atomic(config, cfg);
   const call = (command, extra = {}) => spawnSync(process.execPath, [runner, command, config], { encoding: 'utf8', env: { ...process.env, PATH: bin + ':' + process.env.PATH, ...extra } });
   return { root, repo, state, config, cfg, git, call, close: () => fs.rmSync(root, { recursive: true, force: true }) };

@@ -5,6 +5,10 @@ workspace guideline and mockup redesign documents. [PLAN](../PLAN.md) defines
 product behavior; [TASKS](../TASKS.md) assigns delivery. Existing shell/theme/
 primitive work is retained and improved.
 
+The existing six-page MIDI workspace is implemented. The app-level Video tab and
+its controls described below are the planned V20–V32 target; this document does
+not claim that they already exist.
+
 ## References and interpretation
 
 All nine PNGs in `pictures/UI` were inspected. They are 1536 × 1024 references.
@@ -21,15 +25,16 @@ values and source digests are retained in
 | [04 Arrange](pictures/UI/04-arrange.png) | Dominant aligned MIDI lanes, section strip, top-right action and selected-section inspector; also the Review composition |
 | [06 Mix/Master](pictures/UI/06-mix-master.png) | Control/border/icon density only; no mixer or production page |
 | [07 Library](pictures/UI/07-library.png) | Style/candidate gallery cards and selection states; no sound library |
-| [08 Video](pictures/UI/08-video-preview.png) | Optional companion preview stage and scene timeline only |
+| [08 Video](pictures/UI/08-video-preview.png) | Planned in-app video preview, generation progress, take review and full-cut assembly; adapt the composition, not its soundtrack workflow |
 | [09 Export](pictures/UI/09-export.png) | MIDI package summary, file facts, destination/result and readiness; no codec/loudness controls |
 | [10 Settings](pictures/UI/10-settings.png) | Compact grouped rows for actual playback/preferences; no fake account or model settings |
 
 Retain Melotrail's identity. Use bars/beats instead of ambiguous screenshot time
 labels. Replace waveforms with verified MIDI notes/hits. Role count is four:
 Melody, Chords, Bass, Drums. A static owned rail illustration is optional, subdued
-and explicitly decorative; never substitute it for musical evidence. TABI video
-art belongs to the companion. Do not extract logos/avatars from screenshots.
+and explicitly decorative; never substitute it for musical evidence. Video
+reference art belongs to independent video projects. Do not extract logos/avatars
+from screenshots.
 
 ## Layout targets
 
@@ -117,7 +122,8 @@ and semantic diffs appear in exception details, not a second primary workflow.
 complete/role/manifest file list, real export progress/result and reveal action.
 Instructions: import at song origin, confirm Logic tempo/meter behavior, assign
 instruments and check role alignment. No disabled audio/video format selector.
-Future companion launch appears only after its integration actually works.
+The current Swift companion launch is a superseded handoff retained only until
+V30; it is not part of the planned Video-tab journey.
 The package summary describes current accepted selections, with a section/bar
 inventory distinguishing accepted notes, accepted rests, locks and work needing
 attention. The saved result identifies whether it matches current accepted work;
@@ -125,6 +131,21 @@ an earlier snapshot keeps its original files and reveal target. Keep hashes and
 candidate IDs in package details. Logic guidance occupies the Export inspector
 at reference width and stays inline at smaller widths. Atomic publication shows
 its actual result; it does not offer an unsupported cancellation boundary.
+
+**Video (planned application-level tab):** create/open a video project without a
+MIDI project; import one or more generic PNG/JPEG references, enter a prominent
+free-form prompt and choose 180–300 seconds. Subject, environment, style and full
+scene are optional asset roles. The main action is **Generate video**; look review,
+shot prompts and storyboard detail are optional refinements rather than gates.
+Show actual setup availability, consumed references, duration/work estimate,
+job progress and recovery, immutable takes, unique/reused seconds, silent preview,
+joins and export facts. Never inject Tokyo, train, coffee, TABI or another preset.
+
+Use an app-level MIDI/Video switch above the MIDI shell, leaving all six MIDI
+destinations intact. At 1280×900 keep prompt/next action and preview visible; at
+720×900 keep upload, prompt, generation, review and export keyboard-reachable.
+Technical hashes, model identities and provider details stay disclosed on demand.
+The normal flow requires no JSON, mask, node graph, soundtrack or MIDI export.
 
 ## Interaction and data
 

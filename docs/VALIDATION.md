@@ -6,8 +6,9 @@ queues are superseded; their incomplete gates are not passes.
 
 ## Final manual review
 
-**Q03b handoff · 2026-09-13.** Unpaid engineering is complete; manual acceptance
-is pending. These fresh packets use integrated implementation `c20aecf583`;
+**Q03b MIDI handoff · 2026-09-13.** MIDI engineering is complete; manual MIDI
+acceptance is pending. The replacement Video-tab workstream is planned in
+V10–V33 and is not implemented by this packet. These fresh packets use integrated implementation `c20aecf583`;
 the handoff changes documentation only. The local review packet is
 `~/.codex/melotrail-terra/final-review-2026-09-13/`; paths below are relative to it.
 Start with its identity/check receipt (`verification.json`).
@@ -19,25 +20,26 @@ procedure below. Preserve the packets; fill copies of their forms.
 | U07 · UI | Six-page comparisons and blank scores (`u07/visual-review/index.html`). Review hierarchy, reference fidelity, keyboard flow and resizing. Run `./gradlew :desktopApp:nativeDesktopCapture` on the visible desktop; the previous wallpaper failure remains unresolved. Frame replay is not compositor proof. |
 | Q01 · Music | Development comparisons (`q01-development/review.md`), final-set requirements (`q01-evaluation/review.md`), song intake (`song-intake-template.json`) and blank score worksheet (`score-template.json`). Five owned/licensed full songs, including three unseen, are still missing. Supply actual current MIDI projects, ownership/exposure and settings before freezing a final set. Use generated per-case forms after export; no scores are invented. |
 | Q02 · Logic | Current matrix and blank results (`q02-logic-matrix/review.md`): 20 packages plus one expected rejection. Verify its 571 hashes, import complete and separate tracks at bar 1, play, save/close/reopen and record exact Logic version, bars and results. |
-| V01/V02/V03/V07 · Video | One-second multi-scene probe (`companion/episode.mov`), 12-second 1080p probe (`companion/sustained.mov`) and launchable owned composition (`companion/fixture/composition-request.json`). These synthetic fixtures prove technical behavior, not TABI identity or a full-song pilot. Choose production assets/music, confirm rights/identity/provider/budget, then review the actual episode. Paid generation and upload still require authorization. |
+| V24 · Early video review | After V11/V22/V23, use the in-app Video flow with user-chosen references and a free-form prompt. Review one look and three real clips: base, contrasting-prompt and changed-reference cases. This remains WAITING_USER until actual visual evidence and feedback exist. |
+| V33 · Complete video | After V24/V32, generate, watch and import into the user's chosen Apple editor one real 3–5 minute silent video. Review prompt/reference fidelity, temporal quality, every join and disclosed unique/reused footage. This remains WAITING_USER until the real full cut and decision exist. |
 | Q03 · Release | After U07/Q01/Q02, record the actual MIDI release decision and final build. Musical quality remains unmeasured against the original 5/10 feedback. |
 
-To operate the retained companion demo, launch
+The retained Swift companion demo is superseded historical evidence; it is not
+the V24/V33 product flow and needs no new review. To inspect that old packet, launch
 `/Users/marcoandreose/.codex/melotrail-terra/final-review-2026-09-13/companion/app/melotrail-tabi-editor`
 with `/Users/marcoandreose/.codex/melotrail-terra/final-review-2026-09-13/companion/fixture/composition-request.json`.
-Only paths in this new fixture copy were relocated; source/asset/soundtrack bytes
-are unchanged and its real release caller was rechecked. For the optional app
-handoff, `sh companion/scripts/install.sh` installs separately into a new default
-directory; restart the MIDI app and publish a current package. An absent or
-incompatible installation hides the action. A stale snapshot cannot launch;
-select the finished Logic soundtrack in TABI and confirm its lead-in/tail.
+Only paths in this fixture copy were relocated; source/asset/soundtrack bytes
+are unchanged and its old release caller was rechecked. The preserved installer,
+MIDI handoff and soundtrack timing behavior are evidence of the retired design,
+not requirements or setup steps for the planned independent Video tab.
 
 The final packet retains 66 unchanged pinned image comparisons, 28 real-window
 frame replays, 20-sample timing records, source/build/runtime identities and
 hash-verified MIDI/video artifacts. Automated checks do not establish acoustic
 onset, musical scores, foreground screen capture or human artistic approval.
-Historical packets and failed checks remain preserved. All eight manual rows
-stay WAITING_USER; the scheduler must not retry them as implementation failures.
+Historical packets and failed checks remain preserved. U07, Q01, Q02, Q03, V24
+and V33 stay WAITING_USER; automated agents cannot complete them or retry absent
+human evidence as an implementation failure.
 
 ## Required automated checks
 
@@ -69,6 +71,33 @@ sound library, external model or network prerequisite.
 Keep deterministic fixtures small and owned. Test actual outcomes/invariants;
 source-text absence scans supplement behavior tests rather than replace them.
 Every fixed bug receives a regression that would fail before the fix.
+
+### Planned Video-tab validation
+
+Video validation is independent of the MIDI/Logic gates and requires no MIDI
+project, export, song or soundtrack. Ordinary tests use owned fixtures and fake
+backends. They must prove isolated project storage, immutable reference/take/
+export records, prompt and asset binding, bounded job recovery, no automatic
+downloads or cloud fallback, actual moving-frame preview, exact assembly math,
+and a decodable 1920×1080 H.264 MP4 lasting 180–300 seconds with zero audio
+streams. Missing video tools, models or credentials cannot break MIDI startup,
+audition or export. The app-level Video tab leaves all six MIDI destinations and
+the one persistent MIDI player intact.
+
+V11 separately measures the selected local reference-conditioned generation
+workflow on the real host. V24 requires user review of a base assets/prompt case,
+a contrasting prompt using the same assets and a changed-reference case. V32
+then proves the complete UI path with owned/fake inputs and prepares a review
+packet. V33 requires the user to watch the real 3–5 minute silent cut and every
+join at normal speed, verify prompt/reference fidelity and repetition, then
+import/play it in the chosen Apple editor. Technical checks, file decodability
+and synthetic clips cannot supply either human decision.
+
+Tokyo, train, coffee and TABI are optional examples. Validation follows the
+actual prompt and selected references; it never requires those contents. Local
+generation is tried first. OPTIONAL V25 stays out of automatic selection until
+the user explicitly chooses the hosted fallback after local evidence; any live
+provider request also needs a reviewable capped budget.
 
 ### Q03a clean native installation and startup
 
@@ -137,7 +166,12 @@ alone does not establish it. Acoustic playback and foreground compositor pixels
 remain NOT_MEASURED here. `nativeDesktopCapture` and human review remain the final
 U07/Q03 gates; Q03b owns the integrated review handoff.
 
-## Optional companion preflight
+## Preserved superseded companion preflight evidence
+
+This entire section records technical checks for retired V01–V07 Swift code.
+It remains to preserve reproducible evidence until V31 removes its repository
+owners. None of it validates, configures or constrains the planned Video tab,
+and it cannot satisfy V24 or V33.
 
 V07a recovery (2026-09-13) passed 572 JVM tests, required build, focused
 export/launcher/UI checks and the separate native regression/release/install

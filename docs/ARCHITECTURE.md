@@ -7,19 +7,23 @@ live in [PLAN](../PLAN.md); implementation status lives in [TASKS](../TASKS.md).
 
 ```text
 Compose Desktop
-  -> application use cases and immutable presentation state
+  -> MIDI workspace (implemented)
+       -> application use cases and immutable presentation state
        -> project / music / structure / arrangement domain
        <- project-store adapter
        <- Standard MIDI reader/writer adapter
        <- local MIDI audition adapter
-  -> immutable MIDI package -> Logic Pro
+       -> immutable MIDI package -> Logic Pro
 
-Optional, separately installed TABI companion
-  <- finished Logic soundtrack + optional immutable MIDI export manifest
-  -> its own assets/jobs/provider/encoder -> local video file
+  -> Video workspace (planned in V10–V33; loaded lazily)
+       -> video application and domain
+       <- independent video project/asset/job stores
+       <- selected local inference and video-only media adapters
+       <- explicitly selected hosted adapter (optional)
+       -> complete silent MP4 -> user's external Apple editor
 ```
 
-| Owner | Current path under `src/main/kotlin/app/melotrail` | Responsibility |
+| Owner | Current or planned path | Responsibility |
 | --- | --- | --- |
 | MIDI semantics | `midi/domain`, `midi/adapter` | SMF parsing/writing, canonical events, pairing and preservation |
 | Project | `project`, `project/adapter` | Schema, paths, identities, hashes, atomic store |
@@ -28,6 +32,7 @@ Optional, separately installed TABI companion
 | Orchestration | `application/MidiCore*` | Import, authority changes, generation, drafts, acceptance, export |
 | Playback | `audition`, `audition/adapter` | One MIDI session, managed synth/output, device/resource cleanup |
 | Presentation | `desktopApp/.../desktop/MidiCore*`, shared shell/theme/primitives | Six pages, intents, visual projections, one persistent dock |
+| Video (planned) | `video` and `desktopApp/.../desktop/video` | Independent projects, references, prompts, generation jobs, silent preview/assembly/export |
 
 Names identify observed owners, not an instruction to keep/delete by prefix.
 `DesktopMain.main` calls `MidiCoreDesktopEntrypoint`; obsolete desktop factory
@@ -74,6 +79,12 @@ reject it before writes and preserve its files; any conversion must be a
 separately authorized, explicit operation. New additive records must not
 reinterpret already accepted MIDI or silently upgrade artifacts.
 
+Planned video projects use a separately selected root outside MIDI projects and
+exports. They own immutable reference copies, prompt/shot versions, scene looks,
+takes, job attempts, assemblies and export snapshots. Video code cannot write a
+MIDI project or import MIDI application/storage owners. Only the application
+composition root coordinates the two workspaces.
+
 ## Planned derived data and arrangement authority
 
 M02 adds a pure, versioned melody-context projection. It contains musical
@@ -119,11 +130,22 @@ bounded and lifecycle-managed; no page-local clock or second sequencer. Seek,
 pause, stop, loop, mute/solo and device loss release notes/resources predictably.
 Audition timbre is not authoritative and does not render audio files.
 
-## Optional video isolation
+## Planned video isolation
 
-[TABI_VIDEO](TABI_VIDEO.md) specifies a separate companion, preferably a separate
-repository. Its soundtrack, library, jobs, provider credentials and encoder never
-enter the MIDI schema/build/runtime. It reads immutable export manifests only,
-and remains optional for installation, offline use, audition and export.
-A future launch integration passes a snapshot identity; it does not create a
-second project authority or restore removed release/mastering code.
+[TABI_VIDEO](TABI_VIDEO.md) specifies an independent Video tab in the same
+Kotlin/Compose application. It takes generic reference assets and a free-form
+prompt and exports a complete 180–300 second silent video. It needs no MIDI
+project, manifest, song or soundtrack. The app-level MIDI/Video switch stays
+above the existing six MIDI destinations; entering Video pauses the one MIDI
+session while preserving its position, and silent preview creates no MIDI player.
+
+Video services are constructed lazily. Missing models, credentials or media
+tools cannot prevent MIDI startup, audition or export. Models and large media
+stay outside Git and MIDI storage; hosted uploads require an explicit mode and
+authorization. The Video tab, stores and adapters are planned and must not be
+treated as current runtime until their V10–V33 tasks pass.
+
+The existing Swift companion, soundtrack intake and MIDI Export handoff are
+superseded implementation history retained temporarily for evidence. V30–V31
+remove their repository owners after the integrated owned-fixture path works;
+they are not a compatibility architecture for the new product.

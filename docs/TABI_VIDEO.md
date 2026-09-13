@@ -1,32 +1,52 @@
-# TABI video companion
+# TABI video
 
-Owner: future video product/asset/media contract. Delivery is V01–V07 in
-[TASKS](../TASKS.md), under [PLAN](../PLAN.md). No video feature, model choice,
-paid generation, publishing action or monetization result is implemented here.
+Owner: planned video product, asset and media contract. Delivery is V10–V33 in
+[TASKS](../TASKS.md), under [PLAN §9](../PLAN.md#9-video-generation-from-assets-and-a-prompt).
+The integrated Video tab, model profile, media runtime and generation controls
+are not implemented yet. This document specifies their target behavior and
+preserves clearly marked artistic references and superseded Swift evidence.
 
 ## Outcome and scope
 
-Create an original, calm animated train journey starring TABI, with the
-musician's finished music. Start from a reusable asset library; generate short
-controlled animation takes and compose them into a coherent full-song video.
-A deliverable is a playable video with the real soundtrack, not a still mockup.
+Add an independent **Video** tab to the Kotlin/Compose Melotrail application.
+One or more generic reference assets plus a user-written free-form prompt drive
+generation of short clips, review and assembly into a complete **180–300 second
+silent video** (default 240 seconds). The result is a 1920×1080 H.264 MP4 with
+zero audio streams for later audio work in the user's external Apple editor.
 
-Recommend a separately installed companion, preferably in a separate repository.
-Kotlin may own its job orchestration and Compose editor. Provider calls and an
-encoder are companion-only adapters. The MIDI application remains independently
-buildable/installable, offline and free of audio/video-production dependencies.
-No old Melotrail audio project, selected-master record, renderer, commercial
-policy service or publishing branch is reused.
+Video needs no MIDI project, export, song or soundtrack. It never renders MIDI,
+edits audio, writes a MIDI project or adds a seventh MIDI destination. Its project,
+assets, jobs, models, media tools and outputs use separate storage and runtime.
+The app loads those services lazily so missing video setup cannot block MIDI
+startup, audition or export. The old Swift companion and soundtrack-led handoff
+are superseded and remain only as historical code/evidence until V30–V31.
 
-Input is a finished Logic Pro bounce plus owned/usable visuals and, optionally,
-a verified immutable MIDI export manifest for title and section timing. MIDI has
-no finished instrument sound. The companion never renders MIDI, transcribes,
-remasters or changes the music, and never writes the MIDI project or snapshot.
+The planned normal workflow is:
+
+1. Open Video and create or open an independent video project.
+2. Import one or more PNG/JPEG references and assign optional subject, environment,
+   style or complete-scene roles. Preserve source bytes and show what each request
+   consumes; no particular role combination is mandatory.
+3. Enter a free-form prompt and choose 3–5 minutes. Optional action, motion, style,
+   look and per-shot controls refine the request without becoming prerequisites.
+4. Choose the explicit local setup and click **Generate video**. The app prepares
+   needed looks and shots, records honest work estimates and retains results.
+5. Play the moving draft in the tab; keep, reject or regenerate clips, inspect
+   joins and unique/reused footage, and review the complete silent cut.
+6. Export to a new silent MP4 and reveal it in Finder.
+
+Tokyo, trains, coffee and TABI are examples only. They must never become a required
+preset, default prompt injection, action list or acceptance gate. Any supported
+references and prompt use the same workflow. Try one measured local backend first;
+a hosted fallback is optional and requires explicit selection, upload disclosure
+and a bounded authorized budget. No model download, paid job or upload occurs from
+opening the app.
 
 ## What the existing references establish
 
 [Character identity](pictures/tabi.png) is the cosmic axolotl traveler sheet;
-it still contains “Moki”. New output uses **TABI**. The character has an
+it still contains “Moki”. When a request selects these references, new output uses
+**TABI**. The character has an
 indigo/violet body, pink-purple feathery gills, dark glossy eyes, cheek/star
 markings, headphones, travel jacket/scarf, satchel and travel accessories.
 
@@ -34,8 +54,9 @@ The [morning train scene](pictures/video/Morning%20Lo-Fi%20Train%20Ride%20with%2
 and the three other supplied train scenes under `pictures/video` establish
 composition and mood: TABI at left, three-quarter view toward the right, fixed
 window/train/table geometry, passing Japanese city/countryside, layered depth,
-soft light and cozy cinematic 2D illustration. They are source references, not
-already separated, rigged, licensed-for-redistribution animation assets.
+soft light and cozy cinematic 2D illustration. They are optional source references,
+not already separated, rigged, licensed-for-redistribution animation assets and
+not the product's universal content contract.
 
 The newer pastel station (`pastel-tabi.png`) and
 listening pose (`patel-tabi-music.png`) show dusty lilac TABI,
@@ -49,17 +70,18 @@ This direction supersedes the previous rich neon/navy palette. Recoloring TABI
 to fit a scene palette is explicitly allowed during style exploration. Preserve
 recognition through the axolotl silhouette, feathery gills, face, forehead star,
 curled tail and headphones. Jacket/scarf/accessory details may be simplified.
-V02 resolves proportions, markings, palette and costume into one approved
-identity version after visual comparison. No trial below is user-approved yet.
+When a prompt selects TABI references, V24 checks their identity traits in the
+actual generated result. No trial below is user-approved yet.
 Use the original train scenes for layout, and the pastel pair for softness and
 calm poses. Preserve the station's memorable arch, bench, lamps, central TABI EKI
 sign, train, plants and suitcase when it is used as the channel banner. Simplify
 surface texture and secondary writing without flattening the scene into an empty
 platform. Reduce glossy materials and heavy amber lighting.
 
-## Pastel style exploration and reusable generation brief
+## Preserved artistic exploration and reusable example brief
 
-Some earlier reference and trial files were not included in the supplied Git
+This section is reference-specific artistic history, not a required generation
+preset or normal-workflow prompt. Some earlier reference and trial files were not included in the supplied Git
 commits and are absent locally. Their filenames and design decisions are retained
 below as historical context; only available assets are linked. Use the retained
 v3 banner and style trials for review until missing originals are recovered.
@@ -288,11 +310,12 @@ That is a long-term library wish list, not the first batch. The retired future
 feature offered only static pan/zoom. This plan instead combines true limited
 character animation with deterministic scene motion.
 
-## Small pilot asset kit
+## Retired TABI pilot kit (preserved reference history)
 
-First prove a 30–60 second scene with the approved kit, then one complete song
-(target a normal 3–5 minute track if available; use actual soundtrack duration).
-Do not generate an hour of video or all possible character views first.
+The following kit was proposed for the superseded soundtrack companion. It is
+preserved to explain existing artwork and may inform a future prompt when the
+user selects these assets. It does not define required inputs, duration, scene
+content or acceptance for the new Video tab.
 
 | Group | Pilot contents | Required production properties |
 | --- | --- | --- |
@@ -304,11 +327,10 @@ Do not generate an hour of video or all possible character views first.
 | Atmosphere | Reflections, light, steam; rain only if needed | Separate layers and bounded opacity/motion |
 | Animation | Blink/breathe, writing/hand action, glance, steam | Short validated loops/takes with consistent camera and identity |
 
-First output target: 16:9, 1920×1080, 30 fps. H.264/AAC in MP4 is a candidate
-delivery preset, conditional on V01 proving the installed encoder, distribution
-terms and preview/output support. Do not promise alpha-video or start/end-frame
-conditioning unless the chosen provider supports it; a matte/masked pipeline
-may be required. All generated source outputs remain stored in original quality.
+This historical proposal targeted a 16:9 1920×1080 soundtrack-bearing output.
+The replacement instead exports a silent H.264 MP4 at the cadence proved by the
+selected V11/V12 workflow. All generated source outputs remain stored in their
+original quality.
 
 Later library expansion may include the original requested reading/sleeping/
 smiling/curious/surprised/photographing/ticket/map/postcard/waving/headphone/
@@ -318,23 +340,26 @@ Fuji, countryside/coast, blossoms, rain, snow and autumn; and steam/page/eye/
 gill/tail/cable micro-motion. Add only assets useful to an episode, not a Cartesian
 product of every pose, weather and camera angle.
 
-## Asset-library contract
+## Planned independent asset and project contract
 
-Each asset has an ID/version, local immutable file/digest, type, original source,
+Each imported reference has an ID/version, local immutable file/digest, optional
+role, original source,
 creator/license or user ownership statement, permitted uses, creation/provider/
 model/prompt/reference provenance when generated, dimensions/frame rate/duration,
-alpha/mask facts, pivot/placement, compatible scene/identity version and approval
-state (proposed, approved, rejected).
+alpha/mask facts, compatible request/look identity and review state. Subject,
+environment, style and complete-scene roles are optional; one asset is sufficient.
 
 Keep originals, approved derivatives and generated takes distinct. A revised
 asset receives a new identity; jobs pin approved versions. Validate missing or
 changed media on reopen and before encoding. Large media lives in user-selected
-library storage outside the source repository; small owned test media may be
-checked in. A thumbnail is a cache, not the canonical asset.
+video-project storage outside the source repository and all MIDI roots; small
+owned test media may be checked in. A thumbnail is a cache, not the canonical
+asset. A video project also versions the free-form brief, optional shot overrides,
+looks, attempts, immutable takes, selection/assembly and export snapshots.
 
-### Companion manifest boundary (V02a)
+### Historical companion manifest boundary (superseded V02a)
 
-The independently built `companion/` package now defines schema v1 records for
+The independently built `companion/` package defined schema v1 records for
 asset ID/version, SHA-256-pinned relative media path, type, source/creator and
 creation provenance, rights/permitted uses, geometry (including alpha, mask,
 pivot, anchors and compatible scene/identity versions), and a proposed/approved/
@@ -345,9 +370,9 @@ Melotrail MIDI project. The manifest records no production asset or human
 approval: V02b/V02 still own import, real geometry/identity inspection and the
 user's coherent-kit decision.
 
-### Local import and pilot-kit inspection (V02b)
+### Historical companion import and pilot-kit inspection (superseded V02b)
 
-The companion imports a selected regular local file by copying it to a new
+The companion imported a selected regular local file by copying it to a new
 `originals/<asset-id>/<version>/` path in the user-selected external library.
 It never alters that selected source, replaces an existing original, or mutates
 a manifest; the returned record remains **proposed**. Dimensions, timing and
@@ -371,24 +396,24 @@ required; do not rely on a model reproducing readable route labels every frame.
 
 ## Generative animation strategy
 
-Use one provider initially. V01 checks current API availability, authentication,
-reference-image controls, allowed durations/resolution, commercial-use terms,
-privacy/retention, model versioning, seeds, price and job/cancel behavior.
-Do not equate access through an installed creative connector with a stable API
-that may be embedded in a shipped application. Keep a manual clip-import path
-if provider integration is unavailable.
+V11 measures one local reference-conditioned image/video workflow on the user's
+Mac, then V17 connects that selected backend. It must consume the selected
+references and free-form prompt through an automatable interface and produce
+moving 5–10 second shots. A particular character, scene, action, camera move or
+style is never required. Missing local setup is explicit; the app does not
+download a model automatically or silently send references to a hosted service.
 
-Prefer image-to-video from an approved composed keyframe or locked references.
-Generate small micro-actions; keep the camera and train geometry fixed. Use
-layered/parallax motion for distant scenery and reflections so most of a long
-song does not require new model frames. Use model animation where it adds life,
-not to recreate the entire set at every section boundary.
+Generate short shots and assemble them to the chosen 180–300 second duration.
+Unique footage is the default. An explicit reuse mode may repeat only takes the
+user marks repeatable, with generated and repeated seconds shown separately.
+Never reverse requested action or motion to manufacture a loop. Look review and
+shot-level overrides are optional; the primary Generate video action may create
+unreviewed draft intermediates while recording their status honestly.
 
-Quality review checks first/middle/last frames and real playback: gills, face,
-star, clothing, hands, accessories, no spontaneous objects/text, consistent
-lighting, flicker/warping and loop seam. Matching first/last images is insufficient
-if the intervening animation drifts. Do not reverse an irreversible action such
-as writing or drinking just to manufacture a ping-pong loop.
+Quality review checks real playback against the actual references and prompt:
+recognizable requested subjects/traits, scene/action/motion/style compliance,
+coherent objects, temporal stability, joins and any requested continuity.
+Matching first/last images is insufficient if the intervening animation drifts.
 
 Record requested and actual clip duration; reuse/trim visual clips only within
 explicit scene policy. Rejected takes remain excluded from production. Provider
@@ -409,9 +434,13 @@ Limit concurrency and polling, back off rate limits, bound retries and support
 cancel without claiming a provider refunded work already started. Credentials
 stay in secure configuration, not project manifests or shareable logs.
 
-### Resumable job ledger (V03a)
+The next two subsections preserve the superseded companion's job/provider
+evidence. V16/V25 must re-establish the applicable behavior in the new Kotlin
+video boundary; the records below are not current implementation claims.
 
-The companion now has a provider-neutral schema-v1 job ledger stored separately
+### Historical resumable companion ledger (superseded V03a)
+
+The companion had a provider-neutral schema-v1 job ledger stored separately
 from the MIDI project and asset manifest. Each request freezes provider/model,
 options, prompt, approved reference pins, optional seed, estimated cost and
 attempt cap; its SHA-256 fingerprint supplies an attempt-specific idempotency
@@ -439,9 +468,9 @@ V03a supplies no provider adapter, credentials, network client or live request.
 Its contract is exercised with an owned fake provider. V03b owns a selected API,
 secure configuration, quarantined output download and manual clip import.
 
-### Runway adapter and manual import (V03b)
+### Historical Runway companion adapter (superseded V03b)
 
-The companion uses the reviewed Runway Dev REST request shape only: HTTPS
+The companion used the reviewed Runway Dev REST request shape only: HTTPS
 `POST /v1/image_to_video`, bearer credentials from `RUNWAYML_API_SECRET`,
 `X-Runway-Version: 2024-11-06`, `gen4.5`, one approved PNG/JPEG/WebP still as a
 data URI, `1280:720`, and five seconds. The token is neither Codable nor written
@@ -466,7 +495,10 @@ reject rate, actual cost per accepted clip and per finished video, asset reuse,
 encoding time/disk use and human correction time. Choose an expansion budget
 from measured results; no cost-per-minute promise is justified yet.
 
-## Music-to-scene workflow
+## Historical soundtrack-to-scene workflow (superseded)
+
+The following V04/V07 workflow describes preserved Swift evidence only. The new
+Video tab has no soundtrack or MIDI input and does not port these steps.
 
 1. Select the finished soundtrack; hash/probe it and show real duration.
 2. Optionally read a verified MIDI manifest for section names and times. For a
@@ -488,7 +520,7 @@ rational time/frame rounding policy and exact final-boundary correction.
 Preview and encoder consume the same plan. Crossfades consume explicitly
 modeled overlap; they cannot shorten the soundtrack or silently shift later scenes.
 
-### Deterministic soundtrack timing (V04a)
+### Historical deterministic soundtrack timing (superseded V04a)
 
 The companion first opens one regular local finished-soundtrack file against a
 caller-pinned SHA-256 digest and records its exact single audio-track duration. It may
@@ -516,7 +548,7 @@ frame ranges are contiguous and the last range ends at the one deterministic
 ceil-rounded soundtrack boundary. V04 composition, V05 preview, and V06 output
 must consume this plan rather than independently rounding timestamps.
 
-### Optional Export handoff (V07a)
+### Historical optional Export handoff (superseded V07a)
 
 The MIDI Export page probes a separately installed `melotrail-tabi-editor`.
 Its bounded `--capabilities` response must be exactly
@@ -570,7 +602,7 @@ session saves replace only their own companion document. All selected inputs
 remain protected. Companion intake and installed-launch captures are
 technical fixtures; the full-song production pilot and human decisions stay V07.
 
-### Deterministic scene composition (V04)
+### Historical deterministic scene composition (superseded V04)
 
 The companion's `plan-scenes` caller combines that timing plan with a selected
 external asset-library manifest. Every referenced asset must be an approved,
@@ -604,26 +636,19 @@ Bound source size/duration, disk use, timeout and resource concurrency. Capture
 actual encoder progress and useful redacted errors, not a simulated percentage.
 
 Validate streams, codec/container, dimensions, frame rate, total duration, first/
-last decodable frames, scene boundaries, crop parity, audio timeline and A/V sync.
-Audio encoding conversion must be explicit; no EQ, normalization, mastering,
-trimming or time stretch. Byte identity is not promised after codec conversion;
-source identity and timing are preserved and tested under the chosen policy.
+last decodable frames and every join. The published file is 1920×1080 H.264 with
+square pixels, a constant cadence selected from measured V11/V12 evidence, the
+chosen 180–300 second duration and zero audio streams. Strip any generated audio
+during normalization; do not add audio editing. Record native versus upscaled
+resolution. Byte identity is not promised after codec conversion; input identity,
+selected trim ranges and exact frame duration are preserved and tested.
 
-Reference 08 guides the companion's real preview stage, scene strip, settings
-inspector and restrained export action. The companion has its own soundtrack
-transport and never concurrently substitutes the MIDI synth as the soundtrack.
-Optional launch from MIDI Export appears only after an independently working
-companion exists; its absence leaves MIDI export unaffected.
-
-The editor keeps those regions reachable at 1536×1024, 1280×900 and 720×900:
-at compact width, the same real preview, scrollable selected-scene inspector,
-transport and horizontal scene strip stack rather than scale into clipped
-controls. Space toggles local preview, Left/Right seek one shared frame,
-Home/End seek the soundtrack extent and Escape stops local preview; active text
-fields keep their normal editing keys. Labels name the preview, scene timeline,
-inspector, transport and edit actions for keyboard and accessibility clients.
-These controls affect only the existing shared composition plan and one
-soundtrack player; they do not submit, cancel or imply approval of provider jobs.
+Reference 08 guides the planned in-app preview, take strip, inspector and
+restrained export action. Keep those regions reachable at 1536×1024, 1280×900
+and 720×900. Preview uses moving decoded frames, suppresses source audio, owns
+one video session and does not create or substitute a MIDI player. Entering Video
+pauses MIDI while retaining its position. These controls remain planned until
+their V20–V28 rows pass.
 
 ## YouTube and commercial intent
 
@@ -634,7 +659,7 @@ mass-produced episode template is a poor product strategy. A distinctive TABI
 journey and original music support the creative goal, not a guaranteed outcome.
 [YouTube monetization policy](https://support.google.com/youtube/answer/1311392?hl=en).
 
-Check disclosure against the actual video and soundtrack. YouTube distinguishes
+Check disclosure against the actual finished publication. YouTube distinguishes
 non-realistic animation from realistic synthetic content and explicitly lists
 AI-generated music among disclosure examples. Disclosure itself does not remove
 monetization eligibility. Do not automatically classify all animated videos or
@@ -642,24 +667,35 @@ all algorithmically arranged MIDI the same way; record the user's actual use.
 [YouTube AI disclosure guidance](https://support.google.com/youtube/answer/14328491?hl=en).
 
 These sources were checked on 2026-09-06; review again before publication.
-Provider commercial-use terms, rights to source/reference assets and music,
+Provider commercial-use terms, rights to source/reference assets and any added music,
 YouTube Partner Program eligibility and editorial quality are separate decisions.
 Keep provenance and credits proportional; do not recreate a policy-scoring engine
-or promise copyright exclusivity/revenue. No direct upload or YouTube account
-integration in the first companion; user-controlled publication is sufficient.
+or promise copyright exclusivity/revenue. Melotrail does not upload to YouTube;
+publication stays under user control.
 
 ## Pilot acceptance
 
-A real user approves character identity and the finished full-song video.
-Require stable TABI/train design, visible restrained animation, no distracting
-flicker/loop seams, coherent progression/ending and correct soundtrack sync.
-Record actual spend/retries, output hashes/technical checks, source ownership,
-remaining disclosure/credits decisions and the user's review. Confirm the MIDI
-app still installs and exports with the companion absent. Only then consider
-long compilations, larger libraries, new providers or additional aspect ratios.
+A real user first reviews one generated look and three real clips at V24: a base
+assets/prompt request, a materially different prompt with the same assets and a
+changed-reference request. Review reference fidelity, prompt adherence, requested
+motion/style, object coherence and temporal stability. The chosen content has no
+mandatory TABI, train, prop, location or camera behavior.
+
+At V33, start only with user-chosen references and a free-form prompt in the app,
+then generate, assemble, export and watch one complete 3–5 minute silent video.
+Review every join, unique/reused footage, prompt adherence and reference fidelity,
+then import/play it in the user's chosen Apple editor. Record actual local
+resources or authorized spend, retries, tool/model versions, hashes and feedback.
+Tests cannot award either visual decision, and soundtrack sync is outside scope.
 
 
-## Verified companion spike — 2026-09-08
+## Preserved superseded Swift companion evidence
+
+Everything below records the retired V01–V07 implementation and its measurements.
+It does not define the replacement product, satisfy V24/V33, or establish that
+the planned Video tab, local profile or controls exist.
+
+### Verified companion spike — 2026-09-08
 
 `companion/` is an independent Swift package with no third-party or MIDI
 dependencies. The README owns the native Swift build/run commands. Host checks on
@@ -695,7 +731,7 @@ V01 still owns the bounded paid-pilot proposal, source rights, current provider
 terms/privacy/account limits and distribution decisions; V03 owns persisted jobs,
 secure credentials, cancellation, budget admission and quarantined downloads.
 
-## V01 decision record — 2026-09-09
+### V01 decision record — 2026-09-09
 
 This is a conservative dependency and pilot decision, not an authorization to
 spend money, send media to a provider, or distribute a video. The companion stays

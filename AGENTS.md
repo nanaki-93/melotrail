@@ -23,8 +23,9 @@ retired MC/UI/VID plans from Git history.
 - Generation is deterministic for the same inputs/settings/versions/seed and
   targeted by role/occurrence. Include all used dependencies in fingerprints.
 - Full-draft playback is allowed before acceptance; export is accepted-only.
-- Keep six MIDI destinations and one persistent MIDI player. No audio renderer,
-  Python service, sound library, model dependency, mixer or publishing page.
+- Keep six MIDI destinations and one persistent MIDI player. The MIDI workflow
+  has no audio renderer, Python service, sound library, model dependency, mixer
+  or publishing page; planned video-only tools/models stay behind its lazy boundary.
 
 ## Development and removal
 
@@ -59,8 +60,17 @@ separate; one coordinator owns task status and integration.
 
 ## TABI video boundary
 
-The planned optional companion has separate assets, jobs, provider/encoder
-runtime and finished soundtrack input. It must not render MIDI audio, alter the
-mix/master or write the MIDI project. Video implementation is a separate chosen
-workstream; do not revive the legacy release pipeline. Paid generation needs a
-bounded authorized budget. Public upload requires explicit user authorization.
+The planned Video tab is an independent creative workspace inside the Kotlin/
+Compose Melotrail application. Its generic reference assets and free-form prompt
+produce a complete 3–5 minute silent video; Tokyo, trains, coffee and TABI are
+examples, never required presets or acceptance criteria. It needs no MIDI project,
+export, song or soundtrack. Look and shot review are optional refinements.
+
+Keep video projects, assets, jobs, models, provider credentials, media tools and
+outputs outside MIDI storage and the six MIDI destinations. Try the selected
+local generation workflow first; any hosted fallback requires explicit selection
+and a bounded authorized budget. Adding audio in an external Apple editor and
+public upload stay outside Melotrail. The integrated controls and runtime are
+planned in V10–V33 and must not be described as implemented before their rows pass.
+Preserve the existing Swift companion and its evidence as superseded history until
+V30–V31 remove its repository owners; do not revive its soundtrack-led workflow.

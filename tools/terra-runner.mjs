@@ -47,7 +47,7 @@ export function mark(md, id, state, result) {
 export function effectiveStatus(id, reported) {
   if (reported === 'READY_FOR_VALIDATION') reported = 'DONE';
   // These contracts require a real user decision; code/tests cannot satisfy them.
-  return reported === 'DONE' && ['U07', 'Q01', 'Q02', 'Q03', 'V01', 'V02', 'V03', 'V07'].includes(id) ? 'WAITING_USER' : reported;
+  return reported === 'DONE' && ['U07', 'Q01', 'Q02', 'Q03', 'V24', 'V33'].includes(id) ? 'WAITING_USER' : reported;
 }
 export function permitted(file, paths) {
   return paths.some(p => p.endsWith('/') ? file.startsWith(p) : file === p);

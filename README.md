@@ -13,13 +13,19 @@ UI, one persistent player and accepted-only MIDI export. Legacy audio/worker
 runtime has been removed. The original **5/10 feedback** remains the musical
 baseline until the final listening review; tests cannot award a new score.
 
-All unpaid engineering in [PLAN](PLAN.md) and [TASKS](TASKS.md) is complete.
-Start the [final review](docs/VALIDATION.md#final-manual-review) for current
-UI comparisons, MIDI/Logic packets, installation evidence and video demos.
-Eight human acceptance/production gates remain pending.
-A TABI video companion is separately built under `companion/`; it is not shipped
-with, or required by, the MIDI app. Its owned-media boundary and paid-pilot gate
-are documented in [TABI video](docs/TABI_VIDEO.md).
+MIDI engineering is complete. Its UI, listening, Logic and release decisions
+remain in the [final review](docs/VALIDATION.md#final-manual-review). The new
+video workstream in [PLAN §9](PLAN.md#9-video-generation-from-assets-and-a-prompt)
+and TASKS V10–V33 is planned, not implemented: it will add an independent Video
+tab to this Kotlin/Compose application for turning generic reference assets and
+a free-form prompt into a complete 3–5 minute silent video. It needs no MIDI
+project, export, song or soundtrack. Local generation is evaluated first, and
+audio is added later in the user's external Apple editor.
+
+The repository still contains the superseded Swift soundtrack companion and its
+owned technical fixtures pending V30–V31. They are preserved as historical
+evidence and do not satisfy or define the new asset-and-prompt workflow. Six
+human gates remain open: U07, Q01, Q02, Q03, V24 and V33.
 
 ## Run and validate
 
@@ -46,24 +52,21 @@ Output: an immutable complete-song MIDI file, aligned role files and a manifest.
 Import at song start in Logic Pro, confirm tempo/meter and choose instruments.
 Logic Pro performs all audio production. GarageBand is not a supported target.
 
-To build and start the TABI video editor from this checkout, use macOS 14+ with
-Xcode command-line tools and an existing composition request:
+There is no implemented Video-tab command yet. V20 adds the tab and V32 verifies
+the complete in-app route. **Temporary launcher for the superseded Swift
+workflow:** on macOS 14+ with Xcode command-line tools and an existing composition
+request, the current checkout still supports:
 
 ```bash
 make video VIDEO_REQUEST="/path/to/composition-request.json"
 ```
 
 Optionally add `VIDEO_JOBS="/path/to/animation-jobs.json"` to display a saved job
-ledger. See the [native scene editor](companion/README.md#native-scene-editor)
-for input requirements and editor controls.
-
-For the optional MIDI Export handoff, install the native companion separately with
-`sh companion/scripts/install.sh` on macOS. Export shows **Open in TABI…** only
-when a compatible companion is installed; publish a current MIDI package first.
-In TABI, select your finished Logic soundtrack and confirm its lead-in/tail.
-See the [optional handoff](docs/TABI_VIDEO.md#optional-export-handoff-v07a)
-for installation paths and scene preparation. The MIDI app needs no companion
-to build, run, audition or export.
+ledger. See the [historical native scene editor](companion/README.md#native-scene-editor)
+for input requirements and controls. This launcher and the MIDI Export handoff
+remain until V30–V31 replace their owners after the integrated owned-fixture path
+works. The MIDI app builds, runs, auditions and exports independently of them;
+the planned asset-and-prompt workflow is described above.
 
 For musical evaluation, `musicalEvaluation` freezes supplied owned projects before
 generating from isolated copies, and `musicalComparison` exports the separate M01
@@ -79,15 +82,14 @@ No final songs or new listening scores are bundled; missing songs remain explici
 - [MIDI contract](docs/MIDI_CONTRACT.md): input, preservation and export semantics.
 - [UI guideline](docs/UI_GUIDELINE.md): measured references and six-page design.
 - [Validation](docs/VALIDATION.md): automated/manual checks and retained evidence.
-- [TABI video](docs/TABI_VIDEO.md): assets, generative animation and optional companion.
+- [TABI video](docs/TABI_VIDEO.md): planned in-app asset-and-prompt video contract and preserved artistic/history evidence.
 
 Original UI/TABI/train references and Logic Pro captures remain in `docs/pictures`
 and `docs/checks`. Git is the archive for retired plans and logs. License: MIT.
 
-Automatic execution is configured in [TASKS](TASKS.md#configured-automatic-execution):
-20-minute wakes, small executable slices, Astra Extra High with one retry then Sol High,
-bounded recovery of concrete review findings, and fresh review. Successful commits
-advance `codex/terra-batched-implementation`
-and fast-forward the clean `codex/terra-live` project checkout. Tracked edits are
-preserved and reported if they prevent syncing. Restart `make desktop` to see new
-code. Use the runner `status` command in TASKS for the active stage and evidence.
+Sequential video implementation is configured in
+[TASKS](TASKS.md#configured-automatic-execution): 20-minute wakes, one Sol High
+writer at a time, coordinator validation, fresh review and bounded Astra High
+repair for concrete failures. Successful rows advance
+`codex/video-generation-sequential`; tracked user edits remain protected. The
+retired Terra CLI runner and its local configuration do not control this run.
