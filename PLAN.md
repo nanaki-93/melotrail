@@ -1,10 +1,24 @@
 # Melotrail improvement plan
 
-Updated: 2026-09-13. Status: unpaid engineering complete; final manual acceptance pending.
+Updated: 2026-09-13. Status: MIDI engineering complete with manual acceptance
+pending; replacement asset-and-prompt video generation planned, not implemented.
 
 This is the only roadmap. [TASKS.md](TASKS.md) owns implementation order and
 status. It replaces the MIDI Core and UI task suites; their history stays in
 Git. Existing working behavior is the starting point, not work to repeat.
+
+**Current video decision (2026-09-13):** the user rejected the Swift companion
+and soundtrack-led workflow. Section 9 and TASKS V10–V33 replace V01–V07.
+Deliver a Video tab inside Melotrail: import reference assets, write a prompt,
+generate/review clips and export a complete **3–5 minute silent
+video**. Try local generation first; audio editing/synchronization happens in
+the user's external Apple editor. This supersedes conflicting companion,
+soundtrack-input and no-video-runtime guidance in older references and AGENTS;
+V10 reconciles those owners. The user subsequently authorized sequential
+scheduled implementation on 2026-09-13: Sol High implements each task, Astra High
+repairs concrete failures, and each validated task produces one local commit.
+TASKS owns the execution policy. Model setup choices, paid generation and public
+upload still require their explicitly stated prerequisites.
 
 ## 1. Product decision
 
@@ -30,11 +44,12 @@ or legacy removal. Replace them with automated comparison preparation and final 
 visual and Logic release checks in [Validation](docs/VALIDATION.md). Human listening
 still determines musical acceptance; passing tests cannot award that acceptance.
 
-TABI animation is a second, downstream workstream. Plan an **optional separate
-video companion**, with its own asset library and jobs, consuming a finished
-Logic Pro soundtrack. This recommendation keeps media generation and encoding
-out of the MIDI application. The video backlog is concrete but conditional;
-this planning request does not launch paid generations or publish anything.
+TABI video is an independent creative workspace inside the same Kotlin/Compose
+application. It needs no MIDI project, export, song or soundtrack. Its assets,
+generation jobs and outputs stay separate from MIDI data. The core function is
+**uploaded assets + a user-written prompt → generated video**. TABI riding a
+train through Tokyo and drinking coffee was an example, not a required scenario,
+preset, action list or acceptance gate. Content comes from each user request.
 
 ## 2. What exists and what needs improvement
 
@@ -95,8 +110,10 @@ Preserve these invariants through every task:
    MIDI and validation. AI is unnecessary for the musical workflow.
 6. Logic Pro owns instruments, rendering, mixing and mastering. GarageBand is
    outside the supported destination claim.
-7. Kotlin/JVM owns the app. No Python service, audio processing, model runtime,
-   video encoder or publishing dependency belongs in the MIDI application.
+7. Kotlin/JVM owns the app, including video orchestration and Compose controls.
+   Video may invoke configured local inference and video-only media tools, or
+   an explicitly selected hosted API. These stay outside the MIDI graph. Do not
+   build another Melotrail Swift app, audio renderer, mixer or uploader.
 8. No maintenance or migration of obsolete audio projects. Current MIDI project
    safety must survive schema changes; unsupported versions fail before writing.
 
@@ -117,13 +134,18 @@ Create/open project
   -> Use the draft, with undo available
   -> Export verified complete-song and role MIDI files
   -> Finish instruments and sound in Logic Pro
-  -> Optionally create a TABI video from the finished soundtrack
+  -> Separately generate silent TABI visuals in the Video tab
+  -> Combine visuals and finished music in the user's external editor
 ```
 
 Six MIDI destinations remain: Project, MIDI, Structure & Harmony, Arrange,
 Review, Export. A common song map, selected occurrence and persistent player
 connect them. Draft playback does not require per-role acceptance. Export uses
 only current accepted work.
+
+An application-level **MIDI / Video** tab switch makes video reachable from an
+empty launch. Video owns its project selection and silent preview; it adds no
+step to the six-destination MIDI arrangement/export pipeline.
 
 The principal product improvement is **plan the song once, listen to the whole
 song, repair specific musical problems**. A batch of unrelated section patterns
@@ -335,33 +357,232 @@ other references should stay short and non-overlapping. Runtime-generated
 reports and benchmark artifacts belong in ignored build output or user storage,
 not an expanding checked-in execution diary.
 
-## 9. TABI video direction
+## 9. Video generation from assets and a prompt
 
-The existing asset prompt asks for a very large library; the old future plan
-only promised still-image pan/zoom. Neither is an adequate first implementation
-of the requested generative character animation.
+### 9.1 Outcome and mismatch
 
-Build one cohesive pilot before producing dozens of assets: approved TABI
-identity, one train interior, day/dusk/night scenery, a few props and several
-short restrained action loops. First compare the four pastel art directions in
-[TABI video](docs/TABI_VIDEO.md#pastel-style-exploration-and-reusable-generation-brief)
-against the newly supplied pastel references. The current visual direction is
-simple, cozy and zen, with sparse artistic scenery and a limited palette;
-TABI may be recolored to match. A chosen style still requires actual user review.
-Use image-to-video with locked references for
-blink/breath/write/look-out actions, and deterministic layered/parallax
-composition for most of the duration. Reject identity drift and unstable loops;
-do not ask a model to reinvent the entire character and train for every scene.
+The Swift package opens a prepared `SceneCompositionRequest`, reads a finished
+soundtrack and approved layers, previews their composition and offers a separate
+CLI encode. It lacks the requested upload → prompt → AI video journey. Do not
+port that product workflow to Kotlin. An encoder or synthetic demo does not
+establish that generation from assets and a prompt works.
 
-The companion's input is the musician's finished soundtrack and optionally an
-immutable MIDI export manifest for scene suggestions. MIDI contains no final
-sound. Preview and output must share timing, crop and transition calculations.
-A bounce's lead-in/tail or changed tempo requires explicit video alignment.
+Deliver a complete **180–300 second silent video**, default **240 seconds**,
+for adding music in an external Apple editor and later publishing on YouTube.
+No soundtrack selection, MIDI timing, beat detection, lip sync, music generation,
+mixing or public upload. The only delivered creative application is Melotrail.
 
-The full design, job safety, generation-cost controls, commercial-use checks,
-YouTube delivery considerations and pilot gates are in
-[TABI video](docs/TABI_VIDEO.md). Long compilations, multiple providers, vertical
-variants and direct upload wait until one full-song pilot is convincing.
+### 9.2 Visible workflow
+
+1. Open **Video** from the normal window and create/open a video project.
+2. Add one or more supported reference assets using file selection or working
+   drag-and-drop. Optional roles include subject/character, environment, style
+   or complete scene; no particular role or combination is mandatory. Display
+   which references each generation will consume and preserve originals.
+3. Write a free-form prompt describing the desired video. Optional controls for
+   actions, motion, style and guidelines refine it; a named scenario or preset
+   is never required. Set total duration (3–5 min). No JSON, masks, node graph,
+   manual cutouts or pre-cut animation is required for the normal workflow.
+4. Click **Generate video**. The app prepares any needed scene looks and short
+   shots internally, estimates the work, and runs the selected backend. Optional
+   advanced controls let the user review looks or edit individual shot prompts;
+   neither a storyboard nor manual keyframe approval is required for a draft.
+   Generated intermediate looks retain their unreviewed status until reviewed.
+5. Play the generated draft in the tab. Keep, reject or regenerate clips, refine
+   the prompt and review the complete silent cut. Earlier results survive edits.
+   Display real progress, cancellation/recovery and unique/reused footage.
+6. Export a new silent MP4 and reveal it in Finder. Adding music in the user's
+   chosen Apple editor is the next step outside Melotrail.
+
+Reuse the current theme and reference 08's broad preview composition. At
+1280×900 the next action and preview are visible; at 720×900 uploads, prompt,
+generation and review remain keyboard-reachable. Put technical IDs/hashes/model
+internals in details. Setup explains missing tools/models; after setup, normal
+creation does not require a terminal or operating another creative app.
+
+### 9.3 General reference and prompt contract
+
+The supplied assets and prompt are the content authority. Preserve recognizable
+subjects and the requested reference characteristics while allowing the scene,
+actions, camera, environment and style changes the prompt asks for. Character,
+background and style references are optional roles, not a mandatory TABI kit.
+Conflicting instructions or references require a visible choice rather than a
+silent override. Do not force headphones, a cup, a seated pose or pastel style.
+
+Reusable guidelines address reference fidelity, object coherence, continuity
+where requested, temporal stability and avoiding unintended visual artifacts.
+Camera movement, background movement, pace and action come from the prompt or
+explicit optional settings. A static background can be correct for one request
+and incorrect for another; evaluate generated motion against the actual request.
+
+The Tokyo train/coffee idea may appear as optional example text or a test input.
+It must not become a required preset, hardcoded scene model, default prompt
+injection or release criterion. For that example, passing scenery and coffee
+actions matter only because the example prompt requests them. Any other supported
+assets and prompt must use the same main workflow, without a separate custom mode.
+
+### 9.4 Local first and a measured choice
+
+Read-only host inspection on 2026-09-13 found **Apple M5 Pro, 20 GPU cores,
+48 GB unified memory** and about 441 GiB free. This justifies a local trial,
+not a claim about render time or visual quality. No model was downloaded or
+benchmarked while writing this plan.
+
+First candidate: **Draw Things' local CLI**, a supported reference-image/editing
+model for scene keyframes and a quantized **LTX-2.3 distilled** video profile.
+Official releases list LTX-2.3 and M5 support; current CLI source has image input,
+frame settings, offline operation and video output. Pin a tested released binary
+and all model/encoder/VAE files, quantization and settings. GUI support does not
+prove identical support in the released CLI.
+[Draw Things releases](https://drawthings.ai/downloads/),
+[official CLI source](https://github.com/drawthingsai/draw-things-community/blob/main/Apps/DrawThingsCLI/DrawThingsCLI.swift).
+
+V11 proves reference-conditioned scene creation AND moving video through an
+automatable interface. Try at most two bounded video profiles: LTX first, then
+Wan 2.2 I2V if concrete motion/identity failures justify it. Do not silently drop
+references or invent multi-reference API support. If Draw Things cannot expose
+the required workflow, assess **ComfyUI** as the single alternate local backend;
+Apple Silicon installation and an HTTP/WebSocket API are documented. Exact
+operators, precision and memory still need host evidence. Its Python environment
+would be external video tooling, never a restored Melotrail worker. Ship one
+local backend, not both.
+[ComfyUI macOS](https://docs.comfy.org/installation/desktop/macos),
+[ComfyUI API](https://docs.comfy.org/development/comfyui-server/comms_routes).
+
+Setup shows required disk space and gets an explicit download choice. Store
+models outside Git/MIDI projects; opening the app never downloads them. Once
+installed, local generation is offline, with one inference job at a time on this
+Mac. Measure cold load, seconds per generated second, peak memory/swap, failures
+and accepted takes per attempt. Estimate the whole cut from useful footage and
+retry rates. Proposed usability targets: ≤10 minutes per accepted 5–10 second
+720p take and ≤6 hours for the default cut's planned generation. These are
+targets, not measured facts; the user may accept slower operation.
+
+If local fidelity, motion, automation or practical speed fails, recommend
+**Runway**: reference-conditioned scene images followed by image-to-video. Its
+API documents both stages; exact models, reference counts, limits, pricing and
+cancellation must be checked again during integration. This is an optional
+fallback, with an explicit mode switch, reference-upload choice and capped paid
+pilot. Never silently send local assets to a cloud service. No hosted adapter
+is required if the local route passes.
+[Runway guide](https://docs.dev.runwayml.com/guides/using-the-api/),
+[models](https://docs.dev.runwayml.com/guides/models/),
+[pricing](https://docs.dev.runwayml.com/guides/pricing/).
+
+### 9.5 Producing 3–5 minutes
+
+Generate short shots rather than claiming a single five-minute inference.
+**Unique footage is the default while the user's reuse preference is pending.**
+A four-minute unique cut needs roughly 30–60 useful 5–10 second takes, with the
+exact count increasing for trims/transitions and failed attempts. The user may
+instead choose an efficient reuse mode, proposing roughly 12–18 distinct takes
+and explicitly reviewed repeats. Supporting both is a small shot-planning choice,
+not permission to silently loop the first clip into a full-length deliverable.
+
+Derive exact net duration from actual trim ranges and transition overlap. Show
+unique generated seconds, repeated seconds and estimated work/cost before a
+batch. Reused footage must never be presented as newly generated. When no reuse
+is selected, every timeline placement needs its own selected generated take;
+report missing unique seconds and allow generating more material.
+
+Vary shots according to the prompt and optional shot overrides while respecting
+its continuity and motion requirements. Reuse only takes the user marks
+repeatable. Never reverse actions or motion to manufacture a loop.
+Show every join; a prompt or similar first/last frame cannot establish a seamless
+loop. End/start loopability is optional; a complete 3–5 minute cut is mandatory.
+
+Start with a generic duration/shot planner and editable cards, without requiring
+a separate local language model. Preserve the free-form prompt and offer optional
+user-written per-shot overrides; do not pretend to infer a story/action list from
+arbitrary text or inject a preset story. Compile selected reference roles and
+optional guidelines into backend-supported inputs. Pin the look used for each
+shot, recording whether it was user-approved or an automatic draft intermediate.
+Preserve that reference where continuity is requested and re-anchor rather than accumulating visual drift.
+
+### 9.6 Architecture and data
+
+Add an app-level tab boundary above `MidiCoreWorkspaceShell`; retain its six
+MIDI destinations. Construct video services lazily in a separate composition.
+Missing models/credentials/media tools cannot prevent MIDI startup or export.
+Video works without a MIDI project. Entering Video pauses MIDI audition without
+losing its position; silent video preview creates no MIDI player.
+
+New domain/application/adapters live under `app.melotrail.video`, and presentation
+under `app.melotrail.desktop.video`. MIDI project/application code must not import
+video; only the app composition root coordinates both workspaces. A new video
+project schema owns references, scene looks, immutable takes, selection/assembly,
+job attempts and export snapshots. Store it in a chosen video directory outside
+MIDI project/export paths. No Swift session/ledger or old-project migration.
+
+Import copies selected media, checks decoded content/geometry/limits and pins
+digests. Resize or remove metadata only in derived upload copies. Fingerprints
+include all consumed assets, prompt versions, models/workflows and settings.
+They identify requests; AI output is not guaranteed deterministic even with seeds.
+
+Persist attempts before local launch or hosted submission. Recover across tab
+switches and app restart. Interrupted local inference is recoverable work, not
+a completed take. Ambiguous hosted submissions require reconciliation; never
+blindly retry a possibly charged request. Bound attempts, disk/memory/time and
+concurrency. Cancel only the app's own jobs/processes, not another app's shared
+queue. Unknown progress/cost stays unknown. New takes never overwrite selections.
+
+Use one pinned **FFmpeg/ffprobe** distribution for video-only decode/assembly/
+validation, invoked from Kotlin. V12 proves macOS support, packaging and exact
+codec/preview behavior using owned fixtures. Use argument arrays, bounded pipes
+and job-local temporary directories; reap owned processes on cancellation.
+Record distribution/build options/notices and model terms. No new Swift host,
+audio pipeline or port of the old soundtrack compositor.
+[FFmpeg documentation](https://ffmpeg.org/ffmpeg.html),
+[distribution considerations](https://ffmpeg.org/legal.html).
+
+### 9.7 Delivery and real acceptance
+
+Output: landscape **1920×1080 H.264 MP4**, square pixels, a constant frame rate
+chosen from the proven generation profile (initial target 24 fps), **zero audio
+streams**, and the selected 180–300 second duration. Record native generation
+resolution/cadence and explicit conversion. Resizing 720p to 1080p is not native
+1080p generation; review its quality. Discard model-generated audio during video
+normalization; do not introduce soundtrack editing to do so.
+
+Validate the full export's decodability, stream count, dimensions, frame cadence
+and duration before publishing to a new filename. Preserve accepted takes;
+keep failed partials out of the results gallery. Export provenance contains no
+credentials. Test actual import/playback in the user's chosen Apple editor;
+music placement, synchronization and public upload remain outside scope.
+
+**V24 early visual checkpoint:** one generated look and three real clips: a
+base assets/prompt case, a materially different prompt with the same assets, and
+a changed-reference case. Check reference fidelity, visible compliance with the
+requested scene/action/motion/style, coherent objects and temporal stability.
+TABI identity is checked when TABI references are supplied. No location, prop,
+action or camera mode is mandatory. Obtain actual user feedback before claiming
+this approach works. Unpaid storage/UI/assembly
+work can proceed while a human decision is pending; synthetic media never counts
+as that decision. Local failure triggers a reviewable hosted comparison proposal.
+
+**V33 final checkpoint:** start with only user-chosen reference assets and a
+free-form prompt in Melotrail, then generate, review, assemble and export one
+real 3–5 minute video matching that request. The user reviews the full cut,
+reference fidelity, prompt adherence, repetition and joins at normal speed.
+Technical tests prove integrity; visual quality and channel suitability require
+actual review. A contrasting prompt must work through the same primary flow.
+
+### 9.8 Removal and boundaries
+
+V30–V31 remove `companion/`, exclusive tests/scripts/resources and the MIDI Export
+companion handoff after an integrated owned-fixture path works. Preserve original
+TABI/UI/train references, Logic evidence, MIDI projects/exports and external
+user media/saved outputs. Do not delete installed applications or external
+sessions as repository cleanup. No retained Swift bridge or compatibility mode.
+Replace the temporary Swift Makefile target with `make video` opening the same
+Melotrail Video tab, without a JSON argument.
+
+V10–V33 are the new queue. V24/V33 need human evidence. V25 is an optional hosted
+adapter activated only if the user chooses it after local evaluation. Missing
+model setup, credentials, paid budget or visual decisions block their exact
+gate, not independent engineering. Long compilations, vertical formats, general
+timelines, LoRA training and multiple simultaneously supported providers are
+outside this first delivery.
 
 ## 10. Delivery order and acceptance
 
@@ -372,13 +593,15 @@ variants and direct upload wait until one full-song pilot is convincing.
 | Musical preparation | M02–M03, U04 | Explainable melody/harmony context, explicit chord durations and safe song extent |
 | Song arrangement | M04–M09, U05–U06 | Melody-compatible piano, deliberate section plan, coordinated roles and targeted repairs |
 | Validation | U07, Q01–Q03 | Visual approval, improvement on frozen music cases, fresh Logic checks and clean build/install |
-| Optional video | V01–V07 | Isolated companion, cost-bounded generation, identity-consistent pilot with finished soundtrack |
+| Video replacement | V10–V33 | Reference assets + free-form prompt → complete silent video; measured local trial; Swift removal |
 
 The user chose on 2026-09-11 to perform manual listening, scores, Logic tests
 and visual/video review only after all unpaid engineering. TASKS parks these
-gates as WAITING_USER and excludes them from automatic attempts. Q03a
-(clean build/startup), V07a (optional companion handoff) and Q03b (final
-evidence and review handoff) are complete. Release and production authorizations stay pending. Never claim the current 5/10 result has improved before comparison.
+MIDI gates as WAITING_USER and excludes them from automatic attempts. Q03a and
+Q03b retain completed MIDI evidence. The new video request replaces the old V
+gates and adds an early visual checkpoint at V24. Release and production
+authorizations stay pending. Never claim the musical 5/10 result has improved
+before comparison.
 
 Proposed release targets: median overall and piano/melody-fit scores at least
 8/10 across five varied songs, every song at least 7/10, zero melody mutation,
@@ -401,11 +624,12 @@ split the remaining large features. Each unsuffixed row finishes its remaining
 slice and checks the combined parent acceptance criteria. Dependencies remain
 explicit; completed children are reused. No extra task or execution-log documents.
 
-**Engineering complete:** reuse the integrated MIDI, UI and companion work.
-Q03b supplies current artifacts and the single final manual-review entry point
-in Validation; the eight WAITING_USER gates are the remaining work. User scores,
-Logic playback and foreground compositor capture run afterward; ordinary automated
-tests, builds, frame/semantic checks and independent code review remain per-task.
+**MIDI engineering complete; video replacement pending:** reuse integrated MIDI
+and UI behavior. Q03b remains the MIDI review entry point. V10–V33 replace the
+Swift workstream; old V completion does not satisfy them. This planning update
+does not start/reconfigure the existing heartbeat. A later implementation run
+must select the new queue and exact allowed paths. Automated tests, builds,
+frame/semantic checks and independent code review remain per-task.
 
 **Execution:** the existing 20-minute heartbeat runs the tested local runner's
 `advance` command. One Astra Extra High writer implements; the host coordinator runs
@@ -438,11 +662,10 @@ keep unresolved work recoverable.
 
 **Finish engineering without faking acceptance:** Q01a/Q02a/U07a–b/Q03a/Q03b prepare
 musical, Logic, visual and clean-install evidence independently of the final user
-decisions. The selected unpaid companion work uses a separately built
-`companion/` directory, owned media and provider fakes until actual generation
-is budget-authorized. Asset/rights and paid-pilot gates apply to production media,
-not to independent job/preview/encoder code. Final listening, visuals, Logic and
-TABI pilot approvals remain real human decisions. Public upload is separate.
+decisions. New video plumbing uses owned fixtures and fake backends in ordinary
+tests; real local inference is a separate bounded host check. V24/V33 retain
+actual visual decisions and a hosted pilot retains its spending authorization.
+Local model quality, user listening and TABI identity cannot be approved by tests.
 
 The scheduler notifies on integrated changes, new failures or required input and
 stays quiet during unchanged activity. Local scheduled runs require the computer

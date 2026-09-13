@@ -1,6 +1,6 @@
 # Implementation tasks
 
-Authority: [PLAN](PLAN.md). Updated: 2026-09-13. Task status is authoritative in the integration branch queue.
+Authority: [PLAN](PLAN.md). Updated: 2026-09-13 for the integrated, local-first TABI video replacement. Task status is authoritative in this queue.
 The old MC/UI/VID queues are retired. Reuse existing code and tests; do not
 replay completed import, draft, acceptance, export or UI-foundation work.
 
@@ -18,8 +18,10 @@ replay completed import, draft, acceptance, export or UI-foundation work.
 - Dependencies in the queue are mandatory. The coordinator chooses the earliest
   ready mandatory task, skips an external wait, and records why. Optional tasks
   are excluded unless included in the implementation request.
-- Configured implementer: Astra Extra High. Use a fresh review context and the same
-  task contract; reviewer approval requires evidence, not confidence language.
+- Configured implementer: Sol High (`gpt-5.6-sol`, `high`). On a concrete
+  implementation, test or review failure, use Astra High (`gpt-6-astra`, `high`)
+  with the exact failure evidence and preserved candidate. Use a fresh Sol High
+  review context; reviewer approval requires evidence, not confidence language.
 - Inspect `git status` first. Preserve unrelated work. Use `codex/` branches and
   isolated worktrees from the approved integration base; never reset the user's
   working tree. Commits must contain only task-owned changes.
@@ -40,18 +42,35 @@ States: TODO, RUNNING, REVIEW, WAITING_USER, BLOCKED, DONE, OPTIONAL.
 Only the coordinator updates the queue when parallel workers are explicitly used.
 A manual gate stays WAITING_USER until actual evidence arrives. Per the user's
 2026-09-11 decision, perform all listening scores, Logic import/play/reopen,
-foreground desktop capture and human visual/video review at the end of unpaid
-engineering. Do not admit these rows to automatic worker/retry/review runs merely
+foreground desktop capture and MIDI visual review at the end of unpaid
+MIDI engineering. The newer video request introduces an early V24 visual
+checkpoint; independent engineering continues while that decision is pending. Do not admit these rows to automatic worker/retry/review runs merely
 to rediscover missing evidence. Automated tests, builds and technical review still
 run for every implementation; code failures retain their normal recovery policy.
 Production rights, identity and spending authorization remain required before
 production media use or paid generation; they do not block owned-fixture code.
 
-Automatic engineering is complete: **60 of 68 queue rows DONE**. The remaining
-**eight rows are WAITING_USER** for final listening, Logic, foreground/UI,
-release and production video decisions. Q03b's single entry point is
-[Final manual review](docs/VALIDATION.md#final-manual-review). Do not admit or
-retry these gates without new evidence; notify once and pause automatic work.
+MIDI engineering is complete; U07/Q01/Q02/Q03 retain their real manual gates.
+The user's 2026-09-13 request retires the Swift V01–V07 workstream and its four
+production gates. Their code/evidence remain historical until V30–V31 remove
+exclusive runtime owners. **V10–V33 are the new video queue**, starting TODO;
+old completion does not count toward the replacement. V24/V33 require visual
+feedback, and V25 is an optional hosted fallback. The user authorized the
+sequential scheduler, Sol High implementation, Astra High failure repair and one
+local commit per validated task on 2026-09-13. The first implementation slice is
+V10; the scheduler policy below supersedes the retired autopilot configuration.
+Q03b's [MIDI review](docs/VALIDATION.md#final-manual-review) remains available.
+
+The current video contract is PLAN §9: one Video tab inside Melotrail, assets +
+prompt → real generated clips → a complete 3–5 minute silent video. Local first
+on the user's M5 Pro/48 GB Mac; no soundtrack/MIDI prerequisite. Tokyo, the train
+and coffee actions were illustrative only. Assets and a free-form prompt drive
+all scenarios through the same primary workflow; no required scene preset or
+character/background pair. The primary action is Generate video; look/shot
+review controls are optional refinements, not prerequisites for a draft. This correction supersedes
+older companion/soundtrack guidance in AGENTS and owner documents; V10 aligns
+those references. Preserve existing Makefile/README edits until their named
+replacement tasks. No docs/tasks.md or second implementation queue.
 
 ## Queue
 
@@ -104,27 +123,32 @@ retry these gates without new evidence; notify once and pause automatic work.
 | Q02a | Generate current Logic matrix and manifests | U06, M03, M07, M08 | DONE | Recovered 21 deterministic probes (20 current packages and one expected import rejection), semantic re-import/project reopen and immutable inventories. Export copies omit bank hints while protected source/expression survives. Focused/full checks, build and independent review: ~/.codex/melotrail-terra/q01a-q02a-repair-evidence. Actual Logic import/play/reopen remains Q02. |
 | Q02 | Run the current Logic Pro matrix | Q02a, Q03b | WAITING_USER | Final manual Logic import/play/save/reopen deferred by user until engineering ends. Q02a packages are prepared; Q03b refreshes final build identity and instructions. No Logic pass claimed. |
 | Q03a | Prove clean native build and startup | F06, U06 | DONE | Recovered clean-install verifier; fixed early companion-crash observation (150 ms→2 s) found under clean-run load, with delayed-crash/persistent-process regressions. Uncached architecture/22 focused checks, 581 full tests, build, private DMG installation/bundled-JVM startup and independent review passed. 73 production Kotlin files/27,702 lines (62.4% fewer than baseline); no source media deleted. Evidence ~/.codex/melotrail-terra/final-engineering-recovery-evidence/q03-*. |
-| Q03b | Prepare the final manual-review handoff | Q03a, V07a | DONE | Fresh c20aecf583 implementation packets: empty final-song set (5/3 missing), development comparisons, 20 Logic packages/1 expected rejection/571 verified hashes, 66 pinned UI comparisons, 28 frame replays, timing and owned-video demos. Technical checks/build and independent review passed; README/Architecture/Validation reconciled. Evidence ~/.codex/melotrail-terra/final-review-2026-09-13; all human gates remain pending. |
+| Q03b | Prepare the final manual-review handoff | Q03a | DONE | Fresh c20aecf583 implementation packets: empty final-song set (5/3 missing), development comparisons, 20 Logic packages/1 expected rejection/571 verified hashes, 66 pinned UI comparisons, 28 frame replays, timing and owned-video demos. Technical checks/build and independent review passed; README/Architecture/Validation reconciled. Evidence ~/.codex/melotrail-terra/final-review-2026-09-13; all human gates remain pending. |
 | Q03 | Prove clean install and obtain MIDI release decision | Q03b, U07, Q01, Q02 | WAITING_USER | Final MIDI release decision waits for the end-of-engineering manual review. No release approval inferred from automatic checks. |
-| V01a | Prove an independently built companion boundary | F01 | DONE | Host ProRes/PCM encode, decoded preview timestamps and byte-preserved soundtrack proven; temporary-only outputs. Focused checks, Swift release build, 363 MIDI tests, absent-companion build/tests and fresh Terra review PASS. Evidence ~/.codex/melotrail-terra/v01a-repair-evidence. |
-| V01 | Prove the isolated video/media boundary | V01a | WAITING_USER | Engineering boundary complete; production provider/budget/rights/identity authorization remains pending. Review together at the end; no paid generation authorized. |
-| V02a | Implement immutable asset manifest and validation | V01a | DONE | Recovered Swift manifest; fixed typed-error compilation and no-overwrite snapshot publication. Native library regressions and MIDI test/build checked; production kit/rights approval remains V02. Evidence ~/.codex/melotrail-terra/video-recovery-evidence. |
-| V02b | Import and inspect the pilot asset kit | V02a | DONE | Recovered local import/inspection; fixed infinite Git ancestry traversal and symlink write escape. Native owned-fixture regressions and MIDI test/build validated; production rights/identity remain V02. Evidence ~/.codex/melotrail-terra/v02b-repair-evidence. |
-| V02 | Build the approved TABI asset library | V02b | WAITING_USER | Production asset rights and identity approval remain pending for final review. Local import/inspection code is complete; use owned fixtures for independent engineering. Prior candidate preserved. |
-| V03a | Implement resumable cost-bounded animation jobs | V02b | DONE | Recovered durable job coordinator with cross-process ledger locking and concurrent duplicate/budget/in-flight regressions. Native checks and MIDI test/build validated; no live provider request. Evidence ~/.codex/melotrail-terra/v03a-repair-evidence. |
-| V03b | Implement one provider adapter and manual clip import | V03a | DONE | Recovered adapter and manual import; fixed staged MOV/MP4 probing and CLI encoder. Native fake-HTTP/owned-media regressions, MIDI test/build and fresh review checked. No live request or paid pilot. Evidence ~/.codex/melotrail-terra/v03b-repair-evidence. |
-| V03 | Add one cost-bounded generative-animation adapter | V03b, V01, V02 | WAITING_USER | Provider/job implementation complete in V03a/V03b. Production micro-action identity/loop review and paid pilot wait for final review plus explicit rights/budget authorization. |
-| V04a | Plan deterministic soundtrack and scene timing | V03a | DONE | Recovered rational timing planner and fixed Swift assertions; validated decoded durations, pinned soundtrack changes, explicit alignment and CLI caller. Native debug/release regressions, 410 JVM tests, build and fresh Terra review passed. Evidence ~/.codex/melotrail-terra/v04a-repair-evidence. |
-| V04 | Implement deterministic scene composition | V04a | DONE | ecfa75607cdd; Repaired all five reported Swift compile errors by evaluating throwing scene-resolution, frame, and file-read operations before passing their results to the non-throwing assertion autoclosure. Regression semantics remain unchanged.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T12-00-00-939Z-V04 |
-| V05a | Build real scene preview and soundtrack transport | V04 | DONE | fb33495b7612; Repaired preview synchronization within V05a scope. Public current-frame rendering now derives from the sole AVPlayer’s actual time, the CLI caller uses that snapshot, and regression coverage plays across a scene boundary while checking advancing frame/time pairs and shared frame-rate mapping. Changes remain uncommitted; TASKS was not edited.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T12-16-36-129Z-V05a |
-| V05b | Open a real companion editor window | V05a | DONE | Recovered reachable native editor; fixed loading-window ownership crash and clipped layout. Real release launch/selection/play/seek/close and error-window captures verified; native checks, 410 JVM tests, build and independent review passed. Evidence ~/.codex/melotrail-terra/v05b-repair-evidence. |
-| V05c | Connect crop, motion and transition controls | V05b | DONE | Recovered real editing controls; fixed scroll-aware capture and whole-scene crop geometry. Native pixel oracle/parity, visible controls, preserved sources/player, 410 JVM tests, build and fresh Terra review verified. Evidence ~/.codex/melotrail-terra/v05c-repair-evidence. |
-| V05d | Persist editor sessions and expose asset/job state | V05c | DONE | Repaired pinned save/reopen with source-safe storage, transactional same-player restore, truthful cost/unknown-progress state, and local Stop/Play/Restart. Native regressions and release captures, 410 JVM tests and build verified; fresh Terra review. Evidence ~/.codex/melotrail-terra/v05d-repair-evidence. |
-| V05 | Validate the complete editor and compact keyboard flow | V05d | DONE | Recovered keyboard routing and stable inspector focus; responsive release captures at 1536×1024, 1280×900 and 720×900 with exact size/geometry checks. Native regression/release, 414 JVM tests, build and independent Terra review passed. Evidence: ~/.codex/melotrail-terra/v05-repair-evidence; production artistic approval remains human. |
-| V06a | Implement bounded encoder process and output staging | V01a | DONE | Recovered native encoder process; repaired Swift compile errors, pre-launch cancellation, isolated input snapshots, process-group teardown, bounded diagnostics/callbacks, redaction and cleanup. Owned process regressions, native release and MIDI test/build checked. Episode codec/parity remains V06. Evidence ~/.codex/melotrail-terra/video-recovery-evidence. |
-| V06 | Encode, validate and publish local video outputs | V06a, V05 | DONE | Recovered candidate; repaired Swift types, transparent-buffer noise, A/V backpressure, late cancellation and paired publication. Selected ProRes/PCM MOV proven at 320×180 mono/1s and 1920×1080 stereo/12s, with exact decoded PCM, frame/timeline probes and provenance. Native/release CLI, 433 MIDI tests, build and fresh Terra review passed; evidence ~/.codex/melotrail-terra/v06-repair-evidence. Full-song/production approval remains V07. |
-| V07a | Add capability-checked optional Export handoff | V06, U06 | DONE | Recovered immutable snapshot handoff and separate installer; repaired exact UI assertions and opaque/readable intake rendering, including Aqua-host contrast. 572 JVM tests, build, native regressions/release installation, inspected captures and independent review passed. Evidence ~/.codex/melotrail-terra/final-engineering-recovery-evidence/v07-*. Final musical/production approvals remain pending. |
-| V07 | Complete a TABI music-video pilot and optional handoff | V07a, V03, V02, Q03 | WAITING_USER | Real full-song pilot and human artistic/sound/rights decision deferred until final review and required production authorizations. Optional handoff implementation remains independently runnable as V07a. |
+| V10 | Align video contracts and queue guards | — | TODO | Planned 2026-09-13; not implemented. |
+| V11 | Prove one local generation workflow | V10 | TODO | Planned 2026-09-13; not implemented. |
+| V12 | Prove video-only media runtime | V10 | TODO | Planned 2026-09-13; not implemented. |
+| V13 | Persist independent video projects | V10 | TODO | Planned 2026-09-13; not implemented. |
+| V14 | Import reference assets | V13 | TODO | Planned 2026-09-13; not implemented. |
+| V15 | Compile asset prompts and shot proposal | V13, V14 | TODO | Planned 2026-09-13; not implemented. |
+| V16 | Persist bounded recoverable jobs | V13 | TODO | Planned 2026-09-13; not implemented. |
+| V17 | Connect the chosen local backend | V11, V12, V14, V16 | TODO | Planned 2026-09-13; not implemented. |
+| V18 | Generate scene looks with optional review | V14, V15, V16 | TODO | Planned 2026-09-13; not implemented. |
+| V19 | Generate clips and preserve takes | V12, V15, V16, V18 | TODO | Planned 2026-09-13; not implemented. |
+| V20 | Add Video tab and independent create/open | V13, V16 | TODO | Planned 2026-09-13; not implemented. |
+| V21 | Wire uploads brief and local setup | V14, V15, V20, V11 | TODO | Planned 2026-09-13; not implemented. |
+| V22 | Wire generation look selection and retry | V17, V18, V19, V20, V21 | TODO | Planned 2026-09-13; not implemented. |
+| V23 | Play actual generated video in the tab | V12, V19, V22 | TODO | Planned 2026-09-13; not implemented. |
+| V24 | Review real asset-and-prompt generation | V11, V22, V23 | WAITING_USER | Actual visual evidence/decision required; do not auto-admit. |
+| V25 | Add selected hosted fallback | V11, V16, V18, V19, V21 | OPTIONAL | Only after local evidence and explicit user selection. |
+| V26 | Assemble selected takes to exact duration | V15, V19 | TODO | Planned 2026-09-13; not implemented. |
+| V27 | Encode and validate silent MP4 | V12, V19, V26 | TODO | Planned 2026-09-13; not implemented. |
+| V28 | Expose full-cut review and export | V23, V26, V27 | TODO | Planned 2026-09-13; not implemented. |
+| V29 | Prove installed app and runtime isolation | V20, V23, V28 | TODO | Planned 2026-09-13; not implemented. |
+| V30 | Remove MIDI soundtrack companion handoff | V28, V29 | TODO | Planned 2026-09-13; not implemented. |
+| V31 | Delete Swift companion and launch wiring | V29, V30 | TODO | Planned 2026-09-13; not implemented. |
+| V32 | Verify complete UI and prepare evidence | V22, V23, V28, V31 | TODO | Planned 2026-09-13; not implemented. |
+| V33 | Accept complete prompted video and editor handoff | V24, V32 | WAITING_USER | Actual visual evidence/decision required; do not auto-admit. |
 
 ## Foundation and removal
 
@@ -671,28 +695,11 @@ coordinator checks pass; leave later slices to their queue owners.
 
 ### Q03b — Prepare the final manual-review handoff
 
-**Dependencies:** Q03a, V07a. This is unpaid evidence preparation, not release approval.
-**Owners:** existing Q01a evaluation commands, Q02a Logic matrix, U07 visual/timing
-fixtures, companion owned-media checks, README, docs/ARCHITECTURE.md and docs/VALIDATION.md.
-**Work:** use the integrated implementation after optional handoff lands. Run
-focused checks, `make test`, `make build`, diff check and independent review.
-Regenerate Q01 development comparisons and Q02 matrix into new retained output
-directories; verify hashes and actual build/runtime identity. Freeze final songs
-only if the user has supplied the required ownership/exposure/settings; otherwise
-retain missing-song counts and a blank request/score form. Refresh six-page image,
-real-window frame replay and timing evidence; reconcile stale U07 documentation.
-Prepare the existing owned-media companion demonstration and instructions for
-installed/absent optional handoff. Retain old outputs and failed evidence.
-**Handoff:** update one compact section of Validation linking current artifacts,
-actual commands and limitations, ordered manual steps: install/six-page visual
-review and foreground compositor check (U07), listening/scores (Q01), Logic
-import/play/save/reopen (Q02), MIDI release decision (Q03), then authorized TABI
-production/pilot review (V01/V02/V03/V07). No extra tracked plan or report file.
-Foreground capture remains NOT_MEASURED/INCOMPLETE until actually run; do not
-launch human-gate rows or retry them just to report missing decisions.
-**Done:** current reproducible packets, technical checks and independent review
-pass; the user gets one clear final-review entry point. Unavailable human media,
-ratings or approval remain explicit pending items, not a failed preparation task.
+**Dependencies:** Q03a. DONE; retain the existing MIDI evaluation, Logic matrix,
+UI/native-install and manual-review packets. The old companion portion is
+historical evidence, not acceptance of the 2026-09-13 video replacement.
+V32 prepares new video evidence; V33 owns its real visual decision. Do not replay
+this completed task or reinstate the retired V gates.
 
 ### Q03 — Prove clean install and obtain MIDI release decision
 
@@ -762,381 +769,652 @@ exact ownership, preserved checkpoints/history, budget/pause/admission controls,
 malformed reviews, interrupted recovery and no-progress deferral. Run the runner
 suites, application test/build and fresh review before installing the script.
 
-## Optional TABI video companion
+## Integrated generation from assets and a prompt — V10–V33
 
-All V tasks use [TABI_VIDEO](docs/TABI_VIDEO.md). Build in a separate repository
-or independently built/distributed companion chosen in V01. Do not put media
-runtime into MIDI Core or reuse the old release/renderer branch. Shared commands
-above apply to its equivalent tests/build; core tests apply to integration work.
+### Execution and acceptance contract for this workstream
 
-### V01a — Prove an independently built companion boundary
+Implement only the selected row after its listed dependencies are DONE. Each
+row below supplies exact repository-relative target files (new paths are marked
+new), inputs, rules, verification and an observable result. The coordinator owns
+TASKS/status, shared-file integration and any allowed-path configuration. Agents
+must not expand scope or revive V01–V07. The user has now authorized sequential
+execution through the scheduler below; do not launch parallel task writers.
 
-**Scope:** Use the selected companion/ location with its own build. Prove a small owned-media encode/decode/preview sync spike, no MIDI runtime dependencies and exact local encoder/license facts. Research one current provider API without generating. Keep this a bounded spike, not a complete editor.
-**Inspect:** the V01 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+Every code slice runs its focused command below, then `make test`, `make build`
+and `git diff --check`. Ordinary tests use owned media/fake providers and never
+install a model, submit a cloud job or depend on paid credentials. Model/media
+host probes are separate explicit commands, with measured evidence under ignored
+`build/video/` or another retained owned directory. A missing native prerequisite
+is reported as unavailable, never as a passing/skipped production proof.
 
-### V01 — Prove isolated video/media boundary
+Existing checkout baseline: the prior Makefile task's `make test` and `make build`
+each reported 334 root tests with one failure in
+`TargetArchitectureRulesTest.legacy data payloads and their application consumers
+remain removed`, caused by pre-existing `.venv-worker`, `data/audio` and `sounds`.
+These are unrelated untracked data; do not delete them or weaken the assertion.
+Use a clean isolated checkout for implementation verification and preserve this
+checkout. Current tracked Makefile/README/companion-README edits are intentional.
 
-**Remaining parent slice:** Present exact provider/encoder choices, rights inputs and a bounded paid-pilot proposal. Record missing budget or product decision as WAITING_USER; technical subtasks may proceed with owned fixtures.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
+Start with Draw Things CLI + one measured local profile; V11 can select the
+single ComfyUI alternative if automation/reference support fails. Do not build
+both local adapters. No silent cloud fallback. V25 stays OPTIONAL unless the
+user selects the proposed hosted service after local evidence. V24 can record
+local failure and remain WAITING_USER while V25 is activated; V25 deliberately
+does not depend on V24 being DONE. If V11 rejects local feasibility, the
+coordinator changes V22's V17 dependency to V25 only after the user chooses that
+route; V17 stays explicitly blocked/unselected and does not hold the hosted path.
+V24 completes only when one chosen route has
+real acceptable visual evidence. V33 depends on that decision.
 
-**Work:** settle companion location and input/output presets; prove owned-media
-preview, encode/decode, audio synchronization and native packaging. Inspect one
-provider's current API/terms/credit limits without generation first. Record
-provider/model constraints, encoder version/license/distribution and measured
-resource costs. Request only still-missing generation-budget/media rights inputs
-before dependent paid work; no new approval for already authorized scope.
-**Tests:** absent companion leaves MIDI app build/install/export unchanged;
-short local encode probes first/final frames, streams and duration.
-**Done:** exact dependency choice and bounded pilot budget are reviewable; no
-unverified codec or generative-continuity promise. No full app scaffold yet.
+A 3–5 minute deliverable is mandatory. A short test, image gallery, API wrapper,
+manual JSON/CLI workflow or working synthetic encode cannot close V33. Show
+unique versus reused footage and real joins. Default to unique footage until the
+user explicitly chooses reuse; their preference is currently pending. Both modes
+share the same shot planner and UI, with no hidden repeat-to-fill behavior. Audio sync and public upload are
+excluded. Required human decisions cannot be inferred from source scans or tests.
 
-### V02a — Implement immutable asset manifest and validation
+When a future implementation run explicitly requests parallel agents, safe
+initial pairs are V11 + V13 and, after prerequisites, V14 + V16. V11/V12
+share Gradle/documentation owners and must run sequentially. Both writers
+must have disjoint exact file lists and no shared resource/build edits. The
+coordinator serializes Gradle/build-file, app-shell, documentation, runner and
+removal changes. Default to one writer and a fresh reviewer; workers do not spawn
+other workers. If a row exceeds a focused pass, the coordinator splits it here
+before expanding file ownership. No fixed token budget is created by this plan.
 
-**Scope:** Add asset identity/digest/provenance/rights/geometry/approval records in the companion. Test missing/hash-changed media, dimensions and approved-version selection using small owned fixtures.
-**Inspect:** the V02 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+### V10 — Align contracts and protect the new queue
 
-### V02b — Import and inspect the pilot asset kit
+**Target files:** `AGENTS.md`, `README.md`, `docs/ARCHITECTURE.md`,
+`docs/TABI_VIDEO.md`, `docs/UI_GUIDELINE.md`, `docs/VALIDATION.md`,
+`tools/terra-runner.mjs`, `tools/terra-runner.test.mjs`.
+**Inputs / dependencies:** None; PLAN §9 and the 2026-09-13 user correction.
+**Implementation rules:** Replace the separate-app/soundtrack requirement with
+an independent Video tab and silent output. Preserve artistic references and
+historical evidence with clear supersession; do not claim planned controls
+already exist. Keep six MIDI destinations and separate video storage/runtime.
+Update runner human-gate protection from retired V gates to V24/V33, ensure V25
+cannot be selected while OPTIONAL, and add queue tests. Never change the user's
+active heartbeat/configuration during this task. The coordinator handles any
+future allowlist with exact row paths; retire old V IDs from that run.
+**Verification command:** `node --test tools/terra-runner.test.mjs tools/terra-throughput.test.mjs`; `./gradlew :test --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`.
+**Done:** all owner guidance describes the same new product, and automated agents
+cannot mark V24/V33 complete or run an unchosen cloud task.
 
-**Scope:** Implement local asset import and inspection for masks/alpha/pivots/layers/scene compatibility. Preserve original references and large media outside Git; expose unresolved TABI identity differences for review, without paid generation.
-**Inspect:** the V02 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+### V11 — Prove and pin one local generation workflow
 
-### V02 — Build approved TABI asset library
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoProfile.kt`
+(new), `src/test/kotlin/app/melotrail/video/VideoLocalFeasibilityCheck.kt` (new),
+`src/test/kotlin/app/melotrail/video/LocalVideoProfileTest.kt` (new),
+`src/main/resources/video/local-profile.json` (new), `build.gradle.kts`,
+`docs/TABI_VIDEO.md` (measured local decision section only).
+**Inputs / dependencies:** V10. User-selected references and an explicit local
+model setup/download choice for real inference; pure capability code can proceed
+without those inputs. Initial machine: M5 Pro, 20 GPU cores, 48 GB memory.
+Missing setup is WAITING_USER for the real host probe; do not label a fake probe
+as measured local evidence.
+**Implementation rules:** Register `videoLocalProbe` on the test classpath. Test
+Draw Things released CLI with a supported reference/editing model and LTX-2.3
+distilled I2V. Pin full model dependencies, quantization, tool digest, reference
+limits, input/output formats and offline flags. Prove uploaded reference assets
+and a free-form prompt condition a scene keyframe and a real 5–10 second video.
+Exercise a single-reference request and multiple reference roles; a particular
+character, background image, location or action must not be required.
+Try one Wan I2V alternative only for a reproduced failure. If needed assess
+ComfyUI's exact local API/workflow; select one backend in the same profile,
+without arbitrary custom nodes or invented dtype/MPS support. Bound the probe
+(maximum two video profiles, three takes each); stop on memory pressure. Record
+cold/warm runtime, memory/swap, quality failures, output cadence and projected
+four-minute effort. Verify no remote fallback and review the selected model
+terms. A failed local trial produces an explicit fallback recommendation, not
+an endless model search or a fabricated pass; it need not block independent code.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoProfileTest'`; real host probe: `./gradlew :videoLocalProbe -PvideoProbeRequest=/absolute/path/to/probe.json`.
+**Done:** a versioned, automatable profile and measured recommendation, or a
+concrete local failure with the optional hosted proposal. Visual acceptance is V24.
 
-**Remaining parent slice:** Assemble the real owned pilot kit and record user approval of one coherent TABI/train identity. Missing production layers/rights/approval remain WAITING_USER.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
+### V12 — Prove the video-only media process boundary
 
-**Work:** reconcile character-sheet versus scene details once into an approved
-identity bible; old “Moki” text never appears in output. Follow TABI_VIDEO's
-pastel reference brief: compare four styles using the same train composition,
-allow palette-matched TABI recoloring, and record the user's chosen direction
-before production expansion. Style briefs are prepared; visual approval remains
-pending. Create a manifest with
-hashes, origin/rights/model/version, geometry/anchor/alpha/layer and approvals.
-Start with the small pilot kit in TABI_VIDEO; import owned assets and generate
-missing assets only within the authorized budget. Keep originals immutable.
-**Tests:** missing/hash-mismatched assets, real transparency, dimensions/pivots,
-scene compatibility, rights/provenance and approved-version selection.
-**Done:** user approves one coherent character/train kit; separate files are
-usable in composition, not merely a pretty collage or giant prompt output.
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProcess.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProbe.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoMediaHostCheck.kt` (new),
+`src/test/resources/fixtures/video/owned-motion.mp4` (new), `build.gradle.kts`,
+`docs/TABI_VIDEO.md` (media runtime decision only).
+**Inputs / dependencies:** V10. Owned generated fixture; no character assets/model.
+**Implementation rules:** Select a pinned FFmpeg/ffprobe build for macOS arm64,
+record its source/distribution/digest/build options and notices, and prove decode,
+frame access, seek and silent H.264 encode (prefer available VideoToolbox).
+Register test-classpath `videoMediaProbe`. Launch with argument arrays, bounded
+output/timeout and per-job directories; cancel/reap only owned process trees.
+Handle missing binary, crash, disk exhaustion and Unicode paths without harming
+inputs. Media decoding must not read arbitrary network URLs or launch at MIDI
+startup. Do not link the old Swift package or add audio processing.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMediaProcessTest'`; `./gradlew :videoMediaProbe -PvideoToolsDirectory=/absolute/path/to/tools`.
+**Done:** real owned frames and silent file decode correctly on the host, with
+process lifecycle/error evidence and one chosen distribution strategy.
 
-### V03a — Implement resumable cost-bounded animation jobs
+### V13 — Persist independent video projects and immutable records
 
-**Scope:** Build provider-neutral job persistence, submission identity, budget admission and polling/cancel/restart with fake-provider contract tests. Reject unknown cost and do not issue live generation requests.
-**Inspect:** the V03 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoProject.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoProjectStore.kt` (new),
+`src/main/kotlin/app/melotrail/video/application/VideoProjectLifecycle.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoProjectStoreTest.kt` (new),
+`src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt`.
+**Inputs / dependencies:** V10.
+**Implementation rules:** One current video schema, independent create/open/save,
+versioned references/looks/takes, selected IDs and export records. Require a video
+root outside MIDI projects/exports; account for existing parents, symlinks and
+path escape. Atomic saves with revision/concurrent-write checks; reject unsupported
+schemas before writing and preserve originals. No Swift session or MIDI schema
+migration. Add architectural negative controls for video→MIDI storage writes,
+MIDI→video imports, and I/O in video domain code.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoProjectStoreTest' --tests 'app.melotrail.architecture.TargetArchitectureRulesTest'`.
+**Done:** a video project reopens independently; corrupt saves and MIDI paths
+cannot destroy current work.
 
-### V03b — Implement one provider adapter and manual clip import
+### V14 — Import reference assets safely
 
-**Scope:** Use the verified current API contract from V01a, secure credentials and explicit model/options. Test timeout, rate limits, uncertain submission, partial download and output digest quarantine without paid requests; support owned manual clips.
-**Inspect:** the V03 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoAsset.kt` (new),
+`src/main/kotlin/app/melotrail/video/application/VideoAssetImport.kt` (new),
+`src/main/kotlin/app/melotrail/video/adapter/VideoImageFiles.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoAssetImportTest.kt` (new).
+**Inputs / dependencies:** V13.
+**Implementation rules:** Decode PNG/JPEG initially; support optional subject/character,
+environment, style and complete-scene roles without requiring a role combination.
+Preserve raw source bytes, copy to immutable owned paths,
+produce bounded thumbnails and record hashes/dimensions. Reject unsupported or
+oversized/corrupt content with specific guidance. A duplicate reuses the exact
+asset identity without overwriting. Derivative resizing/metadata removal is
+separate. Never auto-approve identity or treat inspiration artwork as licensed
+production input. No manually authored asset manifest or mask requirement.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAssetImportTest'`.
+**Done:** selected references are usable, hash-pinned and recoverable after reopen.
 
-### V03 — Add one cost-bounded animation adapter
+### V15 — Compile free-form prompts and a duration-aware shot proposal
 
-**Remaining parent slice:** Run only an explicitly budget-authorized short TABI animation batch; record real costs and human identity/loop approval. No authorization means WAITING_USER.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
+**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoBrief.kt` (new),
+`src/main/kotlin/app/melotrail/video/application/VideoShotPlanner.kt` (new),
+`src/main/kotlin/app/melotrail/video/application/VideoPromptCompiler.kt` (new),
+`src/main/resources/video/video-generation-guidelines.json` (new),
+`src/test/kotlin/app/melotrail/video/VideoPromptCompilerTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoShotPlannerTest.kt` (new).
+**Inputs / dependencies:** V13, V14.
+**Implementation rules:** Free-form prompt is the primary input alongside
+selected assets; reference roles and action/camera/motion/style guidelines are
+optional refinements. Compile only backend-supported inputs and preserve the
+user's prompt. No required preset or separate Custom mode, fixed camera, moving
+background or injected action list. A generic shot proposal divides 180–300
+seconds (default 240), retaining the prompt with optional user-written per-shot
+overrides; do not invent semantic story parsing or hardcoded scenario templates.
+Default to unique footage (roughly 30–60 useful short takes for
+four minutes before transition/trim adjustments). An explicit reuse option may
+propose 12–18 distinct takes and reviewed repeats; show the real unique/reused
+seconds and revised local time estimate for each mode. No separate
+LLM, automatic approval or silent reference omission. Hash all consumed inputs
+and template versions; clip generation is not promised deterministic. Changes
+invalidate only dependent pending requests, retaining earlier takes.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoPromptCompilerTest' --tests 'app.melotrail.video.VideoShotPlannerTest'`.
+**Done:** the exact proposed prompts, asset bindings and unique/reused duration
+are inspectable before inference. Contrasting prompts and changed assets use
+the same pipeline; regressions reject injected Tokyo/train/coffee requirements.
 
-**Work:** image-to-video jobs bind approved reference IDs, model/version,
-parameters, prompt, seed when supported, budget and provider job ID. Persist
-submission before polling; resume uncertain jobs by querying identity rather
-than blindly resubmitting. Cache downloaded owned outputs by digest; quarantine
-failed identity/loop clips. Provider seeds do not guarantee reproducible video.
-**Tests:** timeout/rate limit/partial download, cancel/restart, duplicate request,
-unknown-cost admission, budget/retry cap and redacted credentials/logs.
-**Done:** several short TABI micro-actions retain identity and fixed train
-geometry; failed takes are rejected with real costs recorded. Silent visuals
-use the finished soundtrack later; no generated audio replaces the music.
+### V16 — Persist bounded jobs and recover interrupted work
 
-### V04a — Plan deterministic soundtrack and scene timing
+**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoGenerationJob.kt`
+(new), `src/main/kotlin/app/melotrail/video/application/VideoJobCoordinator.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoJobStore.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoJobCoordinatorTest.kt` (new).
+**Inputs / dependencies:** V13.
+**Implementation rules:** Define backend and setup-capability ports for
+keyframe/video requests, availability/model requirements and explicit setup
+actions so UI code can compile independently of the chosen adapter. Durable
+attempts before launch, one local inference at a time, cancellation scoped to
+owned work, bounded retries and restart reconciliation. Keep request/attempt/
+output identities distinct. Unknown progress stays unknown. Local mode records
+time/resources; hosted admission additionally requires a current estimate and
+explicit spend cap. Reserve in-flight maximum cost across concurrent callers.
+Never auto-retry a possibly charged request or equate stopped polling with
+provider cancellation. Fixtures cover crash windows and late completion.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoJobCoordinatorTest'`.
+**Done:** restart/retry/cancel cannot duplicate admission or overwrite a prior take.
 
-**Scope:** Resolve immutable finished soundtrack plus optional verified MIDI manifest to rational time/frame plans with explicit bounce offset/tail alignment. Test mismatches, rounding and no music/project writes using owned media.
-**Inspect:** the V04 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+### V17 — Connect the selected local backend
 
-### V04 — Implement deterministic scene composition
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoBackend.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/LocalVideoSetup.kt` (new),
+`src/test/kotlin/app/melotrail/video/LocalVideoBackendTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/LocalVideoSetupTest.kt` (new).
+**Inputs / dependencies:** V11, V12, V14, V16. Use V11's selected profile; if local
+is rejected, coordinator marks this row BLOCKED with its evidence and activates
+V25 only after user selection. Common UI/application work can use the backend port.
+**Implementation rules:** Invoke the pinned local CLI, or the one proven ComfyUI
+loopback API profile, without a second adapter. Check executable/model versions
+and availability before running; no automatic download/cloud fallback. Supply
+all selected references using the proven conditioning workflow and return owned
+actual image/video results. Correlate job-specific progress and staged outputs.
+For shared local servers cancel only a verified owned prompt; never clear the
+queue or globally interrupt unrelated jobs. Tests use a fake binary/local server.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.LocalVideoSetupTest'`.
+**Done:** real backend results are reachable through the same port as tests;
+missing/offline models produce actionable setup state without affecting MIDI.
 
-**Remaining parent slice:** Implement layered/parallax/window-mask motion, loop scheduling and crossfades from pinned assets; prove deterministic frames and exact soundtrack timeline with owned fixture clips.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
+### V18 — Generate reference-conditioned scene looks with optional review
 
-**Work:** immutable soundtrack + optional verified MIDI manifest become a
-video-job plan. Use explicit bounce offset/tail alignment, rational tick-to-time
-and frame rounding, layer/parallax motion, bounded loop schedules and scene
-crossfades. Layer scrolling occurs behind the window mask. Reuse approved clips
-without monotonously repeating the same episode.
-**Tests:** unequal sections, rounding, overlaps, soundtrack longer/shorter,
-changed tempo mismatch, stale assets, loop seams and no source/music writes.
-**Done:** same accepted assets/job produce the same frame plan; the soundtrack
-is neither trimmed/stretched nor remastered silently.
+**Target files:** `src/main/kotlin/app/melotrail/video/application/VideoSceneLooks.kt`
+(new), `src/test/kotlin/app/melotrail/video/VideoSceneLooksTest.kt` (new).
+**Inputs / dependencies:** V14, V15, V16. Works against the port; concrete local
+integration is V17, optional hosted integration V25.
+**Implementation rules:** Submit look-generation jobs from the selected assets
+and free-form prompt, including valid single-reference requests. Generate missing
+scene elements from the prompt, without requiring a character/background pair.
+Retain results and exact provenance. Offer optional approval of an immutable look
+or selection of an already composed reference. The primary Generate video flow
+may use a generated draft
+look automatically; record it as unreviewed, never as user-approved. Feed its
+exact identity to dependent video requests. A changed brief/reference leaves
+earlier looks available but visibly stale for new work. Reject missing/digest-changed results.
+No prompt-only substitute that discards the supplied reference assets.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoSceneLooksTest'`.
+**Done:** the exact selected/generated scene look and its review status anchor
+later requests after reopen; creating a draft needs no manual keyframe step.
 
-### V05a — Build real scene preview and soundtrack transport
+### V19 — Generate clips and preserve independent takes
 
-**Scope:** Create a companion preview stage sharing output geometry/timing, with real playback/seek and one finished-soundtrack player. Test frame/audio alignment and crop/scene boundaries; no fake video frames.
-**Inspect:** the V05 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+**Target files:** `src/main/kotlin/app/melotrail/video/application/VideoClipGeneration.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoResultImport.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoClipGenerationTest.kt` (new).
+**Inputs / dependencies:** V12, V15, V16, V18.
+**Implementation rules:** Generate video orchestrates needed draft scene looks
+and shots from the prompt, reference pins and optional shot overrides. Use the
+exact supplied/selected/generated look and retain its actual review status.
+Respect requested motion and camera behavior; do not inject predefined actions
+or scenery. Import actual bounded result bytes, decode and probe them; record
+native size/frame rate/duration/audio before normalization.
+Require valid output before a take is reviewable. Rejected/regenerated takes remain
+immutable; acceptance changes only the selected ID. Unsupported output, stale
+completion or lost downloads never replace earlier selected work. Batch submission
+shares coordinator limits and reveals its actual shot count and estimated effort.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoClipGenerationTest'`.
+**Done:** an actual clip can be generated, reopened, rejected and replaced without
+losing earlier work; wrong/malformed results never count as success.
 
-### V05 recovery rules — shared by V05b, V05c, V05d and V05
+### V20 — Add the Video tab and independent create/open flow
 
-The failed V05 candidate is preserved outside the checkout at
-`/Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-09T13-00-26-469Z-V05/worktree`.
-Inspect its diff against `5fecbdefa3bfcf2c6b2cb4dd3f1f5e0d25306173` for
-`companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
-`SceneComposition.swift`, `ScenePreview.swift` and the regression executable.
-Reuse only the helpers needed by the assigned slice, after inspecting their
-consumers and tests. Do not apply the entire candidate, change its preserved
-files, or replay the failed parent. The review failure was an unreachable editor
-and missing rendered/layout evidence, not permission to replace V04/V05a.
+**Target files:** `desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopMain.kt`,
+`desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt`,
+`desktopApp/src/main/kotlin/app/melotrail/desktop/MelotrailAppShell.kt` (new),
+`desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoDesktopComposition.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoWorkspace.kt`
+(new), `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoWorkspaceTest.kt`
+(new), `desktopApp/src/test/kotlin/app/melotrail/desktop/MelotrailAppShellTest.kt`
+(new), `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreDesktopCompositionTest.kt`.
+**Inputs / dependencies:** V13, V16.
+**Implementation rules:** One window, app-level MIDI/Video tabs above the existing
+MIDI shell; preserve its six destinations and one MIDI player. Video create/open
+is available with no MIDI project. Keep its state when switching tabs/projects;
+load video dependencies lazily. Entering Video pauses MIDI, retaining position.
+Parse an explicit `--video` startup option without breaking native startup-check
+arguments; render a real independent empty/setup state. Close video-owned work
+cleanly while preserving persisted jobs. No Swift launch.
+**Verification command:** `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.MelotrailAppShellTest' --tests 'app.melotrail.desktop.video.VideoWorkspaceTest' --tests 'app.melotrail.desktop.MidiCoreDesktopCompositionTest'`.
+**Done:** `./gradlew :desktopApp:run --args='--video'` opens the tab directly;
+MIDI still works when every optional video tool is absent.
 
-Each slice must work through the actual companion window. A library API, JSON
-command, screenshot mock or test-only caller alone cannot satisfy an editor UI
-slice. Use native Swift/AppKit in the existing independent package; do not add
-an application framework, MIDI dependency, audio renderer or provider call.
-Use `docs/pictures/UI/08-video-preview.png`, `docs/UI_GUIDELINE.md` and
-`docs/TABI_VIDEO.md` as design inputs. Native adaptations must preserve the
-reference hierarchy, real preview and compact controls.
+### V21 — Wire asset upload, brief and local setup controls
 
-All four tasks run `node tools/companion-check.mjs`, `make test`, `make build`
-and `git diff --check`, plus their focused verification below and fresh review.
-Use the configured JBR for JVM checks. Extend the existing native regression
-and check entrypoint for automated coverage; keep large captures/fixtures under
-ignored build output. No new plan, prompt or execution-log document. Owned test
-media permits engineering validation; production identity, rights and paid
-pilot approvals remain V02/V03/V07 and must not be fabricated.
+**Target files:** `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoAssetsPanel.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoBriefPanel.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoSetupPanel.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoWorkspace.kt`,
+`desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoInputFlowTest.kt` (new).
+**Inputs / dependencies:** V14, V15, V20, V11.
+**Implementation rules:** Real chooser and native drag/drop, previews/reference
+roles, a prominent free-form prompt, optional guideline controls, 3–5 minute
+duration and model availability. One or more assets plus a prompt are sufficient
+creative inputs; preset selection and background/character pairs are optional.
+Show an explicit install/download choice with size/location and progress; use
+V11's profile, not arbitrary commands. When local is unavailable preserve the
+brief and explain setup. Keep the same prompt-first flow for every scenario; no hand-edited
+JSON. Do not build a model marketplace or silently activate a hosted provider.
+**Verification command:** `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoInputFlowTest'`.
+**Done:** references + brief can be supplied entirely in the application at all
+three supported fixture sizes; cancelled imports leave previous work intact.
 
-### V05b — Open a real companion editor window
+### V22 — Wire look selection, generation and retry controls
 
-**Dependencies:** V05a.
-**Target files:** `companion/Package.swift` (new executable target),
-`companion/Sources/MelotrailTABIEditor/main.swift` (new native entrypoint),
-`companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift` (new window),
-`companion/Sources/MelotrailTABICompanion/SceneEditor.swift` (recover only needed
-session/selection helpers), `companion/Sources/MelotrailTABICompanion/ScenePreview.swift`,
-`companion/Sources/MelotrailTABIRegression/main.swift`, `companion/README.md`.
-**Work:** provide `melotrail-tabi-editor <composition-request.json>` using the
-existing SceneCompositionRequest. Open a visible resizable native window with
-real preview, rendered scene thumbnails, selection and play/pause/seek. Use
-V05a's sole AVPlayer clock; clean observers/player on close. Show honest loading
-and input errors. Establish the scene strip/preview/inspector layout with a
-read-only selected-scene inspector; editing belongs to V05c.
-**Verification:** launch the release executable with owned input, select a scene,
-play across a boundary and seek; verify real frame/time advancement and one
-soundtrack player, error handling and close cleanup. Capture the actual window.
-**Done:** another person can launch and operate the preview from the documented
-command; no inaccessible API counts as the delivered surface.
+**Target files:** `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoGenerationPanel.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoTakeGallery.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoWorkspace.kt`,
+`desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoDesktopComposition.kt`,
+`desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoGenerationFlowTest.kt`
+(new).
+**Inputs / dependencies:** V17, V18, V19, V20, V21. If the local route was
+rejected and the user selected hosted generation, the coordinator replaces V17
+with V25 in this row and its queue entry before admission. No fake-only completion.
+**Implementation rules:** Connect the primary Generate video action from assets
+and a prompt through the full production look/clip pipeline. Keep Generate look,
+Use look and per-shot controls in optional refinements; no storyboard or keyframe
+approval is required for a draft. Wire Cancel, Retry and Keep/reject take controls. Show
+shot list, selected references, local estimate or hosted quote, actual job states
+and errors. Concrete backend is supplied by V17 or V25; fake-only wiring cannot
+be presented as completed integration. Handle tab changes, restart, missing tools,
+late results and duplicate clicks without lost selections or duplicate jobs.
+**Verification command:** `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoGenerationFlowTest'`.
+**Done:** GUI actions dispatch through production use cases and expose real results;
+no API/CLI-only delivery, fictional percentages or synthetic production previews.
 
-### V05c — Connect crop, motion and transition controls
+### V23 — Play actual generated video inside the tab
 
-**Dependencies:** V05b.
-**Target files:** `companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift`,
-`companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
-`companion/Sources/MelotrailTABICompanion/SceneComposition.swift`,
-`companion/Sources/MelotrailTABICompanion/ScenePreview.swift`,
-`companion/Sources/MelotrailTABIRegression/main.swift`.
-**Work:** connect selected-scene crop, supported layer motion and crossfade
-controls to the existing shared composition/frame resolver. Recover preserved
-edit helpers narrowly; reject invalid bounds visibly, retain prior valid edits,
-and refresh thumbnails/preview. Keep the soundtrack digest, duration, frame
-extent and sole player intact. Expose only effects the shared renderer supports.
-**Verification:** drive real window controls on owned contrasting geometry,
-assert rendered pixels/crop/motion at known frames and transition boundaries
-match the shared resolver, including first/last frames and invalid inputs.
-Checking only edited model fields is insufficient. Verify repeated edits do not
-add players or alter source/asset bytes; capture before/after preview images.
-**Done:** each visible control produces its intended rendered change and later
-preview/export consumers use the same edited composition plan.
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/VideoPreviewDecoder.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoPreview.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoTakeGallery.kt`,
+`src/test/kotlin/app/melotrail/video/VideoPreviewDecoderTest.kt` (new),
+`desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoPreviewTest.kt` (new).
+**Inputs / dependencies:** V12, V19, V22.
+**Implementation rules:** Decode actual file frames through the proven media
+boundary with bounded buffers and off-UI-thread work. Play/pause/seek/frame-step
+and resize accurately; show unavailable/corrupt-file states. Measure actual frame
+progress, timing, CPU/memory and process cleanup; no preview made from a still.
+Suppress all source audio. Retain one preview session, stop it on tab departure,
+and never interfere with MIDI state or start another MIDI player.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoPreviewDecoderTest'`; `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoPreviewTest'`.
+**Done:** moving frames, seeking and clean teardown are proved with owned media
+and an actual app-window capture.
 
-### V05d — Persist editor sessions and expose asset/job state
+### V24 — Review real asset-and-prompt generation before claiming product fit
 
-**Dependencies:** V05c.
-**Target files:** `companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
-`companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift`,
-`companion/Sources/MelotrailTABICompanion/SceneEditorDocument.swift` (new current
-session persistence if needed), `companion/Sources/MelotrailTABIEditor/main.swift`,
-`companion/Sources/MelotrailTABIRegression/main.swift`, `companion/README.md`.
-**Work:** save/reopen the current editor request and edits with pinned inputs in
-companion-owned session storage, without overwriting soundtrack, MIDI projects,
-assets or accepted output. Define one current schema, no migration. Detect stale
-assets/soundtrack on reopen before playback. Surface real asset approval/identity
-and persisted animation job cost/state/failure from existing owners; unknown
-progress stays unknown. Provide preview cancel/restart and failure recovery in
-the window; distinguish stopping preview from cancelling a provider job. No new
-paid submission, provider cancel request or fabricated production approval.
-**Verification:** use the visible save/open/cancel actions; reopen identical edits
-and render matching frames, reject changed inputs and malformed sessions, recover
-a failed open, and verify cancellation stops callbacks/audio without losing the
-saved session. Owned ledger fixtures cover cost/failure/unknown progress labels.
-**Done:** the editor session survives reopen and displays truthful actionable
-state while preserving all musical and accepted artifacts.
+**Target files:** `docs/TABI_VIDEO.md`, `docs/VALIDATION.md` (compact evidence and
+actual decision only; generated media stays outside tracked documentation).
+**Inputs / dependencies:** V11, V22, V23. One working route from V17 or explicitly
+chosen V25; user-selected source references, local setup and, only for cloud, a concrete
+authorized budget. WAITING_USER until real evidence/feedback exists.
+**Implementation rules:** From the app import chosen references and enter a
+prompt. Generate a scene look and three clips: the base case, a contrasting
+prompt with the same assets, and a changed-reference case. No predefined location,
+prop, action or motion is required. Compare reference fidelity and prompt
+adherence as well as actual motion/temporal quality. Run the
+PLAN §9.7 checklist at normal speed; retain source/request/result identities,
+measured local resources or billed cost, and actual user feedback. Do not mark
+pass from mocks, provider marketing or file decodability. If local fails, record
+specific reasons and propose a small capped Runway comparison; user selection
+can activate V25 while this gate remains waiting. Avoid repeatedly re-running a
+missing-input gate. Independent assembly/packaging tasks remain runnable.
+**Verification command:** `./gradlew :desktopApp:run --args='--video'`; manual
+review of the three generated clips against PLAN §9.7.
+**Done:** the user accepts reference fidelity and prompt-driven generation through
+one actual backend; otherwise keep the gate open with concrete failed criteria.
 
-### V05 — Validate the complete editor and compact keyboard flow
+### V25 — Add the explicitly chosen hosted fallback (optional)
 
-**Dependencies:** V05d. Reuse V05a–V05d; do not implement them again.
-**Target files:** `companion/Sources/MelotrailTABICompanion/SceneEditorWindow.swift`,
-`companion/Sources/MelotrailTABICompanion/SceneEditor.swift`,
-`companion/Sources/MelotrailTABIRegression/main.swift`,
-`companion/scripts/test.sh`, `docs/VALIDATION.md`, `docs/TABI_VIDEO.md`.
-**Work:** finish keyboard focus/shortcuts, accessibility labels and compact layout
-for the existing window, keeping text-field editing safe. Compare actual captures
-against reference 08 at the three sizes prescribed by the UI guideline/validation
-fixtures. Keep preview, scene strip and inspector reachable without clipped
-controls; preserve output geometry when resizing the window.
-**Verification:** automate real keyboard/selection/play/seek/edit/save/reopen paths,
-inspect actual window captures, and prepare a multi-scene owned-media preview
-that exercises crop, parallax, loops, transitions and exact final audio tail.
-Prove scene-boundary/frame/audio alignment and source digests; retain measurements
-and capture paths in `docs/VALIDATION.md`. An agent may validate technical UI
-behavior, but production character consistency and artistic approval remain human.
-**Done:** the complete reachable editor passes native/JVM checks and independent
-review with actual rendered/layout evidence. V06 then consumes the shared edited
-plan for encoding. No production pilot or paid generation is required to complete
-this engineering parent.
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/RunwayVideoBackend.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoProviderCredentials.kt`
+(new), `src/test/kotlin/app/melotrail/video/RunwayVideoBackendTest.kt` (new),
+`desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoSetupPanel.kt`,
+`desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoDesktopComposition.kt`,
+`docs/TABI_VIDEO.md` (selected hosted profile only).
+**Inputs / dependencies:** V11, V16, V18, V19, V21. OPTIONAL: activate only after
+local evidence and explicit user selection. No dependency on V24 completion.
+**Implementation rules:** Reverify official Runway endpoints/models/limits/terms/
+prices. Support reference-conditioned still generation and image-to-video through
+one backend; typed capabilities, narrow uploads, bounded downloads, digest pinning,
+429/backoff, auth expiry, retention, cancellation and ambiguous-submit handling.
+Use secure process configuration/credential storage; no secrets in project files,
+logs or snapshots. Show mode, upload disclosure and reviewable capped quote.
+Fake HTTP regressions are unpaid; a live request requires the concrete pilot
+budget. Manual provider-site downloads cannot substitute for the app workflow.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.RunwayVideoBackendTest'`; `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoGenerationFlowTest'`.
+**Done:** the selected hosted service works through the existing tab and job port,
+with no automatic local-to-cloud fallback. If local passes, leave this task OPTIONAL.
 
-### V06a — Implement bounded encoder process and output staging
+### V26 — Assemble selected takes to an exact 3–5 minute duration
 
-**Scope:** Build safe argv, owned temp/output paths, progress/timeouts/cancel/disk errors and atomic new-output publishing in companion. Test Unicode/spaces, crashes and collision preservation with owned media.
-**Inspect:** the V06 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoAssembly.kt`
+(new), `src/main/kotlin/app/melotrail/video/application/VideoAssemblyPlanner.kt`
+(new), `src/test/kotlin/app/melotrail/video/VideoAssemblyPlannerTest.kt` (new).
+**Inputs / dependencies:** V15, V19.
+**Implementation rules:** Ordered selected-take trims, explicit transition lengths,
+repeatability flags, explicit unique/reuse mode and exact frame-based net
+duration. Unique mode rejects repeated take IDs; reuse requires both a selected
+reuse mode and approved repeatable takes. Show proposed sequence,
+unique/reused footage and missing usable seconds. Respect the requested 180–300s;
+never pad a still, reverse requested actions/motion, stretch motion silently, repeat a
+rejected take or claim loopability from a score. Respect scene/camera/motion continuity where requested by the prompt or shot
+overrides; permit intentional changes. Let the user change order or request more takes.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAssemblyPlannerTest'`.
+**Done:** 180/240/300s plans have correct lengths including overlap and cannot
+consume missing, unselected or unapproved-for-reuse clips.
 
-### V06 — Encode and validate local outputs
+### V27 — Encode and validate silent MP4 outputs
 
-**Remaining parent slice:** Probe first/final frames, streams, dimensions, duration, A/V sync and preview/output parity; produce a playable local file and compact provenance report.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
+**Target files:** `src/main/kotlin/app/melotrail/video/application/VideoExport.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoEncoder.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoExportTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoMediaHostCheck.kt`.
+**Inputs / dependencies:** V12, V19, V26.
+**Implementation rules:** Same resolved assembly for review/output; normalize
+explicitly to 1920×1080 H.264, square pixels and selected constant cadence, with
+zero audio streams. Record native/upscaled resolution; strip model audio rather
+than adding an audio editor. Full decode, cadence/duration/stream verification,
+first/last/join-frame checks, cancellable bounded encode and no-overwrite atomic
+publication with adjacent provenance. Preserve accepted clips and earlier exports.
+Write only into owned staging/new output paths; malformed inputs never count
+as a successful export.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoExportTest'`; `./gradlew :videoMediaProbe -PvideoToolsDirectory=/absolute/path/to/tools`.
+**Done:** a complete owned 180–300s assembly decodes at the exact target duration
+with no audio, and cancellation/collisions preserve prior outputs.
 
-**Work:** bounded owned encoder process with safe arguments, progress, timeout,
-cancel, disk-space/error handling; stage, probe and atomically publish to a new
-output. Produce chosen video preset and a compact provenance/technical report.
-No upload action. Only clean job-owned temporary files.
-**Tests:** readable first/final frames, duration/frame rate/dimensions/streams,
-soundtrack policy and A/V sync; spaces/Unicode filenames, cancellation, crash,
-stale input, destination collision and preservation of previous complete output.
-**Done:** playable video matches preview and keeps the exact soundtrack timeline;
-no partial output is labeled complete. Core remains independently installable.
+### V28 — Expose full-cut review and export in the application
 
-### V07a — Add capability-checked optional Export handoff
+**Target files:** `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoAssemblyPanel.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoExportPanel.kt`
+(new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoWorkspace.kt`,
+`desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoDesktopComposition.kt`,
+`desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoExportFlowTest.kt` (new).
+**Inputs / dependencies:** V23, V26, V27.
+**Implementation rules:** Select/reorder/trim approved takes, explicitly choose unique
+footage or approved reuse, inspect unique/reused duration and generate missing
+material. Reuse is never automatically enabled to satisfy the duration. Build a
+local silent review cut using the resolved assembly and play it in the existing
+preview. Display every join, then choose an output path, export, show real result
+facts and reveal in Finder. No soundtrack, MIDI or JSON prerequisite. Changing
+assembly invalidates review/export readiness but preserves earlier files.
+**Verification command:** `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoExportFlowTest'`.
+**Done:** the UI produces and plays a complete silent file; exporting is not a
+separate terminal command.
 
-**Scope:** Wire optional companion launch consuming an immutable export manifest and separately supplied finished soundtrack. Test installed/absent companion, stale snapshots and no MIDI project writes; keep independent packaging.
-**Inspect:** the V07 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
+### V29 — Prove packaged app startup and optional-runtime isolation
 
-### V07 — Complete pilot and optional MIDI handoff
+**Target files:** `desktopApp/build.gradle.kts`,
+`desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreNativeInstallCheck.kt`,
+`desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreNativeInstallCheckTest.kt`,
+`desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoInstalledAppCheck.kt`
+(new), `src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt`,
+`docs/VALIDATION.md` (native video evidence only).
+**Inputs / dependencies:** V20, V23, V28.
+**Implementation rules:** Ship the selected media distribution/setup strategy
+with exact notices and required jpackage modules; models remain external and
+explicitly installed. Prove clean MIDI start/export with no video tools/models/
+credentials and no network. Prove Video setup, real owned playback/encode with
+configured tools and cleanup on app close. Register `videoInstalledSmoke` for a
+private installed copy, never the user's installed app. Extend boundary tests
+without weakening existing MIDI/source protection. No development PATH or Swift
+package dependency in the installed launch path.
+**Verification command:** `./gradlew :desktopApp:videoInstalledSmoke -PvideoInstallDirectory=/absolute/path/to/new-install-evidence`; `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.MidiCoreNativeInstallCheckTest'`.
+**Done:** installed-window and media evidence is tied to the actual build, and
+missing optional runtime cannot break MIDI use.
 
-**Remaining parent slice:** Complete the real full-song TABI pilot using approved assets/music, record costs and user visual/sound/rights decisions, then prepare a local upload package. Public upload and monetization remain separate decisions.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
+### V30 — Remove the soundtrack/MIDI companion handoff
 
-**Work:** finish one original full-song TABI episode with the owned music,
-controlled scene evolution and approved character assets. Human review checks
-identity, flicker, loop seams, pacing, sound and ending. Record actual generation
-cost, retries, reuse, production time and outstanding rights/disclosure decisions.
-Add an optional capability-checked launch from MIDI Export only if the companion
-is installed; consume the immutable manifest without editing its project.
-**Tests:** companion installed/absent, stale snapshot, pilot encode/decode,
-A/V/scene checks, companion build/install and core test/build.
-**Done:** user approves a usable video and local upload package. Publication,
-channel eligibility and monetization are separate user/platform decisions;
-there is no fabricated YouTube-readiness score or promised revenue.
+**Target files:** `src/main/kotlin/app/melotrail/application/MidiCoreExportHandoff.kt`
+(delete), `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreCompanionLauncher.kt`
+(delete), `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreCompanionLauncherTest.kt`
+(delete), `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreExportPage.kt`,
+`desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt`,
+`desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreExportPageTest.kt`,
+`src/test/kotlin/app/melotrail/application/MidiCoreMidiPackageExporterTest.kt`.
+**Inputs / dependencies:** V28, V29.
+**Implementation rules:** Trace and remove the optional executable probe/launch,
+Open in TABI action, soundtrack guidance and exclusive tests. Keep MIDI package
+validation and regression assertions that remain useful; do not change manifest
+format or musical export behavior. Video is reached from the app tab without
+an accepted MIDI package. Never touch saved MIDI projects/export snapshots.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.application.MidiCoreMidiPackageExporterTest'`; `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.MidiCoreExportPageTest'`.
+**Done:** MIDI export has no Swift/handoff consumer and its original safety tests
+still pass.
+
+### V31 — Delete the Swift companion and replace its launch/check wiring
+
+**Target files:** `companion/` (delete tracked package/source/tests/scripts/resources),
+`tools/companion-check.mjs` (delete), `tools/companion-check.test.mjs` (delete),
+`Makefile`, `.gitignore`, `README.md`, `docs/ARCHITECTURE.md`, `docs/TABI_VIDEO.md`,
+`docs/VALIDATION.md`, `src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt`.
+**Inputs / dependencies:** V29, V30.
+**Implementation rules:** Enumerate exact repository-owned companion files,
+remaining consumers/symlinks and exclusions before deleting. Transfer only needed
+job/process safety assertions into already implemented Kotlin tests; no retained
+Swift shim/archive/migration. Preserve all supplied references, Logic evidence,
+MIDI artifacts and external user media, sessions and installed applications.
+Remove only verified owned generated caches after retaining needed evidence;
+no broad workspace cleanup. Update make video to invoke the same app's --video
+route without VIDEO_REQUEST/VIDEO_JOBS, and remove Swift build/test requirements
+from active run instructions. Old evidence is historical. Installed runner config
+is coordinator-owned and must drop companion checks when a future run is enabled.
+**Verification command:** `make -n video`; `./gradlew :test --tests 'app.melotrail.architecture.TargetArchitectureRulesTest' --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`; `rg -n 'melotrail-tabi-editor|MELOTRAIL_TABI_EXECUTABLE|companion-check|VIDEO_REQUEST' Makefile src/main desktopApp/src/main tools` (no active hits).
+**Done:** no repository Swift app or runtime consumer remains, and make video
+starts the integrated tab. Unrelated user files are preserved.
+
+### V32 — Verify the complete UI path and prepare final visual evidence
+
+**Target files:** `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoEndToEndTest.kt`
+(new), `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoVisualTest.kt`
+(new), `desktopApp/src/test/resources/visual/video/` (new reviewed technical
+baselines), `docs/VALIDATION.md`, `README.md`.
+**Inputs / dependencies:** V22, V23, V28, V31.
+**Implementation rules:** End-to-end fake-backend tests start from an empty tab,
+import references, enter a free-form prompt, click Generate video without a
+preset/storyboard/keyframe prerequisite, optionally refine looks/clips, cancel/retry,
+restart/reopen, assemble 180/240/300s and export. Use real owned file decode/encode
+for media checks; fake providers are explicitly test-only. Prove no JSON/audio/
+MIDI prerequisite, selected-source/MIDI hashes unchanged, single/multiple-reference
+inputs and contrasting prompts without preset-specific paths,
+no unintended network in local mode and no false completion. Capture empty/setup/
+ready/progress/failure/full-review/export at 1536×1024, 1280×900, 720×900 and inspect
+the actual images before adding baselines. Preserve existing MIDI visual tests.
+Record measured playback/UI performance and exact remaining product gates; do
+not call owned fixtures a successful generation trial.
+**Verification command:** `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoEndToEndTest' --tests 'app.melotrail.desktop.video.VideoVisualTest'`; `make test`; `make build`; `git diff --check`.
+**Done:** technical behavior is proved through the real UI and current native
+runtime, with a concrete review packet for V33.
+
+### V33 — Accept a real complete prompted video and editor handoff
+
+**Target files:** `docs/VALIDATION.md`, `docs/TABI_VIDEO.md`, `README.md`
+(actual current result/limitations and user decision only).
+**Inputs / dependencies:** V24, V32. User-selected references, selected local setup
+or an explicitly authorized hosted budget; WAITING_USER until real evidence exists.
+**Implementation rules:** Starting from user-chosen reference assets and a
+free-form prompt in the app, create one matching 3–5 minute silent video. Content
+and actions are determined by that prompt; Tokyo/train/coffee is only an optional
+example and is not a release requirement. Record generated versus reused seconds,
+actual generation resources/cost, rejected takes, model/tool versions and source/
+output digests. The user watches the entire cut and joins, confirms reference
+fidelity, prompt adherence, temporal coherence and acceptable repetition/quality,
+then imports/plays
+the export in their chosen Apple editor. Audio placement/sync and YouTube upload
+are outside scope. Report every failed criterion and add only bounded corrective
+work to this queue; no self-awarded artistic approval or inferred monetization.
+**Verification command:** `make video`; review the final exported MP4 at normal
+speed and import/play it in the user's chosen Apple editor.
+**Done:** a real full-length result meets the user's visual criteria and the app
+workflow is accepted, or the gate stays pending with explicit failed criteria.
 
 ## Configured automatic execution
 
-The existing **Melotrail Terra autopilot** wakes every **20 minutes** and invokes
-`advance` once. It runs up to three ready slices within 45 minutes and 500,000
-reported non-cached input/output/reasoning tokens; up to 72 task/continuation
-admissions per UTC day. Cached input is recorded separately. Model usage is
-reported after a call, so an in-flight call may cross the admission limit.
-Before admission, the heartbeat checks actual account limits and defers below
-10% remaining. No credit purchase/reset is authorized.
+The user authorized this policy on 2026-09-13. The existing paused Melotrail
+heartbeat is repurposed as **Melotrail video sequential implementation**, attached
+to the current planning/implementation conversation, with **20-minute** wakes.
+It uses native collaboration agents. Do not invoke the retired Terra CLI runner,
+resume its pause file, reset its retained state or start a second automation.
+The old runner source remains subject to V10/V31's compatibility/removal checks;
+its historical model/retry/commit policy does not control this run.
 
-One Astra Extra High (`gpt-6-astra`, `xhigh`) implementer works at a time.
-The runner reads `model` and `reasoningEffort` from its local configuration for
-implementation and independent review. A concrete failure gets one focused
-Astra retry, then one **Sol High** repair with the original task contract, current
-`git diff`, and exact terminal/test/review errors. Checks and fresh Astra Extra High
-review are coordinator-owned. Every changed candidate needs focused checks,
-`make test`, `make build` and `git diff --check` before review/integration.
+Execution checkout: `~/.codex/melotrail-video-sequential/worktree`, branch
+`codex/video-generation-sequential`. This clean worktree starts from the current
+tracked code and accepted PLAN/TASKS/launcher changes; unrelated untracked media
+and environments remain in the normal checkout. Scheduler bookkeeping stays in
+`~/.codex/melotrail-video-sequential/state.json`, outside the product repository.
+This state records the current task, base, phase, agent ID, repair count, evidence
+paths and commit receipt; TASKS remains the only implementation queue.
 
-A budget/deadline interruption is distinct from an implementation failure.
-`advance` continues the preserved stage under a new bounded batch, retaining
-prior usage and evidence. A ready candidate resumes validation/review, not
-implementation. At most three such continuations are admitted per task. A
-completed three-attempt failure can enter finding recovery when its final review
-contains one to three concrete code findings, each with exact authorized files
-and a verifiable acceptance condition. Other failures and exhausted continuations
-are recorded BLOCKED with their preserved candidate.
+Each wake handles at most one unfinished mandatory V10–V33 row or its preserved
+continuation. Select the earliest dependency-ready TODO, excluding V24/V33,
+unchosen OPTIONAL V25 and the completed/retired MIDI/video queues. A missing human
+or setup decision blocks its own task, while later independent ready engineering
+may continue on a later wake. Never retry a WAITING_USER row without new evidence.
+Read live queue status rather than hardcoding completed IDs. One worker/reviewer
+runs at a time; no concurrent task, test suite or repair. Inspect live agents,
+state, Git status and recent commits before admitting work. Resume an interrupted
+stage and preserve its candidate; do not repeat completed work or reset retries.
 
-Finding recovery keeps the parent pending and stores an ordered checklist such
-as `U07b/R1` in the existing runner state/evidence, visible in `status`; these are
-execution steps under the TASKS row, not another product queue. Each wake admits
-one fresh Astra Extra High attempt for one finding, with **20 minutes / 150,000
-reported tokens** including its validation/review. The original contract, current
-binary diff and named check/review errors accompany the prompt. Exact finding
-files further narrow the parent path policy. All normal checks still run.
+1. Launch one fresh **Sol High** agent (`gpt-5.6-sol`, reasoning `high`,
+   `fork_turns: none`) with the exact row, base commit, explicit worktree path,
+   authorized files and required evidence. The coordinator owns task status and
+   commits; workers must not spawn other agents, commit or edit PLAN/TASKS.
+2. After the writer finishes, run the row's focused checks, `make test`,
+   `make build` and `git diff --check` in the execution checkout. Do not edit
+   documentation or source during validation because matrix evidence fingerprints
+   build inputs. Run the row's actual native/media checks when applicable.
+3. A concrete implementation/test/review failure goes directly to **Astra High**
+   (`gpt-6-astra`, reasoning `high`, `fork_turns: none`), with the original row,
+   base, current diff, exact failed command, exit code, relevant terminal output
+   and review findings. Preserve the Sol candidate and repair only the same task.
+   Allow at most two Astra repair attempts per task, retained across wakes; no
+   extra Sol retry or automatic model substitution. Repeat affected required
+   validation after a changed candidate. Missing rights, credentials, model setup
+   choices or real visual decisions are external waits, not code defects.
+4. Once checks pass, a fresh **Sol High** agent reviews the tested diff read-only
+   against the row and PLAN. Review defects use the same Astra repair allowance,
+   followed by validation and a fresh review. A test pass alone is insufficient.
+5. After validation and review pass, the coordinator records DONE plus real
+   evidence in TASKS, stages only task-owned changes and that status update,
+   inspects the staged diff and creates **one local commit** with the row ID in
+   its subject. The implementation and DONE update belong to the same commit;
+   there is no separate queue-status commit. Record and verify the hash in the
+   external receipt before selecting another row. Do not put the future commit's
+   own hash in its contents. On interruption, find an existing task commit before
+   retrying; a pending commit must finish before further work.
+6. Fast-forward the normal checkout on `codex/terra-live` only if its tracked
+   files are clean, it remains on that branch and its HEAD is an ancestor of the
+   verified task commit. Never reset, stash or discard user edits. If synchronization
+   cannot proceed, retain the implementation branch and report its commit/path.
 
-A fresh reviewer must explicitly resolve the original finding against the tested
-tree. A resolved finding can unlock the next preserved finding while the parent
-remains pending; only a complete parent PASS permits integration. No-op edits,
-unresolved acceptance, failed checks, scope violations or interrupted/exhausted
-recovery stop the checklist. New defects do not generate another recovery chain.
-The next wake defers the parent and continues independent ready work. Never
-reset these budgets, replay completed findings or auto-revive historical blocked
-rows. Missing human approval, rights, credentials or environment capabilities
-cannot become code-recovery subtasks.
-Never clear state, erase usage history, weaken a gate or recycle the same task
-forever. A live lock or explicit pause causes no admission. A dead lock requires
-verified PID/process-group recovery; a conflicting changed base preserves work.
+If both Astra repairs fail, preserve the candidate and exact error, mark the row
+BLOCKED without claiming completion, and pause the heartbeat with an actionable
+failure report. A transient usage interruption resumes the same stage when
+available; do not treat it as a code repair or start a substitute model. Check
+current account usage before admission and defer below 10% remaining in any
+available relevant limit. No credit purchase/reset is authorized.
 
-Commits advance `codex/terra-batched-implementation`. The normal project checkout
-uses **codex/terra-live** and is fast-forwarded after each successful integration
-only when it is still on that branch and has no tracked edits. A dirty/diverged
-checkout is preserved and reported; do not reset it. Restart `make desktop` to
-see the new app. TASKS on the integration branch owns completion; runner status
-owns the active stage. Workers are CLI processes, not Scheduled-tab subagents.
+No commit is created for a failed task. On a missing external decision, preserve
+any unfinished changes and inspect whether they can stay isolated before working
+on an independent row; use a dedicated task worktree if necessary. Do not mix
+partial work into another task's commit. When all eligible work is DONE or only
+external decisions remain, notify once with completed commit hashes and pending
+gates, then pause this heartbeat. V24/V33 require real user review; V25 requires
+explicit provider selection and a bounded paid budget. Native model setup/download
+choices remain as specified in V11; ordinary build dependency resolution and
+owned-fixture tests may proceed. No public push, publication or YouTube upload.
 
-Local configuration/state: `~/.codex/melotrail-terra/`. The installed script must
-match tested `tools/terra-runner.mjs`. Only the coordinator updates TASKS and
-integrates. Successful dedicated worker worktrees are removed; failed candidates
-and evidence are retained. No new execution-log document belongs in this repo.
-
-```bash
-node ~/.codex/melotrail-terra/terra-runner.mjs status
-node ~/.codex/melotrail-terra/terra-runner.mjs dry-run
-node ~/.codex/melotrail-terra/terra-runner.mjs advance
-node ~/.codex/melotrail-terra/terra-runner.mjs pause
-node ~/.codex/melotrail-terra/terra-runner.mjs resume
-node --test tools/terra-runner.test.mjs tools/terra-throughput.test.mjs
-```
-
-Human musical ratings, visual/Logic decisions, asset rights/approval and paid
-pilot budget remain deferred final gates, excluded from automatic admission.
-Their evidence-preparation children run automatically, ending with Q03b.
-Unpaid companion plumbing uses owned fixtures and does not depend on a paid
-pilot or final MIDI release. V01/V02/V03/V07 keep their real human gates; public
-upload and paid generation are never inferred from a request to implement code.
-Continue until the selected queue is complete or only blocked/external decisions
-remain. Notify on actual integration, new failure, live-checkout sync failure or
-required input. Local scheduled execution needs this computer and app running.
+Stay quiet while state is unchanged. Notify on a validated task commit, a new
+material failure, skipped live synchronization, required input or queue completion.
+Local scheduled execution requires this computer and the Codex app to be running.
 
 ## Reusable agent prompt
 
 ```text
 Implement only the assigned dependency-ready TASKS row and its explicit slice.
-Complete unpaid engineering and Q03b before requesting manual review. Do not
-retry WAITING_USER rows or treat missing scores/approvals as implementation defects.
+For MIDI retain the Q03b handoff; for video follow PLAN section 9 and V10–V33.
+Do not revive V01–V07. V24 is the early real-video checkpoint; V33 is final
+acceptance. Never retry WAITING_USER rows merely to rediscover missing feedback.
 Read AGENTS, PLAN, README, Architecture and relevant task-owner references once.
 Inspect current callers/tests. Reuse completed child tasks and the preserved
 candidate; do not rebuild the whole parent feature. Do not edit PLAN/TASKS or
@@ -1147,9 +1425,9 @@ Add regressions and call out exact focused test selectors. The host coordinator
 runs Gradle/make, diff checks and fresh review; unavailable worker sandbox sockets
 mean PENDING_COORDINATOR, not failure. UI work includes actual image inspection;
 musical/export work prepares comparison/Logic evidence, never fictional ratings.
-Return the runner's structured task/base/candidate/status/summary/tests/artifacts/
-blocker result. Review also returns structured findings and original finding
-resolutions when requested. WAITING_USER describes an actual missing human decision.
+Return task ID, base, candidate status, summary, changed files, tests, artifacts
+and the precise blocker when present. Reviews identify concrete findings with
+file/line references and verification needed to resolve them. WAITING_USER describes an actual missing human decision.
 Repairs receive the same task, current diff and concrete errors, and remain scoped.
 Never read model transcripts or recursively search execution directories; use
 only the bounded current evidence packet and its named failed check logs.

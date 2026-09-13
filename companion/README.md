@@ -84,6 +84,17 @@ request. It opens the digest-pinned finished soundtrack and approved scene
 assets already named by `SceneCompositionRequest`; it does not write that
 request, the soundtrack, asset library, MIDI project, or an output video.
 
+From the repository root, build and launch the release editor with:
+
+```sh
+make video VIDEO_REQUEST="/path/to/composition-request.json"
+# Optionally display a persisted animation job ledger:
+make video VIDEO_REQUEST="/path/to/composition-request.json" \
+  VIDEO_JOBS="/path/to/animation-jobs.json"
+```
+
+The equivalent direct Swift commands are:
+
 ```sh
 swift build --package-path companion -c release
 "$(swift build --package-path companion -c release --show-bin-path)/melotrail-tabi-editor" \

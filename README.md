@@ -46,7 +46,18 @@ Output: an immutable complete-song MIDI file, aligned role files and a manifest.
 Import at song start in Logic Pro, confirm tempo/meter and choose instruments.
 Logic Pro performs all audio production. GarageBand is not a supported target.
 
-For optional video work, install the native companion separately with
+To build and start the TABI video editor from this checkout, use macOS 14+ with
+Xcode command-line tools and an existing composition request:
+
+```bash
+make video VIDEO_REQUEST="/path/to/composition-request.json"
+```
+
+Optionally add `VIDEO_JOBS="/path/to/animation-jobs.json"` to display a saved job
+ledger. See the [native scene editor](companion/README.md#native-scene-editor)
+for input requirements and editor controls.
+
+For the optional MIDI Export handoff, install the native companion separately with
 `sh companion/scripts/install.sh` on macOS. Export shows **Open in TABI…** only
 when a compatible companion is installed; publish a current MIDI package first.
 In TABI, select your finished Logic soundtrack and confirm its lead-in/tail.
