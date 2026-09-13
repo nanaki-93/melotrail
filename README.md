@@ -39,6 +39,14 @@ Output: an immutable complete-song MIDI file, aligned role files and a manifest.
 Import at song start in Logic Pro, confirm tempo/meter and choose instruments.
 Logic Pro performs all audio production. GarageBand is not a supported target.
 
+For optional video work, install the native companion separately with
+`sh companion/scripts/install.sh` on macOS. Export shows **Open in TABI…** only
+when a compatible companion is installed; publish a current MIDI package first.
+In TABI, select your finished Logic soundtrack and confirm its lead-in/tail.
+See the [optional handoff](docs/TABI_VIDEO.md#optional-export-handoff-v07a)
+for installation paths and scene preparation. The MIDI app needs no companion
+to build, run, audition or export.
+
 For musical evaluation, `musicalEvaluation` freezes supplied owned projects before
 generating from isolated copies, and `musicalComparison` exports the separate M01
 development comparisons. Both require new output directories. See the

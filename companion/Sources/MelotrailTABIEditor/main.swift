@@ -6,14 +6,17 @@ import MelotrailTABICompanion
 private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
     private let requestPath: String?
     private let animationLedgerPath: String?
+    private let handoffArguments: [String]?
     private var loadingWindow: NSWindow?
     private var editorWindow: SceneEditorWindowController?
+    private var handoffWindow: ExportHandoffWindowController?
     private let evidenceDirectory: URL?
 
     override init() {
         let arguments = Array(CommandLine.arguments.dropFirst())
         requestPath = (arguments.count == 1 || arguments.count == 2) ? arguments[0] : nil
         animationLedgerPath = arguments.count == 2 ? arguments[1] : nil
+        handoffArguments = arguments.first == "--midi-export" ? arguments : nil
         evidenceDirectory = ProcessInfo.processInfo.environment["MELOTRAIL_TABI_EDITOR_EVIDENCE_DIR"]
             .map { URL(fileURLWithPath: $0, isDirectory: true) }
         super.init()
@@ -56,6 +59,26 @@ private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
 
     private func openRequest() {
         do {
+            if let handoffArguments {
+                let handoff = try ExportHandoff(arguments: handoffArguments)
+                let controller = try ExportHandoffWindowController(handoff: handoff) { [weak self] request in
+                    guard let self else { return }
+                    self.editorWindow = try self.makeEditor(request)
+                    self.editorWindow?.showEditor()
+                    self.handoffWindow?.close()
+                    self.handoffWindow = nil
+                }
+                handoffWindow = controller
+                controller.showHandoff()
+                loadingWindow?.close()
+                loadingWindow = nil
+                if let evidenceDirectory {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.recordHandoffEvidence(handoff, in: evidenceDirectory)
+                    }
+                }
+                return
+            }
             guard let requestPath else {
                 throw EditorLaunchError.usage
             }
@@ -64,15 +87,7 @@ private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
                 throw EditorLaunchError.notRegularFile(requestPath)
             }
             let request = try JSONDecoder().decode(SceneCompositionRequest.self, from: Data(contentsOf: url, options: [.mappedIfSafe]))
-            let session = try SceneEditorSession(
-                request: request,
-                geometry: PreviewOutputGeometry(width: 1_280, height: 720)
-            )
-            let controller = try SceneEditorWindowController(
-                session: session,
-                sessionDocumentURL: try SceneEditorDocumentStore.defaultURL(for: request),
-                animationLedgerURL: animationLedgerPath.map { URL(fileURLWithPath: $0) }
-            )
+            let controller = try makeEditor(request)
             editorWindow = controller
             controller.showEditor()
             loadingWindow?.close()
@@ -94,12 +109,22 @@ private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func makeEditor(_ request: SceneCompositionRequest) throws -> SceneEditorWindowController {
+        try SceneEditorWindowController(
+            session: SceneEditorSession(request: request, geometry: PreviewOutputGeometry(width: 1_280, height: 720)),
+            sessionDocumentURL: SceneEditorDocumentStore.defaultURL(for: request),
+            animationLedgerURL: animationLedgerPath.map { URL(fileURLWithPath: $0) }
+        )
+    }
+
     private func showInputError(_ message: String) {
         loadingWindow?.title = "Cannot open TABI editor"
         loadingWindow?.setContentSize(NSSize(width: 520, height: 270))
         guard let content = loadingWindow?.contentView else { return }
         content.subviews.forEach { $0.removeFromSuperview() }
-        let details = NSTextField(wrappingLabelWithString: "The companion could not open this composition request.\n\n\(message)\n\nUsage: melotrail-tabi-editor <composition-request.json> [animation-jobs.json]")
+        let subject = handoffArguments == nil ? "composition request" : "MIDI export snapshot"
+        let usage = handoffArguments == nil ? "<composition-request.json> [animation-jobs.json]" : "--midi-export <manifest.json> <SHA-256> <snapshot ID>"
+        let details = NSTextField(wrappingLabelWithString: "The companion could not open this \(subject).\n\n\(message)\n\nUsage: melotrail-tabi-editor \(usage)")
         details.font = .systemFont(ofSize: 13)
         details.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(details)
@@ -112,6 +137,45 @@ private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { [weak self] in
                 self?.recordInputErrorEvidence(message, in: evidenceDirectory)
             }
+        }
+    }
+
+    private func recordHandoffEvidence(_ handoff: ExportHandoff, in outputDirectory: URL) {
+        do {
+            _ = try handoff.verify()
+            guard (try outputDirectory.resourceValues(forKeys: [.isDirectoryKey])).isDirectory == true,
+                  let content = handoffWindow?.window?.contentView else { throw EditorLaunchError.invalidEvidenceDirectory }
+            handoffWindow?.window?.displayIfNeeded()
+            content.layoutSubtreeIfNeeded()
+            func control(_ label: String, in view: NSView) -> NSControl? {
+                if let control = view as? NSControl, control.accessibilityLabel() == label { return control }
+                for child in view.subviews {
+                    if let match = control(label, in: child) { return match }
+                }
+                return nil
+            }
+            guard let choose = control("Choose finished soundtrack", in: content),
+                  let confirm = control("Confirm bounce timing", in: content),
+                  let open = control("Open handoff composition", in: content),
+                  choose.isEnabled && !confirm.isEnabled && !open.isEnabled else { throw EditorLaunchError.captureFailed }
+            guard let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { throw EditorLaunchError.captureFailed }
+            content.cacheDisplay(in: content.bounds, to: bitmap)
+            guard let png = bitmap.representation(using: .png, properties: [:]) else { throw EditorLaunchError.captureFailed }
+            let capture = outputDirectory.appendingPathComponent("handoff-window.png")
+            try png.write(to: capture, options: .withoutOverwriting)
+            let report: [String: Any] = [
+                "schemaVersion": 1, "releaseExecutableLaunched": true,
+                "executablePath": CommandLine.arguments[0], "snapshotId": handoff.snapshotID,
+                "manifestSHA256": handoff.manifestSHA256,
+                "finishedSoundtrackSelectionRequired": choose.isEnabled && !confirm.isEnabled && !open.isEnabled,
+                "capturePath": capture.path,
+            ]
+            try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+                .write(to: outputDirectory.appendingPathComponent("handoff-observations.json"), options: .withoutOverwriting)
+            NSApp.terminate(nil)
+        } catch {
+            writeStandardError("release-handoff-evidence=FAIL: \(error.localizedDescription)")
+            exit(EXIT_FAILURE)
         }
     }
 
@@ -156,6 +220,10 @@ private final class TABIEditorApplication: NSObject, NSApplicationDelegate {
 @MainActor
 private enum TABIEditorMain {
     static func main() {
+        if Array(CommandLine.arguments.dropFirst()) == ["--capabilities"] {
+            print(ExportHandoff.capability)
+            return
+        }
         let application = NSApplication.shared
         let delegate = TABIEditorApplication()
         application.delegate = delegate

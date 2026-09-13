@@ -23,8 +23,8 @@ editor="$release_bin/melotrail-tabi-editor"
 
 run_editor() {
   output_dir=$1
-  request=$2
-  MELOTRAIL_TABI_EDITOR_EVIDENCE_DIR="$output_dir" "$editor" "$request" &
+  shift
+  MELOTRAIL_TABI_EDITOR_EVIDENCE_DIR="$output_dir" "$editor" "$@" &
   editor_pid=$!
   (
     remaining=20
@@ -71,8 +71,8 @@ test "$(plutil -extract frameObserverAndPlayerReleasedOnClose raw -o - "$valid/e
 test "$(plutil -extract inputErrorVisible raw -o - "$invalid/input-error-observations.json")" = "true"
 test "$(sips -g pixelWidth "$valid/editor-window.png" | awk '/pixelWidth/ { print $2 }')" -gt 700
 test "$(sips -g pixelHeight "$valid/editor-window.png" | awk '/pixelHeight/ { print $2 }')" -gt 500
-for fixture in 1536x1024 1280x900 720x900; do
-  test -s "$valid/editor-$fixture.png"
+for layout_fixture in 1536x1024 1280x900 720x900; do
+  test -s "$valid/editor-$layout_fixture.png"
 done
 test "$(plutil -extract 'layoutCaptures.2.fixture' raw -o - "$valid/editor-observations.json")" = "720x900"
 test "$(plutil -extract 'layoutCaptures.2.compactStackedLayout' raw -o - "$valid/editor-observations.json")" = "true"
@@ -84,6 +84,33 @@ echo "release-editor-capture=$valid/editor-window.png"
 echo "release-editor-observations=$valid/editor-observations.json"
 echo "release-editor-input-error-capture=$invalid/input-error-window.png"
 echo "release-editor-input-error-observations=$invalid/input-error-observations.json"
+
+# V07a checks the separate installed executable's protocol and real intake caller.
+installed="$evidence/installed TABI 日本語"
+sh "$root/scripts/install.sh" "$installed"
+editor="$installed/melotrail-tabi-editor"
+test "$("$editor" --capabilities)" = "melotrail-tabi-export-handoff-v1-manifest-v2"
+installed_digest=$(shasum -a 256 "$editor")
+if sh "$root/scripts/install.sh" "$installed"; then
+  echo "regression=FAIL: companion installation overwrote an existing directory" >&2
+  exit 1
+fi
+test "$(shasum -a 256 "$editor")" = "$installed_digest"
+handoff="$evidence/handoff"
+stale_handoff="$evidence/stale-handoff"
+mkdir "$handoff" "$stale_handoff"
+manifest_digest=$(shasum -a 256 "$fixture/manifest.json" | awk '{print $1}')
+run_editor "$handoff" --midi-export "$fixture/manifest.json" "$manifest_digest" owned-timing-snapshot
+run_editor "$stale_handoff" --midi-export "$fixture/manifest.json" "$manifest_digest" wrong-snapshot
+test "$(plutil -extract executablePath raw -o - "$handoff/handoff-observations.json")" = "$editor"
+test "$(plutil -extract snapshotId raw -o - "$handoff/handoff-observations.json")" = "owned-timing-snapshot"
+test "$(plutil -extract manifestSHA256 raw -o - "$handoff/handoff-observations.json")" = "$manifest_digest"
+test "$(plutil -extract inputErrorVisible raw -o - "$stale_handoff/input-error-observations.json")" = "true"
+test -s "$handoff/handoff-window.png"
+test -s "$evidence/export-handoff.png"
+test "$(shasum -a 256 "$fixture/manifest.json" | awk '{print $1}')" = "$manifest_digest"
+echo "release-handoff-evidence=PASS executable=$editor"
+echo "release-handoff-capture=$handoff/handoff-window.png"
 
 # The real CLI must reject a path, even one below our own disposable build tree.
 rejected="$root/.build/rejected-output-$$"

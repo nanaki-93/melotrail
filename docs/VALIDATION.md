@@ -48,6 +48,43 @@ Every fixed bug receives a regression that would fail before the fix.
 
 ## Optional companion preflight
 
+V07a recovery (2026-09-13) passed 572 JVM tests, required build, focused
+export/launcher/UI checks and the separate native regression/release/install
+check. Evidence is in `~/.codex/melotrail-terra/final-engineering-recovery-evidence/`
+(`v07-focused.log`, `v07-test.log`, `v07-build.log`, `v07-companion-final.log`
+and `v07-companion/`). The original two shortened exact-text assertions were
+corrected. Image inspection also caught transparent/blank intake controls;
+opaque rendering, readable native buttons and a dark appearance now have pixel
+and Aqua-host regression coverage. Independent review resolved the contrast
+finding. Three-size MIDI captures and fresh native intake images were inspected;
+this is technical rendering evidence, not the final human visual decision.
+
+V07a focused coordinator checks are `MidiCoreMidiPackageExporterTest`,
+`MidiCoreCompanionLauncherTest` and `MidiCoreExportPageTest`, plus
+`node tools/companion-check.mjs` and the required MIDI `make test`, `make build`
+and `git diff --check`. The export tests exercise the real published snapshot:
+successful/failed launch, changed project revision/acceptance, unrecorded snapshot
+and corrupted manifest all preserve project/source/candidate/export bytes.
+The process tests cover absent/incompatible/removed installations, bounded
+timeout/output, crash and literal Unicode/spaced arguments. Export UI tests use
+the shell caller, including absent, current, stale and launch-error states.
+
+Inspect the fresh `desktopApp/build/test-results/midi-core-export-handoff/`
+captures at 1536×1024, 1280×900 and 720×900 (the test module's working directory
+owns the `build` path). The native check retains `export-handoff.png` beside
+its existing editor fixtures, plus `handoff/handoff-window.png` and
+`handoff/handoff-observations.json` under its fresh `.build/v05b-editor-evidence.*`
+directory. It separately installs the release executable into an owned new
+directory, refuses a second install there, launches its actual handoff entrypoint
+and captures a rejected snapshot identity. Native control regressions select
+the owned finished soundtrack, reject a timing mismatch, confirm alignment,
+save a new timing request and open the existing asset-backed editor session.
+Changed manifest/soundtrack bytes and MIDI-project/snapshot/symlink save targets
+must reject without writing musical inputs. These are technical fixture checks;
+final Logic listening, foreground captures and production TABI review remain
+deferred to the Q03b/manual handoff. No new Logic sound or artistic approval is
+inferred from optional launch behavior.
+
 V01's companion checks are separate from the MIDI application. The coordinator
 runs `node tools/companion-check.mjs`, dispatching the boundary check, native
 regressions and Swift release build. No Gradle companion shim is needed. The

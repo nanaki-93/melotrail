@@ -157,7 +157,7 @@ object MidiCoreDesktopEntrypoint {
                 )
             }
             val exportActions = remember(services) {
-                MidiCoreExportPageActions { directory ->
+                MidiCoreExportPageActions(companion = MidiCoreCompanionLauncher()) { directory ->
                     check(Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN))
                     check(directory.toFile().isDirectory)
                     Desktop.getDesktop().open(directory.toFile())

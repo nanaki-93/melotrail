@@ -675,6 +675,7 @@ do {
         scenes: sceneInputs
     )
     let composition = try compositionRequest.resolve()
+    try runExportHandoffRegression(manifestURL: manifestURL, soundtrackURL: probe.outputURL, composition: compositionRequest)
     let encodedSceneInputs = try JSONEncoder().encode(sceneInputs)
     let decodedSceneInputs = try JSONSerialization.jsonObject(with: encodedSceneInputs)
     let compositionObject: [String: Any] = [
@@ -1141,8 +1142,9 @@ do {
     try MainActor.assumeIsolated {
         let application = NSApplication.shared
         application.setActivationPolicy(.regular)
-        let sessionRoot = timingRoot.appendingPathComponent("editor-session", isDirectory: true)
+        let sessionRoot = FileManager.default.temporaryDirectory.appendingPathComponent("editor-session-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: sessionRoot, withIntermediateDirectories: false)
+        directories.append(sessionRoot)
         let sessionURL = sessionRoot.appendingPathComponent("current.scene-editor.json")
         let ledgerURL = sessionRoot.appendingPathComponent("animation-jobs.json")
         let cost = AnimationCost(currency: "USD", amountCents: 60)

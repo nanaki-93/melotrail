@@ -516,6 +516,60 @@ frame ranges are contiguous and the last range ends at the one deterministic
 ceil-rounded soundtrack boundary. V04 composition, V05 preview, and V06 output
 must consume this plan rather than independently rounding timestamps.
 
+### Optional Export handoff (V07a)
+
+The MIDI Export page probes a separately installed `melotrail-tabi-editor`.
+Its bounded `--capabilities` response must be exactly
+`melotrail-tabi-export-handoff-v1-manifest-v2`. Missing, incompatible or
+unresponsive installations leave ordinary MIDI export available without a video
+action. A compatible installation adds **Open in TABI…** to a saved snapshot;
+earlier accepted work requires a new current export before launch.
+
+Install the companion independently on macOS 14+:
+
+```bash
+sh companion/scripts/install.sh
+```
+
+This builds only the Swift release editor and copies its executable into a new
+`~/Applications/Melotrail TABI/` directory. It refuses an existing destination.
+For another new installation directory, pass its absolute path to the script
+and set `MELOTRAIL_TABI_EXECUTABLE` to that directory's `melotrail-tabi-editor`
+when starting the MIDI app. Reopen Export after installation. This is an unsigned
+local executable installation, not a signed/notarized app bundle. No companion
+target or media dependency enters the Kotlin build/package.
+
+Launch reopens and verifies the MIDI project and every referenced artifact,
+checks the selected snapshot against disk/current accepted work, then passes
+only `--midi-export <absolute manifest path> <SHA-256> <snapshot ID>` as literal
+process arguments. The working directory is temporary storage. No handoff file,
+soundtrack reference, project revision or snapshot rewrite is stored in the
+MIDI project. The companion checks both manifest digest and snapshot identity
+at intake and again when confirming/saving/opening; it never reads project state.
+Currentness is checked at dispatch; subsequent MIDI edits do not alter the
+immutable snapshot already selected in the companion.
+
+The native intake requires a separately selected finished soundtrack and an
+explicit **Confirm timing** action. Lead-in/tail accept exact non-negative seconds
+(up to six decimal places) or rational fractions such as `441/44100`.
+**Use remaining duration as tail** proposes the exact remainder after the entered
+lead-in and MIDI timeline; it still requires explicit timing confirmation.
+The existing timing planner rejects duration
+mismatches rather than shifting, trimming or stretching music. Soundtrack bytes
+are pinned at selection and rechecked before each dependent action. **Save timing
+request…** creates a new JSON request in companion storage for the existing
+scene-preparation workflow. Use that request as the `timing` object of a prepared
+`SceneCompositionRequest` with approved asset pins. **Open prepared composition…**
+checks the exact timing inputs and opens the existing editor; another soundtrack
+or export cannot silently replace the handoff. This intake does not generate or
+approve assets, start paid jobs, encode automatically or publish video.
+
+Timing requests and editor sessions reject MIDI-project descendants and snapshot
+directories, including symlink aliases. Timing publication refuses existing files;
+session saves replace only their own companion document. All selected inputs
+remain protected. Companion intake and installed-launch captures are
+technical fixtures; the full-song production pilot and human decisions stay V07.
+
 ### Deterministic scene composition (V04)
 
 The companion's `plan-scenes` caller combines that timing plan with a selected

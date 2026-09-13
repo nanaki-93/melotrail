@@ -16,23 +16,31 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import app.melotrail.application.MidiCoreExportedPackage
+import app.melotrail.application.MidiCoreProjectSession
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.ExportedFileKind
 import app.melotrail.project.MidiCoreExportSnapshot
 import java.nio.file.Path
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Local UI action for revealing an already-published, immutable package directory. */
 internal data class MidiCoreExportPageActions(
+    val companion: MidiCoreOptionalCompanion? = null,
     val revealDirectory: (Path) -> Unit = {},
 )
 
@@ -58,6 +66,8 @@ internal object MidiCoreExportPageTags {
     const val DETAILS = "midi-core-export-details"
     const val SNAPSHOT_STATUS = "midi-core-export-snapshot-status"
     const val REVEAL_ERROR = "midi-core-export-reveal-error"
+    const val COMPANION = "midi-core-export-companion"
+    const val COMPANION_STATUS = "midi-core-export-companion-status"
 
     fun scope(occurrenceId: String, role: CandidateRole) = "midi-core-export-scope-$occurrenceId-${role.name.lowercase()}"
 
@@ -284,6 +294,7 @@ private fun ExportSnapshotCard(
             ) { Text("Reveal package folder") }
         }
         revealError?.let { Text(it, modifier = Modifier.semantics { testTag = MidiCoreExportPageTags.REVEAL_ERROR }, color = MusicWorkspaceTokens.Warning) }
+        ExportCompanionAction(state, snapshot, current, actions.companion)
         OutlinedButton(
             onClick = { details = !details },
             shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
@@ -298,6 +309,52 @@ private fun ExportSnapshotCard(
             }
             snapshot.files.forEach { Text("${it.kind.exportFilename}: ${it.artifact.sha256}", style = MaterialTheme.typography.bodySmall) }
         }
+    }
+}
+
+@Composable
+private fun ExportCompanionAction(
+    state: MidiCoreWorkspaceState,
+    snapshot: MidiCoreExportSnapshot,
+    current: Boolean,
+    companion: MidiCoreOptionalCompanion?,
+) {
+    var available by remember(companion) { mutableStateOf(false) }
+    var launching by remember(companion, snapshot.id) { mutableStateOf(false) }
+    var result by remember(companion, snapshot.id, state.project?.revision) { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(companion, snapshot.id) {
+        available = withContext(Dispatchers.IO) { companion?.isAvailable() == true }
+    }
+    if (!available || companion == null) return
+    Text("Optional TABI video · choose your finished Logic soundtrack in the companion.", style = MaterialTheme.typography.bodySmall)
+    OutlinedButton(
+        enabled = current && !state.busy && !launching,
+        onClick = {
+            val root = state.projectRoot ?: return@OutlinedButton
+            val project = state.project ?: return@OutlinedButton
+            launching = true
+            result = null
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { companion.launch(MidiCoreProjectSession(root, project), snapshot) }
+                    result = "TABI launched. Choose the finished soundtrack in its window."
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    result = error.message ?: "Could not open TABI. Reopen Export and retry."
+                } finally {
+                    launching = false
+                }
+            }
+        },
+        shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+        modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+            .semantics { testTag = MidiCoreExportPageTags.COMPANION },
+    ) { Text(if (launching) "Opening TABI…" else "Open in TABI…") }
+    val message = result ?: if (!current) "Publish a current MIDI package to open it in TABI." else null
+    message?.let {
+        Text(it, modifier = Modifier.semantics { testTag = MidiCoreExportPageTags.COMPANION_STATUS }, style = MaterialTheme.typography.bodySmall)
     }
 }
 

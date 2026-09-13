@@ -3,12 +3,22 @@ package app.melotrail.desktop
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.toAwtImage
+import app.melotrail.application.MidiCoreProjectSession
+import app.melotrail.project.MidiCoreAcceptedCandidateReference
 import app.melotrail.midi.domain.MidiTrackSummary
 import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
@@ -47,12 +57,112 @@ import app.melotrail.project.SelectedMelodyTrack
 import app.melotrail.project.SourceMidiRecord
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
+import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreExportPageTest {
+    @Test
+    fun `Export keeps companion optional when absent and preserves normal publication`() = runComposeUiTest {
+        val companion = RecordingCompanion(available = false)
+        setContent { MelotrailTheme { MidiCoreExportPage(currentSnapshotState(), {}, MidiCoreExportPageActions(companion)) } }
+        waitUntil { companion.probes.get() > 0 }
+        onNodeWithTag(MidiCoreExportPageTags.COMPANION).assertDoesNotExist()
+        onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().assertIsEnabled()
+        onNodeWithTag(MidiCoreExportPageTags.REVEAL).performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun `Export launches installed companion through its shell with the exact saved snapshot`() = runComposeUiTest {
+        val state = currentSnapshotState()
+        val companion = RecordingCompanion()
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(
+            state = state, initialDestination = MidiCoreWorkspaceDestination.EXPORT,
+            exportActions = MidiCoreExportPageActions(companion),
+        ) } }
+        waitUntil { onAllNodesWithTag(MidiCoreExportPageTags.COMPANION).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag(MidiCoreExportPageTags.COMPANION).performScrollTo().assertIsEnabled().performClick()
+        waitUntil { companion.launches.get() == 1 }
+        waitUntil { onAllNodesWithTag(MidiCoreExportPageTags.COMPANION_STATUS).fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(MidiCoreProjectSession(requireNotNull(state.projectRoot), requireNotNull(state.project)), companion.session)
+        assertEquals(state.export.latestSnapshot, companion.snapshot)
+        onNodeWithTag(MidiCoreExportPageTags.COMPANION_STATUS).assertTextEquals("TABI launched. Choose the finished soundtrack in its window.")
+    }
+
+    @Test
+    fun `Export disables the installed companion for earlier accepted work`() = runComposeUiTest {
+        val current = currentSnapshotState()
+        val state = current.copy(project = requireNotNull(current.project).copy(acceptances = emptyList()))
+        val companion = RecordingCompanion()
+        setContent { MelotrailTheme { MidiCoreExportPage(state, {}, MidiCoreExportPageActions(companion)) } }
+        waitUntil { onAllNodesWithTag(MidiCoreExportPageTags.COMPANION).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag(MidiCoreExportPageTags.COMPANION).performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(MidiCoreExportPageTags.COMPANION_STATUS).assertTextEquals("Publish a current MIDI package to open it in TABI.")
+        assertEquals(0, companion.launches.get())
+    }
+
+    @Test
+    fun `Export reports a companion launch failure without losing its saved package`() = runComposeUiTest {
+        val companion = RecordingCompanion(fail = true)
+        setContent { MelotrailTheme { MidiCoreExportPage(currentSnapshotState(), {}, MidiCoreExportPageActions(companion)) } }
+        waitUntil { onAllNodesWithTag(MidiCoreExportPageTags.COMPANION).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag(MidiCoreExportPageTags.COMPANION).performScrollTo().performClick()
+        waitUntil { onAllNodesWithTag(MidiCoreExportPageTags.COMPANION_STATUS).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag(MidiCoreExportPageTags.COMPANION_STATUS).assertTextContains("TABI unavailable")
+        onNodeWithTag(MidiCoreExportPageTags.REVEAL).performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun `optional Export handoff stays reachable at all supported window sizes`() {
+        listOf(1536 to 1024, 1280 to 900, 720 to 900).forEach { (width, height) ->
+            runSkikoComposeUiTest(size = Size(width.toFloat(), height.toFloat())) {
+                val companion = RecordingCompanion()
+                setContent { MelotrailTheme { MidiCoreWorkspaceShell(
+                    state = currentSnapshotState(), initialDestination = MidiCoreWorkspaceDestination.EXPORT,
+                    exportActions = MidiCoreExportPageActions(companion),
+                ) } }
+                waitUntil { onAllNodesWithTag(MidiCoreExportPageTags.COMPANION).fetchSemanticsNodes().isNotEmpty() }
+                onNodeWithTag(MidiCoreExportPageTags.COMPANION).performScrollTo().assertIsDisplayed().assertIsEnabled()
+                onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertIsDisplayed()
+                val directory = Path.of("build/test-results/midi-core-export-handoff")
+                Files.createDirectories(directory)
+                kotlin.test.assertTrue(ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", directory.resolve("$width-handoff.png").toFile()))
+            }
+        }
+    }
+
+    private class RecordingCompanion(private val available: Boolean = true, private val fail: Boolean = false) : MidiCoreOptionalCompanion {
+        val probes = AtomicInteger()
+        val launches = AtomicInteger()
+        @Volatile var session: MidiCoreProjectSession? = null
+        @Volatile var snapshot: MidiCoreExportSnapshot? = null
+        override fun isAvailable(): Boolean { probes.incrementAndGet(); return available }
+        override fun launch(session: MidiCoreProjectSession, snapshot: MidiCoreExportSnapshot) {
+            if (fail) error("TABI unavailable")
+            this.session = session
+            this.snapshot = snapshot
+            launches.incrementAndGet()
+        }
+    }
+
+    private fun currentSnapshotState(): MidiCoreWorkspaceState {
+        val state = exportState()
+        val project = requireNotNull(state.project)
+        val references = project.candidates.sortedWith(compareBy<MidiCoreCandidate> { it.occurrenceId }.thenBy { it.role.ordinal }).map {
+            MidiCoreAcceptedCandidateReference(it.occurrenceId, it.role, it.id, it.midi.sha256, it.validationReport.sha256,
+                it.authorityHash, it.generatorVersion, it.profileId, it.patternId, it.seed)
+        }
+        val snapshot = exportSnapshot().copy(
+            authorityHash = app.melotrail.project.MidiCoreAuthorityHasher.from(project).sha256,
+            acceptedCandidates = references,
+            generatorVersions = references.associate { "${it.occurrenceId}.${it.role.name.lowercase()}" to it.generatorVersion },
+        )
+        return state.copy(project = project.copy(exportSnapshots = listOf(snapshot)), export = MidiCoreExportUiState(latestSnapshot = snapshot))
+    }
+
     @Test
     fun `Export destination is rendered through the focused workspace shell`() = runComposeUiTest {
         setContent {

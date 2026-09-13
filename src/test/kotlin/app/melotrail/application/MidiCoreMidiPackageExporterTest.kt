@@ -28,6 +28,7 @@ import kotlin.io.path.name
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -36,6 +37,73 @@ import kotlinx.coroutines.runBlocking
 
 class MidiCoreMidiPackageExporterTest {
     @TempDir lateinit var root: Path
+
+    @Test
+    fun `optional handoff rechecks a real exported snapshot and preserves every project byte`() {
+        val store = MidiCoreArtifactStore()
+        val accepted = acceptAll(
+            store,
+            readySession(
+                store,
+                root.resolve("handoff 日本語 project"),
+                projectId = "handoff-unicode-project",
+            ),
+        )
+        val exported = assertIs<MidiCoreMidiPackageExportResult.Exported>(
+            exporter(store, "handoff-export").export(ExportMidiCorePackage(accepted)),
+        ).packageResult
+        fun bytes() = Files.walk(accepted.root).use { paths ->
+            paths.filter { Files.isRegularFile(it) }.toList().associate { it to Files.readAllBytes(it).toList() }
+        }
+        val before = bytes()
+        var received: MidiCoreExportHandoffReference? = null
+        val handoff = MidiCoreExportHandoff(store)
+        handoff.launch(exported.session, exported.snapshot) { received = it }
+        assertEquals(MidiCoreExportHandoffReference(exported.directory.resolve("manifest.json").toRealPath(),
+            exported.manifestSha256, exported.snapshot.id), received)
+        assertEquals(before, bytes())
+        assertFailsWith<IllegalStateException> {
+            handoff.launch(exported.session, exported.snapshot) { error("Companion failed to start") }
+        }
+        assertEquals(before, bytes())
+
+        val changed = exported.session.project.copy(revision = exported.session.project.revision + 1)
+        store.saveProject(accepted.root, changed)
+        received = null
+        val changedBytes = bytes()
+        assertFailsWith<IllegalArgumentException> { handoff.launch(exported.session, exported.snapshot) { received = it } }
+        assertEquals(null, received)
+        assertEquals(changedBytes, bytes())
+    }
+
+    @Test
+    fun `optional handoff rejects stale unrecorded and corrupted snapshots before dispatch`() {
+        val store = MidiCoreArtifactStore()
+        val accepted = acceptAll(store, readySession(store, root.resolve("handoff-stale")))
+        val exported = assertIs<MidiCoreMidiPackageExportResult.Exported>(
+            exporter(store, "handoff-current").export(ExportMidiCorePackage(accepted)),
+        ).packageResult
+        val handoff = MidiCoreExportHandoff(store)
+        var launches = 0
+        assertFailsWith<IllegalArgumentException> {
+            handoff.launch(exported.session, exported.snapshot.copy(id = "unrecorded")) { launches++ }
+        }
+        val changed = exported.session.project.copy(acceptances = emptyList(), revision = exported.session.project.revision + 1)
+        store.saveProject(accepted.root, changed)
+        assertFailsWith<IllegalArgumentException> {
+            handoff.launch(exported.session.copy(project = changed), exported.snapshot) { launches++ }
+        }
+        store.saveProject(accepted.root, exported.session.project)
+        val manifest = exported.directory.resolve("manifest.json")
+        val original = Files.readAllBytes(manifest)
+        Files.writeString(manifest, "changed snapshot")
+        val projectBytes = Files.readAllBytes(accepted.root.resolve("project.json"))
+        assertFailsWith<IllegalArgumentException> { handoff.launch(exported.session, exported.snapshot) { launches++ } }
+        assertContentEquals(projectBytes, Files.readAllBytes(accepted.root.resolve("project.json")))
+        assertEquals("changed snapshot", Files.readString(manifest))
+        assertEquals(0, launches)
+        Files.write(manifest, original)
+    }
 
     @Test
     fun `publishes a complete package records snapshot and reopens it`() {

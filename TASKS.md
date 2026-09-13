@@ -1,6 +1,6 @@
 # Implementation tasks
 
-Authority: [PLAN](PLAN.md). Updated: 2026-09-11. Task status is authoritative in the integration branch queue.
+Authority: [PLAN](PLAN.md). Updated: 2026-09-13. Task status is authoritative in the integration branch queue.
 The old MC/UI/VID queues are retired. Reuse existing code and tests; do not
 replay completed import, draft, acceptance, export or UI-foundation work.
 
@@ -47,7 +47,7 @@ run for every implementation; code failures retain their normal recovery policy.
 Production rights, identity and spending authorization remain required before
 production media use or paid generation; they do not block owned-fixture code.
 
-Remaining automatic order: **Q03a → V07a → Q03b**. Q03b prepares one final review
+Remaining automatic order: **Q03a → Q03b**. V07a was independently recovered first; its V06/U06 dependencies were complete. Q03b prepares one final review
 handoff using the integrated code. Then notify once that manual review is ready
 and leave the gates pending until the user starts it. Real code/environment
 blockers still get reported; an unchanged deferred human gate is not a failure.
@@ -122,7 +122,7 @@ blockers still get reported; an unchanged deferred human gate is not a failure.
 | V05 | Validate the complete editor and compact keyboard flow | V05d | DONE | Recovered keyboard routing and stable inspector focus; responsive release captures at 1536×1024, 1280×900 and 720×900 with exact size/geometry checks. Native regression/release, 414 JVM tests, build and independent Terra review passed. Evidence: ~/.codex/melotrail-terra/v05-repair-evidence; production artistic approval remains human. |
 | V06a | Implement bounded encoder process and output staging | V01a | DONE | Recovered native encoder process; repaired Swift compile errors, pre-launch cancellation, isolated input snapshots, process-group teardown, bounded diagnostics/callbacks, redaction and cleanup. Owned process regressions, native release and MIDI test/build checked. Episode codec/parity remains V06. Evidence ~/.codex/melotrail-terra/video-recovery-evidence. |
 | V06 | Encode, validate and publish local video outputs | V06a, V05 | DONE | Recovered candidate; repaired Swift types, transparent-buffer noise, A/V backpressure, late cancellation and paired publication. Selected ProRes/PCM MOV proven at 320×180 mono/1s and 1920×1080 stereo/12s, with exact decoded PCM, frame/timeline probes and provenance. Native/release CLI, 433 MIDI tests, build and fresh Terra review passed; evidence ~/.codex/melotrail-terra/v06-repair-evidence. Full-song/production approval remains V07. |
-| V07a | Add capability-checked optional Export handoff | V06, U06 | BLOCKED | test-2 failed (2); /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T16-48-46-228Z-V07a/test-2.log ./gradlew test > Task :checkKotlinGradlePluginConfigurationErrors SKIPPED > Task :compileKotlin UP-TO-DATE > Task :compileJava NO-SOURCE > Task :processResources NO-SOURCE > Task :classes UP-TO-DATE > Task :jar UP-TO-DATE > Task :processTestResources UP-TO-DATE > Task :desktopApp:checkKotlinGradlePluginConfigurationErrors SKIPPED > Task :desktopApp:convertXmlValueResourcesForMain NO-SOURCE > Task :desktopApp:copyNonXmlValueResourcesForMa |
+| V07a | Add capability-checked optional Export handoff | V06, U06 | DONE | Recovered immutable snapshot handoff and separate installer; repaired exact UI assertions and opaque/readable intake rendering, including Aqua-host contrast. 572 JVM tests, build, native regressions/release installation, inspected captures and independent review passed. Evidence ~/.codex/melotrail-terra/final-engineering-recovery-evidence/v07-*. Final musical/production approvals remain pending. |
 | V07 | Complete a TABI music-video pilot and optional handoff | V07a, V03, V02, Q03 | WAITING_USER | Real full-song pilot and human artistic/sound/rights decision deferred until final review and required production authorizations. Optional handoff implementation remains independently runnable as V07a. |
 
 ## Foundation and removal

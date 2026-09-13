@@ -134,6 +134,11 @@ public enum SceneEditorDocumentStore {
     }
 
     private static func requireSessionDestination(_ url: URL, document: SceneEditorDocument) throws {
+        do {
+            try ExportHandoff.requireSeparateDestination(url, manifestURL: document.request.timing.manifestPath.map { URL(fileURLWithPath: $0) })
+        } catch {
+            throw SceneEditorDocumentError.unsafeSessionPath(error.localizedDescription)
+        }
         guard url.isFileURL, url.lastPathComponent.hasSuffix(".scene-editor.json") else {
             throw SceneEditorDocumentError.unsafeSessionPath("Choose a companion .scene-editor.json file.")
         }
