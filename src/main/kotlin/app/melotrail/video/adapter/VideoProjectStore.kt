@@ -1,0 +1,422 @@
+package app.melotrail.video.adapter
+
+import app.melotrail.video.application.InvalidVideoProjectException
+import app.melotrail.video.application.UnsafeVideoProjectLocationException
+import app.melotrail.video.application.UnsupportedVideoProjectException
+import app.melotrail.video.application.VideoProjectAlreadyExistsException
+import app.melotrail.video.application.VideoProjectConcurrencyException
+import app.melotrail.video.application.VideoProjectNotFoundException
+import app.melotrail.video.application.VideoProjectPersistence
+import app.melotrail.video.application.VideoProjectSaveException
+import app.melotrail.video.domain.VideoArtifact
+import app.melotrail.video.domain.VideoProject
+import app.melotrail.video.domain.VideoProjectControlPaths
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.charset.StandardCharsets
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
+import java.security.MessageDigest
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+/** Filesystem adapter for an independent, current-schema Video project. */
+class VideoProjectStore(
+    protectedMidiRoots: Collection<Path>,
+    private val atomicWriteObserver: VideoAtomicWriteObserver = VideoAtomicWriteObserver.NONE,
+) : VideoProjectPersistence {
+    private val protectedRoots = protectedMidiRoots.map { it.toAbsolutePath() }
+
+    init {
+        require(protectedRoots.isNotEmpty()) {
+            "At least one MIDI project or export root must be protected before video storage is used"
+        }
+    }
+
+    override fun create(projectRoot: Path, project: VideoProject): VideoProject {
+        require(project.revision == 0L) { "A new video project must start at revision zero" }
+        val plannedRoot = validateLocation(projectRoot)
+        if (Files.exists(plannedRoot, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(plannedRoot)) {
+            throw UnsafeVideoProjectLocationException("The video project root is not a directory: $plannedRoot")
+        }
+        try {
+            Files.createDirectories(plannedRoot)
+        } catch (error: IOException) {
+            throw UnsafeVideoProjectLocationException("The video project root could not be created: $plannedRoot", error)
+        }
+        val root = existingSafeRoot(plannedRoot)
+        return withWriteLock(root) {
+            val target = projectFile(root)
+            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                throw VideoProjectAlreadyExistsException("A video project already exists in this folder.")
+            }
+            verifyArtifacts(root, project)
+            publishDocument(root, target, project, replace = false)
+            project
+        }
+    }
+
+    override fun open(projectRoot: Path): VideoProject {
+        val plannedRoot = validateLocation(projectRoot)
+        if (!Files.isDirectory(plannedRoot, LinkOption.NOFOLLOW_LINKS)) {
+            throw VideoProjectNotFoundException("No current video project was found in this folder.")
+        }
+        val root = existingSafeRoot(plannedRoot)
+        val project = readCurrentProject(root)
+        verifyArtifacts(root, project)
+        return project
+    }
+
+    override fun save(projectRoot: Path, expectedRevision: Long, project: VideoProject): VideoProject {
+        require(expectedRevision >= 0L) { "Expected video project revision must not be negative" }
+        val root = existingSafeRoot(validateLocation(projectRoot))
+        return withWriteLock(root) {
+            val current = readCurrentProject(root)
+            if (current.revision != expectedRevision) {
+                throw VideoProjectConcurrencyException(
+                    "The video project changed from revision $expectedRevision to ${current.revision}.",
+                )
+            }
+            val requiredRevision = try {
+                Math.addExact(expectedRevision, 1L)
+            } catch (error: ArithmeticException) {
+                throw IllegalArgumentException("The video project revision cannot advance safely", error)
+            }
+            require(project.revision == requiredRevision) {
+                "The saved video project must advance revision $expectedRevision to $requiredRevision"
+            }
+            requireAppendOnlyHistory(current, project)
+            verifyArtifacts(root, project)
+            publishDocument(root, projectFile(root), project, replace = true)
+            project
+        }
+    }
+
+    fun resolveArtifact(projectRoot: Path, artifact: VideoArtifact): Path {
+        val root = existingSafeRoot(validateLocation(projectRoot))
+        return verifyArtifact(root, artifact)
+    }
+
+    private fun requireAppendOnlyHistory(current: VideoProject, replacement: VideoProject) {
+        require(current.id == replacement.id) { "A save cannot replace the video project identity" }
+        require(current.createdAt == replacement.createdAt) { "A save cannot replace the video project creation timestamp" }
+        require(current.applicationVersion == replacement.applicationVersion) {
+            "A save cannot replace the creating application version"
+        }
+        require(replacement.referenceVersions.startsWith(current.referenceVersions)) {
+            "Reference versions are immutable and append-only"
+        }
+        require(replacement.lookVersions.startsWith(current.lookVersions)) {
+            "Look versions are immutable and append-only"
+        }
+        require(replacement.takeVersions.startsWith(current.takeVersions)) {
+            "Take versions are immutable and append-only"
+        }
+        require(replacement.exportRecords.startsWith(current.exportRecords)) {
+            "Export records are immutable and append-only"
+        }
+    }
+
+    private fun publishDocument(root: Path, target: Path, project: VideoProject, replace: Boolean) {
+        val bytes = VideoProjectSchema.encode(project).toByteArray(StandardCharsets.UTF_8)
+        require(VideoProjectSchema.decode(bytes.toString(StandardCharsets.UTF_8)) == project) {
+            "Video project schema validation changed the project"
+        }
+        val temporary = Files.createTempFile(root, VideoProjectControlPaths.STAGING_PREFIX, ".tmp")
+        var published = false
+        try {
+            FileChannel.open(temporary, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING).use { channel ->
+                val remaining = ByteBuffer.wrap(bytes)
+                while (remaining.hasRemaining()) channel.write(remaining)
+                channel.force(true)
+            }
+            atomicWriteObserver.beforePublish(temporary, target)
+            val staged = VideoProjectSchema.decode(Files.readString(temporary, StandardCharsets.UTF_8))
+            require(staged == project) { "The staged video project changed before publication" }
+            if (replace) atomicMoveReplace(temporary, target) else publishNewFile(temporary, target)
+            published = true
+        } catch (error: Exception) {
+            val recovery = retainRecoveryEvidence(temporary, target)
+            if (!replace && error is FileAlreadyExistsException) {
+                throw VideoProjectAlreadyExistsException("A video project already exists in this folder.")
+            }
+            throw VideoProjectSaveException(
+                "Video project save failed; the last known-good document was preserved.",
+                target,
+                recovery,
+                error,
+            )
+        } finally {
+            // Publication has already succeeded; a leftover owned temporary is not a failed save.
+            if (published) runCatching { Files.deleteIfExists(temporary) }
+        }
+    }
+
+    private fun readCurrentProject(root: Path): VideoProject {
+        val target = projectFile(root)
+        if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
+            throw VideoProjectNotFoundException("No current video project was found in this folder.")
+        }
+        requireContainedRegularFile(root, target, "Video project document")
+        return when (val inspected = VideoProjectSchema.inspect(Files.readString(target, StandardCharsets.UTF_8))) {
+            is VideoProjectDocument.Current -> inspected.project
+            is VideoProjectDocument.Unsupported -> throw UnsupportedVideoProjectException(inspected.reason)
+            is VideoProjectDocument.Invalid -> throw InvalidVideoProjectException(inspected.reason)
+        }
+    }
+
+    private fun verifyArtifacts(root: Path, project: VideoProject) {
+        project.artifacts().forEach { verifyArtifact(root, it) }
+    }
+
+    private fun verifyArtifact(root: Path, artifact: VideoArtifact): Path {
+        val target = root.resolve(artifact.relativePath).normalize()
+        if (!target.startsWith(root)) {
+            throw InvalidVideoProjectException("Video artifact escapes the project root: ${artifact.relativePath}")
+        }
+        requireNoSymlinkComponents(root, target)
+        requireContainedRegularFile(root, target, "Video artifact '${artifact.relativePath}'")
+        if (sha256(target) != artifact.sha256) {
+            throw InvalidVideoProjectException("Video artifact digest does not match: ${artifact.relativePath}")
+        }
+        return target
+    }
+
+    private fun requireNoSymlinkComponents(root: Path, target: Path) {
+        var current = root
+        root.relativize(target).forEach { segment ->
+            current = current.resolve(segment)
+            if (Files.isSymbolicLink(current)) {
+                throw InvalidVideoProjectException("Video project paths may not contain symbolic links: $current")
+            }
+        }
+    }
+
+    private fun requireContainedRegularFile(root: Path, target: Path, label: String) {
+        if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
+            throw InvalidVideoProjectException("$label is missing or is not a regular file")
+        }
+        val real = try {
+            target.toRealPath()
+        } catch (error: IOException) {
+            throw InvalidVideoProjectException("$label could not be resolved", error)
+        }
+        if (!real.startsWith(root)) {
+            throw InvalidVideoProjectException("$label escapes the video project root")
+        }
+    }
+
+    private fun validateLocation(projectRoot: Path): Path {
+        val candidate = canonicalFuturePath(projectRoot)
+        val conflicts = protectedRoots.map(::canonicalFuturePath).firstOrNull { protected ->
+            candidate.startsWith(protected) || protected.startsWith(candidate)
+        }
+        if (conflicts != null) {
+            throw UnsafeVideoProjectLocationException(
+                "Video storage '$candidate' overlaps protected MIDI storage '$conflicts'.",
+            )
+        }
+        findMidiMarker(candidate)?.let { marker ->
+            throw UnsafeVideoProjectLocationException(
+                "Video storage is inside a MIDI project identified by '$marker'.",
+            )
+        }
+        return candidate
+    }
+
+    private fun canonicalFuturePath(path: Path): Path {
+        // Resolve the existing prefix with filesystem semantics before handling the missing suffix.
+        // Lexical normalization (including Path.relativize) can erase a symlink followed by `..`.
+        val absolute = path.toAbsolutePath()
+        var ancestor: Path? = absolute
+        val missingSegments = ArrayDeque<Path>()
+        while (ancestor != null && !Files.exists(ancestor, LinkOption.NOFOLLOW_LINKS)) {
+            ancestor.fileName?.let { missingSegments.addFirst(it) }
+            ancestor = ancestor.parent
+        }
+        val existing = ancestor ?: throw UnsafeVideoProjectLocationException("The storage path has no resolvable ancestor: $absolute")
+        val realAncestor = try {
+            existing.toRealPath()
+        } catch (error: IOException) {
+            throw UnsafeVideoProjectLocationException("The storage path has an unresolved symbolic link: $absolute", error)
+        }
+        if (missingSegments.any { it.toString() == "." || it.toString() == ".." }) {
+            throw UnsafeVideoProjectLocationException("The storage path traverses an unresolved parent: $absolute")
+        }
+        return missingSegments.fold(realAncestor) { resolved, segment -> resolved.resolve(segment) }
+    }
+
+    private fun findMidiMarker(candidate: Path): Path? {
+        var current: Path? = candidate
+        while (current != null) {
+            val marker = current.resolve(MIDI_PROJECT_FILE)
+            if (Files.exists(marker, LinkOption.NOFOLLOW_LINKS)) return marker
+            current = current.parent
+        }
+        return null
+    }
+
+    private fun existingSafeRoot(path: Path): Path {
+        if (!Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw UnsafeVideoProjectLocationException("The video project root is missing or not a directory: $path")
+        }
+        val root = try {
+            path.toRealPath()
+        } catch (error: IOException) {
+            throw UnsafeVideoProjectLocationException("The video project root could not be resolved: $path", error)
+        }
+        validateLocation(root)
+        return root
+    }
+
+    private fun projectFile(root: Path): Path = root.resolve(PROJECT_FILE)
+
+    private fun <T> withWriteLock(root: Path, action: () -> T): T {
+        val lockPath = root.resolve(LOCK_FILE)
+        val monitor = JVM_LOCKS.computeIfAbsent(lockPath) { Any() }
+        return synchronized(monitor) {
+            if (Files.exists(lockPath, LinkOption.NOFOLLOW_LINKS) &&
+                (!Files.isRegularFile(lockPath, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(lockPath))
+            ) {
+                throw UnsafeVideoProjectLocationException("The video project lock path is unsafe: $lockPath")
+            }
+            FileChannel.open(
+                lockPath,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE,
+                LinkOption.NOFOLLOW_LINKS,
+            ).use { channel ->
+                val lock = channel.lock()
+                try {
+                    action()
+                } finally {
+                    lock.release()
+                }
+            }
+        }
+    }
+
+    private fun retainRecoveryEvidence(temporary: Path, target: Path): Path? {
+        if (!Files.exists(temporary, LinkOption.NOFOLLOW_LINKS)) return null
+        val recovery = target.resolveSibling("${VideoProjectControlPaths.RECOVERY_PREFIX}${UUID.randomUUID()}.json")
+        return try {
+            publishNewFile(temporary, recovery)
+            runCatching { Files.deleteIfExists(temporary) }
+            recovery
+        } catch (_: Exception) {
+            temporary
+        }
+    }
+
+    companion object {
+        const val PROJECT_FILE = VideoProjectControlPaths.DOCUMENT
+        const val MIDI_PROJECT_FILE = "project.json"
+        private const val LOCK_FILE = VideoProjectControlPaths.LOCK
+        private val JVM_LOCKS = ConcurrentHashMap<Path, Any>()
+    }
+}
+
+fun interface VideoAtomicWriteObserver {
+    fun beforePublish(temporary: Path, target: Path)
+
+    companion object {
+        val NONE = VideoAtomicWriteObserver { _, _ -> }
+    }
+}
+
+private object VideoProjectSchema {
+    const val SCHEMA = "melotrail-video-project"
+    const val VERSION = 1
+
+    private val json = Json {
+        prettyPrint = true
+        encodeDefaults = true
+        explicitNulls = false
+        ignoreUnknownKeys = false
+    }
+
+    fun encode(project: VideoProject): String = json.encodeToString(VideoProjectDocumentDto(SCHEMA, VERSION, project))
+
+    fun decode(document: String): VideoProject = when (val inspected = inspect(document)) {
+        is VideoProjectDocument.Current -> inspected.project
+        is VideoProjectDocument.Unsupported -> throw UnsupportedVideoProjectException(inspected.reason)
+        is VideoProjectDocument.Invalid -> throw InvalidVideoProjectException(inspected.reason)
+    }
+
+    fun inspect(document: String): VideoProjectDocument {
+        val root = try {
+            json.parseToJsonElement(document).jsonObject
+        } catch (error: Exception) {
+            return VideoProjectDocument.Invalid("Video project document is not valid JSON: ${error.message ?: error.javaClass.simpleName}")
+        }
+        val schema = try {
+            root["schema"]?.jsonPrimitive?.contentOrNull
+        } catch (error: Exception) {
+            return VideoProjectDocument.Invalid("Video project schema discriminator is invalid")
+        }
+        val version = try {
+            root["version"]?.jsonPrimitive?.intOrNull
+        } catch (error: Exception) {
+            return VideoProjectDocument.Invalid("Video project version discriminator is invalid")
+        }
+        if (schema != SCHEMA || version != VERSION) {
+            return VideoProjectDocument.Unsupported(
+                "Unsupported video project schema '${schema ?: "missing"}' version '${version ?: "missing"}'.",
+            )
+        }
+        return try {
+            VideoProjectDocument.Current(json.decodeFromString<VideoProjectDocumentDto>(document).project)
+        } catch (error: Exception) {
+            VideoProjectDocument.Invalid(
+                "Invalid video project v$VERSION document: ${error.message ?: error.javaClass.simpleName}",
+            )
+        }
+    }
+}
+
+private sealed interface VideoProjectDocument {
+    data class Current(val project: VideoProject) : VideoProjectDocument
+    data class Unsupported(val reason: String) : VideoProjectDocument
+    data class Invalid(val reason: String) : VideoProjectDocument
+}
+
+@Serializable
+private data class VideoProjectDocumentDto(val schema: String, val version: Int, val project: VideoProject)
+
+private fun <T> List<T>.startsWith(prefix: List<T>): Boolean = size >= prefix.size && take(prefix.size) == prefix
+
+private fun sha256(path: Path): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    Files.newInputStream(path).use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+private fun publishNewFile(source: Path, target: Path) {
+    // A hard link publishes complete staged bytes with an exclusive directory entry. ATOMIC_MOVE
+    // may replace an existing target even without REPLACE_EXISTING. Unsupported links fail closed.
+    Files.createLink(target, source)
+}
+
+private fun atomicMoveReplace(source: Path, target: Path) {
+    Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+}

@@ -168,6 +168,34 @@ class TargetArchitectureRulesTest {
             violations,
         )
     }
+
+    @Test
+    fun `video project boundaries reject domain IO and cross-workspace dependencies`() {
+        val violations = TargetArchitectureRules.violations(
+            listOf(
+                SourceFile("src/main/kotlin/app/melotrail/video/domain/VideoProject.kt", "import java.nio.file.Path"),
+                SourceFile(
+                    "src/main/kotlin/app/melotrail/video/adapter/VideoStore.kt",
+                    """import app.melotrail.project.adapter.MidiCoreArtifactStore
+                        |fun overwriteMidi() = MidiCoreArtifactStore().saveProject(projectRoot, project)
+                    """.trimMargin(),
+                ),
+                SourceFile(
+                    "src/main/kotlin/app/melotrail/application/MidiCoreProjectLifecycle.kt",
+                    "import app.melotrail.video.application.VideoProjectLifecycle",
+                ),
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                "src/main/kotlin/app/melotrail/video/domain/VideoProject.kt: domain code may not import java.nio.file",
+                "src/main/kotlin/app/melotrail/video/adapter/VideoStore.kt: video code may not import or write MIDI project storage owners",
+                "src/main/kotlin/app/melotrail/application/MidiCoreProjectLifecycle.kt: MIDI code may not import video owners",
+            ),
+            violations,
+        )
+    }
 }
 
 private data class SourceFile(val path: String, val contents: String)
@@ -181,11 +209,32 @@ private object TargetArchitectureRules {
         "src/main/kotlin/app/melotrail/arrangement/core/",
         "src/main/kotlin/app/melotrail/review/",
         "src/main/kotlin/app/melotrail/export/domain/",
+        "src/main/kotlin/app/melotrail/video/domain/",
     )
     // Target pages live directly in the desktop package; the retired target/ subtree never existed.
     private const val desktopRoot = "desktopApp/src/main/kotlin/app/melotrail/desktop/"
     private const val projectAdapterRoot = "src/main/kotlin/app/melotrail/project/adapter/"
-    private val forbiddenDomainImports = listOf("androidx.compose", "java.io", "java.net", "java.nio.file", "okhttp", "javax.sound.midi")
+    private const val videoRoot = "src/main/kotlin/app/melotrail/video/"
+    private val midiOwnerRoots = listOf(
+        "src/main/kotlin/app/melotrail/project/",
+        "src/main/kotlin/app/melotrail/midi/",
+        "src/main/kotlin/app/melotrail/music/",
+        "src/main/kotlin/app/melotrail/structure/",
+        "src/main/kotlin/app/melotrail/arrangement/",
+        "src/main/kotlin/app/melotrail/review/",
+        "src/main/kotlin/app/melotrail/export/",
+        "src/main/kotlin/app/melotrail/audition/",
+    )
+    private val forbiddenDomainImports = listOf(
+        "androidx.compose",
+        "java.io",
+        "java.net",
+        "java.nio.channels",
+        "java.nio.file",
+        "kotlin.io",
+        "okhttp",
+        "javax.sound.midi",
+    )
     private val forbiddenProjectAdapterImports = listOf("androidx.compose", "java.net", "okhttp", "javax.sound.midi")
 
     fun readProductionSources(): List<SourceFile> = listOf(Path.of("src/main/kotlin"), Path.of("desktopApp/src/main/kotlin"))
@@ -206,6 +255,21 @@ private object TargetArchitectureRules {
                 forbiddenProjectAdapterImports.firstOrNull { forbidden -> imports.any { it.startsWith(forbidden) } }?.let { forbidden ->
                     add("${source.path}: project adapter may not import $forbidden")
                 }
+            }
+            if (source.path.startsWith(videoRoot) &&
+                (imports.any { imported ->
+                    imported.startsWith("app.melotrail.project") ||
+                        imported.startsWith("app.melotrail.midi") ||
+                        imported.startsWith("app.melotrail.application.MidiCore")
+                } || listOf("MidiCoreArtifactStore", "MidiCoreProjectSchema").any(source.contents::contains))
+            ) {
+                add("${source.path}: video code may not import or write MIDI project storage owners")
+            }
+            if ((midiOwnerRoots.any(source.path::startsWith) ||
+                    source.path.startsWith("src/main/kotlin/app/melotrail/application/MidiCore")) &&
+                imports.any { it.startsWith("app.melotrail.video") }
+            ) {
+                add("${source.path}: MIDI code may not import video owners")
             }
             if (source.path.startsWith(desktopRoot) && imports.any { it.startsWith("javax.sound.midi") }) {
                 add("${source.path}: desktop code may not parse raw MIDI")
