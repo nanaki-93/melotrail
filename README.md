@@ -7,14 +7,16 @@ The musician keeps control of the melody, harmony and final sound.
 
 ## Current state
 
-Source protection, deterministic Chords/Bass/Drums generation, style previews,
-complete drafts, atomic acceptance/undo and validated MIDI export already exist.
-The current output averages **5/10 in the user's feedback**: timing works, but
-piano/melody fit and whole-song development need improvement. The MIDI app has
-no audio-production or worker runtime.
+The MIDI workflow now includes explicit chord durations and source-end padding,
+melody-aware piano, coordinated section plans, targeted repairs, compact six-page
+UI, one persistent player and accepted-only MIDI export. Legacy audio/worker
+runtime has been removed. The original **5/10 feedback** remains the musical
+baseline until the final listening review; tests cannot award a new score.
 
-The new [PLAN](PLAN.md) and [task queue](TASKS.md) replace all previous plans.
-They cover musical quality, the supplied UI design and a smaller repository.
+All unpaid engineering in [PLAN](PLAN.md) and [TASKS](TASKS.md) is complete.
+Start the [final review](docs/VALIDATION.md#final-manual-review) for current
+UI comparisons, MIDI/Logic packets, installation evidence and video demos.
+Eight human acceptance/production gates remain pending.
 A TABI video companion is separately built under `companion/`; it is not shipped
 with, or required by, the MIDI app. Its owned-media boundary and paid-pilot gate
 are documented in [TABI video](docs/TABI_VIDEO.md).
@@ -36,9 +38,9 @@ The 2026-09-13 clean check passed; user listening, Logic and visual release
 approval remain separate final-review gates.
 
 Input: one SMF 0/1 file, one note-bearing track/channel, fixed tempo/meter.
-Additional meta-only tracks are allowed. Current structure uses whole bars.
-M03 plans explicit chord-duration editing and optional trailing-silence padding;
-those improvements are not implemented yet.
+Additional meta-only tracks are allowed. Sections use whole bars; chord durations
+are explicit and may be sub-bar. Source extent and optional trailing-silence
+padding are confirmed separately without changing the original MIDI.
 
 Output: an immutable complete-song MIDI file, aligned role files and a manifest.
 Import at song start in Logic Pro, confirm tempo/meter and choose instruments.

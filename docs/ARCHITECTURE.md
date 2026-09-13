@@ -30,9 +30,9 @@ Optional, separately installed TABI companion
 | Presentation | `desktopApp/.../desktop/MidiCore*`, shared shell/theme/primitives | Six pages, intents, visual projections, one persistent dock |
 
 Names identify observed owners, not an instruction to keep/delete by prefix.
-`DesktopMain.main` already calls `MidiCoreDesktopEntrypoint`; obsolete factory
-code in the same file is removal scope. The existing visual-evidence provider
-is reusable work requiring verification, not an absent component to duplicate.
+`DesktopMain.main` calls `MidiCoreDesktopEntrypoint`; obsolete desktop factory
+and audio/worker paths have been removed. The optional installed-launcher check
+uses the same six-page shell with isolated preferences and a bounded exit.
 
 Domain code has no Compose, filesystem, HTTP or MIDI-device dependency. Use cases
 coordinate ports; adapters translate I/O. UI dispatches intents and renders

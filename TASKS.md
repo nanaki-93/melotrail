@@ -47,10 +47,11 @@ run for every implementation; code failures retain their normal recovery policy.
 Production rights, identity and spending authorization remain required before
 production media use or paid generation; they do not block owned-fixture code.
 
-Remaining automatic task: **Q03b**. V07a was independently recovered first; its V06/U06 dependencies were complete. Q03b prepares one final review
-handoff using the integrated code. Then notify once that manual review is ready
-and leave the gates pending until the user starts it. Real code/environment
-blockers still get reported; an unchanged deferred human gate is not a failure.
+Automatic engineering is complete: **60 of 68 queue rows DONE**. The remaining
+**eight rows are WAITING_USER** for final listening, Logic, foreground/UI,
+release and production video decisions. Q03b's single entry point is
+[Final manual review](docs/VALIDATION.md#final-manual-review). Do not admit or
+retry these gates without new evidence; notify once and pause automatic work.
 
 ## Queue
 
@@ -103,7 +104,7 @@ blockers still get reported; an unchanged deferred human gate is not a failure.
 | Q02a | Generate current Logic matrix and manifests | U06, M03, M07, M08 | DONE | Recovered 21 deterministic probes (20 current packages and one expected import rejection), semantic re-import/project reopen and immutable inventories. Export copies omit bank hints while protected source/expression survives. Focused/full checks, build and independent review: ~/.codex/melotrail-terra/q01a-q02a-repair-evidence. Actual Logic import/play/reopen remains Q02. |
 | Q02 | Run the current Logic Pro matrix | Q02a, Q03b | WAITING_USER | Final manual Logic import/play/save/reopen deferred by user until engineering ends. Q02a packages are prepared; Q03b refreshes final build identity and instructions. No Logic pass claimed. |
 | Q03a | Prove clean native build and startup | F06, U06 | DONE | Recovered clean-install verifier; fixed early companion-crash observation (150 ms→2 s) found under clean-run load, with delayed-crash/persistent-process regressions. Uncached architecture/22 focused checks, 581 full tests, build, private DMG installation/bundled-JVM startup and independent review passed. 73 production Kotlin files/27,702 lines (62.4% fewer than baseline); no source media deleted. Evidence ~/.codex/melotrail-terra/final-engineering-recovery-evidence/q03-*. |
-| Q03b | Prepare the final manual-review handoff | Q03a, V07a | TODO | Refresh integrated evidence and one concise review entry point after all unpaid engineering; never invent songs, scores or approvals. |
+| Q03b | Prepare the final manual-review handoff | Q03a, V07a | DONE | Fresh c20aecf583 implementation packets: empty final-song set (5/3 missing), development comparisons, 20 Logic packages/1 expected rejection/571 verified hashes, 66 pinned UI comparisons, 28 frame replays, timing and owned-video demos. Technical checks/build and independent review passed; README/Architecture/Validation reconciled. Evidence ~/.codex/melotrail-terra/final-review-2026-09-13; all human gates remain pending. |
 | Q03 | Prove clean install and obtain MIDI release decision | Q03b, U07, Q01, Q02 | WAITING_USER | Final MIDI release decision waits for the end-of-engineering manual review. No release approval inferred from automatic checks. |
 | V01a | Prove an independently built companion boundary | F01 | DONE | Host ProRes/PCM encode, decoded preview timestamps and byte-preserved soundtrack proven; temporary-only outputs. Focused checks, Swift release build, 363 MIDI tests, absent-companion build/tests and fresh Terra review PASS. Evidence ~/.codex/melotrail-terra/v01a-repair-evidence. |
 | V01 | Prove the isolated video/media boundary | V01a | WAITING_USER | Engineering boundary complete; production provider/budget/rights/identity authorization remains pending. Review together at the end; no paid generation authorized. |
@@ -672,7 +673,7 @@ coordinator checks pass; leave later slices to their queue owners.
 
 **Dependencies:** Q03a, V07a. This is unpaid evidence preparation, not release approval.
 **Owners:** existing Q01a evaluation commands, Q02a Logic matrix, U07 visual/timing
-fixtures, companion owned-media checks, README and docs/VALIDATION.md.
+fixtures, companion owned-media checks, README, docs/ARCHITECTURE.md and docs/VALIDATION.md.
 **Work:** use the integrated implementation after optional handoff lands. Run
 focused checks, `make test`, `make build`, diff check and independent review.
 Regenerate Q01 development comparisons and Q02 matrix into new retained output

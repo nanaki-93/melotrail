@@ -6,14 +6,38 @@ queues are superseded; their incomplete gates are not passes.
 
 ## Final manual review
 
-Per the user's 2026-09-11 decision, run listening scores, manual Logic tests,
-foreground compositor capture and human visual/video review after all unpaid
-engineering. Q03b refreshes the integrated evidence and supplies one review entry
-point here. Until then U07, Q01–Q03 and production video approval gates stay
-WAITING_USER; missing human evidence must not trigger automatic repair attempts.
-Automated tests/builds, semantic checks, real-window frame replay and independent
-code review continue for each implementation. Paid generation and production
-asset use still require their explicit budget/rights/identity authorization.
+**Q03b handoff · 2026-09-13.** Unpaid engineering is complete; manual acceptance
+is pending. These fresh packets use integrated implementation `c20aecf583`;
+the handoff changes documentation only. The local review packet is
+`~/.codex/melotrail-terra/final-review-2026-09-13/`; paths below are relative to it.
+Start with its identity/check receipt (`verification.json`).
+The DMG (`Melotrail-1.0.0.dmg`) passed the isolated installation/startup
+procedure below. Preserve the packets; fill copies of their forms.
+
+| Gate | Open / do next |
+| --- | --- |
+| U07 · UI | Six-page comparisons and blank scores (`u07/visual-review/index.html`). Review hierarchy, reference fidelity, keyboard flow and resizing. Run `./gradlew :desktopApp:nativeDesktopCapture` on the visible desktop; the previous wallpaper failure remains unresolved. Frame replay is not compositor proof. |
+| Q01 · Music | Development comparisons (`q01-development/review.md`), final-set requirements (`q01-evaluation/review.md`), song intake (`song-intake-template.json`) and blank score worksheet (`score-template.json`). Five owned/licensed full songs, including three unseen, are still missing. Supply actual current MIDI projects, ownership/exposure and settings before freezing a final set. Use generated per-case forms after export; no scores are invented. |
+| Q02 · Logic | Current matrix and blank results (`q02-logic-matrix/review.md`): 20 packages plus one expected rejection. Verify its 571 hashes, import complete and separate tracks at bar 1, play, save/close/reopen and record exact Logic version, bars and results. |
+| V01/V02/V03/V07 · Video | One-second multi-scene probe (`companion/episode.mov`), 12-second 1080p probe (`companion/sustained.mov`) and launchable owned composition (`companion/fixture/composition-request.json`). These synthetic fixtures prove technical behavior, not TABI identity or a full-song pilot. Choose production assets/music, confirm rights/identity/provider/budget, then review the actual episode. Paid generation and upload still require authorization. |
+| Q03 · Release | After U07/Q01/Q02, record the actual MIDI release decision and final build. Musical quality remains unmeasured against the original 5/10 feedback. |
+
+To operate the retained companion demo, launch
+`/Users/marcoandreose/.codex/melotrail-terra/final-review-2026-09-13/companion/app/melotrail-tabi-editor`
+with `/Users/marcoandreose/.codex/melotrail-terra/final-review-2026-09-13/companion/fixture/composition-request.json`.
+Only paths in this new fixture copy were relocated; source/asset/soundtrack bytes
+are unchanged and its real release caller was rechecked. For the optional app
+handoff, `sh companion/scripts/install.sh` installs separately into a new default
+directory; restart the MIDI app and publish a current package. An absent or
+incompatible installation hides the action. A stale snapshot cannot launch;
+select the finished Logic soundtrack in TABI and confirm its lead-in/tail.
+
+The final packet retains 66 unchanged pinned image comparisons, 28 real-window
+frame replays, 20-sample timing records, source/build/runtime identities and
+hash-verified MIDI/video artifacts. Automated checks do not establish acoustic
+onset, musical scores, foreground screen capture or human artistic approval.
+Historical packets and failed checks remain preserved. All eight manual rows
+stay WAITING_USER; the scheduler must not retry them as implementation failures.
 
 ## Required automated checks
 
@@ -477,7 +501,9 @@ budget decision with evidence. Agents must not claim measurements they did not r
 
 ### U07b responsiveness and visual-review preparation
 
-Recovery evidence: `~/.codex/melotrail-terra/u07b-repair-evidence/u07/`.
+Historical recovery evidence: `~/.codex/melotrail-terra/u07b-repair-evidence/u07/`.
+Use the current Q03b packet linked above for final review; the earlier packet
+does not establish the current build.
 Open `visual-review/index.html` for all six pages: 66 unchanged U07a target/
 actual/difference comparisons at three guideline sizes, original references,
 and blank per-page scores. **Human visual approval remains U07; acoustic onset
@@ -636,12 +662,12 @@ For Q02, compare alternatives against the same protected melody and section loop
 then Use/Undo/reuse and verify accepted-only export in Logic. Musical, Logic and
 visual approval remain pending human evidence; final Export handoff belongs to U06.
 
-U06 candidate validation is **PENDING_COORDINATOR**. Focused desktop selectors:
+U06 automated coverage is complete and rerun in the final Q03b packet. Focused desktop selectors:
 `MidiCoreExportPageTest`, `MidiCoreFocusedWorkflowTest`, `MidiCoreReviewPageTest`,
 `MidiCoreWorkspaceTest`, `MidiCoreArrangePageTest`, `MidiCoreWorkspaceShellTest`.
 Retain the root `MidiCoreMidiPackageExporterTest`, `MidiCoreAcceptedSongAssemblyTest`
 and `MidiCoreArrangementDraftTest` checks, then run the required full test/build
-and diff checks. No U06 test pass or visual approval is claimed here.
+and diff checks. Human visual and Logic approval remain pending.
 The three-size real-service workflow now applies the Lower piano register repair,
 creates the whole draft under that confirmed plan, uses/undoes/reuses it, exports,
 reopens and publishes a second snapshot while comparing the first package's bytes.
