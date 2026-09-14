@@ -130,7 +130,9 @@ class TargetArchitectureRulesTest {
                 "sfizz_render",
                 "javax.imageio.ImageIO",
             ).mapNotNull { reference ->
-                reference.takeIf(source.contents::contains)?.let { "${source.path}: $it" }
+                reference.takeIf(source.contents::contains)
+                    ?.takeUnless { it == "javax.imageio.ImageIO" && source.path == TargetArchitectureRules.videoImageAdapter }
+                    ?.let { "${source.path}: $it" }
             }
         }
 
@@ -196,11 +198,45 @@ class TargetArchitectureRulesTest {
             violations,
         )
     }
+
+    @Test
+    fun `ImageIO is confined to the video image filesystem adapter`() {
+        val violations = TargetArchitectureRules.violations(
+            listOf(
+                SourceFile(
+                    "src/main/kotlin/app/melotrail/video/adapter/VideoImageFiles.kt",
+                    "import javax.imageio.ImageIO",
+                ),
+                SourceFile(
+                    "src/main/kotlin/app/melotrail/video/domain/VideoAsset.kt",
+                    "import javax.imageio.ImageIO",
+                ),
+                SourceFile(
+                    "src/main/kotlin/app/melotrail/video/application/VideoAssetImport.kt",
+                    "import javax.imageio.ImageIO",
+                ),
+                SourceFile(
+                    "src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt",
+                    "import javax.imageio.ImageIO",
+                ),
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                "src/main/kotlin/app/melotrail/video/domain/VideoAsset.kt: javax.imageio.ImageIO is confined to the video image filesystem adapter",
+                "src/main/kotlin/app/melotrail/video/application/VideoAssetImport.kt: javax.imageio.ImageIO is confined to the video image filesystem adapter",
+                "src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt: javax.imageio.ImageIO is confined to the video image filesystem adapter",
+            ),
+            violations,
+        )
+    }
 }
 
 private data class SourceFile(val path: String, val contents: String)
 
 private object TargetArchitectureRules {
+    const val videoImageAdapter = "src/main/kotlin/app/melotrail/video/adapter/VideoImageFiles.kt"
     private val domainRoots = listOf(
         "src/main/kotlin/app/melotrail/project/",
         "src/main/kotlin/app/melotrail/midi/domain/",
@@ -273,6 +309,9 @@ private object TargetArchitectureRules {
             }
             if (source.path.startsWith(desktopRoot) && imports.any { it.startsWith("javax.sound.midi") }) {
                 add("${source.path}: desktop code may not parse raw MIDI")
+            }
+            if (source.path != videoImageAdapter && imports.any { it.startsWith("javax.imageio.ImageIO") }) {
+                add("${source.path}: javax.imageio.ImageIO is confined to the video image filesystem adapter")
             }
             if (!isDomainSource(source.path) && source.path.startsWith("src/main/kotlin/app/melotrail/midi/") &&
                 !source.path.startsWith("src/main/kotlin/app/melotrail/midi/adapter/") &&

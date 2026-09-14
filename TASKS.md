@@ -131,7 +131,7 @@ replacement tasks. No docs/tasks.md or second implementation queue.
 | V12a | Supervise bounded owned media processes | V10 | DONE | Pinned native launch, private jobs, owned process groups and bounded cleanup; 13 real native cases, 611 total tests, build, diff check and fresh Sol High review PASS after one Astra High repair. Evidence: ~/.codex/melotrail-video-sequential/evidence/V12a. Real media proof remains V12. |
 | V12 | Prove video-only media runtime | V12a | DONE | Pinned separate FFmpeg 9.0.1 tools prove real decode, seek, frame access and silent VideoToolbox H.264 encode: 72 frames, 320x180, 24 fps, 3 seconds, zero audio streams; source preserved. 622 tests, actual launcher rejection checks, make test/build, diff check and fresh Sol High review PASS after one Astra repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V12. Final delivery/UI remain later tasks. |
 | V13 | Persist independent video projects | V10 | DONE | Independent v1 project lifecycle/store, versioned immutable records/selections, artifact hashes, MIDI path isolation and locked atomic revision saves. Real filesystem regressions protect symlink traversal, control-file self-reference and creation collisions. 636 tests, make test/build, diff check and fresh Sol High review PASS after one Astra repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V13. |
-| V14 | Import reference assets | V13 | TODO | Planned 2026-09-13; not implemented. |
+| V14 | Import reference assets | V13 | DONE | Bounded PNG/JPEG import preserves immutable originals, thumbnails, optional metadata and duplicate identity; reopen verifies all pins. 658 tests, make test/build, diff check, seven real reference imports/reopens and fresh Sol High review PASS after three Astra repairs (third explicitly user-authorized). PNG integrity/transparency regressions pass. Evidence ~/.codex/melotrail-video-sequential/evidence/V14. |
 | V15 | Compile asset prompts and shot proposal | V13, V14 | TODO | Planned 2026-09-13; not implemented. |
 | V16 | Persist bounded recoverable jobs | V13 | TODO | Planned 2026-09-13; not implemented. |
 | V17 | Connect the chosen local backend | V11, V12, V14, V16 | TODO | Planned 2026-09-13; not implemented. |
@@ -978,7 +978,9 @@ cannot destroy current work.
 **Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoAsset.kt` (new),
 `src/main/kotlin/app/melotrail/video/application/VideoAssetImport.kt` (new),
 `src/main/kotlin/app/melotrail/video/adapter/VideoImageFiles.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoAssetImportTest.kt` (new).
+`src/test/kotlin/app/melotrail/video/VideoAssetImportTest.kt` (new),
+`src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt`
+(confine ImageIO to the video image adapter; retain MIDI exclusion).
 **Inputs / dependencies:** V13.
 **Implementation rules:** Decode PNG/JPEG initially; support optional subject/character,
 environment, style and complete-scene roles without requiring a role combination.
