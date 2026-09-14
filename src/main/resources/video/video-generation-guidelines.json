@@ -1,0 +1,20 @@
+{
+  "schema": "melotrail-video-generation-guidelines",
+  "version": 1,
+  "promptTemplateVersion": "generic-prompt-v1",
+  "shotPlannerVersion": "duration-shots-v1",
+  "standardGuidelines": [
+    {
+      "id": "reference-fidelity",
+      "text": "Keep requested subjects and characteristics recognizable from the selected references."
+    },
+    {
+      "id": "object-coherence",
+      "text": "Keep intended objects coherent and avoid unintended visual artifacts."
+    },
+    {
+      "id": "temporal-stability",
+      "text": "Maintain temporal stability and continuity where the request calls for continuity."
+    }
+  ]
+}
