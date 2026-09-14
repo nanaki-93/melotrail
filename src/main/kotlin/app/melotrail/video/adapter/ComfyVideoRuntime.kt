@@ -76,12 +76,13 @@ class ComfyVideoConnection internal constructor(
 /** A single inference admission token. Workflow submission belongs to V17b. */
 class ComfyVideoInferenceSlot internal constructor(
     private val runtime: ComfyVideoRuntime,
-    val sessionId: String,
+    internal val session: ComfyVideoSession,
+    internal val attemptKey: String,
 ) : AutoCloseable {
-    private val closed = AtomicBoolean(false)
-    override fun close() {
-        if (closed.compareAndSet(false, true)) runtime.releaseInferenceSlot(sessionId)
-    }
+    val sessionId: String get() = session.id
+    internal var submissionClaimed = false
+    internal fun claimSubmission(): Boolean = runtime.claimInferenceSubmission(this)
+    override fun close() = runtime.releaseInferenceSlot(this)
 }
 
 data class ComfyHostResources(val pressure: ComfyMemoryPressure, val usedSwapBytes: Long)
@@ -194,20 +195,26 @@ class ComfyVideoRuntime internal constructor(
         }
     }
 
-    fun acquireInferenceSlot(): ComfyVideoInferenceSlot = synchronized(lock) {
+    /** Reopening an active persisted attempt returns its same lease and original deadline. */
+    fun acquireInferenceSlot(session: ComfyVideoSession, attemptKey: String): ComfyVideoInferenceSlot = synchronized(lock) {
         val owner = owned
         if (stateValue != ComfyVideoRuntimeState.READY || owner == null || owner.process.isDone) {
             throw ComfyVideoRuntimeException(ComfyVideoRuntimeFailure.NOT_RUNNING, "ComfyUI runtime is not ready.")
         }
-        if (owner.inferenceActive.get()) {
+        if (owner.session !== session || attemptKey.isBlank() || attemptKey.length > 256) {
+            throw ComfyVideoRuntimeException(ComfyVideoRuntimeFailure.INVALID_REQUEST, "Inference requires the exact session and a persisted attempt key.")
+        }
+        owner.inferenceSlot?.let { existing ->
+            if (existing.attemptKey == attemptKey) return@synchronized existing
             throw ComfyVideoRuntimeException(
                 ComfyVideoRuntimeFailure.INFERENCE_BUSY,
                 "The pinned local runtime permits one inference job at a time.",
             )
         }
+        val slot = ComfyVideoInferenceSlot(this, session, attemptKey)
         owner.inferenceStartedNanos = nanoTime()
-        owner.inferenceActive.set(true)
-        ComfyVideoInferenceSlot(this, owner.session.id)
+        owner.inferenceSlot = slot
+        slot
     }
 
     /**
@@ -236,7 +243,7 @@ class ComfyVideoRuntime internal constructor(
             }
             stateValue = ComfyVideoRuntimeState.STOPPING
             current.stopRequested.set(true)
-            current.inferenceActive.set(false)
+            current.inferenceSlot = null
             current.inferenceStartedNanos = null
             current
         }
@@ -246,7 +253,7 @@ class ComfyVideoRuntime internal constructor(
         synchronized(lock) {
             if (owned === owner) {
                 if (failure == null) owned = null
-                owner.inferenceActive.set(false)
+                owner.inferenceSlot = null
                 if (failure == null) {
                     stateValue = ComfyVideoRuntimeState.STOPPED
                     lastFailureValue = null
@@ -269,11 +276,31 @@ class ComfyVideoRuntime internal constructor(
         }
     }
 
-    internal fun releaseInferenceSlot(sessionId: String) {
+    internal fun claimInferenceSubmission(slot: ComfyVideoInferenceSlot): Boolean = synchronized(lock) {
+        val owner = owned
+        if (stateValue != ComfyVideoRuntimeState.READY || owner == null || owner.process.isDone ||
+            owner.session !== slot.session || owner.inferenceSlot !== slot || slot.submissionClaimed
+        ) return@synchronized false
+        slot.submissionClaimed = true
+        true
+    }
+
+    /** Terminal reconciliation can release an attempt even through a reconstructed backend. */
+    fun releaseInferenceSlot(session: ComfyVideoSession, attemptKey: String) {
         synchronized(lock) {
-            owned?.takeIf { it.session.id == sessionId }?.let {
+            owned?.takeIf { it.session === session && it.inferenceSlot?.attemptKey == attemptKey }?.let {
                 it.inferenceStartedNanos = null
-                it.inferenceActive.set(false)
+                it.inferenceSlot = null
+            }
+        }
+    }
+
+    internal fun releaseInferenceSlot(slot: ComfyVideoInferenceSlot) {
+        synchronized(lock) {
+            // A retained handle cannot close a replacement lease, even for a reused key.
+            owned?.takeIf { it.session === slot.session && it.inferenceSlot === slot }?.let {
+                it.inferenceStartedNanos = null
+                it.inferenceSlot = null
             }
         }
     }
@@ -461,7 +488,7 @@ class ComfyVideoRuntime internal constructor(
             if (owned !== owner || stateValue != ComfyVideoRuntimeState.READY) return
             stateValue = ComfyVideoRuntimeState.FAILED
             lastFailureValue = failure
-            owner.inferenceActive.set(false)
+            owner.inferenceSlot = null
             owner.inferenceStartedNanos = null
         }
         stopAfterFailure(owner, failure)
@@ -474,7 +501,7 @@ class ComfyVideoRuntime internal constructor(
             if (owned === owner && !owner.stopRequested.get()) {
                 // A timeout is not termination. Keep the handle so restart cannot overlap cleanup.
                 if (cleanup == null) owned = null
-                owner.inferenceActive.set(false)
+                owner.inferenceSlot = null
                 owner.inferenceStartedNanos = null
                 stateValue = ComfyVideoRuntimeState.FAILED
                 lastFailureValue = failure
@@ -651,7 +678,7 @@ class ComfyVideoRuntime internal constructor(
         val baseline: ComfyHostResources,
         val startedNanos: Long,
         val connectionCapability: Any = Any(),
-        val inferenceActive: AtomicBoolean = AtomicBoolean(false),
+        var inferenceSlot: ComfyVideoInferenceSlot? = null,
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
         @Volatile var inferenceStartedNanos: Long? = null,
         @Volatile var monitor: Future<*>? = null,

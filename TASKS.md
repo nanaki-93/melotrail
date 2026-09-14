@@ -150,7 +150,7 @@ checkpoint do not close V24/V33. Multi-scene editing is deferred.
 | V16 | Persist bounded recoverable jobs | V13 | DONE | Durable admission/launch claims, owned cancellation, explicit bounded retry/recovery, immutable outputs and reserved hosted budgets. 702 tests, make test/build, diff check and fresh Sol High review PASS after three Astra repairs (third explicitly user-authorized); cancellation/claim, crash, late-result and root-rebinding regressions pass. Evidence ~/.codex/melotrail-video-sequential/evidence/V16. |
 | V17a | Pin ComfyUI setup and own its local server | V11, V12a | DONE | Pinned installed ComfyUI/Python/GGUF/LTX/Gemma/upscaler setup; verified owned server identity, bounded resources, cancellation/reaping and single inference admission. 727 tests, make test/build, diff check, real start/health/port-collision/stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17a. API jobs remain V17b. |
 | V17c | Expose a verified owned ComfyUI connection | V17a | DONE | Exact-session private HTTP/WebSocket connections reject copied/stale handles and protect replacement-listener dispatch; encoded queries preserved. 731 tests, make test/build, diff check, real private HTTP/WS/owned-stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17c. API jobs remain V17b. |
-| V17b | Connect recoverable ComfyUI API jobs | V17a, V17c, V14, V16 | TODO | Dedicated owned server and explicit reference bindings; use V17c verified connection for API access. |
+| V17b | Connect recoverable ComfyUI API jobs | V17a, V17c, V14, V16 | DONE | Recoverable ComfyUI jobs with pinned input bindings, bounded HTTP/WebSocket access, stable submission identity, exact-session inference leases, cancellation/restart reconciliation and immutable results. Focused checks, 759 tests, make test/build, diff check, installed-server HTTP/WebSocket/stop proof and fresh Sol High review PASS after five Astra repairs; extended repairs explicitly user-authorized. All six review findings closed. Sources/models preserved; no inference run, which remains V17. Evidence ~/.codex/melotrail-video-sequential/evidence/V17b. |
 | V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | TODO | Revised 2026-09-14; supersedes the planned Draw Things production adapter. Earlier tuned LTX proof is retained at ~/.codex/melotrail-video-sequential/evidence/V17/ltx-tuning-20260914/proven-profile.json: 512x320, 49/129 frames at 25fps, 8 steps, tiled/no hires; silent outputs decoded and 8/8 originals preserved. Historical profile evidence, not the selected production integration. |
 | V18a | Persist prepared scenes and motion capabilities | V13, V14, V15 | TODO | New 2026-09-14; generic layers, poses, masks and source anchors. |
 | V18b | Prove automated reference-conditioned preparation | V17, V18a | TODO | New 2026-09-14; main creative capability risk, no hand-coded TABI regions. |
@@ -1120,7 +1120,9 @@ proves read-only API and WebSocket access, then owned shutdown without inference
 `src/main/kotlin/app/melotrail/video/domain/VideoGenerationJob.kt`,
 `src/test/kotlin/app/melotrail/video/LocalVideoBackendTest.kt` (new),
 `src/test/kotlin/app/melotrail/video/ComfyVideoClientTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoJobCoordinatorTest.kt`.
+`src/test/kotlin/app/melotrail/video/VideoJobCoordinatorTest.kt`,
+`src/main/kotlin/app/melotrail/video/adapter/ComfyVideoRuntime.kt`,
+`src/test/kotlin/app/melotrail/video/ComfyVideoRuntimeTest.kt`.
 **Inputs / dependencies:** V17a, V17c, V14, V16 and the existing
 `VideoGenerationBackendPort` in `VideoJobCoordinator.kt`.
 **Implementation rules:** Use V17c's runtime-issued verified connection for every
@@ -1129,15 +1131,23 @@ reference files, workflow slots and output identities; never interpret a user
 prompt as executable node code or a filesystem path. Upload only consumed images,
 validate `/object_info` requirements, submit API-format workflows to `/prompt`,
 track the returned prompt ID over `/ws`, and reconcile `/history` and `/queue`.
+Runtime inference leases are keyed to the persisted attempt and exact session,
+so reconstructed backends can release only their own terminal work. Reacquiring
+the same lease must not reset its deadline; stale releases cannot free newer work.
+Bound response-body consumption as well as connection/headers. Server errors
+after submission remain uncertain. Reconcile interrupted history as cancellation,
+and recheck completion when cancellation races a successful result.
 Persist stable attempt identity before submission; an ambiguous response must not
 trigger a duplicate submit. Validate history and result files before success;
 `executed` events alone do not mean a whole workflow finished. Handle reconnects,
 node errors, restart and late results under V16's durable admission rules.
 Interrupt only the dedicated owned server's verified work; never globally clear
 an external queue. Ordinary tests use a local fake HTTP/WebSocket server.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.ComfyVideoClientTest' --tests 'app.melotrail.video.VideoJobCoordinatorTest'`.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.ComfyVideoRuntimeTest' --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.ComfyVideoClientTest' --tests 'app.melotrail.video.VideoJobCoordinatorTest'`.
 **Done:** submit, observe, cancel and recover preserve job ownership and immutable
 results; unsupported bindings fail before inference rather than losing references.
+The existing opt-in `ComfyVideoConnectionHostCheck` confirms the runtime changes
+against the installed owned server without inference; actual generation remains V17.
 
 ### V17 — Verify the selected ComfyUI adapter on this host
 

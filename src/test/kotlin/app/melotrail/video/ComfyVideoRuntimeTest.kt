@@ -262,16 +262,55 @@ class ComfyVideoRuntimeTest {
         )))
         assertEquals(ComfyVideoRuntimeState.READY, runtime.state)
 
-        val slot = runtime.acquireInferenceSlot()
-        val busy = assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot() }
+        val slot = runtime.acquireInferenceSlot(session, "attempt-1")
+        val busy = assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-2") }
         assertEquals(ComfyVideoRuntimeFailure.INFERENCE_BUSY, busy.failure)
         slot.close()
-        runtime.acquireInferenceSlot().close()
+        runtime.acquireInferenceSlot(session, "attempt-2").close()
 
         runtime.stop()
         assertTrue(runner.cancelObserved.await(1, TimeUnit.SECONDS))
         assertEquals(ComfyVideoRuntimeState.STOPPED, runtime.state)
         runtime.close()
+    }
+
+    @Test
+    fun `attempt leases reject copied sessions and stale keys or handles without releasing new work`() {
+        val fixture = RuntimeFixture.create()
+        val runtime = fixture.runtime(BlockingRunner(), { true }, nanoTime = { 0L })
+        try {
+            val session = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            val first = runtime.acquireInferenceSlot(session, "attempt-1")
+            assertTrue(first.claimSubmission())
+            assertFalse(runtime.acquireInferenceSlot(session, "attempt-1").claimSubmission())
+            assertEquals(ComfyVideoRuntimeFailure.INVALID_REQUEST,
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session.copy(), "attempt-1") }.failure)
+            runtime.releaseInferenceSlot(session.copy(), "attempt-1")
+            assertEquals(ComfyVideoRuntimeFailure.INFERENCE_BUSY,
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-2") }.failure)
+            runtime.releaseInferenceSlot(session, "attempt-1")
+            runtime.releaseInferenceSlot(session, "attempt-1")
+            val second = runtime.acquireInferenceSlot(session, "attempt-2")
+            first.close()
+            runtime.releaseInferenceSlot(session, "attempt-1")
+            assertEquals(ComfyVideoRuntimeFailure.INFERENCE_BUSY,
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-3") }.failure)
+            second.close()
+            assertFalse(second.claimSubmission())
+            val sameKeyReplacement = runtime.acquireInferenceSlot(session, "attempt-2")
+            second.close()
+            assertTrue(sameKeyReplacement === runtime.acquireInferenceSlot(session, "attempt-2"))
+            assertEquals(ComfyVideoRuntimeFailure.INFERENCE_BUSY,
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-3") }.failure)
+            runtime.stop()
+            val nextSession = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            val next = runtime.acquireInferenceSlot(nextSession, "attempt-2")
+            sameKeyReplacement.close()
+            runtime.releaseInferenceSlot(session, "attempt-2")
+            assertTrue(next === runtime.acquireInferenceSlot(nextSession, "attempt-2"))
+            assertEquals(ComfyVideoRuntimeFailure.INVALID_REQUEST,
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-2") }.failure)
+        } finally { runtime.close() }
     }
 
     @Test
@@ -418,9 +457,11 @@ class ComfyVideoRuntimeTest {
             nanoTime = { clock.get() },
         )
 
-        runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
-        val lease = runtime.acquireInferenceSlot()
-        clock.set(Duration.ofSeconds(2).toNanos())
+        val session = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+        val lease = runtime.acquireInferenceSlot(session, "attempt-1")
+        clock.set(Duration.ofMillis(750).toNanos())
+        assertTrue(lease === runtime.acquireInferenceSlot(session, "attempt-1"))
+        clock.set(Duration.ofMillis(1_100).toNanos())
 
         waitUntil { runtime.state == ComfyVideoRuntimeState.FAILED }
         assertEquals(ComfyVideoRuntimeFailure.RESOURCE_LIMIT, runtime.lastFailure?.failure)
@@ -458,7 +499,8 @@ class ComfyVideoRuntimeTest {
             ComfyHostResources(ComfyMemoryPressure.NORMAL, 0)
         })
         try {
-            val connection = runtime.connection(runtime.start(fixture.setup, fixture.sessions, fixture.freePort()))
+            val session = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            val connection = runtime.connection(session)
             throwSample.set(true)
             waitUntil { runtime.state == ComfyVideoRuntimeState.FAILED }
             assertEquals(ComfyVideoRuntimeFailure.RESOURCE_LIMIT, runtime.lastFailure?.failure)
@@ -470,7 +512,7 @@ class ComfyVideoRuntimeTest {
                 }.failure,
             )
             assertEquals(ComfyVideoRuntimeFailure.NOT_RUNNING,
-                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot() }.failure)
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-1") }.failure)
             // Restart without stop proves the monitor itself awaited and released its completed child.
             throwSample.set(false)
             waitUntil { runCatching { runtime.start(fixture.setup, fixture.sessions, fixture.freePort()) }.isSuccess }
@@ -507,7 +549,7 @@ class ComfyVideoRuntimeTest {
         val runner = DelayedRunner()
         val runtime = fixture.runtime(runner, { true })
         try {
-            runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            val session = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
             val error = assertFailsWith<ComfyVideoRuntimeException> { runtime.stop() }
             assertEquals(ComfyVideoRuntimeFailure.SHUTDOWN_FAILED, error.failure)
             assertTrue(runner.cancelObserved.await(1, TimeUnit.SECONDS))
@@ -517,7 +559,7 @@ class ComfyVideoRuntimeTest {
             assertEquals(ComfyVideoRuntimeFailure.INVALID_REQUEST, restart.failure)
             assertEquals(1, runner.launches.get())
             assertEquals(ComfyVideoRuntimeFailure.NOT_RUNNING,
-                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot() }.failure)
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-1") }.failure)
             runner.release.countDown()
             runtime.stop()
             assertEquals(ComfyVideoRuntimeState.STOPPED, runtime.state)
@@ -652,9 +694,9 @@ class ComfyVideoRuntimeTest {
         })
         val callers = Executors.newFixedThreadPool(2)
         try {
-            runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            val session = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
             arm.set(true)
-            val acquired = callers.submit<app.melotrail.video.adapter.ComfyVideoInferenceSlot> { runtime.acquireInferenceSlot() }
+            val acquired = callers.submit<app.melotrail.video.adapter.ComfyVideoInferenceSlot> { runtime.acquireInferenceSlot(session, "attempt-1") }
             assertTrue(admissionEntered.await(1, TimeUnit.SECONDS))
             val stopEntered = CountDownLatch(1)
             val stopped = callers.submit { stopEntered.countDown(); runtime.stop() }
@@ -669,9 +711,9 @@ class ComfyVideoRuntimeTest {
             slot.close()
             assertEquals(ComfyVideoRuntimeState.STOPPED, runtime.state)
             assertEquals(ComfyVideoRuntimeFailure.NOT_RUNNING,
-                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot() }.failure)
-            runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
-            runtime.acquireInferenceSlot().close()
+                assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(session, "attempt-1") }.failure)
+            val replacement = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            runtime.acquireInferenceSlot(replacement, "attempt-2").close()
         } finally { releaseAdmission.countDown(); callers.shutdownNow(); runtime.close() }
     }
 
@@ -700,7 +742,7 @@ class ComfyVideoRuntimeTest {
         assertTrue(condition(), "condition did not become true")
     }
 
-    private class BlockingRunner : (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult {
+    internal class BlockingRunner : (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult {
         val request = AtomicReference<VideoMediaProcessRequest?>()
         val launches = AtomicInteger(0)
         val cancelObserved = CountDownLatch(1)
@@ -842,7 +884,7 @@ class ComfyVideoRuntimeTest {
         }
     }
 
-    private data class RuntimeFixture(
+    internal data class RuntimeFixture(
         val root: Path,
         val sessions: Path,
         val setup: ReadyLocalVideoSetup,

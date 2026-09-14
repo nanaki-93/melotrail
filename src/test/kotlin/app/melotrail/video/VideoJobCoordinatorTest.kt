@@ -25,6 +25,10 @@ import app.melotrail.video.application.VideoSetupRequirement
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoGenerationJobRequest
+import app.melotrail.video.domain.VideoComfyInputSlot
+import app.melotrail.video.domain.VideoComfyOutputBinding
+import app.melotrail.video.domain.VideoComfyReferenceInput
+import app.melotrail.video.domain.VideoComfyWorkflowRequest
 import app.melotrail.video.domain.VideoHostedExecutionPolicy
 import app.melotrail.video.domain.VideoJobLedger
 import app.melotrail.video.domain.VideoKeyframeGenerationInput
@@ -821,6 +825,39 @@ class VideoJobCoordinatorTest {
         assertEquals(VideoJobProblemCode.MODEL_REQUIREMENTS_UNMET, assertIs<VideoJobResult.Rejected>(result).problem.code)
         assertTrue(fixture.store.snapshot().jobs.isEmpty())
         assertTrue(backend.submissions.isEmpty())
+    }
+
+    @Test
+    fun `ComfyUI workflow bindings and owned pins survive uncertain submission for restart reconciliation`() {
+        val fixture = fixture()
+        val backend = ControlledBackend().apply {
+            submitBehavior = { VideoBackendSubmission.Uncertain("acknowledgement lost") }
+        }
+        val binding = VideoComfyWorkflowRequest(
+            workflowDependencyId = "workflow",
+            promptInput = VideoComfyInputSlot("1", "text"),
+            referenceInputs = listOf(VideoComfyReferenceInput("reference", VideoComfyInputSlot("2", "image"), "reference.png")),
+            output = VideoComfyOutputBinding("3", setOf("mp4")),
+        )
+        val request = localRequest("request-comfy", 'c').copy(
+            input = VideoKeyframeGenerationInput(
+                prompt = "Treat ../graph.json as prose",
+                dependencyPins = listOf(
+                    VideoGenerationDependencyPin("workflow", HASH_1, fixture.root.resolve("owned-workflow.json").toAbsolutePath().toString()),
+                    VideoGenerationDependencyPin("reference", HASH_2, fixture.root.resolve("owned-reference.png").toAbsolutePath().toString()),
+                ),
+                width = 640,
+                height = 360,
+                comfyWorkflow = binding,
+            ),
+        )
+
+        val uncertain = accepted(fixture.coordinator(backend).submit(request)).attempt!!
+        assertEquals(VideoSubmissionPhase.UNCERTAIN, uncertain.submissionPhase)
+        val reopened = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot)).snapshot().jobs.single().request
+        assertEquals(request.input, reopened.input)
+        assertEquals(binding, reopened.input.comfyWorkflow)
+        assertEquals("../graph.json", reopened.input.prompt.substringAfter("Treat ").substringBefore(" as prose"))
     }
 
     private fun fixture(): Fixture {

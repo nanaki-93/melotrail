@@ -92,6 +92,8 @@ data class VideoGenerationJobRequest(
 sealed interface VideoGenerationInput {
     val prompt: String
     val dependencyPins: List<VideoGenerationDependencyPin>
+    /** Persisted executable binding; the free-form prompt is never parsed as a graph or path. */
+    val comfyWorkflow: VideoComfyWorkflowRequest?
 }
 
 @Serializable
@@ -101,10 +103,12 @@ data class VideoKeyframeGenerationInput(
     override val dependencyPins: List<VideoGenerationDependencyPin>,
     val width: Int,
     val height: Int,
+    override val comfyWorkflow: VideoComfyWorkflowRequest? = null,
 ) : VideoGenerationInput {
     init {
         requireVideoPrompt(prompt)
         requireVideoDependencyPins(dependencyPins)
+        requireComfyDependencies(dependencyPins, comfyWorkflow)
         require(width in 64..8192 && height in 64..8192) { "Keyframe dimensions are outside supported orchestration bounds" }
     }
 }
@@ -118,10 +122,12 @@ data class VideoClipGenerationInput(
     val width: Int,
     val height: Int,
     val framesPerSecond: Int,
+    override val comfyWorkflow: VideoComfyWorkflowRequest? = null,
 ) : VideoGenerationInput {
     init {
         requireVideoPrompt(prompt)
         requireVideoDependencyPins(dependencyPins)
+        requireComfyDependencies(dependencyPins, comfyWorkflow)
         require(durationMillis in 100L..60_000L) { "One generated video request must be 0.1..60 seconds" }
         require(width in 64..8192 && height in 64..8192) { "Video dimensions are outside supported orchestration bounds" }
         require(framesPerSecond in 1..120) { "Video frame rate is outside supported orchestration bounds" }
@@ -129,10 +135,82 @@ data class VideoClipGenerationInput(
 }
 
 @Serializable
-data class VideoGenerationDependencyPin(val id: String, val sha256: String) {
+data class VideoGenerationDependencyPin(
+    val id: String,
+    val sha256: String,
+    /** Absolute owned file path when this dependency is consumed by a local workflow. */
+    val ownedPath: String? = null,
+) {
     init {
         requireVideoJobId(id, "Video generation dependency")
         requireVideoJobSha256(sha256, "Video generation dependency")
+        ownedPath?.let {
+            require(it.isNotBlank() && it.length <= 8_192 && it.none(Char::isISOControl)) {
+                "Video generation dependency path is invalid"
+            }
+        }
+    }
+}
+
+/** API-format ComfyUI node bindings persisted with the immutable request for restart recovery. */
+@Serializable
+data class VideoComfyWorkflowRequest(
+    val workflowDependencyId: String,
+    val promptInput: VideoComfyInputSlot,
+    val referenceInputs: List<VideoComfyReferenceInput> = emptyList(),
+    val widthInput: VideoComfyInputSlot? = null,
+    val heightInput: VideoComfyInputSlot? = null,
+    val frameCountInput: VideoComfyInputSlot? = null,
+    val framesPerSecondInput: VideoComfyInputSlot? = null,
+    val output: VideoComfyOutputBinding,
+) {
+    init {
+        requireVideoJobId(workflowDependencyId, "ComfyUI workflow dependency")
+        require(referenceInputs.size <= 32) { "A ComfyUI workflow can consume at most 32 references" }
+        require(referenceInputs.map(VideoComfyReferenceInput::dependencyId).distinct().size == referenceInputs.size) {
+            "ComfyUI reference dependencies must be unique"
+        }
+        require(referenceInputs.map(VideoComfyReferenceInput::slot).distinct().size == referenceInputs.size) {
+            "ComfyUI reference input slots must be unique"
+        }
+        val scalarSlots = listOfNotNull(promptInput, widthInput, heightInput, frameCountInput, framesPerSecondInput)
+        require(scalarSlots.distinct().size == scalarSlots.size) { "ComfyUI scalar input slots must be unique" }
+        require(referenceInputs.none { it.slot in scalarSlots }) { "ComfyUI reference and scalar slots must be distinct" }
+    }
+}
+
+@Serializable
+data class VideoComfyInputSlot(val nodeId: String, val inputName: String) {
+    init {
+        require(COMFY_NODE_ID.matches(nodeId)) { "ComfyUI node ID is invalid" }
+        require(COMFY_INPUT_NAME.matches(inputName)) { "ComfyUI input name is invalid" }
+    }
+}
+
+@Serializable
+data class VideoComfyReferenceInput(
+    val dependencyId: String,
+    val slot: VideoComfyInputSlot,
+    val uploadFileName: String,
+) {
+    init {
+        requireVideoJobId(dependencyId, "ComfyUI reference dependency")
+        require(COMFY_UPLOAD_NAME.matches(uploadFileName) && uploadFileName !in setOf(".", "..")) {
+            "ComfyUI upload filename is invalid"
+        }
+    }
+}
+
+@Serializable
+data class VideoComfyOutputBinding(
+    val nodeId: String,
+    val allowedExtensions: Set<String>,
+) {
+    init {
+        require(COMFY_NODE_ID.matches(nodeId)) { "ComfyUI output node ID is invalid" }
+        require(allowedExtensions.isNotEmpty() && allowedExtensions.size <= 8 &&
+            allowedExtensions.all { COMFY_EXTENSION.matches(it) }
+        ) { "ComfyUI output extensions must be lowercase safe extensions" }
     }
 }
 
@@ -329,6 +407,23 @@ private fun requireVideoDependencyPins(value: List<VideoGenerationDependencyPin>
         "Video generation dependency IDs must be unique"
     }
 }
+
+private fun requireComfyDependencies(
+    pins: List<VideoGenerationDependencyPin>,
+    workflow: VideoComfyWorkflowRequest?,
+) {
+    if (workflow == null) return
+    val byId = pins.associateBy(VideoGenerationDependencyPin::id)
+    val consumed = listOf(workflow.workflowDependencyId) + workflow.referenceInputs.map(VideoComfyReferenceInput::dependencyId)
+    require(consumed.all { byId[it]?.ownedPath != null }) {
+        "Every consumed ComfyUI workflow/reference dependency needs a digest-pinned owned path"
+    }
+}
+
+private val COMFY_NODE_ID = Regex("[A-Za-z0-9._~-]{1,256}")
+private val COMFY_INPUT_NAME = Regex("[A-Za-z_][A-Za-z0-9_]{0,127}")
+private val COMFY_UPLOAD_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,159}")
+private val COMFY_EXTENSION = Regex("[a-z0-9]{1,12}")
 
 /** Persistence controls cannot become output artifacts, including filesystem aliases. */
 internal object VideoJobControlPaths {
