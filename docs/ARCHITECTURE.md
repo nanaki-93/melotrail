@@ -142,8 +142,18 @@ session while preserving its position, and silent preview creates no MIDI player
 Video services are constructed lazily. Missing models, credentials or media
 tools cannot prevent MIDI startup, audition or export. Models and large media
 stay outside Git and MIDI storage; hosted uploads require an explicit mode and
-authorization. The Video tab, stores and adapters are planned and must not be
-treated as current runtime until their V10–V33 tasks pass.
+authorization. The current V17a adapter validates a separately installed,
+hash-pinned ComfyUI/LTX/Gemma profile and starts one dedicated loopback server
+through the existing owned-process supervisor. Its private input/output/temp/user
+directories, one-inference admission and bounded health/resource/stop lifecycle
+belong to the video runtime. A per-launch response marker attests the listener;
+an occupied port or competing listener is never treated as that runtime. Cleanup
+timeouts and unconfirmed native supervision retain process ownership and block
+restart. The pinned ComfyUI/GGUF import-source sets are rechecked at launch,
+separately from the large model hashes checked during explicit setup.
+It exposes no workflow submission or layer-preparation claim. The Video tab,
+application composition, ComfyUI jobs, automatic preparation and full assembly
+remain planned in their later V10–V33 rows.
 
 The existing Swift companion, soundtrack intake and MIDI Export handoff are
 superseded implementation history retained temporarily for evidence. V30–V31

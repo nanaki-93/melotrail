@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "profileId": "comfyui-ltx23-v1",
+  "applicationSupportRelativePath": "Library/Application Support/MelotrailVideo",
+  "testedHost": "Apple M5 Pro, 48 GiB unified memory, macOS arm64",
+  "capability": "Pinned local ComfyUI server and short LTX-2.3 image-to-video support from one already composed image. Multi-reference conditioning, layer preparation, complex action control, arbitrary-scene quality, and complete 3-5 minute assembly are unproven.",
+  "comfyUi": {
+    "relativePath": "tools/comfyui/v0.35.0",
+    "version": "0.35.0",
+    "commit": "40c4fcdf513a4523e39d54a9d391908af8df8171",
+    "main": {
+      "relativePath": "main.py",
+      "size": 25676,
+      "sha256": "5810003c5e2bf844c12e1ca044b86b2746a9f24b528b95ebfae832d9aff6a5ea"
+    },
+    "files": [
+      {
+        "name": "ComfyUI version declaration",
+        "relativePath": "comfyui_version.py",
+        "size": 128,
+        "sha256": "17464fd982310d4c7d468d7731e102f6e677e7f8525cabf57156375a140b8546"
+      },
+      {
+        "name": "ComfyUI GPL-3.0 license",
+        "relativePath": "LICENSE",
+        "size": 35149,
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      {
+        "name": "ComfyUI-GGUF entry point",
+        "relativePath": "custom_nodes/ComfyUI-GGUF/__init__.py",
+        "size": 300,
+        "sha256": "7ba473d8254a2867534565bb0b2ae194f1c55d5c2c00e30b6dbaf76be7d7a6b7"
+      }
+    ],
+    "python": {
+      "linkRelativePath": ".venv/bin/python",
+      "version": "3.12.0",
+      "resolvedSize": 33816,
+      "resolvedSha256": "ad9cd693cb6d5281e8f5381504500fc0cdf2b3a1259bd6578bf72061b45b7645",
+      "sitePackagesRelativePath": ".venv/lib/python3.12/site-packages"
+    },
+    "packages": [
+      {
+        "name": "torch",
+        "version": "2.14.0",
+        "metadataRelativePath": ".venv/lib/python3.12/site-packages/torch-2.14.0.dist-info/METADATA",
+        "size": 38300,
+        "sha256": "45eb688ebf1a2a131e65cd00292e19405019e8ae94f3b5c9f538f86381fd6e3d"
+      },
+      {
+        "name": "comfyui-frontend-package",
+        "version": "1.51.10",
+        "metadataRelativePath": ".venv/lib/python3.12/site-packages/comfyui_frontend_package-1.51.10.dist-info/METADATA",
+        "size": 118,
+        "sha256": "47ee4a75209d627a5f147f384111612551b6abce75fec54b7d73354683723d73"
+      },
+      {
+        "name": "gguf",
+        "version": "0.19.0",
+        "metadataRelativePath": ".venv/lib/python3.12/site-packages/gguf-0.19.0.dist-info/METADATA",
+        "size": 4100,
+        "sha256": "c6ed6e4d4dbb4b46f32855b4189599c568d5617a012345aa9249b3acf7204a03"
+      }
+    ],
+    "customNodes": [
+      {
+        "directory": "ComfyUI-GGUF",
+        "commit": "6ea2651e7df66d7585f6ffee804b20e92fb38b8a"
+      }
+    ],
+    "sourceTrees": [
+      {
+        "relativePath": "",
+        "excludedDirectories": [
+          ".git",
+          ".venv",
+          "custom_nodes",
+          "models",
+          "input",
+          "output",
+          "temp",
+          "user"
+        ],
+        "fileCount": 831,
+        "totalBytes": 12285579,
+        "sha256": "e706851db7d5b9d31b043e886167a59f6e70dbbd67cfddae09b5b93f69879a1f"
+      },
+      {
+        "relativePath": "custom_nodes/ComfyUI-GGUF",
+        "excludedDirectories": [
+          ".git"
+        ],
+        "fileCount": 9,
+        "totalBytes": 77388,
+        "sha256": "699f22240f165f6b4129ffb52c9a67170d87ed44ce2a24df8db450bb35c2a8ed"
+      }
+    ]
+  },
+  "workflow": {
+    "relativePath": "workflows/comfyui-ltx23-v1",
+    "modelPaths": {
+      "relativePath": "model-paths.yaml",
+      "size": 244,
+      "sha256": "ab4d4363cbce67675079504b75f1a9d5a070062ea4ad915fb2f93c87e261c72f"
+    },
+    "provenance": {
+      "relativePath": "provenance.json",
+      "size": 2070,
+      "sha256": "b26e79a1e00deab85349b1558397ad571a6bf49ccacc665bd33fbfb01229705d"
+    }
+  },
+  "modelsRelativePath": "models/comfyui",
+  "models": [
+    {
+      "name": "LTX-2.3 22B distilled 1.1 Q4_K_M",
+      "relativePath": "diffusion_models/ltx-2.3-22b-distilled-1.1-Q4_K_M.gguf",
+      "size": 14194441248,
+      "sha256": "5d09efdc0b8ec2054c44a05366cd7c6634ffa333b379b1f8baf018a78974b73d",
+      "source": "unsloth/LTX-2.3-GGUF@96e8ed4925ead3db9ff4d0084f165ef6a74f28d0"
+    },
+    {
+      "name": "LTX-2.3 distilled embeddings connectors",
+      "relativePath": "text_encoders/ltx-2.3-22b-distilled_embeddings_connectors.safetensors",
+      "size": 2312144712,
+      "sha256": "c61cbb396e2a8175d8b2da51f0fdac885a4ccd22c9f64dafa5aa2c455dc8a507",
+      "source": "unsloth/LTX-2.3-GGUF@96e8ed4925ead3db9ff4d0084f165ef6a74f28d0"
+    },
+    {
+      "name": "LTX-2.3 distilled video VAE",
+      "relativePath": "vae/ltx-2.3-22b-distilled_video_vae.safetensors",
+      "size": 1452256522,
+      "sha256": "e68d6d8f8a42942ac9b862cc315beb3bc30805a8876c7ad63ba5bf7a2b8e168a",
+      "source": "unsloth/LTX-2.3-GGUF@96e8ed4925ead3db9ff4d0084f165ef6a74f28d0"
+    },
+    {
+      "name": "Gemma 3 12B IT QAT Q4_K_XL text encoder",
+      "relativePath": "text_encoders/gemma-3-12b-it-qat-UD-Q4_K_XL.gguf",
+      "size": 7432229248,
+      "sha256": "da98f81c86916ed1c76b3eeda56b25cb7b8352b01093e2edb8028110fe2cb53b",
+      "source": "unsloth/gemma-3-12b-it-qat-GGUF@858acec7ec0541a46c39985c95d3b52d8f3ab183"
+    },
+    {
+      "name": "RealESRGAN x2plus",
+      "relativePath": "upscale_models/RealESRGAN_x2plus.pth",
+      "size": 67061725,
+      "sha256": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb",
+      "source": "xinntao/Real-ESRGAN v0.2.1 release asset 42011922"
+    }
+  ],
+  "server": {
+    "host": "127.0.0.1",
+    "defaultPort": 8192,
+    "startupTimeoutSeconds": 180,
+    "sessionTimeoutSeconds": 5400,
+    "inferenceTimeoutSeconds": 1200,
+    "shutdownTimeoutSeconds": 15,
+    "additionalSwapLimitBytes": 8589934592,
+    "pollIntervalMillis": 2000,
+    "arguments": [
+      "--fp16-unet",
+      "--bf16-text-enc",
+      "--fp32-vae",
+      "--disable-smart-memory",
+      "--disable-pinned-memory",
+      "--cache-none",
+      "--disable-api-nodes",
+      "--disable-auto-launch",
+      "--disable-all-custom-nodes",
+      "--whitelist-custom-nodes",
+      "ComfyUI-GGUF"
+    ]
+  },
+  "terms": [
+    {
+      "component": "ComfyUI",
+      "terms": "GPL-3.0",
+      "source": "https://github.com/Comfy-Org/ComfyUI/blob/40c4fcdf513a4523e39d54a9d391908af8df8171/LICENSE"
+    },
+    {
+      "component": "ComfyUI-GGUF",
+      "terms": "GPL-3.0",
+      "source": "https://github.com/city96/ComfyUI-GGUF/blob/6ea2651e7df66d7585f6ffee804b20e92fb38b8a/LICENSE"
+    },
+    {
+      "component": "LTX-2.3",
+      "terms": "LTX-2 Community License; disclosure required; separate commercial license at or above USD 10M annual entity revenue and for competing products/services",
+      "source": "https://huggingface.co/Lightricks/LTX-2.3/blob/main/LICENSE"
+    },
+    {
+      "component": "Gemma 3",
+      "terms": "Gemma Terms and prohibited-use policy; redistribution has separate obligations",
+      "source": "https://ai.google.dev/gemma/terms"
+    },
+    {
+      "component": "RealESRGAN",
+      "terms": "BSD-3-Clause",
+      "source": "https://github.com/xinntao/Real-ESRGAN/blob/master/LICENSE"
+    }
+  ]
+}

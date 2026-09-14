@@ -774,6 +774,59 @@ binaries and makes no codec, FFmpeg distribution, network, performance or visual
 quality claim. V12 owns the pinned FFmpeg distribution and real decode, seek,
 frame-access and silent-encode proof.
 
+## Pinned ComfyUI setup and owned server boundary (V17a)
+
+`LocalVideoSetup` now reads the bundled `comfyui-ltx23-v1` profile only when the
+video workspace asks for setup. It verifies the separate installation under
+`~/Library/Application Support/MelotrailVideo`: ComfyUI 0.35.0 at commit
+`40c4fcdf513a4523e39d54a9d391908af8df8171`, ComfyUI-GGUF at commit
+`6ea2651e7df66d7585f6ffee804b20e92fb38b8a`, Python 3.12.0, torch 2.14.0,
+frontend 1.51.10, GGUF 0.19.0, the workflow provenance/model-path files and the
+five exact LTX/Gemma/upscaler files. The profile also pins the complete ComfyUI
+and enabled GGUF Python/native import-source sets (831 and 9 files, approximately
+12 MB), including paths, sizes and content digests. Changed or added executable
+sources are corrupt even when Git HEAD is unchanged. The source sets, Python
+executable, package metadata and workflow configuration are checked again at
+launch; large model hashes are checked only by explicit setup. File size and
+SHA-256 mismatches are corrupt setup, not a request to substitute another file. The resolved regular
+Python executable is pinned while `VIRTUAL_ENV`, the exact venv `PYTHONPATH` and
+offline flags preserve the installed environment. A private bytecode-cache prefix
+and disabled bytecode writes prevent existing source-tree caches from substituting
+stale executable bytecode and keep installed source files read-only. Setup reports every missing or
+corrupt component, current component terms, and three explicit choices: reuse
+the verified installation, separately install/repair the disclosed pins, or
+leave video unavailable. It performs no repair or download.
+
+`ComfyVideoRuntime` starts the verified `main.py` directly through V12a's native
+process-group supervisor; the retained Python monitor is evidence and is not a
+second production supervisor. A fresh private session owns its input, output,
+temporary and user directories. The server listens only on `127.0.0.1`, disables
+API nodes and auto-launch, disables all installed custom nodes except the pinned
+GGUF node, and refuses an occupied port rather than accepting its health response.
+Readiness requires both a live owned child and its random per-launch response
+marker on `/system_stats`. The bootstrap adds the marker inside that child's
+HTTP application; the probe never sends it to the listener. A competing listener
+that binds after the port precheck cannot satisfy readiness with generic stats.
+Stop, startup failure,
+readiness timeout, session timeout, three lost health checks, critical/unknown
+memory pressure, 8 GiB additional swap and the 20-minute single-inference bound
+all cancel and reap only that process group. Resource-sampler exceptions fail
+closed, and health-probe exceptions count toward the three consecutive failures.
+A shutdown wait expiring retains ownership and blocks every restart until a later
+stop/close confirms completion. Explicit or suppressed native supervision failure
+also retains ownership and reports uncertain cleanup; ordinary completed exit
+failures have already been reaped. Inference admission and stop share one lock.
+Warning pressure is observed but is not itself a stop. These are measured safety bounds from the M5 Pro / 48 GiB
+trials, not a memory guarantee and not an OS-control change.
+
+This boundary does not submit a workflow. The retained graph supports a short
+LTX-2.3 image-to-video take from one already composed image and uses Gemma 3,
+not T5. It does not establish multi-reference conditioning, automatic subject
+layers/masks/anchors, guided complex actions, arbitrary-scene quality or a
+complete 3–5 minute video. V17b owns API jobs and V18b owns the missing automatic
+reference-conditioned preparation proof. The Video tab and normal setup UI
+remain planned in V20–V21, so this lazy adapter adds no MIDI startup dependency.
+
 ## Selected video-only media runtime (V12)
 
 V12 selects FFmpeg 9.0.1 for macOS arm64 as an explicitly and separately
