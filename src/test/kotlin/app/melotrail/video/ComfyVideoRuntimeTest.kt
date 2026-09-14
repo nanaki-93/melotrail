@@ -2,6 +2,7 @@ package app.melotrail.video
 
 import app.melotrail.video.adapter.ComfyHostResources
 import app.melotrail.video.adapter.ComfyMemoryPressure
+import app.melotrail.video.adapter.ComfyVideoHttpMethod
 import app.melotrail.video.adapter.ComfyVideoRuntime
 import app.melotrail.video.adapter.ComfyVideoRuntimeException
 import app.melotrail.video.adapter.ComfyVideoRuntimeFailure
@@ -17,13 +18,27 @@ import app.melotrail.video.adapter.VideoMediaProcessOutput
 import app.melotrail.video.adapter.VideoMediaProcessRequest
 import app.melotrail.video.adapter.VideoMediaProcessResult
 import com.sun.net.httpserver.HttpServer
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.net.Socket
+import java.net.SocketTimeoutException
+import java.net.URI
+import java.net.URLDecoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.net.http.WebSocket
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Duration
+import java.security.MessageDigest
+import java.util.Base64
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -41,6 +56,185 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ComfyVideoRuntimeTest {
+    @Test
+    fun `runtime issues an owned HTTP and WebSocket connection only for its exact session`() {
+        val fixture = RuntimeFixture.create()
+        val runner = OwnedProtocolRunner()
+        val runtime = fixture.runtime(runner, healthy = { uri -> ComfyVideoRuntime.defaultHealthProbe(uri) })
+        try {
+            val session = runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            val copied = session.copy()
+            val copyFailure = assertFailsWith<ComfyVideoRuntimeException> { runtime.connection(copied) }
+            assertEquals(ComfyVideoRuntimeFailure.INVALID_REQUEST, copyFailure.failure)
+
+            val connection = runtime.connection(session)
+            val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build()
+            val queueUri = connection.httpUri(ComfyVideoHttpMethod.GET, "/queue?owned=true")
+            assertTrue(queueUri.path.matches(Regex("/_melotrail/[0-9a-f-]+/queue")))
+            assertFalse(queueUri.toString().contains(assertNotNull(runner.healthIdentity.get())))
+            assertTrue(queueUri.toString().contains(assertNotNull(runner.routeToken.get())))
+            val queue = client.send(
+                HttpRequest.newBuilder(queueUri).timeout(Duration.ofSeconds(1)).GET().build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            assertEquals(200, queue.statusCode())
+            assertTrue(queue.body().contains("queue_running"))
+
+            val viewPath = "/view?filename=coffee%20cup.png&subfolder=a%26b&type=output"
+            val view = client.send(
+                HttpRequest.newBuilder(connection.httpUri(ComfyVideoHttpMethod.GET, viewPath))
+                    .timeout(Duration.ofSeconds(1))
+                    .GET()
+                    .build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            assertEquals(200, view.statusCode())
+            val receivedQuery = URI(assertNotNull(runner.lastViewTarget.get())).rawQuery
+                .split('&')
+                .associate { field ->
+                    val (name, value) = field.split('=', limit = 2)
+                    name to URLDecoder.decode(value, Charsets.UTF_8)
+                }
+            assertEquals("coffee cup.png", receivedQuery["filename"])
+            assertEquals("a&b", receivedQuery["subfolder"])
+
+            val raw = client.send(
+                HttpRequest.newBuilder(session.endpoint.resolve("/queue")).timeout(Duration.ofSeconds(1)).GET().build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            assertEquals(404, raw.statusCode(), "public session metadata must not expose raw ComfyUI routes")
+
+            val status = awaitStatusEvent(client, connection.webSocketUri("runtime-fixture"))
+            assertTrue(status.contains("\"type\":\"status\""))
+            assertTrue(runner.privateWebSockets.get() == 1)
+        } finally {
+            runtime.close()
+        }
+        assertTrue(runner.cancelObserved.await(1, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun `connection validates the documented operation namespace`() {
+        val fixture = RuntimeFixture.create()
+        val runner = BlockingRunner()
+        val runtime = fixture.runtime(runner, { true })
+        try {
+            val connection = runtime.connection(runtime.start(fixture.setup, fixture.sessions, fixture.freePort()))
+            listOf(
+                ComfyVideoHttpMethod.GET to "/system_stats",
+                ComfyVideoHttpMethod.GET to "/object_info/LTXVConditioning",
+                ComfyVideoHttpMethod.GET to "/history/prompt-123",
+                ComfyVideoHttpMethod.GET to "/view?filename=result.png&type=output",
+                ComfyVideoHttpMethod.POST to "/upload/image",
+                ComfyVideoHttpMethod.POST to "/prompt",
+                ComfyVideoHttpMethod.POST to "/queue",
+                ComfyVideoHttpMethod.POST to "/interrupt",
+            ).forEach { (method, path) ->
+                assertTrue(connection.httpUri(method, path).path.startsWith("/_melotrail/"))
+            }
+
+            listOf(
+                ComfyVideoHttpMethod.GET to "http://127.0.0.1:9999/queue",
+                ComfyVideoHttpMethod.GET to "/api/queue",
+                ComfyVideoHttpMethod.GET to "/history/../prompt",
+                ComfyVideoHttpMethod.GET to "/history/..",
+                ComfyVideoHttpMethod.GET to "/object_info/.",
+                ComfyVideoHttpMethod.GET to "/history/id%2Fother",
+                ComfyVideoHttpMethod.GET to "/ws",
+                ComfyVideoHttpMethod.POST to "/system_stats",
+                ComfyVideoHttpMethod.POST to "/prompt#fragment",
+                ComfyVideoHttpMethod.POST to "/unknown",
+            ).forEach { (method, path) ->
+                assertEquals(
+                    ComfyVideoRuntimeFailure.INVALID_REQUEST,
+                    assertFailsWith<ComfyVideoRuntimeException> { connection.httpUri(method, path) }.failure,
+                )
+            }
+            assertEquals(
+                ComfyVideoRuntimeFailure.INVALID_REQUEST,
+                assertFailsWith<ComfyVideoRuntimeException> { connection.webSocketUri("bad?client") }.failure,
+            )
+        } finally {
+            runtime.close()
+        }
+    }
+
+    @Test
+    fun `connections become stale after stop and restart`() {
+        val fixture = RuntimeFixture.create()
+        val runner = BlockingRunner()
+        val runtime = fixture.runtime(runner, { true })
+        val port = fixture.freePort()
+        try {
+            val firstSession = runtime.start(fixture.setup, fixture.sessions, port)
+            val first = runtime.connection(firstSession)
+            runtime.stop()
+            assertEquals(
+                ComfyVideoRuntimeFailure.NOT_RUNNING,
+                assertFailsWith<ComfyVideoRuntimeException> {
+                    first.httpUri(ComfyVideoHttpMethod.GET, "/queue")
+                }.failure,
+            )
+
+            val secondSession = runtime.start(fixture.setup, fixture.sessions, port)
+            val second = runtime.connection(secondSession)
+            assertEquals(
+                ComfyVideoRuntimeFailure.NOT_RUNNING,
+                assertFailsWith<ComfyVideoRuntimeException> { first.webSocketUri("old-client") }.failure,
+            )
+            assertTrue(second.httpUri(ComfyVideoHttpMethod.GET, "/queue").path.startsWith("/_melotrail/"))
+            assertFalse(
+                firstSession.id == secondSession.id,
+                "restart must issue a fresh session and route namespace",
+            )
+        } finally {
+            runtime.close()
+        }
+    }
+
+    @Test
+    fun `same-port replacement cannot receive a standard Comfy mutation after URI validation`() {
+        val fixture = RuntimeFixture.create()
+        val port = fixture.freePort()
+        val runner = OwnedProtocolRunner()
+        val runtime = fixture.runtime(runner, healthy = { uri -> ComfyVideoRuntime.defaultHealthProbe(uri) })
+        val session = runtime.start(fixture.setup, fixture.sessions, port)
+        val privatePrompt = runtime.connection(session).httpUri(ComfyVideoHttpMethod.POST, "/prompt")
+        runtime.stop()
+
+        val standardMutations = AtomicInteger()
+        val receivedPath = AtomicReference<String>()
+        val replacement = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
+        replacement.createContext("/") { exchange ->
+            receivedPath.set(exchange.requestURI.path)
+            if (exchange.requestURI.path == "/prompt") standardMutations.incrementAndGet()
+            exchange.sendResponseHeaders(404, -1)
+            exchange.close()
+        }
+        replacement.start()
+        try {
+            val response = HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(privatePrompt)
+                    .timeout(Duration.ofSeconds(1))
+                    .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                    .build(),
+                HttpResponse.BodyHandlers.discarding(),
+            )
+            assertEquals(404, response.statusCode())
+            assertTrue(receivedPath.get().startsWith("/_melotrail/"))
+            assertEquals(0, standardMutations.get())
+            assertEquals(
+                ComfyVideoRuntimeFailure.NOT_RUNNING,
+                assertFailsWith<ComfyVideoRuntimeException> {
+                    runtime.connection(session)
+                }.failure,
+            )
+        } finally {
+            replacement.stop(0)
+            runtime.close()
+        }
+    }
+
     @Test
     fun `owned launch uses resolved Python with explicit venv imports and private directories`() {
         val fixture = RuntimeFixture.create()
@@ -264,11 +458,17 @@ class ComfyVideoRuntimeTest {
             ComfyHostResources(ComfyMemoryPressure.NORMAL, 0)
         })
         try {
-            runtime.start(fixture.setup, fixture.sessions, fixture.freePort())
+            val connection = runtime.connection(runtime.start(fixture.setup, fixture.sessions, fixture.freePort()))
             throwSample.set(true)
             waitUntil { runtime.state == ComfyVideoRuntimeState.FAILED }
             assertEquals(ComfyVideoRuntimeFailure.RESOURCE_LIMIT, runtime.lastFailure?.failure)
             assertTrue(runner.cancelObserved.await(1, TimeUnit.SECONDS))
+            assertEquals(
+                ComfyVideoRuntimeFailure.NOT_RUNNING,
+                assertFailsWith<ComfyVideoRuntimeException> {
+                    connection.httpUri(ComfyVideoHttpMethod.GET, "/queue")
+                }.failure,
+            )
             assertEquals(ComfyVideoRuntimeFailure.NOT_RUNNING,
                 assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot() }.failure)
             // Restart without stop proves the monitor itself awaited and released its completed child.
@@ -514,6 +714,134 @@ class ComfyVideoRuntimeTest {
         }
     }
 
+    private class OwnedProtocolRunner :
+        (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult {
+        val healthIdentity = AtomicReference<String?>()
+        val routeToken = AtomicReference<String?>()
+        val lastViewTarget = AtomicReference<String?>()
+        val privateWebSockets = AtomicInteger()
+        val cancelObserved = CountDownLatch(1)
+
+        override fun invoke(
+            request: VideoMediaProcessRequest,
+            cancellation: VideoMediaProcessCancellation,
+        ): VideoMediaProcessResult {
+            val identity = request.arguments[4]
+            val token = request.arguments[5]
+            val port = request.arguments[request.arguments.indexOf("--port") + 1].toInt()
+            healthIdentity.set(identity)
+            routeToken.set(token)
+            val server = ServerSocket().apply {
+                reuseAddress = true
+                bind(InetSocketAddress("127.0.0.1", port))
+                soTimeout = 25
+            }
+            val clients = Executors.newCachedThreadPool { runnable ->
+                Thread(runnable, "comfy-owned-protocol-fixture").apply { isDaemon = true }
+            }
+            try {
+                while (!cancellation.isCancelled()) {
+                    try {
+                        val socket = server.accept()
+                        clients.submit { handle(socket, identity, token) }
+                    } catch (_: SocketTimeoutException) {
+                        // Poll the same cancellation object used by the production process supervisor.
+                    }
+                }
+                cancelObserved.countDown()
+            } finally {
+                server.close()
+                clients.shutdownNow()
+            }
+            throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "owned protocol fixture cancelled")
+        }
+
+        private fun handle(socket: Socket, identity: String, token: String) {
+            socket.use {
+                it.soTimeout = 1_000
+                val reader = BufferedReader(InputStreamReader(it.getInputStream(), Charsets.US_ASCII))
+                val requestLine = reader.readLine() ?: return
+                val headers = mutableMapOf<String, String>()
+                while (true) {
+                    val line = reader.readLine() ?: return
+                    if (line.isEmpty()) break
+                    val separator = line.indexOf(':')
+                    if (separator > 0) headers[line.substring(0, separator).lowercase()] = line.substring(separator + 1).trim()
+                }
+                val parts = requestLine.split(' ')
+                if (parts.size < 2) return
+                val path = parts[1].substringBefore('?')
+                val namespace = "/_melotrail/$token"
+                if (headers["upgrade"].equals("websocket", ignoreCase = true) && path == "$namespace/ws") {
+                    privateWebSockets.incrementAndGet()
+                    val key = headers["sec-websocket-key"] ?: return
+                    val accept = Base64.getEncoder().encodeToString(
+                        MessageDigest.getInstance("SHA-1")
+                            .digest((key + WEBSOCKET_GUID).toByteArray(Charsets.US_ASCII)),
+                    )
+                    val output = it.getOutputStream()
+                    output.write(
+                        ("HTTP/1.1 101 Switching Protocols\r\n" +
+                            "Upgrade: websocket\r\n" +
+                            "Connection: Upgrade\r\n" +
+                            "Sec-WebSocket-Accept: $accept\r\n\r\n").toByteArray(Charsets.US_ASCII),
+                    )
+                    val event = "{\"type\":\"status\",\"data\":{\"status\":{\"exec_info\":{\"queue_remaining\":0}},\"sid\":\"fixture\"}}"
+                        .toByteArray(Charsets.UTF_8)
+                    check(event.size < 126)
+                    output.write(byteArrayOf(0x81.toByte(), event.size.toByte()))
+                    output.write(event)
+                    output.flush()
+                    Thread.sleep(20)
+                    return
+                }
+
+                when (path) {
+                    "/system_stats" -> respond(
+                        it,
+                        200,
+                        "{\"system\":{\"comfyui_version\":\"0.35.0\"}}",
+                        mapOf("X-Melotrail-Session" to identity),
+                    )
+                    "$namespace/system_stats" -> respond(
+                        it,
+                        200,
+                        "{\"system\":{\"comfyui_version\":\"0.35.0\"}}",
+                        mapOf("X-Melotrail-Session" to identity),
+                    )
+                    "$namespace/queue" -> respond(it, 200, "{\"queue_running\":[],\"queue_pending\":[]}")
+                    "$namespace/view" -> {
+                        lastViewTarget.set(parts[1])
+                        respond(it, 200, parts[1])
+                    }
+                    else -> respond(it, 404, "")
+                }
+            }
+        }
+
+        private fun respond(socket: Socket, status: Int, body: String, headers: Map<String, String> = emptyMap()) {
+            val bytes = body.toByteArray(Charsets.UTF_8)
+            val reason = if (status == 200) "OK" else "Not Found"
+            val head = buildString {
+                append("HTTP/1.1 $status $reason\r\n")
+                append("Content-Type: application/json\r\n")
+                append("Content-Length: ${bytes.size}\r\n")
+                append("Connection: close\r\n")
+                headers.forEach { (name, value) -> append("$name: $value\r\n") }
+                append("\r\n")
+            }
+            socket.getOutputStream().apply {
+                write(head.toByteArray(Charsets.US_ASCII))
+                write(bytes)
+                flush()
+            }
+        }
+
+        companion object {
+            private const val WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+        }
+    }
+
     private data class RuntimeFixture(
         val root: Path,
         val sessions: Path,
@@ -585,6 +913,39 @@ class ComfyVideoRuntimeTest {
     }
 }
 
+private fun awaitStatusEvent(client: HttpClient, uri: URI): String {
+    val result = CompletableFuture<String>()
+    val text = StringBuilder()
+    val socket = client.newWebSocketBuilder()
+        .connectTimeout(Duration.ofSeconds(2))
+        .buildAsync(uri, object : WebSocket.Listener {
+            override fun onOpen(webSocket: WebSocket) {
+                webSocket.request(1)
+            }
+
+            override fun onText(
+                webSocket: WebSocket,
+                data: CharSequence,
+                last: Boolean,
+            ): CompletionStage<*>? {
+                text.append(data)
+                if (last) result.complete(text.toString())
+                webSocket.request(1)
+                return null
+            }
+
+            override fun onError(webSocket: WebSocket, error: Throwable) {
+                result.completeExceptionally(error)
+            }
+        })
+        .get(2, TimeUnit.SECONDS)
+    return try {
+        result.get(2, TimeUnit.SECONDS)
+    } finally {
+        socket.abort()
+    }
+}
+
 /**
  * Explicit host-only V17a probe. The coordinator invokes this through a temporary Gradle init
  * script; ordinary tests never call it and it performs no inference or download.
@@ -621,6 +982,79 @@ object ComfyVideoRuntimeHostCheck {
         }
         check(before == sourceSnapshot(setup)) { "Pinned source/model identity changed during server-only probe" }
         println("V17a host probe PASS: setup=ready start=ready health=pass busyPort=refused stop=reaped sourcePreserved=true session=${session.directory}")
+    }
+
+    private fun sourceSnapshot(setup: ReadyLocalVideoSetup): Map<Path, Pair<Long, FileTime>> {
+        val paths = mutableListOf(setup.pythonExecutable, setup.mainScript, setup.modelPathsConfig)
+        Files.walk(setup.modelsRoot).use { stream ->
+            stream.filter { Files.isRegularFile(it) }.forEach(paths::add)
+        }
+        return paths.associateWith { Files.size(it) to Files.getLastModifiedTime(it) }
+    }
+}
+
+/**
+ * Explicit host-only V17c proof. It accesses only read-only ComfyUI routes and the initial
+ * WebSocket status event; it never acquires an inference slot or submits a workflow.
+ */
+object ComfyVideoConnectionHostCheck {
+    @JvmStatic
+    fun main(arguments: Array<String>) {
+        val report = LocalVideoSetup.bundled().inspect()
+        check(report.state == LocalVideoSetupState.READY) {
+            report.issues.joinToString(prefix = "Pinned setup unavailable: ") { "${it.component}: ${it.detail}" }
+        }
+        val setup = checkNotNull(report.ready)
+        val sessions = setup.applicationSupportRoot.resolve("runs").also { Files.createDirectories(it) }
+        val before = sourceSnapshot(setup)
+        val runtime = ComfyVideoRuntime()
+        var sessionDirectory: Path? = null
+        try {
+            val session = runtime.start(setup, sessions)
+            sessionDirectory = session.directory
+            val connection = runtime.connection(session)
+            val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
+
+            val stats = client.send(
+                HttpRequest.newBuilder(connection.httpUri(ComfyVideoHttpMethod.GET, "/system_stats"))
+                    .timeout(Duration.ofSeconds(2))
+                    .GET()
+                    .build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            check(stats.statusCode() == 200 && stats.body().contains("\"comfyui_version\"")) {
+                "Private ComfyUI system stats were unavailable: HTTP ${stats.statusCode()}"
+            }
+            check(stats.headers().firstValue("X-Melotrail-Session").orElse("").isNotBlank()) {
+                "Private system stats did not carry the owned response identity"
+            }
+
+            val queue = client.send(
+                HttpRequest.newBuilder(connection.httpUri(ComfyVideoHttpMethod.GET, "/queue"))
+                    .timeout(Duration.ofSeconds(2))
+                    .GET()
+                    .build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            check(queue.statusCode() == 200 && queue.body().contains("queue_running")) {
+                "Private ComfyUI queue read was unavailable: HTTP ${queue.statusCode()}"
+            }
+
+            val event = awaitStatusEvent(client, connection.webSocketUri("melotrail-v17c-host-check"))
+            check(event.contains("\"type\": \"status\"") || event.contains("\"type\":\"status\"")) {
+                "ComfyUI WebSocket did not send its initial status event: $event"
+            }
+        } finally {
+            runCatching { runtime.stop() }
+            runtime.close()
+            check(before == sourceSnapshot(setup)) {
+                "Pinned source/model identity changed during connection-only probe"
+            }
+        }
+        println(
+            "V17c host proof PASS: setup=ready privateHttp=system_stats,queue " +
+                "webSocket=status stop=reaped inference=none sourcePreserved=true session=$sessionDirectory",
+        )
     }
 
     private fun sourceSnapshot(setup: ReadyLocalVideoSetup): Map<Path, Pair<Long, FileTime>> {

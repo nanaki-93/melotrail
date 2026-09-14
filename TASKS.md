@@ -149,7 +149,8 @@ checkpoint do not close V24/V33. Multi-scene editing is deferred.
 | V15 | Compile asset prompts and shot proposal | V13, V14 | DONE | Exact prompts and capability-aware reference/guidance bindings; 180–300s unique or explicitly reviewed reuse proposals with scoped fingerprints and profile-bound estimates. 681 tests, make test/build, diff check and fresh Sol High review PASS after one Astra repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V15. No inference/backend selection or visual approval claimed. |
 | V16 | Persist bounded recoverable jobs | V13 | DONE | Durable admission/launch claims, owned cancellation, explicit bounded retry/recovery, immutable outputs and reserved hosted budgets. 702 tests, make test/build, diff check and fresh Sol High review PASS after three Astra repairs (third explicitly user-authorized); cancellation/claim, crash, late-result and root-rebinding regressions pass. Evidence ~/.codex/melotrail-video-sequential/evidence/V16. |
 | V17a | Pin ComfyUI setup and own its local server | V11, V12a | DONE | Pinned installed ComfyUI/Python/GGUF/LTX/Gemma/upscaler setup; verified owned server identity, bounded resources, cancellation/reaping and single inference admission. 727 tests, make test/build, diff check, real start/health/port-collision/stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17a. API jobs remain V17b. |
-| V17b | Connect recoverable ComfyUI API jobs | V17a, V14, V16 | TODO | New 2026-09-14; dedicated owned server, explicit reference bindings. |
+| V17c | Expose a verified owned ComfyUI connection | V17a | DONE | Exact-session private HTTP/WebSocket connections reject copied/stale handles and protect replacement-listener dispatch; encoded queries preserved. 731 tests, make test/build, diff check, real private HTTP/WS/owned-stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17c. API jobs remain V17b. |
+| V17b | Connect recoverable ComfyUI API jobs | V17a, V17c, V14, V16 | TODO | Dedicated owned server and explicit reference bindings; use V17c verified connection for API access. |
 | V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | TODO | Revised 2026-09-14; supersedes the planned Draw Things production adapter. Earlier tuned LTX proof is retained at ~/.codex/melotrail-video-sequential/evidence/V17/ltx-tuning-20260914/proven-profile.json: 512x320, 49/129 frames at 25fps, 8 steps, tiled/no hires; silent outputs decoded and 8/8 originals preserved. Historical profile evidence, not the selected production integration. |
 | V18a | Persist prepared scenes and motion capabilities | V13, V14, V15 | TODO | New 2026-09-14; generic layers, poses, masks and source anchors. |
 | V18b | Prove automated reference-conditioned preparation | V17, V18a | TODO | New 2026-09-14; main creative capability risk, no hand-coded TABI regions. |
@@ -818,7 +819,7 @@ Use a clean isolated checkout for implementation verification and preserve this
 checkout. Current tracked Makefile/README/companion-README edits are intentional.
 
 The revised local route is ComfyUI preparation plus controlled composition.
-V17a/V17b/V17 replace the unimplemented production adapter, reusing the measured
+V17a/V17c/V17b/V17 replace the unimplemented production adapter, reusing the measured
 external installation. V18b must prove the missing automated preparation rather
 than treating an LTX image-to-video workflow as a multi-asset scene builder.
 Do not build both Draw Things and ComfyUI production adapters. No silent cloud
@@ -1088,6 +1089,30 @@ process supervision instead of another process framework.
 **Done:** owned start/health/stop and port-collision behavior are tested; the
 selected external runtime is pinned, with absent setup handled without breaking MIDI.
 
+### V17c — Expose a verified owned ComfyUI connection
+
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/ComfyVideoRuntime.kt`,
+`src/test/kotlin/app/melotrail/video/ComfyVideoRuntimeTest.kt`.
+**Inputs / dependencies:** V17a. Its public session value contains metadata;
+the private listener identity is currently unavailable to a real API consumer.
+**Implementation rules:** Expose a small runtime-issued connection for the future
+HTTP/WebSocket client, tied to the exact live owned session and server identity.
+A copied session value or arbitrary URI must not establish ownership. Reject
+stale connections after stop, failure or restart; retain the existing inference
+admission and bounded process cleanup. Close the gap between checking health and
+sending a mutating request: a replacement unrelated listener on the same port
+must never receive a usable ComfyUI mutation. Prefer a private per-launch route
+namespace/handshake in the existing bootstrap over another server or process
+framework. Keep the verified connection usable for the documented ComfyUI HTTP
+and WebSocket operations without exposing raw server access as a fallback.
+Validate operation paths, avoid network work while holding the runtime lifecycle
+lock, and preserve the installed source/model files. No workflow submission,
+asset binding, job persistence, inference or application UI in this slice.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.ComfyVideoRuntimeTest'`.
+**Done:** fixtures cover copied/stale session rejection, same-port replacement,
+HTTP/WebSocket access and shutdown races; an opt-in real installed-server check
+proves read-only API and WebSocket access, then owned shutdown without inference.
+
 ### V17b — Connect recoverable ComfyUI API jobs
 
 **Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoBackend.kt`
@@ -1096,9 +1121,10 @@ selected external runtime is pinned, with absent setup handled without breaking 
 `src/test/kotlin/app/melotrail/video/LocalVideoBackendTest.kt` (new),
 `src/test/kotlin/app/melotrail/video/ComfyVideoClientTest.kt` (new),
 `src/test/kotlin/app/melotrail/video/VideoJobCoordinatorTest.kt`.
-**Inputs / dependencies:** V17a, V14, V16 and the existing
+**Inputs / dependencies:** V17a, V17c, V14, V16 and the existing
 `VideoGenerationBackendPort` in `VideoJobCoordinator.kt`.
-**Implementation rules:** Explicit typed bindings resolve digest-pinned owned
+**Implementation rules:** Use V17c's runtime-issued verified connection for every
+HTTP/WebSocket operation. Explicit typed bindings resolve digest-pinned owned
 reference files, workflow slots and output identities; never interpret a user
 prompt as executable node code or a filesystem path. Upload only consumed images,
 validate `/object_info` requirements, submit API-format workflows to `/prompt`,

@@ -54,6 +54,25 @@ data class ComfyVideoSession(
     val userDirectory: Path,
 )
 
+enum class ComfyVideoHttpMethod { GET, POST }
+
+/**
+ * An unforgeable capability for the exact server launch that issued [sessionId]. Paths are
+ * resolved through that launch's private namespace, so a later listener on the public port does
+ * not receive a standard ComfyUI operation even if it wins a dispatch race.
+ */
+class ComfyVideoConnection internal constructor(
+    private val runtime: ComfyVideoRuntime,
+    private val capability: Any,
+    val sessionId: String,
+) {
+    fun httpUri(method: ComfyVideoHttpMethod, operationPath: String): URI =
+        runtime.resolveHttpUri(capability, sessionId, method, operationPath)
+
+    fun webSocketUri(clientId: String): URI =
+        runtime.resolveWebSocketUri(capability, sessionId, clientId)
+}
+
 /** A single inference admission token. Workflow submission belongs to V17b. */
 class ComfyVideoInferenceSlot internal constructor(
     private val runtime: ComfyVideoRuntime,
@@ -131,9 +150,10 @@ class ComfyVideoRuntime internal constructor(
                 val session = createSession(setup, sessionsParent, port)
                 val cancellation = VideoMediaProcessCancellation()
                 val identity = UUID.randomUUID().toString()
-                val request = launchRequest(setup, session, identity)
+                val routeToken = UUID.randomUUID().toString()
+                val request = launchRequest(setup, session, identity, routeToken)
                 val process = executor.submit<VideoMediaProcessResult> { runProcess(request, cancellation) }
-                OwnedSession(setup, session, identity, cancellation, process, baseline, nanoTime()).also { owned = it }
+                OwnedSession(setup, session, identity, routeToken, cancellation, process, baseline, nanoTime()).also { owned = it }
             } catch (error: ComfyVideoRuntimeException) {
                 stateValue = ComfyVideoRuntimeState.FAILED
                 lastFailureValue = error
@@ -190,6 +210,24 @@ class ComfyVideoRuntime internal constructor(
         ComfyVideoInferenceSlot(this, owner.session.id)
     }
 
+    /**
+     * Issues a connection only for the exact session instance returned by [start]. Session values
+     * are intentionally public metadata; copying one does not copy runtime ownership.
+     */
+    fun connection(session: ComfyVideoSession): ComfyVideoConnection = synchronized(lock) {
+        val owner = owned
+        if (stateValue != ComfyVideoRuntimeState.READY || owner == null || owner.process.isDone) {
+            throw ComfyVideoRuntimeException(ComfyVideoRuntimeFailure.NOT_RUNNING, "ComfyUI runtime is not ready.")
+        }
+        if (owner.session !== session) {
+            throw ComfyVideoRuntimeException(
+                ComfyVideoRuntimeFailure.INVALID_REQUEST,
+                "Only the exact session returned by this live runtime can open a ComfyUI connection.",
+            )
+        }
+        ComfyVideoConnection(this, owner.connectionCapability, owner.session.id)
+    }
+
     fun stop() {
         val owner = synchronized(lock) {
             val current = owned ?: run {
@@ -239,6 +277,86 @@ class ComfyVideoRuntime internal constructor(
             }
         }
     }
+
+    internal fun resolveHttpUri(
+        capability: Any,
+        sessionId: String,
+        method: ComfyVideoHttpMethod,
+        operationPath: String,
+    ): URI {
+        val operation = validateHttpOperation(method, operationPath)
+        val target = connectionTarget(capability, sessionId)
+        val query = operation.rawQuery?.let { "?$it" }.orEmpty()
+        return URI("${target.endpoint.scheme}://${target.endpoint.rawAuthority}${target.namespace}${operation.rawPath}$query")
+    }
+
+    internal fun resolveWebSocketUri(capability: Any, sessionId: String, clientId: String): URI {
+        if (!CLIENT_ID.matches(clientId)) {
+            throw ComfyVideoRuntimeException(
+                ComfyVideoRuntimeFailure.INVALID_REQUEST,
+                "ComfyUI WebSocket client ID must contain 1-128 letters, digits, dots, underscores or hyphens.",
+            )
+        }
+        val target = connectionTarget(capability, sessionId)
+        return URI(
+            "ws",
+            null,
+            target.endpoint.host,
+            target.endpoint.port,
+            target.namespace + "/ws",
+            "clientId=$clientId",
+            null,
+        )
+    }
+
+    private fun connectionTarget(capability: Any, sessionId: String): ConnectionTarget = synchronized(lock) {
+        val owner = owned
+        if (stateValue != ComfyVideoRuntimeState.READY || owner == null || owner.process.isDone ||
+            owner.connectionCapability !== capability || owner.session.id != sessionId
+        ) {
+            throw ComfyVideoRuntimeException(
+                ComfyVideoRuntimeFailure.NOT_RUNNING,
+                "The ComfyUI connection is stale or its owned server is not ready.",
+            )
+        }
+        ConnectionTarget(owner.session.endpoint, owner.namespace)
+    }
+
+    private fun validateHttpOperation(method: ComfyVideoHttpMethod, operationPath: String): URI {
+        val operation = try {
+            URI(operationPath)
+        } catch (error: Exception) {
+            throw invalidOperation("ComfyUI operation path is not a valid URI.", error)
+        }
+        if (operationPath.length > MAX_OPERATION_LENGTH || operation.isAbsolute || operation.rawAuthority != null ||
+            operation.rawFragment != null || operation.rawPath.isNullOrEmpty() || !operation.rawPath.startsWith("/") ||
+            operation.rawPath.contains("//")
+        ) {
+            throw invalidOperation("ComfyUI operation must be one bounded absolute-path reference without authority or fragment.")
+        }
+        val path = operation.rawPath
+        val allowed = when (method) {
+            ComfyVideoHttpMethod.GET -> path in READ_OPERATIONS ||
+                safeDynamicOperation(path, HISTORY_ITEM, "/history/") ||
+                safeDynamicOperation(path, OBJECT_INFO_ITEM, "/object_info/")
+            ComfyVideoHttpMethod.POST -> path in MUTATION_OPERATIONS
+        }
+        if (!allowed) {
+            throw invalidOperation("Unsupported ComfyUI ${method.name} operation path: $path")
+        }
+        return operation
+    }
+
+    private fun safeDynamicOperation(path: String, pattern: Regex, prefix: String): Boolean {
+        if (!pattern.matches(path)) return false
+        return path.removePrefix(prefix) !in setOf(".", "..")
+    }
+
+    private fun invalidOperation(message: String, cause: Throwable? = null) = ComfyVideoRuntimeException(
+        ComfyVideoRuntimeFailure.INVALID_REQUEST,
+        message,
+        cause,
+    )
 
     private fun waitForReadiness(owner: OwnedSession) {
         val profile = owner.setup.server
@@ -469,12 +587,18 @@ class ComfyVideoRuntime internal constructor(
         )
     }
 
-    private fun launchRequest(setup: ReadyLocalVideoSetup, session: ComfyVideoSession, identity: String): VideoMediaProcessRequest {
+    private fun launchRequest(
+        setup: ReadyLocalVideoSetup,
+        session: ComfyVideoSession,
+        identity: String,
+        routeToken: String,
+    ): VideoMediaProcessRequest {
         val arguments = listOf(
             "-c", BOOTSTRAP,
             session.directory.toString(),
             setup.mainScript.toString(),
             identity,
+            routeToken,
             "--listen", setup.server.host,
             "--port", session.endpoint.port.toString(),
             "--input-directory", session.inputDirectory.toString(),
@@ -521,35 +645,84 @@ class ComfyVideoRuntime internal constructor(
         val setup: ReadyLocalVideoSetup,
         val session: ComfyVideoSession,
         val identity: String,
+        val routeToken: String,
         val cancellation: VideoMediaProcessCancellation,
         val process: Future<VideoMediaProcessResult>,
         val baseline: ComfyHostResources,
         val startedNanos: Long,
+        val connectionCapability: Any = Any(),
         val inferenceActive: AtomicBoolean = AtomicBoolean(false),
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
         @Volatile var inferenceStartedNanos: Long? = null,
         @Volatile var monitor: Future<*>? = null,
     )
 
+    private data class ConnectionTarget(val endpoint: URI, val namespace: String)
+
+    private val OwnedSession.namespace: String get() = "/_melotrail/$routeToken"
+
     companion object {
         private const val LOOPBACK = "127.0.0.1"
         private const val MAX_FAILED_HEALTH_CHECKS = 3
+        private const val MAX_OPERATION_LENGTH = 8_192
+        private val CLIENT_ID = Regex("[A-Za-z0-9._-]{1,128}")
+        private val HISTORY_ITEM = Regex("/history/[A-Za-z0-9._~-]{1,256}")
+        private val OBJECT_INFO_ITEM = Regex("/object_info/[A-Za-z0-9._~-]{1,256}")
+        private val READ_OPERATIONS = setOf(
+            "/system_stats",
+            "/object_info",
+            "/prompt",
+            "/history",
+            "/queue",
+            "/view",
+        )
+        private val MUTATION_OPERATIONS = setOf(
+            "/upload/image",
+            "/prompt",
+            "/queue",
+            "/interrupt",
+            "/history",
+        )
         private val BOOTSTRAP = """
             import os,pathlib,runpy,sys
             session=pathlib.Path(sys.argv[1])
             [session.joinpath(name).mkdir() for name in ('input','output','temp','user')]
             main=sys.argv[2]
             identity=sys.argv[3]
-            sys.argv=[main]+sys.argv[4:]
+            route_token=sys.argv[4]
+            namespace='/_melotrail/'+route_token
+            sys.argv=[main]+sys.argv[5:]
             from aiohttp import web
             original_init=web.Application.__init__
+            original_add_routes=web.Application.add_routes
+            allowed={
+                'GET':{'/system_stats','/object_info','/object_info/{node_class}','/prompt','/history','/history/{prompt_id}','/queue','/view','/ws'},
+                'POST':{'/upload/image','/prompt','/queue','/interrupt','/history'},
+            }
+            @web.middleware
+            async def owned_only(request,handler):
+                if request.path == '/system_stats' or request.path.startswith(namespace+'/'):
+                    return await handler(request)
+                return web.Response(status=404)
             async def attest(request,response):
-                if request.path == '/system_stats':
+                if request.path == '/system_stats' or request.path == namespace+'/system_stats':
                     response.headers['X-Melotrail-Session']=identity
             def owned_init(app,*args,**kwargs):
+                middlewares=list(kwargs.pop('middlewares',[]))
+                middlewares.insert(0,owned_only)
+                kwargs['middlewares']=middlewares
                 original_init(app,*args,**kwargs)
                 app.on_response_prepare.append(attest)
+            def owned_add_routes(app,routes):
+                routes=list(routes)
+                aliases=web.RouteTableDef()
+                for route in routes:
+                    if isinstance(route,web.RouteDef) and route.path in allowed.get(route.method,set()):
+                        aliases.route(route.method,namespace+route.path)(route.handler,**route.kwargs)
+                original_add_routes(app,aliases)
+                return original_add_routes(app,routes)
             web.Application.__init__=owned_init
+            web.Application.add_routes=owned_add_routes
             os.chdir(str(pathlib.Path(main).parent))
             runpy.run_path(main,run_name='__main__')
         """.trimIndent()
