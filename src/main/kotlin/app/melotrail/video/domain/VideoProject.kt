@@ -16,6 +16,7 @@ data class VideoProject(
     val applicationVersion: String? = null,
     val referenceVersions: List<VideoReferenceRecord> = emptyList(),
     val lookVersions: List<VideoLookRecord> = emptyList(),
+    val preparedSceneVersions: List<VideoPreparedSceneRecord> = emptyList(),
     val takeVersions: List<VideoTakeRecord> = emptyList(),
     val selectedReferenceIds: List<VideoVersionedId> = emptyList(),
     val selectedLookId: VideoVersionedId? = null,
@@ -37,6 +38,7 @@ data class VideoProject(
 
         requireUnique(referenceVersions.map(VideoReferenceRecord::id), "Reference")
         requireUnique(lookVersions.map(VideoLookRecord::id), "Look")
+        requireUnique(preparedSceneVersions.map(VideoPreparedSceneRecord::id), "Prepared scene")
         requireUnique(takeVersions.map(VideoTakeRecord::id), "Take")
         requireUnique(exportRecords.map(VideoExportRecord::id), "Export")
 
@@ -45,6 +47,12 @@ data class VideoProject(
         val takes = takeVersions.map(VideoTakeRecord::id).toSet()
         require(lookVersions.all { look -> look.referenceIds.all(references::contains) }) {
             "Every look reference must identify a persisted reference version"
+        }
+        require(preparedSceneVersions.all { scene ->
+            (scene.sourceLookId == null || scene.sourceLookId in looks) &&
+                scene.sourceReferenceIds.all(references::contains)
+        }) {
+            "Every prepared-scene source must identify persisted look and reference versions"
         }
         require(takeVersions.all { take -> take.lookId == null || take.lookId in looks }) {
             "Every take look must identify a persisted look version"
@@ -64,6 +72,7 @@ data class VideoProject(
         val artifactPaths = buildList {
             addAll(referenceVersions.map { it.artifact.relativePath })
             addAll(lookVersions.map { it.artifact.relativePath })
+            addAll(preparedSceneVersions.map { it.artifact.relativePath })
             addAll(takeVersions.map { it.artifact.relativePath })
             addAll(exportRecords.map { it.artifact.relativePath })
         }
@@ -75,6 +84,10 @@ data class VideoProject(
     fun artifacts(): List<VideoArtifact> = buildList {
         addAll(referenceVersions.map(VideoReferenceRecord::artifact))
         addAll(lookVersions.map(VideoLookRecord::artifact))
+        preparedSceneVersions.forEach { scene ->
+            add(scene.artifact)
+            addAll(scene.consumedArtifacts)
+        }
         addAll(takeVersions.map(VideoTakeRecord::artifact))
         addAll(exportRecords.map(VideoExportRecord::artifact))
     }

@@ -9,6 +9,7 @@ import app.melotrail.video.application.VideoProjectNotFoundException
 import app.melotrail.video.application.VideoProjectPersistence
 import app.melotrail.video.application.VideoProjectSaveException
 import app.melotrail.video.domain.VideoArtifact
+import app.melotrail.video.domain.VideoPreparedSceneRecord
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoProjectControlPaths
 import java.io.IOException
@@ -110,6 +111,116 @@ class VideoProjectStore(
         return verifyArtifact(root, artifact)
     }
 
+    /**
+     * Publishes a prepared-scene descriptor and appends its record under the same
+     * project lock used by ordinary saves. The caller owns descriptor encoding;
+     * this store continues to own path safety, artifact verification and revision publication.
+     */
+    internal fun appendPreparedScene(
+        projectRoot: Path,
+        expectedRevision: Long,
+        record: VideoPreparedSceneRecord,
+        descriptorBytes: ByteArray,
+    ): VideoProject {
+        require(expectedRevision >= 0L) { "Expected video project revision must not be negative" }
+        require(sha256(descriptorBytes) == record.artifact.sha256) {
+            "Prepared-scene descriptor bytes do not match their artifact pin"
+        }
+        val expectedPath = "prepared-scenes/${record.id.id}/v${record.id.version}/scene.json"
+        require(record.artifact.relativePath == expectedPath) {
+            "Prepared-scene record does not point to its immutable descriptor path"
+        }
+        val root = existingSafeRoot(validateLocation(projectRoot))
+        return withWriteLock(root) {
+            val current = readCurrentProject(root)
+            if (current.revision != expectedRevision) {
+                throw VideoProjectConcurrencyException(
+                    "The video project changed from revision $expectedRevision to ${current.revision}.",
+                )
+            }
+            require(current.preparedSceneVersions.none { it.id == record.id }) {
+                "Prepared-scene version ${record.id.id} v${record.id.version} already exists"
+            }
+            val requiredRevision = try {
+                Math.addExact(expectedRevision, 1L)
+            } catch (error: ArithmeticException) {
+                throw IllegalArgumentException("The video project revision cannot advance safely", error)
+            }
+            val replacement = current.copy(
+                preparedSceneVersions = current.preparedSceneVersions + record,
+                revision = requiredRevision,
+            )
+            requireAppendOnlyHistory(current, replacement)
+            verifyArtifacts(root, current)
+            record.consumedArtifacts.forEach { verifyArtifact(root, it) }
+
+            val target = root.resolve(record.artifact.relativePath).normalize()
+            if (!target.startsWith(root)) {
+                throw InvalidVideoProjectException("Prepared-scene descriptor escapes the video project root")
+            }
+            val parent = requireNotNull(target.parent)
+            requireNoSymlinkComponents(root, parent)
+            try {
+                Files.createDirectories(parent)
+            } catch (error: IOException) {
+                throw VideoProjectSaveException(
+                    "Prepared-scene descriptor folder could not be created; the project document was preserved.",
+                    projectFile(root),
+                    null,
+                    error,
+                )
+            }
+            requireNoSymlinkComponents(root, parent)
+            val realParent = try {
+                parent.toRealPath()
+            } catch (error: IOException) {
+                throw InvalidVideoProjectException("Prepared-scene descriptor folder could not be resolved", error)
+            }
+            if (!realParent.startsWith(root)) {
+                throw InvalidVideoProjectException("Prepared-scene descriptor folder escapes the video project root")
+            }
+
+            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                verifyArtifact(root, record.artifact)
+            } else {
+                val temporary = try {
+                    Files.createTempFile(parent, ".prepared-scene-", ".tmp")
+                } catch (error: IOException) {
+                    throw VideoProjectSaveException(
+                        "Prepared-scene descriptor could not be staged; the project document was preserved.",
+                        projectFile(root),
+                        null,
+                        error,
+                    )
+                }
+                try {
+                    FileChannel.open(temporary, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING).use { channel ->
+                        val remaining = ByteBuffer.wrap(descriptorBytes)
+                        while (remaining.hasRemaining()) channel.write(remaining)
+                        channel.force(true)
+                    }
+                    publishNewFile(temporary, target)
+                } catch (error: Exception) {
+                    throw VideoProjectSaveException(
+                        "Prepared-scene descriptor could not be published; the project document was preserved.",
+                        projectFile(root),
+                        null,
+                        error,
+                    )
+                } finally {
+                    runCatching { Files.deleteIfExists(temporary) }
+                }
+            }
+
+            // Retain an immutable descriptor if project publication fails. A retry may reuse
+            // only the same digest, while the previous project document remains authoritative.
+            verifyArtifact(root, record.artifact)
+            verifyArtifacts(root, replacement)
+            publishDocument(root, projectFile(root), replacement, replace = true)
+            replacement
+        }
+    }
+
     private fun requireAppendOnlyHistory(current: VideoProject, replacement: VideoProject) {
         require(current.id == replacement.id) { "A save cannot replace the video project identity" }
         require(current.createdAt == replacement.createdAt) { "A save cannot replace the video project creation timestamp" }
@@ -121,6 +232,9 @@ class VideoProjectStore(
         }
         require(replacement.lookVersions.startsWith(current.lookVersions)) {
             "Look versions are immutable and append-only"
+        }
+        require(replacement.preparedSceneVersions.startsWith(current.preparedSceneVersions)) {
+            "Prepared-scene versions are immutable and append-only"
         }
         require(replacement.takeVersions.startsWith(current.takeVersions)) {
             "Take versions are immutable and append-only"
@@ -339,7 +453,7 @@ fun interface VideoAtomicWriteObserver {
 
 private object VideoProjectSchema {
     const val SCHEMA = "melotrail-video-project"
-    const val VERSION = 1
+    const val VERSION = 2
 
     private val json = Json {
         prettyPrint = true
@@ -410,6 +524,10 @@ private fun sha256(path: Path): String {
     }
     return digest.digest().joinToString("") { "%02x".format(it) }
 }
+
+private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256")
+    .digest(bytes)
+    .joinToString("") { "%02x".format(it) }
 
 private fun publishNewFile(source: Path, target: Path) {
     // A hard link publishes complete staged bytes with an exclusive directory entry. ATOMIC_MOVE

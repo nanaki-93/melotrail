@@ -13,6 +13,7 @@ import app.melotrail.video.application.VideoProjectSaveException
 import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoExportRecord
 import app.melotrail.video.domain.VideoLookRecord
+import app.melotrail.video.domain.VideoPreparedSceneRecord
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoReferenceRecord
 import app.melotrail.video.domain.VideoTakeRecord
@@ -125,6 +126,44 @@ class VideoProjectStoreTest {
     }
 
     @Test
+    fun `prepared scene records are append-only and retain every consumed artifact pin`() {
+        val videoRoot = root.resolve("video-project")
+        val projectStore = store()
+        val original = projectStore.create(videoRoot, emptyProject())
+        val populated = populatedProject(original, videoRoot)
+        projectStore.save(videoRoot, 0L, populated)
+        val reference = populated.referenceVersions.single()
+        val descriptor = artifact(videoRoot, "prepared-scenes/scene/v1/scene.json", "prepared scene descriptor")
+        val layer = artifact(videoRoot, "prepared-assets/layer.png", "prepared layer")
+        val scene = VideoPreparedSceneRecord(
+            id = VideoVersionedId("scene", 1),
+            artifact = descriptor,
+            sourceLookId = populated.selectedLookId,
+            sourceReferenceIds = listOf(reference.id),
+            consumedArtifacts = listOf(reference.artifact, populated.lookVersions.single().artifact, layer),
+            createdAt = "2026-09-13T00:05:00Z",
+        )
+        val withScene = populated.copy(preparedSceneVersions = listOf(scene), revision = 2L)
+        projectStore.save(videoRoot, 1L, withScene)
+        val reopened = assertIs<VideoProjectLifecycleResult.Opened>(lifecycle(projectStore).open(videoRoot)).session
+        val before = Files.readAllBytes(videoRoot.resolve(VideoProjectStore.PROJECT_FILE))
+
+        val rejected = assertIs<VideoProjectLifecycleResult.Rejected>(
+            lifecycle(projectStore).save(
+                reopened,
+                withScene.copy(
+                    preparedSceneVersions = listOf(scene.copy(createdAt = "2026-09-13T00:06:00Z")),
+                    revision = 3L,
+                ),
+            ),
+        )
+
+        assertEquals(VideoProjectProblemCode.IMMUTABLE_HISTORY, rejected.problem.code)
+        assertContentEquals(before, Files.readAllBytes(videoRoot.resolve(VideoProjectStore.PROJECT_FILE)))
+        assertEquals(listOf(reference.artifact, populated.lookVersions.single().artifact, layer), projectStore.open(videoRoot).preparedSceneVersions.single().consumedArtifacts)
+    }
+
+    @Test
     fun `corrupt staged save preserves the last known-good project`() {
         val videoRoot = root.resolve("video-project")
         var corrupt = false
@@ -157,7 +196,7 @@ class VideoProjectStoreTest {
             lifecycle(projectStore).create(CreateVideoProject(videoRoot, "Original", "video-1")),
         ).session.project
         val projectFile = videoRoot.resolve(VideoProjectStore.PROJECT_FILE)
-        val unsupported = """{"schema":"melotrail-video-project","version":99,"project":{}}"""
+        val unsupported = """{"schema":"melotrail-video-project","version":1,"project":{}}"""
         Files.writeString(projectFile, unsupported)
         val beforeUnsupported = Files.readAllBytes(projectFile)
 
