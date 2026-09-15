@@ -16,6 +16,7 @@ import app.melotrail.video.domain.VideoAssetCreationProvenance
 import app.melotrail.video.domain.VideoAssetIdentityReview
 import app.melotrail.video.domain.VideoAssetRights
 import app.melotrail.video.domain.VideoAssetUsageIntent
+import app.melotrail.video.domain.VideoBriefReference
 import app.melotrail.video.domain.VideoImageFormat
 import app.melotrail.video.domain.VideoReferenceRole
 import java.awt.Color
@@ -117,6 +118,7 @@ class VideoAssetImportTest {
         assertEquals(requestedRoles, importedRoles)
         assertEquals(requestedRoles.size, session.project.referenceVersions.size)
         assertEquals(requestedRoles.size, session.project.selectedReferenceIds.size)
+        assertEquals(requestedRoles, harness.loaded(harness.importer.open(harness.projectRoot)).assets.map { it.role })
     }
 
     @Test
@@ -234,7 +236,7 @@ class VideoAssetImportTest {
                 first.session,
                 ImportVideoAsset(
                     source,
-                    role = VideoReferenceRole.SUBJECT,
+                    role = VideoReferenceRole.OUTFIT,
                     rights = VideoAssetRights(license = "A later claim must not overwrite the asset"),
                 ),
             ),
@@ -245,10 +247,14 @@ class VideoAssetImportTest {
         assertEquals(VideoAssetUsageIntent.INSPIRATION_ONLY, duplicate.asset.usageIntent)
         assertNull(duplicate.asset.rights)
         assertEquals(VideoAssetIdentityReview.UNREVIEWED, duplicate.asset.identityReview)
+        val briefBinding = VideoBriefReference.from(duplicate.asset, VideoReferenceRole.OUTFIT)
+        assertEquals(VideoReferenceRole.OUTFIT, briefBinding.role)
+        assertEquals(VideoReferenceRole.STYLE, duplicate.asset.role)
         assertEquals(first.session.project.revision, duplicate.session.project.revision)
         assertEquals(1, duplicate.session.project.referenceVersions.size)
         assertContentEquals(descriptorBefore, Files.readAllBytes(descriptorPath))
         assertContentEquals(originalBefore, Files.readAllBytes(harness.projectRoot.resolve(first.asset.original.artifact.relativePath)))
+        assertEquals(VideoReferenceRole.STYLE, harness.loaded(harness.importer.open(harness.projectRoot)).assets.single().role)
     }
 
     @Test

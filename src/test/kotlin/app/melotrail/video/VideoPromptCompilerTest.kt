@@ -75,9 +75,107 @@ class VideoPromptCompilerTest {
     }
 
     @Test
+    fun `multiple character outfit and scenery pictures bind independently with role-scoped guidance`() {
+        val prompt = "  Keep a traveler recognizable while the landscape changes.\nUse a quiet illustrated treatment.  "
+        val references = listOf(
+            reference("character-one", VideoReferenceRole.CHARACTER, "1".repeat(64)),
+            reference("character-two", VideoReferenceRole.CHARACTER, "2".repeat(64)),
+            reference("outfit-one", VideoReferenceRole.OUTFIT, "3".repeat(64)),
+            reference("outfit-two", VideoReferenceRole.OUTFIT, "4".repeat(64)),
+            reference("city-one", VideoReferenceRole.ENVIRONMENT, "5".repeat(64)),
+            reference("city-two", VideoReferenceRole.ENVIRONMENT, "6".repeat(64)),
+            reference("style", VideoReferenceRole.STYLE, "7".repeat(64)),
+            reference("scene", VideoReferenceRole.COMPLETE_SCENE, "8".repeat(64)),
+            reference("unassigned", null, "9".repeat(64)),
+        )
+
+        val compilation = compiler.compile(VideoBrief(prompt, references), capabilities(maximumReferences = 9), guidelines())
+        val backendPrompt = requireNotNull(compilation.backendPrompt)
+
+        assertEquals(VideoPromptCompilationStatus.READY, compilation.status)
+        assertEquals(prompt, compilation.primaryPrompt)
+        assertTrue(backendPrompt.startsWith(prompt))
+        assertEquals(references.map { it.role }, compilation.bindings.map { it.requestedRole })
+        assertEquals(references.map { it.original.sha256 }, compilation.bindings.map { it.artifact.sha256 })
+        assertTrue(compilation.bindings.all { it.status == VideoReferenceBindingStatus.BOUND })
+        compilation.bindings.filter { it.requestedRole != null }.forEach { binding ->
+            assertEquals(binding.requestedRole, binding.roleGuidance?.role)
+        }
+        assertEquals(null, compilation.bindings.last().roleGuidance)
+        assertTrue(backendPrompt.contains("poses and expressions"))
+        assertTrue(backendPrompt.contains("without copying a depicted model's identity"))
+        assertTrue(backendPrompt.contains("Do not transfer depicted people, clothing"))
+        assertTrue(backendPrompt.contains("Retain the selected style"))
+        assertEquals(9, compilation.dependencies.count { it.key.endsWith(".asset") })
+        assertEquals(9, compilation.dependencies.count { it.key.endsWith(".binding") })
+    }
+
+    @Test
+    fun `character outfit and scenery groups may each be absent`() {
+        val compilation = compiler.compile(
+            VideoBrief(
+                "Use only the selected supplementary inspiration.",
+                listOf(
+                    reference("style-only", VideoReferenceRole.STYLE, "a".repeat(64)),
+                    reference("unassigned", null, "b".repeat(64)),
+                ),
+            ),
+            capabilities(maximumReferences = 2),
+            guidelines(),
+        )
+
+        assertEquals(VideoPromptCompilationStatus.READY, compilation.status)
+        assertTrue(compilation.appliedGuidance.none {
+            it.referenceRole != null && it.referenceRole in setOf(
+                VideoReferenceRole.SUBJECT,
+                VideoReferenceRole.CHARACTER,
+                VideoReferenceRole.OUTFIT,
+                VideoReferenceRole.ENVIRONMENT,
+            )
+        })
+        assertEquals(listOf(VideoReferenceRole.STYLE, null), compilation.bindings.map { it.requestedRole })
+    }
+
+    @Test
+    fun `outfit image and explicit role changes alter identity while unrelated inputs stay pinned`() {
+        val prompt = "Preserve the subject and landscape while applying the selected clothes."
+        val originalReferences = listOf(
+            reference("character", VideoReferenceRole.SUBJECT, "a".repeat(64)),
+            reference("outfit", VideoReferenceRole.OUTFIT, "b".repeat(64)),
+            reference("city", VideoReferenceRole.ENVIRONMENT, "c".repeat(64)),
+            reference("style", VideoReferenceRole.STYLE, "d".repeat(64)),
+        )
+        val original = compiler.compile(VideoBrief(prompt, originalReferences), capabilities(), guidelines())
+        val changedOutfit = compiler.compile(
+            VideoBrief(prompt, originalReferences.toMutableList().also {
+                it[1] = reference("outfit", VideoReferenceRole.OUTFIT, "e".repeat(64))
+            }),
+            capabilities(),
+            guidelines(),
+        )
+        val reassignedOutfit = compiler.compile(
+            VideoBrief(prompt, originalReferences.toMutableList().also {
+                it[1] = it[1].copy(role = VideoReferenceRole.COMPLETE_SCENE)
+            }),
+            capabilities(),
+            guidelines(),
+        )
+
+        assertNotEquals(original.requestFingerprint, changedOutfit.requestFingerprint)
+        assertNotEquals(original.requestFingerprint, reassignedOutfit.requestFingerprint)
+        assertEquals(
+            original.dependencies.filter { ".character." in it.key || ".city." in it.key || ".style." in it.key },
+            changedOutfit.dependencies.filter { ".character." in it.key || ".city." in it.key || ".style." in it.key },
+        )
+        assertEquals("b".repeat(64), original.bindings[1].artifact.sha256)
+        assertEquals(VideoReferenceRole.OUTFIT, original.bindings[1].requestedRole)
+        assertEquals(VideoReferenceRole.COMPLETE_SCENE, reassignedOutfit.bindings[1].requestedRole)
+    }
+
+    @Test
     fun `unsupported capacity roles and user guidance stay visible and block inference`() {
         val first = reference("first", VideoReferenceRole.SUBJECT, "a".repeat(64))
-        val second = reference("second", VideoReferenceRole.STYLE, "b".repeat(64))
+        val second = reference("second", VideoReferenceRole.OUTFIT, "b".repeat(64))
         val third = reference("third", null, "c".repeat(64))
         val limited = capabilities(
             maximumReferences = 1,

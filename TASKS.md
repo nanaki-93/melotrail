@@ -154,13 +154,14 @@ checkpoint do not close V24/V33. Multi-scene editing is deferred.
 | V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | DONE | Production ComfyUI probe, selected DynamicCombo validation, protected-root preflight and reliable native test readiness. Focused checks, 777 tests, make test/build, diff and fresh Sol High review PASS after five Astra repairs; extended repairs user-authorized. Real H264 768x448,129 frames,25fps,5.16s silent output fully decoded; recovery, terminal/active cancellation, immutable result, owned stop and source/model preservation verified. Evidence ~/.codex/melotrail-video-sequential/evidence/V17/production-adapter-20260914/host-4. Earlier 1024 memory stop retained; automatic preparation/full-video gates remain later rows. |
 | V18a1 | Requalify desktop visuals on macOS 27 | V17 | DONE | 69 fresh exact baselines on macOS 27.0; original images retained, text-only differences independently reviewed. 75 focused/777 full tests, build, diff and fresh Sol High review PASS. Evidence: ~/.codex/melotrail-video-sequential/evidence/V18a1/macos27-20260915. Human gates remain pending. |
 | V18a | Persist prepared scenes and motion capabilities | V13, V14, V15, V18a1 | DONE | Versioned scene layers/poses/masks, source and dependency pins, geometry, effect anchors and motion capabilities persist through the guarded append-only store; component review states and separate motion/footage reuse policies retained. 17 focused/781 full tests, build, diff and fresh Sol High review PASS after V18a1 host requalification. Evidence: ~/.codex/melotrail-video-sequential/evidence/V18a/prepared-scenes-20260915. |
-| V18b | Prove automated reference-conditioned preparation | V17, V18a | TODO | New 2026-09-14; main creative capability risk, no hand-coded TABI regions. |
+| V18a2 | Bind character, outfit and scenery inspiration | V14, V15, V18a | DONE | Optional multi-image character/pose/expression, outfit and city/scenery roles bind independently with scoped guidance, immutable role reassignment and complete dependency pins; unsupported roles/conflicts/capacity remain visible. 47 focused/784 full tests, build, diff and fresh Sol High review PASS. Evidence: ~/.codex/melotrail-video-sequential/evidence/V18a2/reference-bindings-20260915. Actual conditioning and upload controls remain V18b/V21. |
+| V18b | Prove automated reference-conditioned preparation | V17, V18a, V18a2 | TODO | Revised 2026-09-15; prove character, outfit and scenery image conditioning, including isolated outfit/pose changes; no hand-coded TABI regions. |
 | V18 | Prepare scene looks and layers with optional review | V14, V15, V16, V18a, V18b | TODO | Revised 2026-09-14; preserve supplied assets and actual review status. |
 | V19a | Generalize controlled subject motion and effects | V12, V18a | TODO | New 2026-09-14; external tool, approved motion/steam behavior as scoped reference. |
 | V19b | Render coherent scenery with continuous time | V19a | TODO | New 2026-09-14; depth, coverage, occlusion and resumable frame ranges. |
 | V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary. |
 | V20 | Add Video tab and independent create/open | V13, V16 | TODO | Planned 2026-09-13; not implemented. |
-| V21 | Wire separate assets prompt constraints and setup | V14, V15, V17a, V18a, V20 | TODO | Revised 2026-09-14; character, scenario and style groups are optional roles. |
+| V21 | Wire separate assets prompt constraints and setup | V14, V15, V17a, V18a, V18a2, V20 | TODO | Revised 2026-09-14; character, scenario and style groups are optional roles. |
 | V22 | Wire generation look selection and retry | V17, V18, V19, V20, V21 | TODO | Planned 2026-09-13; not implemented. |
 | V23 | Play actual generated video in the tab | V12, V19, V22 | TODO | Planned 2026-09-13; not implemented. |
 | V24 | Review real asset-and-prompt generation | V18b, V22, V23 | WAITING_USER | Three real 20–30s app cases remain pending. Earlier LTX steam-origin/quality feedback is preserved at ~/.codex/melotrail-video-sequential/evidence/V17/ltx-tuning-20260914/user-feedback.json. Later controlled-motion checkpoint and coffee steam are approved in their own scope; latest train refinement is a starting point, not this in-app gate. |
@@ -1224,25 +1225,72 @@ train/window assumption, duplicated project store or old-project migration.
 **Done:** two structurally different owned prepared scenes reopen with verified
 pins and capabilities; scene metadata cannot silently change accepted sources.
 
+### V18a2 — Bind character, outfit and scenery inspiration
+
+**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoAsset.kt`,
+`src/main/kotlin/app/melotrail/video/domain/VideoBrief.kt`,
+`src/main/kotlin/app/melotrail/video/application/VideoPromptCompiler.kt`,
+`src/main/resources/video/video-generation-guidelines.json`,
+`src/test/kotlin/app/melotrail/video/VideoAssetImportTest.kt`,
+`src/test/kotlin/app/melotrail/video/VideoPromptCompilerTest.kt`, and
+`src/test/kotlin/app/melotrail/video/VideoShotPlannerTest.kt` (existing prompt-template
+version invalidation fixture only).
+**Inputs / dependencies:** V14, V15, V18a; PLAN sections 9.2–9.4 and the user's
+2026-09-15 three-group inspiration request. The coordinator's pending PLAN/TASKS/
+TABI specification edits belong with this task's validated commit.
+**Implementation rules:** Reuse CHARACTER/SUBJECT for identity and pose/expression
+examples and ENVIRONMENT for city/scenery; add a distinct OUTFIT reference role.
+Retain optional STYLE, COMPLETE_SCENE and unassigned inputs. Support multiple
+assets per group through existing brief bindings and actual backend limits, with
+one reference plus a prompt still valid where supported. Preserve immutable asset
+identity, original bytes, provenance and existing import deduplication. A selected
+brief binding may explicitly reassign a reused asset's role without rewriting its
+import descriptor; conflicting duplicate bindings remain visible blockers.
+Compile/pin every selected image and its role. Role-scoped guidance assigns
+clothing/accessories to outfit references, identity/pose/expression to character
+references and environment to scenery references, preserving selected style.
+Do not transfer an outfit model's identity or a city image's people/clothing into
+the selected character. Keep the user prompt exact; conflicting explicit intent
+requires visible resolution at preparation/UI boundaries. Pictures are inspiration,
+not executable arbitrary-action guarantees. Never silently bind an unsupported
+role or truncate extra pictures; adding the enum must not advertise unmeasured
+backend support. Invalidate request fingerprints on changed image/role/guidelines,
+preserve earlier artifacts, and do not add migration or a second reference schema.
+Do not modify the historical LocalVideoReferenceRole probe or claim ComfyUI
+conditioning is proved here; V18b owns the real workflow capability proof.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAssetImportTest' --tests 'app.melotrail.video.VideoPromptCompilerTest' --tests 'app.melotrail.video.VideoShotPlannerTest'`.
+**Done:** all three groups round-trip and bind distinctly; outfit-only and role-only
+edits change request identity while unrelated selected assets remain pinned.
+Regressions cover multiple pictures, optional/absent groups, duplicate-byte role
+reassignment without descriptor mutation, unsupported outfit roles and capacity
+limits. Focused checks, `make test`, `make build`, diff and fresh review pass.
+
 ### V18b — Prove automated reference-conditioned scene preparation
 
 **Target files:** `src/main/resources/video/comfyui/scene-prepare-api.json` (new),
 `src/main/resources/video/comfyui/scene-prepare-profile.json` (new),
 `src/test/kotlin/app/melotrail/video/VideoScenePreparationHostCheck.kt` (new),
 `build.gradle.kts`, `docs/TABI_VIDEO.md` (compact capability/limitations only).
-**Inputs / dependencies:** V17, V18a; user references and the latest motion
+**Inputs / dependencies:** V17, V18a, V18a2; user references and the latest motion
 checkpoint as a comparison, not hardcoded production input.
 **Implementation rules:** Select and pin an automatable ComfyUI image/reference
 and layer-preparation workflow against V18a's contract. Assess at most two bounded
 profiles with current model/node commercial terms and explicit setup for new
 files. LTX's existing single-composed-image input is insufficient evidence.
-Prove consumed subject, scenario and style references, clean subject/background
+Prove consumed character pose/expression, outfit, city/scenery and optional style
+references through actual role-specific image bindings, clean subject/background
 separation, required eye/head data, occlusion masks, source-attached effects and
 usable scenery extension. Use maintained nodes where possible. A profile needing
 an unimplemented extractor/rigging node is incomplete: identify that exact gap
 and split the corrective slice here before expanding file ownership.
-Run a base case, changed scenario and changed subject with the same workflow;
-include a single complete-scene input. No manual pixel coordinates, source edits,
+Run a base case with all three inspiration groups, changed scenario and changed
+subject with the same workflow; include a single complete-scene input. Add
+outfit-only and pose/expression-reference-only comparisons with other selections
+held fixed. Inspect that selected clothing changes without replacing the subject,
+scenery or style, and that pose/expression examples affect supported prepared
+outputs. Record role capacities and explicit unsupported-role feedback; no
+prompt-only or collage substitution for actual reference conditioning. No manual
+pixel coordinates, source edits,
 precut assets or reference-specific scripts may be required to pass. Missing roles
 are derived from the prompt where supported. Report unsupported motions explicitly;
 do not claim arbitrary prompt-to-action parsing without a tested component.
@@ -1268,8 +1316,12 @@ from supplied references and the free-form prompt. Validate/import actual result
 against the pinned preparation contract. Support single-reference inputs and
 optional roles without a required character/background pair. Automatic look/rig
 choices stay unreviewed; optional user approval pins an immutable version.
-Preserve approved appearance/effects when only scenery or motion settings change;
-invalidate only affected derived work. Keep earlier results visibly available.
+Preserve selected character, outfit and style references when scenery changes;
+changing an outfit retains other selections and invalidates all dependent subject
+layers/poses/masks without changing accepted source versions. Preserve approved
+effects only when their source/geometry dependencies remain valid. Invalidate only
+affected derived work, preserve each group's exact consumed pins, and keep earlier
+results visibly available.
 Detect conflicting controls, unsupported actions and stale/digest-changed outputs;
 never substitute prompt-only generation that discards references.
 **Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoSceneLooksTest' --tests 'app.melotrail.video.VideoScenePreparationTest'`.
@@ -1376,12 +1428,19 @@ MIDI still works when every optional video tool is absent.
 (new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoSetupPanel.kt`
 (new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoWorkspace.kt`,
 `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoInputFlowTest.kt` (new).
-**Inputs / dependencies:** V14, V15, V17a, V18a, V20.
+**Inputs / dependencies:** V14, V15, V17a, V18a, V18a2, V20.
 **Implementation rules:** Real chooser and native drag/drop, previews/reference
-roles in separate Character/subject, Scenario/environment and Style areas, a
-prominent free-form prompt, optional executable motion/effect constraints, 3–5
-minute duration and model availability. Include a complete-scene input. Preserve
-character/style selections when the scenario changes. Show camera, character
+roles in three primary optional areas: Character — moves & expressions, Outfit,
+and City / scenery, each accepting multiple pictures within supported limits.
+Keep supplementary Style and Complete scene inputs. Provide per-group thumbnails,
+remove/reassign actions and visible selected counts, plus a prominent free-form
+prompt, optional executable motion/effect constraints, 3–5 minute duration and
+model availability. Preserve character/outfit/style selections when scenery
+changes and vice versa. Use explicit brief bindings for reused imports; never
+silently retain the wrong group after deduplication. Show conflicting bindings,
+unsupported roles, incompatible outfit intent and excess-image limits before a
+job starts; do not imply that a pose image guarantees arbitrary motion. Show
+camera, character
 motion, environment speed/direction and source-attached effect controls only
 where supported, with unsupported-action feedback and short-preview access.
 One or more assets plus a prompt are sufficient
@@ -1445,7 +1504,10 @@ chosen V25; user-selected source references, local setup and, only for cloud, a 
 authorized budget. WAITING_USER until real evidence/feedback exists.
 **Implementation rules:** From the app import chosen references and enter a
 prompt. Generate a prepared scene and three real 20–30 second clips: the base
-case, a contrasting prompt with the same assets, and a changed-reference case.
+case, a contrasting prompt with the same assets, and an outfit-only changed-reference
+case that retains character, city/scenery and style selections. Inspect fidelity
+of every supplied inspiration group; pose/expression and scenery variations are
+also established by V18b's preparation evidence.
 Use the primary UI without manual masks, hardcoded landmarks or external edits.
 Include supported character action, source-anchored effects where requested,
 scenery coherence and absence of obvious reset/repetition in the review. The
@@ -1639,8 +1701,12 @@ preset/storyboard/keyframe prerequisite, optionally refine looks/clips, cancel/r
 restart/reopen, render a continuous 180/240/300s plan and export. Use real owned file decode/encode
 for media checks; fake providers are explicitly test-only. Prove no JSON/audio/
 MIDI prerequisite, selected-source/MIDI hashes unchanged, single/multiple-reference
-inputs and contrasting prompts without preset-specific paths, separate subject/
-scenario/style inputs, no manual rigging prerequisite, supported constraint
+inputs and contrasting prompts without preset-specific paths, separate character
+moves/expressions, outfit and city/scenery groups plus optional style/complete-scene
+inputs. Verify multi-image add/remove/reassign, duplicate import binding, reopen,
+absent groups, outfit-only/scenery-only changes, role conflicts and capacity limits;
+preserve other selections and source bytes. Prove no manual rigging prerequisite,
+supported constraint
 feedback, component-scoped regeneration and no whole-clip repeat-to-fill,
 no unintended network in local mode and no false completion. Capture empty/setup/
 ready/progress/failure/full-review/export at 1536×1024, 1280×900, 720×900 and inspect

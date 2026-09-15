@@ -1,8 +1,46 @@
 {
   "schema": "melotrail-video-generation-guidelines",
   "version": 1,
-  "promptTemplateVersion": "generic-prompt-v1",
+  "promptTemplateVersion": "generic-prompt-v2",
   "shotPlannerVersion": "duration-shots-v1",
+  "referenceRoleGuidance": [
+    {
+      "id": "subject-identity-pose-expression",
+      "role": "SUBJECT",
+      "label": "Subject reference guidance",
+      "text": "Use these references for the selected subject's recognizable identity, silhouette, poses and expressions. When outfit references are selected, let them control clothing and accessories; preserve this subject when scenery or style changes. Pose and expression examples are inspiration only and do not guarantee unsupported animation."
+    },
+    {
+      "id": "character-identity-pose-expression",
+      "role": "CHARACTER",
+      "label": "Character reference guidance",
+      "text": "Use these references for the selected character's recognizable identity, silhouette, poses and expressions. When outfit references are selected, let them control clothing and accessories; preserve this character when scenery or style changes. Pose and expression examples are inspiration only and do not guarantee unsupported animation."
+    },
+    {
+      "id": "outfit-clothing-accessories",
+      "role": "OUTFIT",
+      "label": "Outfit reference guidance",
+      "text": "Use these references for the selected clothing, colors, accessories and outfit details. Apply them to the selected subject without copying a depicted model's identity, face, body, pose or background. Outfit references supersede incidental clothing in other references."
+    },
+    {
+      "id": "environment-city-scenery",
+      "role": "ENVIRONMENT",
+      "label": "City and scenery reference guidance",
+      "text": "Use these references for buildings, landmarks, streets, landscape and environmental mood. Do not transfer depicted people, clothing or an incidental visual style onto the selected subject, outfit or style."
+    },
+    {
+      "id": "visual-style",
+      "role": "STYLE",
+      "label": "Style reference guidance",
+      "text": "Use these references for visual treatment while preserving the selected subject, outfit and environment. Retain the selected style when outfit or scenery references change."
+    },
+    {
+      "id": "complete-scene-composition",
+      "role": "COMPLETE_SCENE",
+      "label": "Complete scene reference guidance",
+      "text": "Use these references for the requested complete-scene composition while preserving any separately selected subject, outfit, environment and style references according to their roles."
+    }
+  ],
   "standardGuidelines": [
     {
       "id": "reference-fidelity",

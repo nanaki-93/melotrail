@@ -382,11 +382,14 @@ mixing or public upload. The only delivered creative application is Melotrail.
 ### 9.2 Visible workflow
 
 1. Open **Video** from the normal window and create/open a video project.
-2. Add references in separate **Character / subject**, **Scenario / environment**
-   and **Style** areas, with a complete-scene input also supported. File selection
-   and drag-and-drop both work. These are optional asset roles, not three required
-   uploads. Display consumed references and preserve originals. Let the user keep
-   chosen character/style references while changing the scenario.
+2. Add pictures in three separate, optional upload areas: **Character — moves &
+   expressions**, **Outfit**, and **City / scenery**. Each accepts multiple PNG/JPEG
+   references through file selection or drag-and-drop. Character references cover
+   identity and examples of poses/expressions; outfit references guide clothing
+   and accessories; city references guide the environment. Keep supplementary
+   **Style** and **Complete scene** inputs available without adding required steps.
+   Display consumed references and preserve originals. Keep chosen character,
+   outfit and style references when changing the scenery, and vice versa.
 3. Write a free-form prompt describing the desired video. Optional controls for
    actions, motion, style and guidelines refine it; a named scenario or preset
    is never required. Set total duration (3–5 min). No JSON, masks, node graph,
@@ -417,6 +420,24 @@ actions, camera, environment and style changes the prompt asks for. Character,
 background and style references are optional roles, not a mandatory TABI kit.
 Conflicting instructions or references require a visible choice rather than a
 silent override. Do not force headphones, a cup, a seated pose or pastel style.
+
+The 2026-09-15 upload specification separates three kinds of inspiration:
+
+| Upload area | Intended influence | Preserve independently |
+| --- | --- | --- |
+| Character — moves & expressions | Recognizable subject, silhouette, pose and facial-expression examples | Identity is retained when outfit or scenery changes; pose pictures do not guarantee supported animation |
+| Outfit | Selected clothing, colors, accessories and outfit details | Do not copy a reference model's face/body or incidental background; outfit selection supersedes incidental clothing in other references |
+| City / scenery | Buildings, landmarks, streets, landscape and environmental mood | Do not replace the selected character, outfit or visual style with people/clothing/style from scenery pictures |
+
+All three groups are optional and support multiple images within the measured
+workflow capacity. A single reference plus a prompt still works where supported.
+Use generic roles rather than requiring TABI or a city. Retain the selected style
+reference (including the approved banner style when chosen) across outfit/scenery
+changes. Explicit prompt/reference disagreements and incompatible outfits require
+a visible resolution; no silent averaging or arbitrary last-upload-wins behavior.
+Moving/removing a reference changes the current request binding, not original
+bytes or accepted versions. Show duplicate-role/capacity/unsupported-role issues
+before generation; do not silently drop images or treat filenames as conditioning.
 
 Reusable guidelines address reference fidelity, object coherence, continuity
 where requested, temporal stability and avoiding unintended visual artifacts.
@@ -476,7 +497,12 @@ The first creative prerequisite is an automated, reference-conditioned prepared
 scene: subject layers, usable eye/head poses or landmarks, clean background fill,
 effect source anchors, occlusion masks and sufficient scenery for the requested
 travel. Prove both a changed scenario and a changed subject using the same input
-contract. A reference collage or passing asset filenames as text is not proof
+contract. Also compare outfit-only and pose/expression-reference-only changes,
+holding other selections fixed. Verify the outfit changes without changing subject
+identity or scenery, and that supplied pose/expression examples influence supported
+prepared outputs. Record each selected role's actual workflow image binding and
+capacity; a role unsupported by the chosen profile must be reported before a job.
+A reference collage or passing asset filenames as text is not proof
 that all selected references condition generation. Prefer maintained ComfyUI nodes
 where they work; pin and validate their actual outputs. At most two bounded
 preparation profiles are tried before reporting a concrete capability gap.
@@ -595,8 +621,11 @@ music placement, synchronization and public upload remain outside scope.
 
 **V24 early visual checkpoint:** one prepared scene and three real 20–30 second clips: a
 base assets/prompt case, a materially different prompt with the same assets, and
-a changed-reference case. Check reference fidelity, visible compliance with the
-requested scene/action/motion/style, coherent objects and temporal stability.
+a changed-reference case that changes only the outfit while retaining character,
+city/scenery and style selections. Check all supplied groups' fidelity, visible
+compliance with the requested scene/action/motion/style, coherent objects and
+temporal stability; changed-scenery and pose/expression evidence remains required
+in the preparation proof.
 Check derived masks/poses, effect anchoring, depth and absence of obvious repeat
 resets at normal speed, not only selected still frames. TABI identity is checked
 when TABI references are supplied. No location, prop,

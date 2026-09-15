@@ -254,7 +254,7 @@ class VideoShotPlannerTest {
         )
         val changedGuidelines = compiler.decodeGuidelines(
             checkNotNull(javaClass.getResource("/video/video-generation-guidelines.json")).readText()
-                .replace("generic-prompt-v1", "generic-prompt-fixture-v2")
+                .replace("generic-prompt-v2", "generic-prompt-fixture-v3")
                 .replace("duration-shots-v1", "duration-shots-fixture-v2")
                 .replace("Keep intended objects coherent", "Preserve intended object shapes"),
         )

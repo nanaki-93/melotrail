@@ -33,7 +33,10 @@ data class VideoBrief(
     }
 }
 
-/** One explicitly selected immutable original. Thumbnail bytes are never generation input. */
+/**
+ * One explicitly selected immutable original. Thumbnail bytes are never generation input.
+ * [role] is the role for this brief and may intentionally differ from the imported asset descriptor.
+ */
 data class VideoBriefReference(
     val assetId: VideoVersionedId,
     val original: VideoArtifact,

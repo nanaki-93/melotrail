@@ -24,9 +24,11 @@ are superseded and remain only as historical code/evidence until V30–V31.
 The planned normal workflow is:
 
 1. Open Video and create or open an independent video project.
-2. Import one or more PNG/JPEG references and assign optional subject, environment,
-   style or complete-scene roles. Preserve source bytes and show what each request
-   consumes; no particular role combination is mandatory.
+2. Import PNG/JPEG pictures into three optional areas: **Character — moves &
+   expressions**, **Outfit**, and **City / scenery**, with multiple pictures per
+   area within the selected workflow's supported limits. Keep supplementary style
+   and complete-scene inputs available. Preserve source bytes and show what each
+   request consumes; no particular role combination is mandatory.
 3. Enter a free-form prompt and choose 3–5 minutes. Optional action, motion, style,
    look and per-shot controls refine the request without becoming prerequisites.
 4. Choose the explicit local setup and click **Generate video**. The app prepares
@@ -41,6 +43,28 @@ references and prompt use the same workflow. Try one measured local backend firs
 a hosted fallback is optional and requires explicit selection, upload disclosure
 and a bounded authorized budget. No model download, paid job or upload occurs from
 opening the app.
+
+### Separate inspiration groups (2026-09-15 specification)
+
+Character references supply identity plus examples of poses and expressions;
+outfit references supply clothing/accessories; city/scenery references supply the
+environment. Keep each group's selected pictures separately when another group
+changes, and retain the chosen visual style. For TABI, the chosen banner style
+continues to guide rendering even when city references are photographs.
+
+An explicit outfit reference controls clothing over incidental clothing in other
+images; its depicted person or background must not replace the selected subject
+or city. City pictures must not change subject identity or outfit. Resolve a
+conflicting prompt or incompatible outfit references visibly before generation.
+Pose/expression inspiration is not a promise of arbitrary animation: V18b must
+measure supported preparation and motion capabilities and report gaps honestly.
+All groups remain optional, scenario-neutral and usable with multiple references.
+Original assets and accepted results remain immutable; changing one group only
+invalidates derived work that consumes it, including dependent masks/poses when
+an outfit changes the silhouette. V18a2 supplies the missing role/binding contract,
+V18b proves actual conditioning, V21 exposes the three upload areas, and V24/V32
+verify reference fidelity and the complete UI behavior. These are planned changes,
+not implemented controls or a new approval of generated video.
 
 ## What the existing references establish
 

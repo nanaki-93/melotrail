@@ -40,6 +40,20 @@ class VideoPromptCompiler {
             requireStableId(guideline.id, "Standard guideline ID")
             requireFreeFormText(guideline.text, "Standard guideline")
         }
+        require(document.referenceRoleGuidance.size == VideoReferenceRole.entries.size) {
+            "Video generation guidelines must define every reference role exactly once"
+        }
+        require(document.referenceRoleGuidance.map(VideoReferenceRoleGuidance::role).toSet() ==
+            VideoReferenceRole.entries.toSet()) {
+            "Video generation guidelines must define every reference role exactly once"
+        }
+        require(document.referenceRoleGuidance.map(VideoReferenceRoleGuidance::id).distinct().size ==
+            document.referenceRoleGuidance.size) { "Reference-role guideline IDs must be unique" }
+        document.referenceRoleGuidance.forEach { guideline ->
+            requireStableId(guideline.id, "Reference-role guideline ID")
+            requireStableId(guideline.label, "Reference-role guideline label")
+            requireFreeFormText(guideline.text, "Reference-role guideline")
+        }
         return VideoPromptGuidelineSet(document, sha256(bytes))
     }
 
@@ -74,6 +88,7 @@ class VideoPromptCompiler {
             )
         }
 
+        val roleGuidanceByRole = guidelineSet.document.referenceRoleGuidance.associateBy { it.role }
         var boundCount = 0
         val bindings = brief.selectedReferences.map { reference ->
             val unsupportedReason = when {
@@ -90,6 +105,7 @@ class VideoPromptCompiler {
                 assetId = reference.assetId,
                 artifact = reference.original,
                 requestedRole = reference.role,
+                roleGuidance = reference.role?.let(roleGuidanceByRole::getValue),
                 status = if (unsupportedReason == null) VideoReferenceBindingStatus.BOUND else VideoReferenceBindingStatus.NOT_BOUND,
                 problem = unsupportedReason,
             )
@@ -114,6 +130,16 @@ class VideoPromptCompiler {
             brief.guidance.style?.let { add(VideoAppliedGuidance(VideoGuidanceKind.STYLE, "Style", it, false)) }
             brief.guidance.guidelines.forEachIndexed { index, text ->
                 add(VideoAppliedGuidance(VideoGuidanceKind.USER_GUIDELINE, "User guideline ${index + 1}", text, false))
+            }
+            brief.selectedReferences.mapNotNull(VideoBriefReference::role).distinct().forEach { role ->
+                val guideline = roleGuidanceByRole.getValue(role)
+                add(VideoAppliedGuidance(
+                    kind = VideoGuidanceKind.STANDARD_GUIDELINE,
+                    label = guideline.label,
+                    text = guideline.text,
+                    standard = true,
+                    referenceRole = role,
+                ))
             }
             guidelineSet.document.standardGuidelines.forEach { guideline ->
                 add(VideoAppliedGuidance(VideoGuidanceKind.STANDARD_GUIDELINE, guideline.id, guideline.text, true))
@@ -180,7 +206,12 @@ class VideoPromptCompiler {
         requestedGuidance.forEachIndexed { index, guidance ->
             add(VideoInputDependency(
                 "guidance.${index + 1}.${guidance.kind.name.lowercase()}",
-                digest(guidance.label, guidance.text, guidance.standard.toString()),
+                digest(
+                    guidance.label,
+                    guidance.text,
+                    guidance.standard.toString(),
+                    guidance.referenceRole?.name ?: "ALL_REFERENCES",
+                ),
             ))
         }
         add(VideoInputDependency("template.guidelines", guidelineSet.sourceSha256))
@@ -230,7 +261,16 @@ data class VideoPromptGuidelineDocument(
     val version: Int,
     val promptTemplateVersion: String,
     val shotPlannerVersion: String,
+    val referenceRoleGuidance: List<VideoReferenceRoleGuidance>,
     val standardGuidelines: List<VideoStandardGuideline>,
+)
+
+@Serializable
+data class VideoReferenceRoleGuidance(
+    val id: String,
+    val role: VideoReferenceRole,
+    val label: String,
+    val text: String,
 )
 
 @Serializable
@@ -262,6 +302,7 @@ data class VideoAppliedGuidance(
     val label: String,
     val text: String,
     val standard: Boolean,
+    val referenceRole: VideoReferenceRole? = null,
 )
 
 enum class VideoReferenceBindingStatus { BOUND, NOT_BOUND }
@@ -277,6 +318,7 @@ data class VideoCompiledReferenceBinding(
     val assetId: VideoVersionedId,
     val artifact: app.melotrail.video.domain.VideoArtifact,
     val requestedRole: VideoReferenceRole?,
+    val roleGuidance: VideoReferenceRoleGuidance?,
     val status: VideoReferenceBindingStatus,
     val problem: VideoReferenceBindingProblem?,
 )

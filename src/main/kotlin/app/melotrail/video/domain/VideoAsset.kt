@@ -71,6 +71,7 @@ enum class VideoImageFormat(val mediaType: String, val fileExtension: String) {
 enum class VideoReferenceRole {
     SUBJECT,
     CHARACTER,
+    OUTFIT,
     ENVIRONMENT,
     STYLE,
     COMPLETE_SCENE,
