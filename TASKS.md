@@ -152,7 +152,8 @@ checkpoint do not close V24/V33. Multi-scene editing is deferred.
 | V17c | Expose a verified owned ComfyUI connection | V17a | DONE | Exact-session private HTTP/WebSocket connections reject copied/stale handles and protect replacement-listener dispatch; encoded queries preserved. 731 tests, make test/build, diff check, real private HTTP/WS/owned-stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17c. API jobs remain V17b. |
 | V17b | Connect recoverable ComfyUI API jobs | V17a, V17c, V14, V16 | DONE | Recoverable ComfyUI jobs with pinned input bindings, bounded HTTP/WebSocket access, stable submission identity, exact-session inference leases, cancellation/restart reconciliation and immutable results. Focused checks, 759 tests, make test/build, diff check, installed-server HTTP/WebSocket/stop proof and fresh Sol High review PASS after five Astra repairs; extended repairs explicitly user-authorized. All six review findings closed. Sources/models preserved; no inference run, which remains V17. Evidence ~/.codex/melotrail-video-sequential/evidence/V17b. |
 | V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | DONE | Production ComfyUI probe, selected DynamicCombo validation, protected-root preflight and reliable native test readiness. Focused checks, 777 tests, make test/build, diff and fresh Sol High review PASS after five Astra repairs; extended repairs user-authorized. Real H264 768x448,129 frames,25fps,5.16s silent output fully decoded; recovery, terminal/active cancellation, immutable result, owned stop and source/model preservation verified. Evidence ~/.codex/melotrail-video-sequential/evidence/V17/production-adapter-20260914/host-4. Earlier 1024 memory stop retained; automatic preparation/full-video gates remain later rows. |
-| V18a | Persist prepared scenes and motion capabilities | V13, V14, V15 | TODO | New 2026-09-14; generic layers, poses, masks and source anchors. |
+| V18a1 | Requalify desktop visuals on macOS 27 | V17 | DONE | 69 fresh exact baselines on macOS 27.0; original images retained, text-only differences independently reviewed. 75 focused/777 full tests, build, diff and fresh Sol High review PASS. Evidence: ~/.codex/melotrail-video-sequential/evidence/V18a1/macos27-20260915. Human gates remain pending. |
+| V18a | Persist prepared scenes and motion capabilities | V13, V14, V15, V18a1 | BLOCKED | Sol source candidate preserved; resume validation after user-authorized macOS 27 baseline prerequisite V18a1 passes. |
 | V18b | Prove automated reference-conditioned preparation | V17, V18a | TODO | New 2026-09-14; main creative capability risk, no hand-coded TABI regions. |
 | V18 | Prepare scene looks and layers with optional review | V14, V15, V16, V18a, V18b | TODO | Revised 2026-09-14; preserve supplied assets and actual review status. |
 | V19a | Generalize controlled subject motion and effects | V12, V18a | TODO | New 2026-09-14; external tool, approved motion/steam behavior as scoped reference. |
@@ -1177,6 +1178,31 @@ shot capability as automatic multi-reference preparation or artistic acceptance.
 **Done:** a real pinned ComfyUI result is reached through the production job port
 on this host; the capability record distinguishes tested and unproven stages.
 
+### V18a1 — Requalify desktop visuals on macOS 27
+
+**Target files:** the existing 69 PNGs under
+`desktopApp/src/test/resources/visual/` (`panel.png`, `primary-focused.png`,
+`primary-unfocused.png` and the 66 existing `shell/*.png` fixtures),
+`desktopApp/src/test/resources/visual/renderer.properties`, and only the current
+U07a renderer paragraph in `docs/VALIDATION.md`.
+**Inputs / dependencies:** V17; the user's 2026-09-15 authorization to requalify
+macOS 27.0 after the V18a host mismatch. Exact owned filenames and original
+hashes are retained in the external qualification packet.
+**Implementation rules:** This is a bounded Astra High failure repair, followed
+by fresh Sol High review. Preserve the retained V18a source candidate in its
+execution checkout and commit this prerequisite separately. Capture all 69
+technical snapshots on the genuine current OS, including a fresh focused button.
+Inspect original/actual/difference images and retain old hashes and artifacts.
+Keep font, renderer-class and native pins, all zero-tolerance comparisons,
+geometry/accessibility assertions and negative controls intact. Do not change
+production UI or test assertions to accommodate a snapshot. Update only measured
+OS metadata and reviewed expected PNGs; no historical evidence rewrite, human
+visual/Logic approval, skipped check or tolerance waiver.
+**Verification command:** `./gradlew :desktopApp:test --rerun-tasks --tests 'app.melotrail.desktop.MidiCorePinnedVisualTest' --tests 'app.melotrail.desktop.WorkstationPrimitivesTest' --tests 'app.melotrail.desktop.VisualImageComparatorTest' --tests 'app.melotrail.desktop.MidiCoreVisualReviewTest'`, then `make test`, `make build`, and `git diff --check` on the frozen candidate.
+**Done:** fresh actual captures match all 69 reviewed current-host baselines
+exactly; independent geometry/focus/accessibility and deliberate negative-control
+assertions pass, old references are preserved, and independent review passes.
+
 ### V18a — Persist prepared scenes and motion capabilities
 
 **Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoPreparedScene.kt`
@@ -1185,7 +1211,7 @@ on this host; the capability record distinguishes tested and unproven stages.
 `src/main/kotlin/app/melotrail/video/adapter/VideoProjectStore.kt`,
 `src/test/kotlin/app/melotrail/video/VideoPreparedSceneStoreTest.kt` (new),
 `src/test/kotlin/app/melotrail/video/VideoProjectStoreTest.kt`.
-**Inputs / dependencies:** V13, V14, V15; current immutable project/artifact contracts.
+**Inputs / dependencies:** V13, V14, V15, V18a1; current immutable project/artifact contracts.
 **Implementation rules:** Version and retain source look/reference pins, layer/
 pose/mask assets, coordinate spaces, subject landmarks, effect anchors, depth and
 occlusion relations, scenery coverage and supported motion controls. Persist

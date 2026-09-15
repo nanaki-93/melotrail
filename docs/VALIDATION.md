@@ -1005,11 +1005,18 @@ all snapshot files and visible scrolled decision/action bounds. Original stale
 fixtures remain separate. Real musical-service behavior remains covered by the
 focused workflow suite; synthetic fixtures do not establish Logic approval.
 
-The renderer uses macOS 26.6.2/aarch64, Compose UI 1.11.0/Skiko 0.144.6, software
+The renderer uses macOS 27.0/aarch64, Compose UI 1.11.0/Skiko 0.144.6, software
 raster, density/font scale 1, fixed frame times/dates/seeds and stopped playback.
 System Arial regular/bold files are read in place, never redistributed.
 `visual/renderer.properties` pins OS, font, renderer-class and native digests.
 An environment change fails explicitly rather than skipping or updating goldens.
+The user authorized V18a1 requalification on 2026-09-15. All 69 replacement PNGs
+come from fresh current-host captures; inspected differences lie around text,
+with dimensions and alpha unchanged. Font, renderer and native digests remain
+unchanged. Original PNGs/hashes, original/actual/diff image reviews and qualification
+receipts are retained in
+`~/.codex/melotrail-video-sequential/evidence/V18a1/macos27-20260915`.
+This technical refresh does not supply U07's human visual decision.
 
 `VisualImageComparator` compares every ARGB pixel with zero tolerance and no
 masking, resizing or registration. Tests write actual/expected/diff PNGs and a
