@@ -827,6 +827,48 @@ complete 3–5 minute video. V17b owns API jobs and V18b owns the missing automa
 reference-conditioned preparation proof. The Video tab and normal setup UI
 remain planned in V20–V21, so this lazy adapter adds no MIDI startup dependency.
 
+## Production ComfyUI short-shot probe (V17)
+
+The opt-in `comfyVideoProbe` command binds one digest-pinned, already composed
+image plus its free-form prompt to the bundled generic API graph. Named slots
+bind node 4's image, node 20's prompt, nodes 21–24's width, height, frame count
+and FPS, and node 16's MP4 output. No reference path or TABI prompt is embedded
+in the graph. The graph retains the tested LTX-2.3 distilled Q4 model, Gemma 3
+encoder, eight-step sigma schedule and 512/64 spatial plus 128/32 temporal tiled
+decode settings. The existing external workflow/profile pins remain unchanged.
+
+```sh
+./gradlew :comfyVideoProbe \
+  -PcomfyVideoRequest=/absolute/path/to/owned-request.json
+```
+
+The request file and its `inputs` directory must be owner-controlled regular
+paths outside every supplied protected MIDI root. Its output names an absent
+direct sibling. The command rejects collisions, symlinks, traversal, changed
+input digests, unsafe dimensions, a non-five-second request and an invalid LTX
+frame count before launch. It then uses `LocalVideoSetup`, `ComfyVideoRuntime`,
+`LocalVideoBackend`, `VideoJobStore` and `VideoJobCoordinator`, reconstructs the
+coordinator while the durable attempt is active, and publishes one immutable
+result. `VideoMediaProbe` fully decodes that result and checks frame count,
+dimensions, cadence and zero audio before writing `result.json`. The report also
+records timings, sampled process-tree RSS, host-global pressure/swap, terminal
+cancellation preservation, owned runtime stop and before/after setup/input pins.
+After the successful result releases the one-inference lease, a second sequential
+request with the same prompt, image, settings, seed and graph bytes is cancelled
+immediately through the production adapter and reconciled by a reconstructed
+coordinator. It must reach `CANCELLED` without an output and without changing the
+earlier published result. The separately owned graph copy changes only that
+request's durable path identity; it is not another workflow or tuning profile.
+
+The selected external workflow's earlier 1024×576, 129-frame, 25 fps trial took
+396.112 seconds with sampled peak process RSS of 22,920,757,248 bytes and no
+additional host swap; the 768 comparison took 214.294 seconds. Those retained
+measurements selected this bounded configuration but do not prove the production
+adapter command. Its generated report owns the fresh measurement after the host
+run. Neither result proves automatic multi-reference composition, subject layers,
+masks or anchors, complex-action control, arbitrary-scene quality, or a complete
+180–300 second video. V18b and the later visual/full-video gates own those claims.
+
 ## Selected video-only media runtime (V12)
 
 V12 selects FFmpeg 9.0.1 for macOS arm64 as an explicitly and separately

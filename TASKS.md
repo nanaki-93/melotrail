@@ -151,7 +151,7 @@ checkpoint do not close V24/V33. Multi-scene editing is deferred.
 | V17a | Pin ComfyUI setup and own its local server | V11, V12a | DONE | Pinned installed ComfyUI/Python/GGUF/LTX/Gemma/upscaler setup; verified owned server identity, bounded resources, cancellation/reaping and single inference admission. 727 tests, make test/build, diff check, real start/health/port-collision/stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17a. API jobs remain V17b. |
 | V17c | Expose a verified owned ComfyUI connection | V17a | DONE | Exact-session private HTTP/WebSocket connections reject copied/stale handles and protect replacement-listener dispatch; encoded queries preserved. 731 tests, make test/build, diff check, real private HTTP/WS/owned-stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17c. API jobs remain V17b. |
 | V17b | Connect recoverable ComfyUI API jobs | V17a, V17c, V14, V16 | DONE | Recoverable ComfyUI jobs with pinned input bindings, bounded HTTP/WebSocket access, stable submission identity, exact-session inference leases, cancellation/restart reconciliation and immutable results. Focused checks, 759 tests, make test/build, diff check, installed-server HTTP/WebSocket/stop proof and fresh Sol High review PASS after five Astra repairs; extended repairs explicitly user-authorized. All six review findings closed. Sources/models preserved; no inference run, which remains V17. Evidence ~/.codex/melotrail-video-sequential/evidence/V17b. |
-| V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | TODO | Revised 2026-09-14; supersedes the planned Draw Things production adapter. Earlier tuned LTX proof is retained at ~/.codex/melotrail-video-sequential/evidence/V17/ltx-tuning-20260914/proven-profile.json: 512x320, 49/129 frames at 25fps, 8 steps, tiled/no hires; silent outputs decoded and 8/8 originals preserved. Historical profile evidence, not the selected production integration. |
+| V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | DONE | Production ComfyUI probe, selected DynamicCombo validation, protected-root preflight and reliable native test readiness. Focused checks, 777 tests, make test/build, diff and fresh Sol High review PASS after five Astra repairs; extended repairs user-authorized. Real H264 768x448,129 frames,25fps,5.16s silent output fully decoded; recovery, terminal/active cancellation, immutable result, owned stop and source/model preservation verified. Evidence ~/.codex/melotrail-video-sequential/evidence/V17/production-adapter-20260914/host-4. Earlier 1024 memory stop retained; automatic preparation/full-video gates remain later rows. |
 | V18a | Persist prepared scenes and motion capabilities | V13, V14, V15 | TODO | New 2026-09-14; generic layers, poses, masks and source anchors. |
 | V18b | Prove automated reference-conditioned preparation | V17, V18a | TODO | New 2026-09-14; main creative capability risk, no hand-coded TABI regions. |
 | V18 | Prepare scene looks and layers with optional review | V14, V15, V16, V18a, V18b | TODO | Revised 2026-09-14; preserve supplied assets and actual review status. |
@@ -1154,17 +1154,26 @@ against the installed owned server without inference; actual generation remains 
 **Target files:** `src/main/resources/video/comfyui/short-shot-api.json` (new),
 `src/main/resources/video/comfyui/runtime-profile.json`,
 `src/test/kotlin/app/melotrail/video/ComfyVideoHostCheck.kt` (new),
-`build.gradle.kts`, `docs/TABI_VIDEO.md`, `README.md` (actual setup status only).
+`build.gradle.kts`, `docs/TABI_VIDEO.md`, `README.md` (actual setup status only),
+`src/main/kotlin/app/melotrail/video/adapter/ComfyVideoClient.kt`,
+`src/test/kotlin/app/melotrail/video/ComfyVideoClientTest.kt`,
+`src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt` (required native validation fixture).
 **Inputs / dependencies:** V17a, V17b, V12. Use the already tested external generic
 LTX workflow and its source/model pins; no new provider or model purchase.
 **Implementation rules:** Register `comfyVideoProbe` using a request file in an
 owned output directory. Through the production adapter, run a bounded image-
 conditioned five-second case, verify full decode/frames/audio, record timings,
 memory/swap, cancellation/recovery and unchanged sources. Bind named workflow
-inputs rather than embedding TABI paths or prompts. The old Draw Things probe
+inputs rather than embedding TABI paths or prompts. Validate pinned ComfyUI
+DynamicCombo inputs by resolving only the selected schema branches after scalar
+binding; preserve explicit export settings and reject malformed schemas, unknown
+choices and arbitrary or inactive dotted inputs. Report the persisted failure
+cause when submission fails. Native validation readiness must publish a complete
+PID before tests can cancel its process; retain real signal/cleanup assertions
+and add a deterministic regression for partial readiness publication. The old Draw Things probe
 remains historical evidence, not a second active backend. Do not mark this short-
 shot capability as automatic multi-reference preparation or artistic acceptance.
-**Verification command:** `./gradlew :comfyVideoProbe -PcomfyVideoRequest=/absolute/path/to/owned-request.json`; `./gradlew :test --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.LocalVideoSetupTest'`.
+**Verification command:** `./gradlew :comfyVideoProbe -PcomfyVideoRequest=/absolute/path/to/owned-request.json`; `./gradlew :test --tests 'app.melotrail.video.ComfyVideoHostCheckTest' --tests 'app.melotrail.video.ComfyVideoClientTest' --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.LocalVideoSetupTest' --tests 'app.melotrail.video.VideoMediaProcessTest'`.
 **Done:** a real pinned ComfyUI result is reached through the production job port
 on this host; the capability record distinguishes tested and unproven stages.
 

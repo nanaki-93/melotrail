@@ -16,11 +16,11 @@ baseline until the final listening review; tests cannot award a new score.
 MIDI engineering is complete. Its UI, listening, Logic and release decisions
 remain in the [final review](docs/VALIDATION.md#final-manual-review). The new
 video workstream in [PLAN §9](PLAN.md#9-video-generation-from-assets-and-a-prompt)
-and TASKS V10–V33 is planned, not implemented: it will add an independent Video
-tab to this Kotlin/Compose application for turning generic reference assets and
-a free-form prompt into a complete 3–5 minute silent video. It needs no MIDI
-project, export, song or soundtrack. Local generation is evaluated first, and
-audio is added later in the user's external Apple editor.
+has implemented its isolated project, asset, planning, job, media and owned
+ComfyUI foundations. The Video tab, automatic multi-reference preparation,
+controlled continuous motion and complete 3–5 minute silent export remain later
+V10–V33 work. Video needs no MIDI project, export, song or soundtrack; audio is
+added later in the user's external Apple editor.
 
 The repository still contains the superseded Swift soundtrack companion and its
 owned technical fixtures pending V30–V31. They are preserved as historical
@@ -42,6 +42,24 @@ The coordinator's [clean native installation check](docs/VALIDATION.md#q03a-clea
 packages a macOS DMG and launches a private installed copy with its bundled JVM.
 The 2026-09-13 clean check passed; user listening, Logic and visual release
 approval remain separate final-review gates.
+
+The opt-in V17 production-adapter check accepts one absolute, owner-controlled
+JSON request beside a fresh output-directory path. It remains outside ordinary
+tests and app startup:
+
+```bash
+./gradlew :comfyVideoProbe \
+  -PcomfyVideoRequest="/absolute/path/to/owned-request.json"
+```
+
+The request names the verified application-support root, pinned FFmpeg tools,
+one digest-pinned composed image under an `inputs` sibling, prompt, width,
+height, duration, FPS, expected frame count, loopback port, polling interval and
+protected MIDI roots. The generated `result.json` records the exact production
+job path, full media decode, frames, geometry, cadence, silence, timing, memory,
+swap, reconstructed-job recovery, an immediate sequential active-cancellation
+check, lifecycle stop and unchanged inputs. It is evidence for one short
+composed-image input only; V18b owns automatic multi-reference preparation.
 
 Input: one SMF 0/1 file, one note-bearing track/channel, fixed tempo/meter.
 Additional meta-only tracks are allowed. Sections use whole bars; chord durations

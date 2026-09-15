@@ -105,3 +105,22 @@ tasks.register<JavaExec>("videoMediaProbe") {
         setArgs(arguments)
     }
 }
+
+// V17 keeps the real ComfyUI generation proof explicit and off ordinary test/app startup paths.
+tasks.register<JavaExec>("comfyVideoProbe") {
+    group = "verification"
+    description = "Run one bounded image-conditioned shot through the owned production ComfyUI job path."
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("app.melotrail.video.ComfyVideoHostCheck")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+    workingDir(rootDir)
+    doFirst {
+        val request = providers.gradleProperty("comfyVideoRequest").orNull
+            ?: error("Supply an owned request with -PcomfyVideoRequest=/absolute/path/to/request.json")
+        require(Path.of(request).isAbsolute) {
+            "comfyVideoRequest must be absolute: $request"
+        }
+        setArgs(listOf(request))
+    }
+}

@@ -25,6 +25,7 @@ import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.time.Duration
@@ -195,6 +196,31 @@ class VideoMediaProcessTest {
             unrelated.destroyForcibly()
             unrelated.waitFor(3, TimeUnit.SECONDS)
         }
+    }
+
+    @Test
+    fun `fixture PID readiness stays absent until empty and partial writes complete`() {
+        val ready = root.resolve("atomic-ready.txt")
+        val pid = 12_345L
+        var stagedPath: Path? = null
+
+        publishFixturePid(ready, pid) { staged, value ->
+            stagedPath = staged
+            assertEquals(0L, Files.size(staged))
+            assertFalse(Files.exists(ready), "An empty staged file must not admit cancellation")
+
+            Files.writeString(staged, value.take(2))
+            assertEquals("12", Files.readString(staged))
+            assertFalse(Files.exists(ready), "Even a parseable partial PID must not admit cancellation")
+
+            Files.writeString(staged, value)
+            assertFalse(Files.exists(ready), "Readiness must wait for the completed write to return")
+        }
+
+        awaitFile(ready)
+        assertEquals(pid.toString(), Files.readString(ready))
+        assertEquals(pid, Files.readString(ready).trim().toLong())
+        assertFalse(Files.exists(checkNotNull(stagedPath)), "Publication must move the staged file")
     }
 
     @Test
@@ -773,6 +799,22 @@ class VideoMediaProcessTest {
     }
 }
 
+private fun publishFixturePid(
+    ready: Path,
+    pid: Long = ProcessHandle.current().pid(),
+    writePid: (Path, String) -> Unit = { staged, value -> Files.writeString(staged, value) },
+) {
+    // Existence is the cancellation handshake, so incomplete bytes must stay at a
+    // sibling path until the writer has closed and an atomic rename publishes them.
+    val staged = Files.createTempFile(ready.parent, ".fixture-pid-", ".tmp")
+    try {
+        writePid(staged, pid.toString())
+        Files.move(staged, ready, StandardCopyOption.ATOMIC_MOVE)
+    } finally {
+        Files.deleteIfExists(staged)
+    }
+}
+
 /** Native fixture entry point launched by [VideoMediaProcessTest]. */
 object VideoMediaProcessFixture {
     @JvmStatic
@@ -791,12 +833,12 @@ object VideoMediaProcessFixture {
             }
             "sleep" -> Thread.sleep(arguments[1].toLong())
             "ready-and-sleep" -> {
-                Files.writeString(Path.of(arguments[1]), ProcessHandle.current().pid().toString())
+                publishFixturePid(Path.of(arguments[1]))
                 Thread.sleep(arguments[2].toLong())
             }
             "ignore-term-and-sleep" -> {
                 FixtureLibC.instance.signal(15, Pointer(1)) // SIG_IGN; force the supervisor's bounded escalation.
-                Files.writeString(Path.of(arguments[1]), ProcessHandle.current().pid().toString())
+                publishFixturePid(Path.of(arguments[1]))
                 Thread.sleep(30_000)
             }
             "exit" -> exitProcess(arguments[1].toInt())

@@ -260,6 +260,9 @@ class ComfyVideoClient private constructor(
         val boundSlots = request.scalarInputs.keys + request.uploads.map(ComfyUploadBinding::slot)
         if (boundSlots.distinct().size != boundSlots.size) return "ComfyUI workflow slots must be unique."
         if (request.output.nodeId !in workflow) return "Configured ComfyUI output node '${request.output.nodeId}' is missing."
+        boundSlots.firstOrNull { it.nodeId !in workflow }?.let {
+            return "Bound ComfyUI node '${it.nodeId}' is missing."
+        }
         workflow.forEach { (nodeId, value) ->
             val node = value as? JsonObject ?: return "ComfyUI node '$nodeId' must be an object."
             val classType = node["class_type"]?.jsonPrimitive?.contentOrNull
@@ -271,27 +274,67 @@ class ComfyVideoClient private constructor(
                 return "Configured ComfyUI output node '$nodeId' is not an output node."
             }
             val declared = definition["input"] as? JsonObject ?: JsonObject(emptyMap())
-            val required = declared["required"] as? JsonObject ?: JsonObject(emptyMap())
-            val optional = declared["optional"] as? JsonObject ?: JsonObject(emptyMap())
-            val hidden = declared["hidden"] as? JsonObject ?: JsonObject(emptyMap())
-            val allowed = required.keys + optional.keys + hidden.keys
-            val unknown = inputs.keys - allowed
+            // Select dynamic branches using the values that will actually be posted, before any upload.
+            val effectiveInputs = inputs.toMutableMap()
+            request.scalarInputs.filterKeys { it.nodeId == nodeId }.forEach { (slot, value) ->
+                effectiveInputs[slot.inputName] = value
+            }
+            request.uploads.filter { it.slot.nodeId == nodeId }.forEach {
+                effectiveInputs[it.slot.inputName] = JsonPrimitive(it.uploadFileName)
+            }
+            val (allowed, required) = declaredInputNames(nodeId, declared, effectiveInputs)
+            val unknown = effectiveInputs.keys - allowed
             if (unknown.isNotEmpty()) return "ComfyUI node '$nodeId' has unsupported inputs: ${unknown.sorted().joinToString()}."
-            val missing = required.keys - inputs.keys - boundSlots.filter { it.nodeId == nodeId }.map { it.inputName }.toSet()
+            val missing = required - effectiveInputs.keys
             if (missing.isNotEmpty()) return "ComfyUI node '$nodeId' lacks required inputs: ${missing.sorted().joinToString()}."
         }
-        boundSlots.forEach { slot ->
-            val node = workflow[slot.nodeId] as? JsonObject
-                ?: return "Bound ComfyUI node '${slot.nodeId}' is missing."
-            val classType = node["class_type"]?.jsonPrimitive?.contentOrNull ?: return "Bound node has no class_type."
-            val definition = objectInfo[classType]?.jsonObject ?: return "ComfyUI node type '$classType' is unavailable."
-            val declared = definition["input"]?.jsonObject ?: JsonObject(emptyMap())
-            val names = (declared["required"] as? JsonObject).orEmpty().keys +
-                (declared["optional"] as? JsonObject).orEmpty().keys +
-                (declared["hidden"] as? JsonObject).orEmpty().keys
-            if (slot.inputName !in names) return "ComfyUI slot '${slot.nodeId}.${slot.inputName}' is unsupported."
-        }
         return null
+    }
+
+    /** Mirrors pinned ComfyUI _io.py's DynamicCombo/parse_class_inputs wire-name expansion only. */
+    private fun declaredInputNames(
+        nodeId: String,
+        declared: JsonObject,
+        inputs: Map<String, JsonElement>,
+    ): Pair<Set<String>, Set<String>> {
+        val allowed = linkedSetOf<String>()
+        val required = linkedSetOf<String>()
+        fun malformed(name: String): Nothing =
+            throw ComfyProtocolRejected("ComfyUI node '$nodeId' has malformed dynamic input schema at '$name'.")
+
+        fun collect(groups: JsonObject, prefix: String, depth: Int) {
+            if (depth > 16 || groups.keys.any { it !in setOf("required", "optional", "hidden") }) malformed(prefix)
+            groups.forEach { (category, entries) ->
+                val definitions = entries as? JsonObject ?: malformed(prefix)
+                definitions.forEach input@{ (name, definition) ->
+                    val path = if (prefix.isEmpty()) name else "$prefix.$name"
+                    if (!allowed.add(path) || allowed.size > 1024) malformed(path)
+                    if (category == "required") required += path
+                    val tuple = definition as? JsonArray ?: return@input
+                    if ((tuple.firstOrNull() as? JsonPrimitive)?.contentOrNull != "COMFY_DYNAMICCOMBO_V3") return@input
+                    if (tuple.size != 2) malformed(path)
+                    val options = (tuple[1] as? JsonObject)?.get("options") as? JsonArray ?: malformed(path)
+                    if (options.isEmpty()) malformed(path)
+                    val branches = linkedMapOf<String, JsonObject>()
+                    options.forEach { option ->
+                        val branch = option as? JsonObject ?: malformed(path)
+                        val key = (branch["key"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull ?: malformed(path)
+                        val nested = branch["inputs"] as? JsonObject ?: malformed(path)
+                        if (branches.put(key, nested) != null) malformed(path)
+                    }
+                    val selection = inputs[path] ?: return@input
+                    val key = (selection as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                    val selected = branches[key] ?: throw ComfyProtocolRejected(
+                        "ComfyUI node '$nodeId' has unsupported dynamic selection at '$path': $selection.",
+                    )
+                    // _io.py selects a scalar key, then prefixes only that option's nested inputs.
+                    // It reconstructs the nested dictionary later, immediately before node execution.
+                    collect(selected, path, depth + 1)
+                }
+            }
+        }
+        collect(declared, "", 0)
+        return allowed to required
     }
 
     private fun bindWorkflow(

@@ -3,7 +3,7 @@
   "profileId": "comfyui-ltx23-v1",
   "applicationSupportRelativePath": "Library/Application Support/MelotrailVideo",
   "testedHost": "Apple M5 Pro, 48 GiB unified memory, macOS arm64",
-  "capability": "Pinned local ComfyUI server and short LTX-2.3 image-to-video support from one already composed image. Multi-reference conditioning, layer preparation, complex action control, arbitrary-scene quality, and complete 3-5 minute assembly are unproven.",
+  "capability": "Pinned local ComfyUI server and short LTX-2.3 image-to-video support from one already composed image. The separately bundled V17 API graph binds the image, prompt, dimensions, frame count and FPS without changing the external workflow pins. Multi-reference conditioning, layer preparation, complex action control, arbitrary-scene quality, and complete 3-5 minute assembly are unproven.",
   "comfyUi": {
     "relativePath": "tools/comfyui/v0.35.0",
     "version": "0.35.0",

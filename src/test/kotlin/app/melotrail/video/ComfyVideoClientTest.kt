@@ -28,8 +28,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 class ComfyVideoClientTest {
@@ -81,6 +87,181 @@ class ComfyVideoClientTest {
             assertTrue(assertIs<ComfyClientSubmissionResult.Rejected>(result).reason.contains("unsupported"))
             assertEquals(listOf("/object_info"), server.requests.map { it.path })
         }
+    }
+
+    @Test
+    fun `pinned SaveVideo dynamic schema submits bundled H264 reencode CRF18 settings unchanged`() {
+        SocketComfyServer().use { server ->
+            server.response.set { request -> when (request.path) {
+                "/object_info" -> json(saveVideoObjectInfo().toString())
+                "/prompt" -> json("""{"prompt_id":"$PROMPT_ID"}""")
+                else -> json("{}", 404)
+            } }
+            val graph = saveVideoWorkflow()
+            assertIs<ComfyClientSubmissionResult.Accepted>(server.client().submit(submission(graph, emptyMap())))
+            val posted = Json.parseToJsonElement(server.requests.single { it.path == "/prompt" }.body.toString(Charsets.UTF_8)).jsonObject
+            val inputs = posted["prompt"]!!.jsonObject["3"]!!.jsonObject["inputs"]!!.jsonObject
+            assertEquals(graph["3"]!!.jsonObject["inputs"], inputs)
+            assertEquals(JsonPrimitive("mp4"), inputs["format"])
+            assertEquals(JsonPrimitive("h264"), inputs["format.codec"])
+            assertEquals(JsonPrimitive("re-encode"), inputs["format.codec.encoding"])
+            assertEquals(JsonPrimitive(18), inputs["format.codec.encoding.crf"])
+            assertEquals(listOf("/object_info", "/prompt"), server.requests.map { it.path })
+        }
+    }
+
+    @Test
+    fun `dynamic branches use effective scalar bindings before validating nested inputs`() {
+        SocketComfyServer().use { server ->
+            server.response.set { request -> when (request.path) {
+                "/object_info" -> json(saveVideoObjectInfo().toString())
+                "/prompt" -> json("""{"prompt_id":"$PROMPT_ID"}""")
+                else -> json("{}", 404)
+            } }
+            // The original webm/h264 combination is invalid; the bound mp4 selection makes it valid.
+            val graph = saveVideoWorkflow(mapOf("format" to JsonPrimitive("webm")))
+            val scalar = mapOf(
+                VideoComfyInputSlot("3", "format") to JsonPrimitive("mp4"),
+            )
+            assertIs<ComfyClientSubmissionResult.Accepted>(server.client().submit(submission(graph, scalar)))
+            val posted = Json.parseToJsonElement(server.requests.single { it.path == "/prompt" }.body.toString(Charsets.UTF_8)).jsonObject
+            val inputs = posted["prompt"]!!.jsonObject["3"]!!.jsonObject["inputs"]!!.jsonObject
+            assertEquals(JsonPrimitive("mp4"), inputs["format"])
+            assertEquals(JsonPrimitive(18), inputs["format.codec.encoding.crf"])
+        }
+    }
+
+    @Test
+    fun `omitted optional encoding does not require inactive CRF input`() {
+        SocketComfyServer().use { server ->
+            server.response.set { request -> when (request.path) {
+                "/object_info" -> json(saveVideoObjectInfo().toString())
+                "/prompt" -> json("""{"prompt_id":"$PROMPT_ID"}""")
+                else -> json("{}", 404)
+            } }
+            val graph = saveVideoWorkflow(remove = setOf("format.codec.encoding", "format.codec.encoding.crf"))
+            assertIs<ComfyClientSubmissionResult.Accepted>(server.client().submit(submission(graph, emptyMap())))
+            assertEquals(listOf("/object_info", "/prompt"), server.requests.map { it.path })
+        }
+    }
+
+    @Test
+    fun `invalid missing and inactive dynamic inputs reject before upload or prompt`() {
+        val cases = listOf(
+            saveVideoWorkflow(mapOf("format" to JsonPrimitive("avi"))) to "unsupported dynamic selection",
+            saveVideoWorkflow(mapOf("format" to JsonPrimitive(1))) to "unsupported dynamic selection",
+            saveVideoWorkflow(mapOf("format" to buildJsonObject { put("format", "mp4") })) to "unsupported dynamic selection",
+            saveVideoWorkflow(mapOf("format" to JsonPrimitive("webm"))) to "unsupported dynamic selection",
+            saveVideoWorkflow(mapOf("format.codec" to JsonPrimitive("h265"))) to "unsupported dynamic selection",
+            saveVideoWorkflow(mapOf("format.codec.encoding" to JsonPrimitive("invalid"))) to "unsupported dynamic selection",
+            saveVideoWorkflow(mapOf("format.codec.encoding" to JsonPrimitive("auto"))) to "unsupported inputs: format.codec.encoding.crf",
+            saveVideoWorkflow(mapOf("format.codec" to JsonPrimitive("auto"))) to "unsupported inputs: format.codec.encoding",
+            saveVideoWorkflow(mapOf("format.typo" to JsonPrimitive(18))) to "unsupported inputs: format.typo",
+            saveVideoWorkflow(mapOf("filename_prefix.codec" to JsonPrimitive("h264"))) to "unsupported inputs: filename_prefix.codec",
+            saveVideoWorkflow(remove = setOf("format.codec.encoding.crf")) to "lacks required inputs: format.codec.encoding.crf",
+            saveVideoWorkflow(remove = setOf("format.codec", "format.codec.encoding", "format.codec.encoding.crf")) to "lacks required inputs: format.codec",
+            saveVideoWorkflow(remove = setOf("format", "format.codec", "format.codec.encoding", "format.codec.encoding.crf")) to "lacks required inputs: format",
+        )
+        cases.forEach { (graph, expected) ->
+            assertDynamicRejection(graph, saveVideoObjectInfo(), expected)
+        }
+        assertDynamicRejection(saveVideoWorkflow(), saveVideoObjectInfo(), "unsupported dynamic selection", mapOf(
+            VideoComfyInputSlot("3", "format") to JsonPrimitive("webm"),
+        ))
+    }
+
+    @Test
+    fun `malformed dynamic combo schema rejects before upload or prompt`() {
+        val malformedOptions = listOf(
+            JsonPrimitive("not-options"),
+            JsonArray(emptyList()),
+            JsonArray(listOf(JsonPrimitive("not-an-option"))),
+            Json.parseToJsonElement("""[{"key":"mp4"}]"""),
+            Json.parseToJsonElement("""[{"key":1,"inputs":{}}]"""),
+            Json.parseToJsonElement("""[{"key":"mp4","inputs":{"required":[]}}]"""),
+            Json.parseToJsonElement("""[{"key":"mp4","inputs":{"unknown":{}}}]"""),
+            Json.parseToJsonElement("""[{"key":"mp4","inputs":{}},{"key":"mp4","inputs":{}}]"""),
+        )
+        malformedOptions.forEach { options ->
+            val info = saveVideoObjectInfo()
+            val node = info["SaveVideo"]!!.jsonObject
+            val input = node["input"]!!.jsonObject
+            val required = input["required"]!!.jsonObject
+            val malformed = buildJsonArray {
+                add(JsonPrimitive("COMFY_DYNAMICCOMBO_V3"))
+                add(buildJsonObject { put("options", options) })
+            }
+            val changedInput = JsonObject(input + ("required" to JsonObject(required + ("format" to malformed))))
+            val changedInfo = JsonObject(info + ("SaveVideo" to JsonObject(node + ("input" to changedInput))))
+            assertDynamicRejection(saveVideoWorkflow(), changedInfo, "malformed dynamic input schema")
+        }
+    }
+
+    private fun assertDynamicRejection(
+        graph: JsonObject,
+        info: JsonObject,
+        expected: String,
+        scalar: Map<VideoComfyInputSlot, JsonPrimitive> = emptyMap(),
+    ) {
+        SocketComfyServer().use { server ->
+            server.response.set { json(info.toString()) }
+            // An upload is requested but its bytes must never be opened for an invalid graph.
+            val request = submission(graph, scalar).copy(uploads = listOf(
+                ComfyUploadBinding(java.nio.file.Path.of("unopened-reference.png"), "subject.png", VideoComfyInputSlot("2", "image")),
+            ))
+            val result = assertIs<ComfyClientSubmissionResult.Rejected>(server.client().submit(request))
+            assertTrue(result.reason.contains(expected), result.reason)
+            assertEquals(listOf("/object_info"), server.requests.map { it.path })
+        }
+    }
+
+    private fun saveVideoWorkflow(
+        replacements: Map<String, JsonElement> = emptyMap(),
+        remove: Set<String> = emptySet(),
+    ): JsonObject {
+        val save = ComfyVideoHostProbe.bundledWorkflow()["16"]!!.jsonObject
+        val inputs = save["inputs"]!!.jsonObject + ("video" to Json.parseToJsonElement("""["2",0]"""))
+        return JsonObject(workflow() + ("3" to JsonObject(save + ("inputs" to JsonObject((inputs - remove) + replacements)))))
+    }
+
+    // Structural /object_info fixture from pinned 40c4fcdf comfy_extras/nodes_video.py:76–166;
+    // _io.py:1220–1270, 1822–1830, 1901–1930 define the wire form. Display metadata is omitted.
+    private fun saveVideoObjectInfo(): JsonObject {
+        fun groups(required: Map<String, JsonElement> = emptyMap(), optional: Map<String, JsonElement> = emptyMap()) = buildJsonObject {
+            put("required", JsonObject(required))
+            if (optional.isNotEmpty()) put("optional", JsonObject(optional))
+        }
+        fun combo(options: Map<String, JsonObject>) = buildJsonArray {
+            add(JsonPrimitive("COMFY_DYNAMICCOMBO_V3"))
+            add(buildJsonObject {
+                put("options", buildJsonArray {
+                    options.forEach { (key, inputs) -> add(buildJsonObject { put("key", key); put("inputs", inputs) }) }
+                })
+            })
+        }
+        fun codec(codecs: List<String>): JsonArray = combo(codecs.associateWith { key ->
+            if (key == "auto") groups() else {
+                val crf = Json.parseToJsonElement(if (key == "h264")
+                    """["FLOAT",{"default":23.0,"min":0.0,"max":51.0,"step":1.0}]"""
+                else """["FLOAT",{"default":30.0,"min":0.0,"max":63.0,"step":1.0}]""")
+                groups(optional = mapOf("encoding" to combo(mapOf(
+                    "auto" to groups(), "re-encode" to groups(mapOf("crf" to crf)),
+                ))))
+            }
+        })
+        val allCodecs = listOf("auto", "h264", "av1")
+        val input = groups(required = mapOf(
+            "video" to Json.parseToJsonElement("""["VIDEO",{}]"""),
+            "filename_prefix" to Json.parseToJsonElement("""["STRING",{"default":"video/ComfyUI"}]"""),
+            "format" to combo(listOf("auto", "mp4", "mkv", "webm").associateWith { format ->
+                groups(mapOf("codec" to codec(if (format == "webm") listOf("auto", "av1") else allCodecs)))
+            }),
+        ), optional = mapOf("codec" to codec(allCodecs)))
+        val hidden = Json.parseToJsonElement("""{"prompt":["PROMPT"],"extra_pnginfo":["EXTRA_PNGINFO"]}""")
+        return JsonObject(Json.parseToJsonElement(OBJECT_INFO).jsonObject + ("SaveVideo" to buildJsonObject {
+            put("output_node", true)
+            put("input", JsonObject(input + ("hidden" to hidden)))
+        }))
     }
 
     @Test
