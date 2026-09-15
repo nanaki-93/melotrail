@@ -1,6 +1,6 @@
 # Implementation tasks
 
-Authority: [PLAN](PLAN.md). Updated: 2026-09-13 for the integrated, local-first TABI video replacement. Task status is authoritative in this queue.
+Authority: [PLAN](PLAN.md). Updated: 2026-09-14 for local ComfyUI preparation and continuous controlled video. Task status is authoritative in this queue.
 The old MC/UI/VID queues are retired. Reuse existing code and tests; do not
 replay completed import, draft, acceptance, export or UI-foundation work.
 
@@ -53,16 +53,22 @@ production media use or paid generation; they do not block owned-fixture code.
 MIDI engineering is complete; U07/Q01/Q02/Q03 retain their real manual gates.
 The user's 2026-09-13 request retires the Swift V01–V07 workstream and its four
 production gates. Their code/evidence remain historical until V30–V31 remove
-exclusive runtime owners. **V10–V33 are the new video queue**, starting TODO;
+exclusive runtime owners. **V10–V33 are the video queue**, including suffixed slices;
 old completion does not count toward the replacement. V24/V33 require visual
 feedback, and V25 is an optional hosted fallback. The user authorized the
 sequential scheduler, Sol High implementation, Astra High failure repair and one
-local commit per validated task on 2026-09-13. The first implementation slice is
-V10; the scheduler policy below supersedes the retired autopilot configuration.
+local commit per validated task on 2026-09-13. The first implementation slice was
+V10; V10–V16 are now completed as recorded below. The scheduler policy below
+supersedes the retired autopilot configuration. On 2026-09-14 the user approved
+restarting with the revised ComfyUI plan. The coordinator reconciled PLAN/queue
+into the execution checkout, retained the earlier V17/V24 evidence, and prepared
+V17a as the next dependency-ready row with its exact allowed paths. Include these
+coordinator-owned PLAN/TASKS changes with the next validated task commit; do not
+resume the superseded Draw Things production-adapter contract.
 Q03b's [MIDI review](docs/VALIDATION.md#final-manual-review) remains available.
 
 The current video contract is PLAN §9: one Video tab inside Melotrail, assets +
-prompt → real generated clips → a complete 3–5 minute silent video. Local first
+prompt → prepared scene → a complete 3–5 minute silent video. Local first
 on the user's M5 Pro/48 GB Mac; no soundtrack/MIDI prerequisite. Tokyo, the train
 and coffee actions were illustrative only. Assets and a free-form prompt drive
 all scenarios through the same primary workflow; no required scene preset or
@@ -71,6 +77,14 @@ review controls are optional refinements, not prerequisites for a draft. This co
 older companion/soundtrack guidance in AGENTS and owner documents; V10 aligns
 those references. Preserve existing Makefile/README edits until their named
 replacement tasks. No docs/tasks.md or second implementation queue.
+
+The user selected one continuous scene, changing scenery and occasional character
+actions, with reuse of subtle motions but no obvious repeated whole clip. The
+approved plan uses ComfyUI visual preparation plus a small external
+controlled compositor. The latest prototype still has manually prepared regions;
+it proves neither generic automatic preparation nor full-length app delivery.
+V17a–V19b below make that gap explicit. Steam approval and the preserved short
+checkpoint do not close V24/V33. Multi-scene editing is deferred.
 
 ## Queue
 
@@ -134,16 +148,22 @@ replacement tasks. No docs/tasks.md or second implementation queue.
 | V14 | Import reference assets | V13 | DONE | Bounded PNG/JPEG import preserves immutable originals, thumbnails, optional metadata and duplicate identity; reopen verifies all pins. 658 tests, make test/build, diff check, seven real reference imports/reopens and fresh Sol High review PASS after three Astra repairs (third explicitly user-authorized). PNG integrity/transparency regressions pass. Evidence ~/.codex/melotrail-video-sequential/evidence/V14. |
 | V15 | Compile asset prompts and shot proposal | V13, V14 | DONE | Exact prompts and capability-aware reference/guidance bindings; 180–300s unique or explicitly reviewed reuse proposals with scoped fingerprints and profile-bound estimates. 681 tests, make test/build, diff check and fresh Sol High review PASS after one Astra repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V15. No inference/backend selection or visual approval claimed. |
 | V16 | Persist bounded recoverable jobs | V13 | DONE | Durable admission/launch claims, owned cancellation, explicit bounded retry/recovery, immutable outputs and reserved hosted budgets. 702 tests, make test/build, diff check and fresh Sol High review PASS after three Astra repairs (third explicitly user-authorized); cancellation/claim, crash, late-result and root-rebinding regressions pass. Evidence ~/.codex/melotrail-video-sequential/evidence/V16. |
-| V17 | Connect the chosen local backend | V11, V12, V14, V16 | TODO | Planned 2026-09-13; not implemented. |
-| V18 | Generate scene looks with optional review | V14, V15, V16 | TODO | Planned 2026-09-13; not implemented. |
-| V19 | Generate clips and preserve takes | V12, V15, V16, V18 | TODO | Planned 2026-09-13; not implemented. |
+| V17a | Pin ComfyUI setup and own its local server | V11, V12a | TODO | Revised 2026-09-14; existing external installation is evidence, not app integration. |
+| V17b | Connect recoverable ComfyUI API jobs | V17a, V14, V16 | TODO | New 2026-09-14; dedicated owned server, explicit reference bindings. |
+| V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | TODO | Revised 2026-09-14; supersedes the planned Draw Things production adapter. Earlier tuned LTX proof is retained at ~/.codex/melotrail-video-sequential/evidence/V17/ltx-tuning-20260914/proven-profile.json: 512x320, 49/129 frames at 25fps, 8 steps, tiled/no hires; silent outputs decoded and 8/8 originals preserved. Historical profile evidence, not the selected production integration. |
+| V18a | Persist prepared scenes and motion capabilities | V13, V14, V15 | TODO | New 2026-09-14; generic layers, poses, masks and source anchors. |
+| V18b | Prove automated reference-conditioned preparation | V17, V18a | TODO | New 2026-09-14; main creative capability risk, no hand-coded TABI regions. |
+| V18 | Prepare scene looks and layers with optional review | V14, V15, V16, V18a, V18b | TODO | Revised 2026-09-14; preserve supplied assets and actual review status. |
+| V19a | Generalize controlled subject motion and effects | V12, V18a | TODO | New 2026-09-14; external tool, approved motion/steam behavior as scoped reference. |
+| V19b | Render coherent scenery with continuous time | V19a | TODO | New 2026-09-14; depth, coverage, occlusion and resumable frame ranges. |
+| V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary. |
 | V20 | Add Video tab and independent create/open | V13, V16 | TODO | Planned 2026-09-13; not implemented. |
-| V21 | Wire uploads brief and local setup | V14, V15, V20, V11 | TODO | Planned 2026-09-13; not implemented. |
+| V21 | Wire separate assets prompt constraints and setup | V14, V15, V17a, V18a, V20 | TODO | Revised 2026-09-14; character, scenario and style groups are optional roles. |
 | V22 | Wire generation look selection and retry | V17, V18, V19, V20, V21 | TODO | Planned 2026-09-13; not implemented. |
 | V23 | Play actual generated video in the tab | V12, V19, V22 | TODO | Planned 2026-09-13; not implemented. |
-| V24 | Review real asset-and-prompt generation | V11, V22, V23 | WAITING_USER | Actual visual evidence/decision required; do not auto-admit. |
+| V24 | Review real asset-and-prompt generation | V18b, V22, V23 | WAITING_USER | Three real 20–30s app cases remain pending. Earlier LTX steam-origin/quality feedback is preserved at ~/.codex/melotrail-video-sequential/evidence/V17/ltx-tuning-20260914/user-feedback.json. Later controlled-motion checkpoint and coffee steam are approved in their own scope; latest train refinement is a starting point, not this in-app gate. |
 | V25 | Add selected hosted fallback | V11, V16, V18, V19, V21 | OPTIONAL | Only after local evidence and explicit user selection. |
-| V26 | Assemble selected takes to exact duration | V15, V19 | TODO | Planned 2026-09-13; not implemented. |
+| V26 | Plan one continuous scene to exact duration | V15, V18a, V19 | TODO | Revised 2026-09-14; replace the old primary short-shot/repeat planner. |
 | V27 | Encode and validate silent MP4 | V12, V19, V26 | TODO | Planned 2026-09-13; not implemented. |
 | V28 | Expose full-cut review and export | V23, V26, V27 | TODO | Planned 2026-09-13; not implemented. |
 | V29 | Prove installed app and runtime isolation | V20, V23, V28 | TODO | Planned 2026-09-13; not implemented. |
@@ -797,22 +817,22 @@ These are unrelated untracked data; do not delete them or weaken the assertion.
 Use a clean isolated checkout for implementation verification and preserve this
 checkout. Current tracked Makefile/README/companion-README edits are intentional.
 
-Start with Draw Things CLI + one measured local profile; V11 can select the
-single ComfyUI alternative if automation/reference support fails. Do not build
-both local adapters. No silent cloud fallback. V25 stays OPTIONAL unless the
-user selects the proposed hosted service after local evidence. V24 can record
-local failure and remain WAITING_USER while V25 is activated; V25 deliberately
-does not depend on V24 being DONE. If V11 rejects local feasibility, the
-coordinator changes V22's V17 dependency to V25 only after the user chooses that
-route; V17 stays explicitly blocked/unselected and does not hold the hosted path.
-V24 completes only when one chosen route has
-real acceptable visual evidence. V33 depends on that decision.
+The revised local route is ComfyUI preparation plus controlled composition.
+V17a/V17b/V17 replace the unimplemented production adapter, reusing the measured
+external installation. V18b must prove the missing automated preparation rather
+than treating an LTX image-to-video workflow as a multi-asset scene builder.
+Do not build both Draw Things and ComfyUI production adapters. No silent cloud
+fallback. V25 stays OPTIONAL; if later selected, revise exact dependencies and
+capability gaps here before activation. V24 needs real acceptable visual evidence
+through the selected route; V33 depends on that decision. A failed preparation
+trial blocks its dependent production path, not independent fixture/UI work.
 
 A 3–5 minute deliverable is mandatory. A short test, image gallery, API wrapper,
 manual JSON/CLI workflow or working synthetic encode cannot close V33. Show
-unique versus reused footage and real joins. Default to unique footage until the
-user explicitly chooses reuse; their preference is currently pending. Both modes
-share the same shot planner and UI, with no hidden repeat-to-fill behavior. Audio sync and public upload are
+component reuse and real chunk/scenery joins. The user explicitly allows subtle
+motion reuse, not whole-clip repeat-to-fill. Build one continuous-scene flow;
+do not implement the superseded unique/repeated-short-shot modes as primary UI.
+Audio sync and public upload are
 excluded. Required human decisions cannot be inferred from source scans or tests.
 
 When a future implementation run explicitly requests parallel agents, safe
@@ -995,6 +1015,10 @@ production input. No manually authored asset manifest or mask requirement.
 
 ### V15 — Compile free-form prompts and a duration-aware shot proposal
 
+Completed contract retained below as evidence of V15. PLAN §9.5 and V26 supersede
+its primary short-shot/whole-footage reuse proposal; do not reimplement that old
+product flow. Its exact prompt handling and dependency fingerprints remain useful.
+
 **Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoBrief.kt` (new),
 `src/main/kotlin/app/melotrail/video/application/VideoShotPlanner.kt` (new),
 `src/main/kotlin/app/melotrail/video/application/VideoPromptCompiler.kt` (new),
@@ -1041,65 +1065,216 @@ provider cancellation. Fixtures cover crash windows and late completion.
 **Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoJobCoordinatorTest'`.
 **Done:** restart/retry/cancel cannot duplicate admission or overwrite a prior take.
 
-### V17 — Connect the selected local backend
+### V17a — Pin ComfyUI setup and own its local server
+
+**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoSetup.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/ComfyVideoRuntime.kt` (new),
+`src/main/resources/video/comfyui/runtime-profile.json` (new),
+`src/test/kotlin/app/melotrail/video/LocalVideoSetupTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/ComfyVideoRuntimeTest.kt` (new),
+`docs/TABI_VIDEO.md`, `docs/ARCHITECTURE.md` (current/planned boundary only).
+**Inputs / dependencies:** V11, V12a; the retained external ComfyUI installation,
+launch scripts, model receipts and memory measurements in the V17 evidence.
+**Implementation rules:** Pin actual Python/ComfyUI/node/model versions, paths,
+terms and tested host settings; reuse the installed files after verification.
+Describe capabilities honestly: LTX short shots do not prove layer preparation.
+Start only a dedicated loopback server in owned directories/process groups, with
+one inference job and bounded startup/resource/shutdown monitoring. Refuse an
+occupied port instead of attaching to an unowned instance. Never kill an unrelated
+process. Setup lists missing/corrupt dependencies and explicit download choices;
+no download at app startup, cloud node activation or MIDI dependency. Reuse V12a's
+process supervision instead of another process framework.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoSetupTest' --tests 'app.melotrail.video.ComfyVideoRuntimeTest'`.
+**Done:** owned start/health/stop and port-collision behavior are tested; the
+selected external runtime is pinned, with absent setup handled without breaking MIDI.
+
+### V17b — Connect recoverable ComfyUI API jobs
 
 **Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoBackend.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/LocalVideoSetup.kt` (new),
+(new), `src/main/kotlin/app/melotrail/video/adapter/ComfyVideoClient.kt` (new),
+`src/main/kotlin/app/melotrail/video/domain/VideoGenerationJob.kt`,
 `src/test/kotlin/app/melotrail/video/LocalVideoBackendTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/LocalVideoSetupTest.kt` (new).
-**Inputs / dependencies:** V11, V12, V14, V16. Use V11's selected profile; if local
-is rejected, coordinator marks this row BLOCKED with its evidence and activates
-V25 only after user selection. Common UI/application work can use the backend port.
-**Implementation rules:** Invoke the pinned local CLI, or the one proven ComfyUI
-loopback API profile, without a second adapter. Check executable/model versions
-and availability before running; no automatic download/cloud fallback. Supply
-all selected references using the proven conditioning workflow and return owned
-actual image/video results. Correlate job-specific progress and staged outputs.
-For shared local servers cancel only a verified owned prompt; never clear the
-queue or globally interrupt unrelated jobs. Tests use a fake binary/local server.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.LocalVideoSetupTest'`.
-**Done:** real backend results are reachable through the same port as tests;
-missing/offline models produce actionable setup state without affecting MIDI.
+`src/test/kotlin/app/melotrail/video/ComfyVideoClientTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoJobCoordinatorTest.kt`.
+**Inputs / dependencies:** V17a, V14, V16 and the existing
+`VideoGenerationBackendPort` in `VideoJobCoordinator.kt`.
+**Implementation rules:** Explicit typed bindings resolve digest-pinned owned
+reference files, workflow slots and output identities; never interpret a user
+prompt as executable node code or a filesystem path. Upload only consumed images,
+validate `/object_info` requirements, submit API-format workflows to `/prompt`,
+track the returned prompt ID over `/ws`, and reconcile `/history` and `/queue`.
+Persist stable attempt identity before submission; an ambiguous response must not
+trigger a duplicate submit. Validate history and result files before success;
+`executed` events alone do not mean a whole workflow finished. Handle reconnects,
+node errors, restart and late results under V16's durable admission rules.
+Interrupt only the dedicated owned server's verified work; never globally clear
+an external queue. Ordinary tests use a local fake HTTP/WebSocket server.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.ComfyVideoClientTest' --tests 'app.melotrail.video.VideoJobCoordinatorTest'`.
+**Done:** submit, observe, cancel and recover preserve job ownership and immutable
+results; unsupported bindings fail before inference rather than losing references.
 
-### V18 — Generate reference-conditioned scene looks with optional review
+### V17 — Verify the selected ComfyUI adapter on this host
+
+**Target files:** `src/main/resources/video/comfyui/short-shot-api.json` (new),
+`src/main/resources/video/comfyui/runtime-profile.json`,
+`src/test/kotlin/app/melotrail/video/ComfyVideoHostCheck.kt` (new),
+`build.gradle.kts`, `docs/TABI_VIDEO.md`, `README.md` (actual setup status only).
+**Inputs / dependencies:** V17a, V17b, V12. Use the already tested external generic
+LTX workflow and its source/model pins; no new provider or model purchase.
+**Implementation rules:** Register `comfyVideoProbe` using a request file in an
+owned output directory. Through the production adapter, run a bounded image-
+conditioned five-second case, verify full decode/frames/audio, record timings,
+memory/swap, cancellation/recovery and unchanged sources. Bind named workflow
+inputs rather than embedding TABI paths or prompts. The old Draw Things probe
+remains historical evidence, not a second active backend. Do not mark this short-
+shot capability as automatic multi-reference preparation or artistic acceptance.
+**Verification command:** `./gradlew :comfyVideoProbe -PcomfyVideoRequest=/absolute/path/to/owned-request.json`; `./gradlew :test --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.LocalVideoSetupTest'`.
+**Done:** a real pinned ComfyUI result is reached through the production job port
+on this host; the capability record distinguishes tested and unproven stages.
+
+### V18a — Persist prepared scenes and motion capabilities
+
+**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoPreparedScene.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoPreparedSceneStore.kt`
+(new), `src/main/kotlin/app/melotrail/video/domain/VideoProject.kt`,
+`src/main/kotlin/app/melotrail/video/adapter/VideoProjectStore.kt`,
+`src/test/kotlin/app/melotrail/video/VideoPreparedSceneStoreTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoProjectStoreTest.kt`.
+**Inputs / dependencies:** V13, V14, V15; current immutable project/artifact contracts.
+**Implementation rules:** Version and retain source look/reference pins, layer/
+pose/mask assets, coordinate spaces, subject landmarks, effect anchors, depth and
+occlusion relations, scenery coverage and supported motion controls. Persist
+component-specific review status and the explicit subtle-motion reuse policy,
+separate from old whole-footage reuse. Pin every consumed dependency. Validate
+geometry, missing or changed assets, invalid anchors, unsafe paths and unsupported
+schema without overwriting records. No fixed TABI coordinates, mandatory cup,
+train/window assumption, duplicated project store or old-project migration.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoPreparedSceneStoreTest' --tests 'app.melotrail.video.VideoProjectStoreTest'`.
+**Done:** two structurally different owned prepared scenes reopen with verified
+pins and capabilities; scene metadata cannot silently change accepted sources.
+
+### V18b — Prove automated reference-conditioned scene preparation
+
+**Target files:** `src/main/resources/video/comfyui/scene-prepare-api.json` (new),
+`src/main/resources/video/comfyui/scene-prepare-profile.json` (new),
+`src/test/kotlin/app/melotrail/video/VideoScenePreparationHostCheck.kt` (new),
+`build.gradle.kts`, `docs/TABI_VIDEO.md` (compact capability/limitations only).
+**Inputs / dependencies:** V17, V18a; user references and the latest motion
+checkpoint as a comparison, not hardcoded production input.
+**Implementation rules:** Select and pin an automatable ComfyUI image/reference
+and layer-preparation workflow against V18a's contract. Assess at most two bounded
+profiles with current model/node commercial terms and explicit setup for new
+files. LTX's existing single-composed-image input is insufficient evidence.
+Prove consumed subject, scenario and style references, clean subject/background
+separation, required eye/head data, occlusion masks, source-attached effects and
+usable scenery extension. Use maintained nodes where possible. A profile needing
+an unimplemented extractor/rigging node is incomplete: identify that exact gap
+and split the corrective slice here before expanding file ownership.
+Run a base case, changed scenario and changed subject with the same workflow;
+include a single complete-scene input. No manual pixel coordinates, source edits,
+precut assets or reference-specific scripts may be required to pass. Missing roles
+are derived from the prompt where supported. Report unsupported motions explicitly;
+do not claim arbitrary prompt-to-action parsing without a tested component.
+Keep original files unchanged and evidence outside Git. Technical preparation
+proof does not confer visual approval; inability to produce usable contract outputs
+blocks dependent production integration with concrete evidence.
+**Verification command:** `./gradlew :videoScenePreparationProbe -PvideoScenePreparationRequest=/absolute/path/to/owned-request.json` (register this task); `./gradlew :test --tests 'app.melotrail.video.VideoPreparedSceneStoreTest'`.
+**Done:** prepared scene artifacts are generated from raw references and a prompt
+without the prototype's manual setup; exact supported operations and limitations
+are recorded for V18/V21. No full-video success claim.
+
+### V18 — Prepare scene looks and layers with optional review
 
 **Target files:** `src/main/kotlin/app/melotrail/video/application/VideoSceneLooks.kt`
-(new), `src/test/kotlin/app/melotrail/video/VideoSceneLooksTest.kt` (new).
-**Inputs / dependencies:** V14, V15, V16. Works against the port; concrete local
-integration is V17, optional hosted integration V25.
-**Implementation rules:** Submit look-generation jobs from the selected assets
-and free-form prompt, including valid single-reference requests. Generate missing
-scene elements from the prompt, without requiring a character/background pair.
-Retain results and exact provenance. Offer optional approval of an immutable look
-or selection of an already composed reference. The primary Generate video flow
-may use a generated draft
-look automatically; record it as unreviewed, never as user-approved. Feed its
-exact identity to dependent video requests. A changed brief/reference leaves
-earlier looks available but visibly stale for new work. Reject missing/digest-changed results.
-No prompt-only substitute that discards the supplied reference assets.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoSceneLooksTest'`.
-**Done:** the exact selected/generated scene look and its review status anchor
-later requests after reopen; creating a draft needs no manual keyframe step.
+(new), `src/main/kotlin/app/melotrail/video/application/VideoScenePreparation.kt`
+(new), `src/main/kotlin/app/melotrail/video/adapter/VideoPreparedSceneImport.kt`
+(new), `src/test/kotlin/app/melotrail/video/VideoSceneLooksTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoScenePreparationTest.kt` (new).
+**Inputs / dependencies:** V14, V15, V16, V18a, V18b; the exact proved workflow and
+existing prompt compiler/job port. No alternate manual preparation path.
+**Implementation rules:** Generate video prepares a missing look and usable layers
+from supplied references and the free-form prompt. Validate/import actual results
+against the pinned preparation contract. Support single-reference inputs and
+optional roles without a required character/background pair. Automatic look/rig
+choices stay unreviewed; optional user approval pins an immutable version.
+Preserve approved appearance/effects when only scenery or motion settings change;
+invalidate only affected derived work. Keep earlier results visibly available.
+Detect conflicting controls, unsupported actions and stale/digest-changed outputs;
+never substitute prompt-only generation that discards references.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoSceneLooksTest' --tests 'app.melotrail.video.VideoScenePreparationTest'`.
+**Done:** the primary flow creates a reusable prepared scene automatically, and
+reopening or changing one component preserves provenance and scoped approvals.
 
-### V19 — Generate clips and preserve independent takes
+### V19a — Generalize controlled subject motion and effects
+
+**Target files:** `tools/video-motion/package.json` (new),
+`tools/video-motion/package-lock.json` (new), `tools/video-motion/render.cjs`
+(new), `tools/video-motion/render.test.cjs` (new),
+`src/main/resources/video/motion-runtime.json` (new).
+**Inputs / dependencies:** V12, V18a; preserved controlled-motion v1 checkpoint,
+v2 approved steam and v3 renderer evidence. Ordinary tests use owned fixtures.
+**Implementation rules:** Adapt the useful external Node Canvas compositor into
+one versioned, parameter-driven video tool, not a Kotlin frame renderer or new
+service. Pin the Node/library runtime for explicit video-only installation.
+Consume V18a layers and measured landmarks/poses, never baked-in face patches,
+eye drawings or scene coordinates. Provide supported blinking, breathing and
+small head gestures with bounded amplitudes; retain subject silhouette and
+occlusion. Preserve the approved steam's soft rise/fade behavior relative to its
+source anchor, only when that effect is requested and a source exists. Use absolute
+frame time and seeded schedules; regenerate no surrounding cabin pixels to move
+the face. Match the source illustration style. Output bounded frames and a receipt;
+no full-video frame batch in memory. Do not promise drinking/page-turning from this
+motion set. Verify the same controls on different scene geometries.
+**Verification command:** `npm ci --prefix tools/video-motion`; `node --test tools/video-motion/render.test.cjs`.
+**Done:** reusable subject/effect motion is independent of TABI/Tokyo coordinates;
+owned pixel/geometry and repeatability regressions pass, with real comparison
+renders retained for later user review rather than self-awarded artistic approval.
+
+### V19b — Render coherent scenery with continuous time
+
+**Target files:** `tools/video-motion/scenery.cjs` (new),
+`tools/video-motion/scenery.test.cjs` (new), `tools/video-motion/render.cjs`,
+`tools/video-motion/render.test.cjs`, `src/main/resources/video/motion-runtime.json`.
+**Inputs / dependencies:** V19a and V18a's depth/occlusion/coverage contract.
+**Implementation rules:** Derive rigid layer movement from one camera trajectory
+and depth model, with compatible projection, occlusion and motion blur. Near
+objects pass faster than distant ones when the requested travel implies it;
+buildings retain shape. Support the requested static or moving environment,
+not a compulsory train-window overlay. Validate full visible coverage before
+rendering; no visible wrapping, invented filler, reversed travel or last-frame
+freeze. Join new scenery sections while offscreen. Pass absolute frame indices,
+seed and initial state across chunks so blinks, steam and scenery cannot restart.
+Write bounded frame ranges and reap owned outputs on cancellation. Preserve
+approved character/steam behavior when only scenery changes.
+**Verification command:** `node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`.
+**Done:** a 20–30 second owned render and a split/resumed equivalent have matching
+boundary states, no geometry drift or coverage holes; real scenery realism still
+requires V24 user feedback.
+
+### V19 — Generate controlled previews and preserve independent takes
 
 **Target files:** `src/main/kotlin/app/melotrail/video/application/VideoClipGeneration.kt`
 (new), `src/main/kotlin/app/melotrail/video/adapter/VideoResultImport.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoClipGenerationTest.kt` (new).
-**Inputs / dependencies:** V12, V15, V16, V18.
-**Implementation rules:** Generate video orchestrates needed draft scene looks
-and shots from the prompt, reference pins and optional shot overrides. Use the
-exact supplied/selected/generated look and retain its actual review status.
-Respect requested motion and camera behavior; do not inject predefined actions
-or scenery. Import actual bounded result bytes, decode and probe them; record
-native size/frame rate/duration/audio before normalization.
-Require valid output before a take is reviewable. Rejected/regenerated takes remain
-immutable; acceptance changes only the selected ID. Unsupported output, stale
-completion or lost downloads never replace earlier selected work. Batch submission
-shares coordinator limits and reveals its actual shot count and estimated effort.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoClipGenerationTest'`.
-**Done:** an actual clip can be generated, reopened, rejected and replaced without
-losing earlier work; wrong/malformed results never count as success.
+`src/main/kotlin/app/melotrail/video/adapter/VideoMotionRenderer.kt` (new),
+`src/main/kotlin/app/melotrail/video/domain/VideoGenerationJob.kt`,
+`src/main/kotlin/app/melotrail/video/adapter/LocalVideoBackend.kt`,
+`src/test/kotlin/app/melotrail/video/VideoClipGenerationTest.kt` (new),
+`src/test/kotlin/app/melotrail/video/VideoMotionRendererTest.kt` (new).
+**Inputs / dependencies:** V12, V15, V16, V17, V18, V19b.
+**Implementation rules:** Generate video coordinates prepared-scene work and
+bounded controlled-render requests under the existing durable job admission,
+ownership and cancellation contract. Extend typed job inputs for motion frame
+ranges; do not create a second job ledger. The external compositor is a media
+stage, not another generative provider. Resolve its pinned runtime without a
+development PATH assumption; reuse V12a supervision and V12 encoding/probing.
+Preserve actual look/component review status and exact reference/motion settings.
+Decode/probe actual outputs before they are reviewable, retain native/upscaled
+resolution and cadence, and strip any incidental source audio. Import new takes
+immutably; reject stale/malformed results without replacing selections. Support
+5-second and 20–30 second previews using the same renderer used for full output.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoClipGenerationTest' --tests 'app.melotrail.video.VideoMotionRendererTest'`; `node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`.
+**Done:** an actual prepared-scene preview can be generated, reopened, cancelled,
+rejected and replaced through production services without manual scripts or lost work.
 
 ### V20 — Add the Video tab and independent create/open flow
 
@@ -1130,13 +1305,19 @@ MIDI still works when every optional video tool is absent.
 (new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoSetupPanel.kt`
 (new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoWorkspace.kt`,
 `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoInputFlowTest.kt` (new).
-**Inputs / dependencies:** V14, V15, V20, V11.
+**Inputs / dependencies:** V14, V15, V17a, V18a, V20.
 **Implementation rules:** Real chooser and native drag/drop, previews/reference
-roles, a prominent free-form prompt, optional guideline controls, 3–5 minute
-duration and model availability. One or more assets plus a prompt are sufficient
+roles in separate Character/subject, Scenario/environment and Style areas, a
+prominent free-form prompt, optional executable motion/effect constraints, 3–5
+minute duration and model availability. Include a complete-scene input. Preserve
+character/style selections when the scenario changes. Show camera, character
+motion, environment speed/direction and source-attached effect controls only
+where supported, with unsupported-action feedback and short-preview access.
+One or more assets plus a prompt are sufficient
 creative inputs; preset selection and background/character pairs are optional.
 Show an explicit install/download choice with size/location and progress; use
-V11's profile, not arbitrary commands. When local is unavailable preserve the
+V17a's pinned setup and V18b's supported preparation capabilities, not arbitrary
+commands. When local is unavailable preserve the
 brief and explain setup. Keep the same prompt-first flow for every scenario; no hand-edited
 JSON. Do not build a model marketplace or silently activate a hosted provider.
 **Verification command:** `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoInputFlowTest'`.
@@ -1155,10 +1336,10 @@ three supported fixture sizes; cancelled imports leave previous work intact.
 rejected and the user selected hosted generation, the coordinator replaces V17
 with V25 in this row and its queue entry before admission. No fake-only completion.
 **Implementation rules:** Connect the primary Generate video action from assets
-and a prompt through the full production look/clip pipeline. Keep Generate look,
-Use look and per-shot controls in optional refinements; no storyboard or keyframe
+and a prompt through production preparation and controlled rendering. Keep Generate
+look, Use look and per-component controls in optional refinements; no storyboard or keyframe
 approval is required for a draft. Wire Cancel, Retry and Keep/reject take controls. Show
-shot list, selected references, local estimate or hosted quote, actual job states
+preparation/render stages, selected references, local estimate or hosted quote, actual job states
 and errors. Concrete backend is supplied by V17 or V25; fake-only wiring cannot
 be presented as completed integration. Handle tab changes, restart, missing tools,
 late results and duplicate clicks without lost selections or duplicate jobs.
@@ -1188,12 +1369,17 @@ and an actual app-window capture.
 
 **Target files:** `docs/TABI_VIDEO.md`, `docs/VALIDATION.md` (compact evidence and
 actual decision only; generated media stays outside tracked documentation).
-**Inputs / dependencies:** V11, V22, V23. One working route from V17 or explicitly
+**Inputs / dependencies:** V18b, V22, V23. One working route from V17 or explicitly
 chosen V25; user-selected source references, local setup and, only for cloud, a concrete
 authorized budget. WAITING_USER until real evidence/feedback exists.
 **Implementation rules:** From the app import chosen references and enter a
-prompt. Generate a scene look and three clips: the base case, a contrasting
-prompt with the same assets, and a changed-reference case. No predefined location,
+prompt. Generate a prepared scene and three real 20–30 second clips: the base
+case, a contrasting prompt with the same assets, and a changed-reference case.
+Use the primary UI without manual masks, hardcoded landmarks or external edits.
+Include supported character action, source-anchored effects where requested,
+scenery coherence and absence of obvious reset/repetition in the review. The
+approved steam and five-second checkpoint are scoped comparison references,
+not this gate's decision. No predefined location,
 prop, action or motion is required. Compare reference fidelity and prompt
 adherence as well as actual motion/temporal quality. Run the
 PLAN §9.7 checklist at normal speed; retain source/request/result identities,
@@ -1229,23 +1415,33 @@ budget. Manual provider-site downloads cannot substitute for the app workflow.
 **Done:** the selected hosted service works through the existing tab and job port,
 with no automatic local-to-cloud fallback. If local passes, leave this task OPTIONAL.
 
-### V26 — Assemble selected takes to an exact 3–5 minute duration
+### V26 — Plan one continuous scene to exact duration
 
 **Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoAssembly.kt`
 (new), `src/main/kotlin/app/melotrail/video/application/VideoAssemblyPlanner.kt`
-(new), `src/test/kotlin/app/melotrail/video/VideoAssemblyPlannerTest.kt` (new).
-**Inputs / dependencies:** V15, V19.
-**Implementation rules:** Ordered selected-take trims, explicit transition lengths,
-repeatability flags, explicit unique/reuse mode and exact frame-based net
-duration. Unique mode rejects repeated take IDs; reuse requires both a selected
-reuse mode and approved repeatable takes. Show proposed sequence,
-unique/reused footage and missing usable seconds. Respect the requested 180–300s;
-never pad a still, reverse requested actions/motion, stretch motion silently, repeat a
-rejected take or claim loopability from a score. Respect scene/camera/motion continuity where requested by the prompt or shot
-overrides; permit intentional changes. Let the user change order or request more takes.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAssemblyPlannerTest'`.
-**Done:** 180/240/300s plans have correct lengths including overlap and cannot
-consume missing, unselected or unapproved-for-reuse clips.
+(new), `src/main/kotlin/app/melotrail/video/domain/VideoBrief.kt`,
+`src/main/kotlin/app/melotrail/video/application/VideoPromptCompiler.kt`,
+`src/main/kotlin/app/melotrail/video/application/VideoShotPlanner.kt` (retire),
+`src/test/kotlin/app/melotrail/video/VideoShotPlannerTest.kt` (retire),
+`src/test/kotlin/app/melotrail/video/VideoPromptCompilerTest.kt`,
+`src/test/kotlin/app/melotrail/video/VideoAssemblyPlannerTest.kt` (new).
+**Inputs / dependencies:** V15, V18a, V19.
+**Implementation rules:** Replace the old primary unique/reused-short-shot
+proposal with one prepared-scene timeline: exact frame count, a global motion
+clock/seed, bounded chunk ranges, occasional supported actions and the selected
+component-reuse policy. Remove exclusive retired planner fields/callers/tests
+only after replacing their useful prompt/fingerprint/estimate behavior. No
+parallel compatibility planner or multi-scene editor. Resolve scenery coverage
+against the full camera path; gaps request more preparation rather than a hidden
+loop/freeze. Preserve exact state across chunk boundaries and fingerprint every
+consumed layer, pose, motion setting and workflow. Changes invalidate only affected
+work. Separate fresh action footage, procedural motion and repeated components
+without double-counting overlapping layer durations or calling them unique AI
+seconds. Reusing a subtle motion never authorizes a whole-clip repeat. Produce
+exact 180/240/300s plans at 30 fps, including any trimmed boundary support frames.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAssemblyPlannerTest' --tests 'app.melotrail.video.VideoPromptCompilerTest'`.
+**Done:** complete plans have correct durations and validated coverage; missing
+assets, reset state and unselected whole-footage reuse cannot yield a ready plan.
 
 ### V27 — Encode and validate silent MP4 outputs
 
@@ -1255,13 +1451,21 @@ consume missing, unselected or unapproved-for-reuse clips.
 `src/test/kotlin/app/melotrail/video/VideoMediaHostCheck.kt`.
 **Inputs / dependencies:** V12, V19, V26.
 **Implementation rules:** Same resolved assembly for review/output; normalize
-explicitly to 1920×1080 H.264, square pixels and selected constant cadence, with
+explicitly to 1920×1080 H.264, square pixels and 30 fps, with
 zero audio streams. Record native/upscaled resolution; strip model audio rather
 than adding an audio editor. Full decode, cadence/duration/stream verification,
 first/last/join-frame checks, cancellable bounded encode and no-overwrite atomic
 publication with adjacent provenance. Preserve accepted clips and earlier exports.
 Write only into owned staging/new output paths; malformed inputs never count
 as a successful export.
+Render/encode sequential chunks from V26's absolute frame ranges with bounded
+memory/disk, checkpoint and resume. Preserve temporal state and continuous timestamps;
+never accumulate the full frame batch in RAM. Run a real 60-second continuity/
+resource check before the full 180–300 second owned encode and update the runtime
+estimate from measured data. Full decode includes chunk boundaries and scenery
+section joins. Do not silently change cadence or assume the narrow pinned FFmpeg
+distribution supports untested filters/encoders; extend it only in a separately
+scoped queue slice if the actual pipeline requires that.
 **Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoExportTest'`; `./gradlew :videoMediaProbe -PvideoToolsDirectory=/absolute/path/to/tools`.
 **Done:** a complete owned 180–300s assembly decodes at the exact target duration
 with no audio, and cancellation/collisions preserve prior outputs.
@@ -1274,11 +1478,12 @@ with no audio, and cancellation/collisions preserve prior outputs.
 `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoDesktopComposition.kt`,
 `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoExportFlowTest.kt` (new).
 **Inputs / dependencies:** V23, V26, V27.
-**Implementation rules:** Select/reorder/trim approved takes, explicitly choose unique
-footage or approved reuse, inspect unique/reused duration and generate missing
-material. Reuse is never automatically enabled to satisfy the duration. Build a
-local silent review cut using the resolved assembly and play it in the existing
-preview. Display every join, then choose an output path, export, show real result
+**Implementation rules:** Expose duration, supported occasional actions, scenery
+coverage, subtle-motion reuse and real preparation/render estimates for one
+continuous scene. Do not require a clip-reordering timeline or reuse-to-fill mode.
+Build a local silent review cut using the resolved plan and play it in the existing
+preview. Surface chunk/scenery joins for inspection, then choose an output path,
+export, show real result
 facts and reveal in Finder. No soundtrack, MIDI or JSON prerequisite. Changing
 assembly invalidates review/export readiness but preserves earlier files.
 **Verification command:** `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.video.VideoExportFlowTest'`.
@@ -1302,6 +1507,10 @@ configured tools and cleanup on app close. Register `videoInstalledSmoke` for a
 private installed copy, never the user's installed app. Extend boundary tests
 without weakening existing MIDI/source protection. No development PATH or Swift
 package dependency in the installed launch path.
+Verify the pinned ComfyUI Python runtime and external motion tool's Node/library
+runtime resolve from their explicit setup paths and stay behind the lazy video
+boundary; absent setup is recoverable. Run the motion tool's focused checks in
+the normal project validation path and include dependency/license notices.
 **Verification command:** `./gradlew :desktopApp:videoInstalledSmoke -PvideoInstallDirectory=/absolute/path/to/new-install-evidence`; `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.MidiCoreNativeInstallCheckTest'`.
 **Done:** installed-window and media evidence is tied to the actual build, and
 missing optional runtime cannot break MIDI use.
@@ -1356,10 +1565,12 @@ baselines), `docs/VALIDATION.md`, `README.md`.
 **Implementation rules:** End-to-end fake-backend tests start from an empty tab,
 import references, enter a free-form prompt, click Generate video without a
 preset/storyboard/keyframe prerequisite, optionally refine looks/clips, cancel/retry,
-restart/reopen, assemble 180/240/300s and export. Use real owned file decode/encode
+restart/reopen, render a continuous 180/240/300s plan and export. Use real owned file decode/encode
 for media checks; fake providers are explicitly test-only. Prove no JSON/audio/
 MIDI prerequisite, selected-source/MIDI hashes unchanged, single/multiple-reference
-inputs and contrasting prompts without preset-specific paths,
+inputs and contrasting prompts without preset-specific paths, separate subject/
+scenario/style inputs, no manual rigging prerequisite, supported constraint
+feedback, component-scoped regeneration and no whole-clip repeat-to-fill,
 no unintended network in local mode and no false completion. Capture empty/setup/
 ready/progress/failure/full-review/export at 1536×1024, 1280×900, 720×900 and inspect
 the actual images before adding baselines. Preserve existing MIDI visual tests.
@@ -1378,10 +1589,12 @@ or an explicitly authorized hosted budget; WAITING_USER until real evidence exis
 **Implementation rules:** Starting from user-chosen reference assets and a
 free-form prompt in the app, create one matching 3–5 minute silent video. Content
 and actions are determined by that prompt; Tokyo/train/coffee is only an optional
-example and is not a release requirement. Record generated versus reused seconds,
+example and is not a release requirement. Record component reuse and actual
+generated/composed media without false unique-footage totals,
 actual generation resources/cost, rejected takes, model/tool versions and source/
 output digests. The user watches the entire cut and joins, confirms reference
-fidelity, prompt adherence, temporal coherence and acceptable repetition/quality,
+fidelity, prompt adherence, continuous scenery, occasional character action,
+temporal coherence and acceptable repetition/quality,
 then imports/plays
 the export in their chosen Apple editor. Audio placement/sync and YouTube upload
 are outside scope. Report every failed criterion and add only bounded corrective
