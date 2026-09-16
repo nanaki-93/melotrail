@@ -5,12 +5,17 @@ import app.melotrail.video.application.VideoPromptCompiler
 import app.melotrail.video.application.VideoPromptIssueCode
 import app.melotrail.video.application.VideoReferenceBindingProblem
 import app.melotrail.video.application.VideoReferenceBindingStatus
+import app.melotrail.video.application.VideoSceneAppearancePolicy
+import app.melotrail.video.application.VideoSceneLook
 import app.melotrail.video.domain.VideoArtifact
+import app.melotrail.video.domain.VideoAssetIdentityReview
+import app.melotrail.video.domain.VideoAssetImage
 import app.melotrail.video.domain.VideoBrief
 import app.melotrail.video.domain.VideoBriefGuidance
 import app.melotrail.video.domain.VideoBriefReference
 import app.melotrail.video.domain.VideoDependencyPin
 import app.melotrail.video.domain.VideoGuidanceKind
+import app.melotrail.video.domain.VideoImageFormat
 import app.melotrail.video.domain.VideoPromptBackendCapabilities
 import app.melotrail.video.domain.VideoReferenceRole
 import app.melotrail.video.domain.VideoVersionedId
@@ -50,6 +55,55 @@ class VideoPromptCompilerTest {
         assertFalse(backendPrompt.contains("Tokyo", ignoreCase = true))
         assertFalse(backendPrompt.contains("train", ignoreCase = true))
         assertFalse(backendPrompt.contains("coffee", ignoreCase = true))
+    }
+
+    @Test
+    fun `finished artwork motion compilation binds one exact look and forbids appearance redesign`() {
+        val prompt = "  Blink once, then let the window light drift.\r\nKeep the camera still.  "
+        val image = VideoAssetImage(
+            VideoArtifact("references/finished/v2/original.png", "a".repeat(64)),
+            VideoImageFormat.PNG,
+            "image/png",
+            1280,
+            720,
+            12_345,
+            hasAlphaChannel = true,
+            hasTransparentPixels = false,
+        )
+        val look = VideoSceneLook(
+            VideoVersionedId("finished", 2),
+            VideoArtifact("references/finished/v2/descriptor.json", "b".repeat(64)),
+            image,
+            VideoAssetIdentityReview.APPROVED,
+            VideoSceneAppearancePolicy.PRESERVE_AS_DRAWN,
+        )
+
+        val compilation = compiler.compileMotion(prompt, look, capabilities(maximumReferences = 1), guidelines())
+
+        assertEquals(VideoPromptCompilationStatus.READY, compilation.status)
+        assertEquals(prompt, compilation.primaryPrompt)
+        assertEquals(listOf(look.id), compilation.bindings.map { it.assetId })
+        assertEquals(listOf(VideoReferenceRole.COMPLETE_SCENE), compilation.bindings.map { it.requestedRole })
+        assertEquals(image.artifact.sha256, compilation.dependencies.single { it.key.endsWith(".asset") }.sha256)
+        assertTrue(requireNotNull(compilation.backendPrompt).contains("Preserve its identity, outfit, style"))
+        assertTrue(requireNotNull(compilation.backendPrompt).contains("without redesigning"))
+        assertFalse(requireNotNull(compilation.backendPrompt).contains("Tokyo", ignoreCase = true))
+
+        val unsupported = capabilities(maximumReferences = 1).copy(
+            supportedGuidance = VideoGuidanceKind.entries.toSet() - VideoGuidanceKind.STANDARD_GUIDELINE,
+        )
+        val blocked = compiler.compileMotion(prompt, look, unsupported, guidelines())
+        assertEquals(VideoPromptCompilationStatus.BLOCKED, blocked.status)
+        assertFalse(blocked.canPrepareRequests)
+        assertEquals(2, blocked.issues.count {
+            it.code == VideoPromptIssueCode.MOTION_PRESERVATION_UNSUPPORTED && it.blocksInference
+        })
+        assertEquals(prompt, blocked.backendPrompt)
+        assertTrue(blocked.omittedGuidance.any { it.label == "finished-artwork-preservation" })
+        val generic = compiler.compile(VideoBrief(prompt, listOf(look.asBriefReference())), unsupported, guidelines())
+        assertEquals(VideoPromptCompilationStatus.REVIEW_REQUIRED, generic.status)
+        assertTrue(generic.canPrepareRequests)
+        assertTrue(generic.issues.none { it.blocksInference })
     }
 
     @Test
@@ -266,7 +320,7 @@ class VideoPromptCompilerTest {
 
     @Test
     fun `guideline decoder rejects unknown versions and prompt validation permits line endings but not binary controls`() {
-        val unsupported = String(guidelineBytes()).replace("\"version\": 1", "\"version\": 2")
+        val unsupported = String(guidelineBytes()).replace("\"version\": 2", "\"version\": 3")
         assertFailsWith<IllegalArgumentException> { compiler.decodeGuidelines(unsupported) }
         assertFailsWith<IllegalArgumentException> { brief("visible\u0000binary") }
 

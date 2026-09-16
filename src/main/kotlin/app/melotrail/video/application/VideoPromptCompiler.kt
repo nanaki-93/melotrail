@@ -40,6 +40,19 @@ class VideoPromptCompiler {
             requireStableId(guideline.id, "Standard guideline ID")
             requireFreeFormText(guideline.text, "Standard guideline")
         }
+        require(document.motionGuidelines.isNotEmpty() && document.motionGuidelines.size <= 16) {
+            "Video generation guidelines must contain between 1 and 16 finished-artwork motion guidelines"
+        }
+        require(document.motionGuidelines.map(VideoStandardGuideline::id).distinct().size ==
+            document.motionGuidelines.size) { "Finished-artwork motion guideline IDs must be unique" }
+        document.motionGuidelines.forEach { guideline ->
+            requireStableId(guideline.id, "Finished-artwork motion guideline ID")
+            requireFreeFormText(guideline.text, "Finished-artwork motion guideline")
+        }
+        require((document.standardGuidelines + document.motionGuidelines).map(VideoStandardGuideline::id).distinct().size ==
+            document.standardGuidelines.size + document.motionGuidelines.size) {
+            "Standard and finished-artwork motion guideline IDs must not overlap"
+        }
         require(document.referenceRoleGuidance.size == VideoReferenceRole.entries.size) {
             "Video generation guidelines must define every reference role exactly once"
         }
@@ -59,10 +72,38 @@ class VideoPromptCompiler {
 
     fun decodeGuidelines(text: String): VideoPromptGuidelineSet = decodeGuidelines(text.toByteArray(UTF_8))
 
+    /**
+     * Compiles a motion-only request around one already-finished scene. The exact user text remains
+     * [VideoPromptCompilation.primaryPrompt]; the immutable uploaded picture is the only look binding.
+     */
+    fun compileMotion(
+        motionPrompt: String,
+        look: VideoSceneLook,
+        capabilities: VideoPromptBackendCapabilities,
+        guidelineSet: VideoPromptGuidelineSet,
+    ): VideoPromptCompilation = compileRequest(
+        VideoBrief(
+            prompt = motionPrompt,
+            selectedReferences = listOf(look.asBriefReference()),
+        ),
+        capabilities,
+        guidelineSet,
+        guidelineSet.document.motionGuidelines,
+        requireAppearancePreservation = true,
+    )
+
     fun compile(
         brief: VideoBrief,
         capabilities: VideoPromptBackendCapabilities,
         guidelineSet: VideoPromptGuidelineSet,
+    ): VideoPromptCompilation = compileRequest(brief, capabilities, guidelineSet, emptyList())
+
+    private fun compileRequest(
+        brief: VideoBrief,
+        capabilities: VideoPromptBackendCapabilities,
+        guidelineSet: VideoPromptGuidelineSet,
+        additionalStandardGuidelines: List<VideoStandardGuideline>,
+        requireAppearancePreservation: Boolean = false,
     ): VideoPromptCompilation {
         val issues = mutableListOf<VideoPromptIssue>()
         if (!capabilities.supportsPrimaryPrompt) {
@@ -141,6 +182,9 @@ class VideoPromptCompiler {
                     referenceRole = role,
                 ))
             }
+            additionalStandardGuidelines.forEach { guideline ->
+                add(VideoAppliedGuidance(VideoGuidanceKind.STANDARD_GUIDELINE, guideline.id, guideline.text, true))
+            }
             guidelineSet.document.standardGuidelines.forEach { guideline ->
                 add(VideoAppliedGuidance(VideoGuidanceKind.STANDARD_GUIDELINE, guideline.id, guideline.text, true))
             }
@@ -148,11 +192,19 @@ class VideoPromptCompiler {
         val appliedGuidance = requestedGuidance.filter { it.kind in capabilities.supportedGuidance }
         val omittedGuidance = requestedGuidance.filterNot { it.kind in capabilities.supportedGuidance }
         omittedGuidance.forEach { guidance ->
+            // Motion preparation must represent preservation in the backend request. Ordinary
+            // compile() standards remain advisory; this does not assert artistic fidelity.
+            val requiredPreservation = requireAppearancePreservation &&
+                (guidance.referenceRole == VideoReferenceRole.COMPLETE_SCENE ||
+                    additionalStandardGuidelines.any { it.id == guidance.label })
             issues += VideoPromptIssue(
-                code = if (guidance.standard) VideoPromptIssueCode.STANDARD_GUIDANCE_UNSUPPORTED
-                else VideoPromptIssueCode.USER_GUIDANCE_UNSUPPORTED,
+                code = when {
+                    requiredPreservation -> VideoPromptIssueCode.MOTION_PRESERVATION_UNSUPPORTED
+                    guidance.standard -> VideoPromptIssueCode.STANDARD_GUIDANCE_UNSUPPORTED
+                    else -> VideoPromptIssueCode.USER_GUIDANCE_UNSUPPORTED
+                },
                 message = "Backend '${capabilities.backendId}' cannot consume ${guidance.label} guidance; it remains visible and is not in the backend prompt.",
-                blocksInference = !guidance.standard,
+                blocksInference = requiredPreservation || !guidance.standard,
             )
         }
 
@@ -245,7 +297,7 @@ class VideoPromptCompiler {
 
     companion object {
         const val GUIDELINE_SCHEMA = "melotrail-video-generation-guidelines"
-        const val GUIDELINE_VERSION = 1
+        const val GUIDELINE_VERSION = 2
         private val JSON = Json { ignoreUnknownKeys = false }
     }
 }
@@ -263,6 +315,7 @@ data class VideoPromptGuidelineDocument(
     val shotPlannerVersion: String,
     val referenceRoleGuidance: List<VideoReferenceRoleGuidance>,
     val standardGuidelines: List<VideoStandardGuideline>,
+    val motionGuidelines: List<VideoStandardGuideline>,
 )
 
 @Serializable
@@ -332,6 +385,7 @@ enum class VideoPromptIssueCode {
     REFERENCE_CAPACITY_EXCEEDED,
     USER_GUIDANCE_UNSUPPORTED,
     STANDARD_GUIDANCE_UNSUPPORTED,
+    MOTION_PRESERVATION_UNSUPPORTED,
 }
 
 data class VideoPromptIssue(val code: VideoPromptIssueCode, val message: String, val blocksInference: Boolean)

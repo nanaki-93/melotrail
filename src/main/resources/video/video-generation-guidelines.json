@@ -1,7 +1,7 @@
 {
   "schema": "melotrail-video-generation-guidelines",
-  "version": 1,
-  "promptTemplateVersion": "generic-prompt-v2",
+  "version": 2,
+  "promptTemplateVersion": "finished-artwork-motion-v1",
   "shotPlannerVersion": "duration-shots-v1",
   "referenceRoleGuidance": [
     {
@@ -38,7 +38,7 @@
       "id": "complete-scene-composition",
       "role": "COMPLETE_SCENE",
       "label": "Complete scene reference guidance",
-      "text": "Use these references for the requested complete-scene composition while preserving any separately selected subject, outfit, environment and style references according to their roles."
+      "text": "Use the selected complete scene as finished artwork. Preserve its identity, outfit, style, composition and drawn details exactly; prompts describe motion only. A changed appearance requires replacement external artwork rather than redrawing, restyling or inpainting this picture."
     }
   ],
   "standardGuidelines": [
@@ -53,6 +53,12 @@
     {
       "id": "temporal-stability",
       "text": "Maintain temporal stability and continuity where the request calls for continuity."
+    }
+  ],
+  "motionGuidelines": [
+    {
+      "id": "finished-artwork-preservation",
+      "text": "Animate the supplied finished artwork without redesigning its subjects, outfit, style, scenery or composition and without generating a replacement still image."
     }
   ]
 }
