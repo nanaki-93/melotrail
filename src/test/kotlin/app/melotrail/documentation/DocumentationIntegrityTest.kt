@@ -90,7 +90,7 @@ class DocumentationIntegrityTest {
     }
 
     @Test
-    fun `consolidation preserves original UI references and recorded Logic captures`() {
+    fun `supplied UI and current TABI references and recorded Logic captures stay byte exact`() {
         val referenceRoot = repository.resolve("docs/pictures/UI")
         val manifest = Json.parseToJsonElement(Files.readString(referenceRoot.resolve("reference-measurements.json"))).jsonObject
         val references = manifest.getValue("referenceManifest").jsonArray
@@ -113,11 +113,13 @@ class DocumentationIntegrityTest {
 
         mapOf(
             "docs/pictures/App-pages.png" to "f8db766f5d19d9d4a6423da7575ac6a435789880d7dbf2590d8405f72b258afc",
-            "docs/pictures/tabi.png" to "8c790543d85bcd5d8b8a681e98c699816376e03561e8cf35f9e626cb75eb8d2a",
-            "docs/pictures/video/2135A4D8-3760-4F5F-989C-7EF5097ED4EE.jpeg" to "3743ec6b2ed2aeda45fb03a7da5173da21bd765cce86d9124dbecb0c011b0410",
-            "docs/pictures/video/2466F94A-C5D7-4792-9AAD-BF15C315ED47.jpeg" to "b49346d676469301aad5d7f8b43e9e7fd4dde546ad19d203ace07441624f6fb1",
-            "docs/pictures/video/925CC60E-0978-4AF3-8F34-70E412300B4C.jpeg" to "3ae878e3d00a286cb13bfe3bc56b30f702aded431f9cca514ffb07ae79d73fd5",
-            "docs/pictures/video/Morning Lo-Fi Train Ride with Tabi.png" to "dc9541450b2aafebe713801e7b84bf445022557fcdaa2a2b66146b5b167558f2",
+            // User-approved TABI refresh from f96a7f36430d45c576de511be94480e31762570b.
+            "docs/pictures/video/tabi-assets/character-profile/tabi-character-profile.png" to "1c63aa8f579634eff5f8c6864e97882513feba381c1e2380ae66018800f9d238",
+            "docs/pictures/video/tabi-assets/emotions/01-joy.png" to "375be0ae23ff2408dd9ad50638a0323b0ca00d1ea944e137128d960d5b18e753",
+            "docs/pictures/video/tabi-assets/train-actions/01-drinking-coffee.png" to "f8ac8dcfcb1635a8913ea6a1eb2a8a52af428458203ec1770a3bd68d3ef09235",
+            "docs/pictures/video/tabi-assets/walking/01-walk-right-step-a.png" to "9796ac1fd540ea85b21abbd04a27fef96d77a8e3362b98890be588b97fecb187",
+            "docs/pictures/video/tabi-assets/country-outfits/japan/tabi-japan-scene.png" to "a45301d1154b6ce57dcd311781aa5249c33e19ade6c4e64f9e02d32e8ef7f816",
+            "docs/pictures/video/tabi-eki-channel-banner-charcoal-stone-v6-upload.jpg" to "ff3a282b97a1ccca07d5f35a08feba5b66a8e66557a7ddda0e49bf357234f430",
         ).forEach { (relativePath, digest) ->
             assertEquals(digest, sha256(repository.resolve(relativePath)), "Changed supplied reference: $relativePath")
         }

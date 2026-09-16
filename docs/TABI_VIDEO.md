@@ -52,15 +52,35 @@ context only. Unsupported actions stay visible. Tokyo, trains, coffee and TABI
 are examples, never required presets. Preserve the approved motion/steam checkpoint
 and latest charcoal/stone v6 artistic choice without inferring new visual approval.
 
-## What the existing references establish
+## Current TABI asset kit
 
-[Character identity](pictures/tabi.png) is the cosmic axolotl traveler sheet;
+The user refreshed the supplied artwork in commit
+`f96a7f36430d45c576de511be94480e31762570b`, merged into the video implementation
+branch. Use the [character profile](pictures/video/tabi-assets/character-profile/tabi-character-profile.png),
+[expressions](pictures/video/tabi-assets/emotions),
+[actions](pictures/video/tabi-assets/train-actions),
+[walking poses](pictures/video/tabi-assets/walking),
+[outfits](pictures/video/tabi-assets/fits) and
+[country artwork](pictures/video/tabi-assets/country-outfits) as selected inputs.
+The approved style reference remains the
+[charcoal/stone v6 banner](pictures/video/tabi-eki-channel-banner-charcoal-stone-v6-upload.jpg).
+These supplied pictures still need V18b2 validation before being treated as
+separate motion-ready layers; their presence does not prove animation readiness.
+
+## Historical references
+
+The descriptions below record earlier artwork. Links to removed images point to
+the pre-refresh Git revision; use the current kit above for new work.
+
+### What the earlier references established
+
+[Character identity](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/tabi.png) is the cosmic axolotl traveler sheet;
 it still contains “Moki”. When a request selects these references, new output uses
 **TABI**. The character has an
 indigo/violet body, pink-purple feathery gills, dark glossy eyes, cheek/star
 markings, headphones, travel jacket/scarf, satchel and travel accessories.
 
-The [morning train scene](pictures/video/Morning%20Lo-Fi%20Train%20Ride%20with%20Tabi.png)
+The [morning train scene](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/Morning%20Lo-Fi%20Train%20Ride%20with%20Tabi.png)
 and the three other supplied train scenes under `pictures/video` establish
 composition and mood: TABI at left, three-quarter view toward the right, fixed
 window/train/table geometry, passing Japanese city/countryside, layered depth,
@@ -91,18 +111,18 @@ platform. Reduce glossy materials and heavy amber lighting.
 ## Preserved artistic exploration and reusable example brief
 
 This section is reference-specific artistic history, not a required generation
-preset or normal-workflow prompt. Some earlier reference and trial files were not included in the supplied Git
-commits and are absent locally. Their filenames and design decisions are retained
-below as historical context; only available assets are linked. Use the retained
-v3 banner and style trials for review until missing originals are recovered.
+preset or normal-workflow prompt. Removed tracked images link to their retained
+Git revision; other absent originals remain filename-only historical context.
+For current work, use the refreshed TABI kit and selected charcoal/stone v6 banner
+listed above.
 
 Four proposed single-scene trials were generated on 2026-09-06 with the built-in
 image tool before expanding the asset kit. They compare the same seated listening
 pose, camera and train/window layout while varying the art medium and restrained
-palette: [Paper Moon Railway](pictures/video/style-trials/paper-moon-railway.png),
-[Apricot Quiet](pictures/video/style-trials/apricot-quiet.png),
-[Lilac Sunday](pictures/video/style-trials/lilac-sunday.png) and
-[Moonmilk Express](pictures/video/style-trials/moonmilk-express.png). They remain
+palette: [Paper Moon Railway](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/style-trials/paper-moon-railway.png),
+[Apricot Quiet](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/style-trials/apricot-quiet.png),
+[Lilac Sunday](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/style-trials/lilac-sunday.png) and
+[Moonmilk Express](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/style-trials/moonmilk-express.png). They remain
 proposed style examples until the user chooses or rejects a direction. The prompts
 below reproduce their intent; they are not an authorization for paid jobs. Attach
 the actual reference images when using them in an image tool because filesystem
@@ -128,9 +148,9 @@ rather than abstract graphic decoration.
 Three replacement banner trials add tangible music objects cumulatively while
 preserving the v2 composition and **TABI EKI** sign:
 
-1. [Step 1](pictures/video/banner-funky-steps/tabi-banner-real-funky-step-1.png):
+1. [Step 1](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/banner-funky-steps/tabi-banner-real-funky-step-1.png):
    portable record player, record sleeves, lava lamp, backpack pins and sunglasses.
-2. [Step 2](pictures/video/banner-funky-steps/tabi-banner-real-funky-step-2.png):
+2. [Step 2](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/banner-funky-steps/tabi-banner-real-funky-step-2.png):
    adds a vintage radio, small disco ball, vinyl stack, hand percussion and a
    patterned ceramic pot.
 3. Step 3 (`tabi-banner-real-funky-step-3.png`):
@@ -156,15 +176,15 @@ material. Borrow only broad fashion attitude, tangible beatnik/pop accessories,
 flat palette and minimal-shading principles; do not reproduce their artwork,
 embedded text or watermarks.
 
-The latest proposed [green-coat revision](pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-master.png)
+The latest proposed [green-coat revision](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-master.png)
 removes Tabi's beret and sunglasses, restores the visible face, and replaces the
 brown jacket and scarf with a roomy emerald coat with a high pink collar, cuffs
 and trim. It also reduces the plant density and retains exactly two crescent
 motifs: the tall poster at far left and the lower-right luggage. The central
 sign, record sleeve and train no longer carry moons. The exact **TABI EKI** sign,
 11:11 clock, platform 7, music objects, train and Step 2 composition remain.
-Review the [2560 × 1440 PNG](pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-2560x1440.png)
-or compact [upload JPEG](pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-upload.jpg).
+Review the [2560 × 1440 PNG](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-2560x1440.png)
+or compact [upload JPEG](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-upload.jpg).
 The cheetah gallery reference is preserved as inspiration-only material; its
 characters, layout and individual artwork are not part of the TABI identity.
 
@@ -180,7 +200,7 @@ The emblem and display lettering remain raster concepts pending explicit user
 approval and later deterministic reconstruction if adopted as reusable branding.
 
 Four isolated signature studies explore the **TABI EKI** wordmark and Tabi-head
-emblem without the station artwork: [A — Soul Loop](pictures/video/signature-concepts/tabi-eki-signature-a-soul-loop.png)
+emblem without the station artwork: [A — Soul Loop](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/signature-concepts/tabi-eki-signature-a-soul-loop.png)
 uses connected soul-script lettering and a headphone portrait;
 B — Tall Wiggle (`tabi-eki-signature-b-tall-wiggle.png`)
 uses condensed organic capitals and a simple headphone-free stamp;
@@ -242,7 +262,7 @@ contribute Tokyo-window composition only; they do not override the banner's
 colors, clothing or rendering. This precedence belongs to that selected trial,
 not to the generic assets-and-prompt product contract.
 
-A fifth proposed [Paper Moon with Lilac window](pictures/video/style-trials/paper-moon-lilac-window.png)
+A fifth proposed [Paper Moon with Lilac window](https://github.com/nanaki-93/melotrail/blob/6f489d9ece4441a9e3b0e10dc1bf0c09d89c868d/docs/pictures/video/style-trials/paper-moon-lilac-window.png)
 combines Paper Moon's character, cabin and tactile paper treatment with Lilac
 Sunday's pale limited-print Tokyo scenery. It is a hybrid comparison candidate,
 not a channel geography commitment or an approved production master. The channel
