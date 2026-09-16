@@ -1,0 +1,18 @@
+{
+  "name": "@melotrail/video-motion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned, bounded controlled-motion compositor for prepared Melotrail video scenes.",
+  "type": "commonjs",
+  "engines": {
+    "node": "25.8.2",
+    "npm": "11.14.1"
+  },
+  "scripts": {
+    "test": "node --test render.test.cjs",
+    "render": "node render.cjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "0.1.80"
+  }
+}

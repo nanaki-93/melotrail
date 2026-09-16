@@ -22,8 +22,12 @@ redraw finished artwork as a prerequisite. The approved steam and five-second
 checkpoint remain preserved, with charcoal/stone v6 the latest selected artistic
 reference for externally authored TABI assets. No new visual approval is inferred.
 
-Execution policy remains Sol High implementation/review, Astra High repairs and
-one commit per validated task under TASKS. This scope/planning update does not
+Execution policy, revised by the user on 2026-09-16, starts with Terra High and
+two retries, then escalates to Sol High with two retries. Each model gets one
+initial attempt plus its two retries. Fresh Sol High review and one commit per
+validated task remain required under TASKS. The coordinator starts the next
+eligible task immediately after verifying the previous commit; periodic heartbeats
+serve as recovery wakeups. This scope/planning update does not
 restart the paused scheduler, download models or launch new inference. Image
 creation, audio synchronization and public publishing stay outside Melotrail.
 

@@ -109,8 +109,12 @@ Original UI/TABI/train references and Logic Pro captures remain in `docs/picture
 and `docs/checks`. Git is the archive for retired plans and logs. License: MIT.
 
 Sequential video implementation is configured in
-[TASKS](TASKS.md#configured-automatic-execution): 20-minute wakes, one Sol High
-writer at a time, coordinator validation, fresh review and bounded Astra High
-repair for concrete failures. Successful rows advance
+[TASKS](TASKS.md#configured-automatic-execution): continuous sequential execution
+with 20-minute recovery wakes. Each verified task commit immediately admits the
+next eligible task after dependency and usage checks. One Terra High
+writer at a time with two retries, then Sol High with two retries. Each model
+gets one initial attempt plus its retries, with full task and failure context
+passed to each fresh retry agent. Coordinator validation and fresh Sol High
+review precede one implementation commit per successful task. Successful rows advance
 `codex/video-generation-sequential`; tracked user edits remain protected. The
 retired Terra CLI runner and its local configuration do not control this run.

@@ -18,10 +18,11 @@ replay completed import, draft, acceptance, export or UI-foundation work.
 - Dependencies in the queue are mandatory. The coordinator chooses the earliest
   ready mandatory task, skips an external wait, and records why. Optional tasks
   are excluded unless included in the implementation request.
-- Configured implementer: Sol High (`gpt-5.6-sol`, `high`). On a concrete
-  implementation, test or review failure, use Astra High (`gpt-6-astra`, `high`)
-  with the exact failure evidence and preserved candidate. Use a fresh Sol High
-  review context; reviewer approval requires evidence, not confidence language.
+- Configured implementer: Terra High (`gpt-5.6-terra`, `high`), with an initial
+  attempt and at most two fresh-agent retries. If those fail, escalate to Sol High
+  (`gpt-5.6-sol`, `high`) for one attempt and at most two fresh-agent retries.
+  Every retry/escalation includes the full task, preserved candidate and concrete
+  failure context. Keep fresh Sol High review; see the bounded policy below.
 - Inspect `git status` first. Preserve unrelated work. Use `codex/` branches and
   isolated worktrees from the approved integration base; never reset the user's
   working tree. Commits must contain only task-owned changes.
@@ -57,7 +58,9 @@ exclusive runtime owners. **V10–V33 are the video queue**, including suffixed 
 old completion does not count toward the replacement. V24/V33 require visual
 feedback, and V25 is an optional hosted fallback. The user authorized the
 sequential scheduler, Sol High implementation, Astra High failure repair and one
-local commit per validated task on 2026-09-13. The first implementation slice was
+local commit per validated task on 2026-09-13. On 2026-09-16 the user replaced
+the writer/repair policy with Terra High plus two retries, then Sol High plus
+two retries; fresh Sol High review and per-task commits remain required. The first implementation slice was
 V10; V10–V16 are now completed as recorded below. The scheduler policy below
 supersedes the retired autopilot configuration. On 2026-09-14 the user approved
 restarting with the revised ComfyUI plan. The coordinator reconciled PLAN/queue
@@ -164,7 +167,7 @@ selecting a dependency-ready mandatory row. No docs/tasks.md or second queue.
 | V18b2 | Validate externally prepared animation assets | V14, V18a | DONE | Finished artwork and optional ready layers reopen with exact pins, measured alpha, geometry and bounded motion capabilities; unsupported inputs fail actionably. Image decoding stays in VideoImageFiles. 47 focused/798 full tests, make test/build, diff and independent Sol High review PASS after three Astra repairs (third user-authorized) and coordinator scope alignment. Evidence ~/.codex/melotrail-video-sequential/evidence/V18b2/ready-assets-20260916. No generated-motion or visual approval claimed. |
 | V18b | Prove automated reference-conditioned preparation | V17, V18a, V18a2, V18b1 | OPTIONAL | Deferred generative preparation; outside current delivery and excluded unless explicitly reselected. |
 | V18 | Import finished looks and prepare motion inputs | V14, V15, V16, V18a, V18b2 | DONE | Finished-look selection and supported motion admission preserve imported appearance, share complete consumed-component fingerprints/reviews and block unsupported preservation guidance. Three Astra High repairs (third user-authorized); 36 focused and 822 full tests, make test/build, diff check and fresh Sol High review PASS. Evidence: `~/.codex/melotrail-video-sequential/evidence/V18/finished-artwork-20260916`. Rendering and UI remain later tasks. |
-| V19a | Generalize controlled subject motion and effects | V12, V18a | TODO | New 2026-09-14; external tool, approved motion/steam behavior as scoped reference. |
+| V19a | Generalize controlled subject motion and effects | V12, V18a | DONE | Versioned Node compositor uses actual prepared-scene placement, supplied poses and both mask representations for bounded subject motion and source-anchored steam. Real-importer fixtures, 7 Node tests, 823 project tests, build/diff and fresh Sol review PASS; 4 comparison renders/1,200 frame hashes verified. Eight writer attempts, last two user-authorized. Evidence `~/.codex/melotrail-video-sequential/evidence/V19a/controlled-motion-20260916`; scenery, app integration and artistic approval remain later work. |
 | V19b | Render coherent scenery with continuous time | V19a | TODO | New 2026-09-14; depth, coverage, occlusion and resumable frame ranges. |
 | V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary. |
 | V20 | Add Video tab and independent create/open | V13, V16 | TODO | Planned 2026-09-13; not implemented. |
@@ -1403,7 +1406,9 @@ pins, motion-capability limits and scoped review. Actual moving output remains V
 **Target files:** `tools/video-motion/package.json` (new),
 `tools/video-motion/package-lock.json` (new), `tools/video-motion/render.cjs`
 (new), `tools/video-motion/render.test.cjs` (new),
-`src/main/resources/video/motion-runtime.json` (new).
+`src/main/resources/video/motion-runtime.json` (new),
+`src/test/kotlin/app/melotrail/video/VideoMotionDescriptorFixtureTest.kt` (new;
+production importer fixture bridge added after the V19a transform review finding).
 **Inputs / dependencies:** V12, V18a; preserved controlled-motion v1 checkpoint,
 v2 approved steam and v3 renderer evidence. Ordinary tests use owned fixtures.
 **Implementation rules:** Adapt the useful external Node Canvas compositor into
@@ -1418,7 +1423,7 @@ frame time and seeded schedules; regenerate no surrounding cabin pixels to move
 the face. Match the source illustration style. Output bounded frames and a receipt;
 no full-video frame batch in memory. Do not promise drinking/page-turning from this
 motion set. Verify the same controls on different scene geometries.
-**Verification command:** `npm ci --prefix tools/video-motion`; `node --test tools/video-motion/render.test.cjs`.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'` (emit actual importer descriptors and assets under owned build output for Node comparison); `npm ci --prefix tools/video-motion`; `node --test tools/video-motion/render.test.cjs`.
 **Done:** reusable subject/effect motion is independent of TABI/Tokyo coordinates;
 owned pixel/geometry and repeatability regressions pass, with real comparison
 renders retained for later user review rather than self-awarded artistic approval.
@@ -1804,8 +1809,8 @@ workflow is accepted, or the gate stays pending with explicit failed criteria.
 
 ## Configured automatic execution
 
-The user authorized this policy on 2026-09-13. The existing paused Melotrail
-heartbeat is repurposed as **Melotrail video sequential implementation**, attached
+The user authorized sequential execution on 2026-09-13 and revised the model
+and retry policy on 2026-09-16. The existing Melotrail heartbeat runs as **Melotrail video sequential implementation**, attached
 to the current planning/implementation conversation, with **20-minute** wakes.
 It uses native collaboration agents. Do not invoke the retired Terra CLI runner,
 resume its pause file, reset its retained state or start a second automation.
@@ -1820,18 +1825,28 @@ and environments remain in the normal checkout. Scheduler bookkeeping stays in
 This state records the current task, base, phase, agent ID, repair count, evidence
 paths and commit receipt; TASKS remains the only implementation queue.
 
-Each wake handles at most one unfinished mandatory V10–V33 row or its preserved
-continuation. Select the earliest dependency-ready TODO, excluding V24/V33,
+The user authorized continuous sequential execution on 2026-09-16. Keep the
+coordinator active through bounded agent waits, validation, review, retry and
+commit stages. After verifying each task commit and receipt, immediately recheck
+usage, Git state and dependencies and admit the next eligible task in the same
+execution, without waiting for a scheduled wake. Twenty-minute heartbeats are
+recovery wakeups for an interrupted or idle coordinator, not delays between tasks.
+Do not end merely after dispatching an agent or completing one task. Preserve
+state before unavoidable interruptions and never duplicate active work on recovery.
+Continue until eligible work is complete, retries are exhausted, usage requires
+deferral, the user stops execution, or only external decisions remain.
+Select the earliest dependency-ready TODO, excluding V24/V33,
 all unselected OPTIONAL rows (including V18b1, V18b and V25) and the
 completed/retired MIDI/video queues. A missing human
 or setup decision blocks its own task, while later independent ready engineering
-may continue on a later wake. Never retry a WAITING_USER row without new evidence.
+may continue immediately after checking dependencies. Never retry a WAITING_USER
+row without new evidence.
 Read live queue status rather than hardcoding completed IDs. One worker/reviewer
 runs at a time; no concurrent task, test suite or repair. Inspect live agents,
 state, Git status and recent commits before admitting work. Resume an interrupted
 stage and preserve its candidate; do not repeat completed work or reset retries.
 
-1. Launch one fresh **Sol High** agent (`gpt-5.6-sol`, reasoning `high`,
+1. Launch one fresh **Terra High** agent (`gpt-5.6-terra`, reasoning `high`,
    `fork_turns: none`) with the exact row, base commit, explicit worktree path,
    authorized files and required evidence. The coordinator owns task status and
    commits; workers must not spawn other agents, commit or edit PLAN/TASKS.
@@ -1839,17 +1854,26 @@ stage and preserve its candidate; do not repeat completed work or reset retries.
    `make build` and `git diff --check` in the execution checkout. Do not edit
    documentation or source during validation because matrix evidence fingerprints
    build inputs. Run the row's actual native/media checks when applicable.
-3. A concrete implementation/test/review failure goes directly to **Astra High**
-   (`gpt-6-astra`, reasoning `high`, `fork_turns: none`), with the original row,
-   base, current diff, exact failed command, exit code, relevant terminal output
-   and review findings. Preserve the Sol candidate and repair only the same task.
-   Allow at most two Astra repair attempts per task, retained across wakes; no
-   extra Sol retry or automatic model substitution. Repeat affected required
-   validation after a changed candidate. Missing rights, credentials, model setup
-   choices or real visual decisions are external waits, not code defects.
-4. Once checks pass, a fresh **Sol High** agent reviews the tested diff read-only
-   against the row and PLAN. Review defects use the same Astra repair allowance,
-   followed by validation and a fresh review. A test pass alone is insufficient.
+3. Concrete implementation, test or review failures consume the current model's
+   bounded attempts. Terra High gets one initial attempt and up to two retries;
+   after its second retry fails, escalate the preserved task to **Sol High**
+   (`gpt-5.6-sol`, reasoning `high`) for one escalation attempt and up to two
+   retries. This is at most six writer attempts per task. Use a fresh agent with
+   `fork_turns: none` for every retry/escalation; do not restart from a blank tree.
+   Include the full original task and acceptance criteria, allowed files, base,
+   preserved candidate/diff and hashes, exact failed command and exit code,
+   relevant error output, review findings, previous fixes and unresolved issues
+   in the new agent's context. Include evidence paths with the concrete failure
+   summary, not paths alone. Persist the model tier, attempt index (1–3), agent
+   identity and failure history before dispatch; retain them across wakes and
+   interruptions. New findings do not reset attempts. Usage interruptions and
+   missing external decisions do not consume a code retry. No automatic Astra
+   escalation is configured by this policy.
+4. Revalidate each changed candidate with focused checks, test/build and relevant
+   host/media checks. Once checks pass, a fresh **Sol High** agent reviews the
+   exact tested diff read-only against the row and PLAN. Review is separate from
+   writer attempts. Concrete review defects feed the same current-tier retry
+   allowance; do not reset it or give reviewers a separate implementation budget.
 5. After validation and review pass, the coordinator records DONE plus real
    evidence in TASKS, stages only task-owned changes and that status update,
    inspects the staged diff and creates **one local commit** with the row ID in
@@ -1863,10 +1887,11 @@ stage and preserve its candidate; do not repeat completed work or reset retries.
    verified task commit. Never reset, stash or discard user edits. If synchronization
    cannot proceed, retain the implementation branch and report its commit/path.
 
-If both Astra repairs fail, preserve the candidate and exact error, mark the row
-BLOCKED without claiming completion, and pause the heartbeat with an actionable
-failure report. A transient usage interruption resumes the same stage when
-available; do not treat it as a code repair or start a substitute model. Check
+If Sol High's second retry fails, preserve the candidate and exact task/failure
+context, mark the row BLOCKED without claiming completion, and pause the heartbeat
+with an actionable failure report. Further attempts need new user authorization.
+A transient usage interruption resumes the same stage when available; do not
+treat it as a code repair or start a substitute model. Check
 current account usage before admission and defer below 10% remaining in any
 available relevant limit. No credit purchase/reset is authorized.
 

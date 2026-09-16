@@ -1,0 +1,46 @@
+{
+  "schema": "melotrail-controlled-motion-runtime",
+  "version": 1,
+  "tool": {
+    "id": "melotrail-controlled-motion",
+    "version": "1.0.0",
+    "entryPoint": "tools/video-motion/render.cjs",
+    "installCommand": "npm ci --prefix tools/video-motion",
+    "fixtureCommand": "./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'",
+    "testCommand": "MELOTRAIL_MOTION_FIXTURE_ROOT=\"$PWD/build/video-motion-fixtures\" node --test tools/video-motion/render.test.cjs",
+    "comparisonCommand": "node tools/video-motion/render.test.cjs --list-production-comparisons \"$PWD/build/video-motion-fixtures\""
+  },
+  "runtime": {
+    "node": "25.8.2",
+    "npm": "11.14.1",
+    "canvas": {
+      "package": "@napi-rs/canvas",
+      "version": "0.1.80"
+    }
+  },
+  "requestSchema": "melotrail-controlled-motion-request-v1",
+  "limits": {
+    "maximumFramesPerInvocation": 300,
+    "maximumWidth": 3840,
+    "maximumHeight": 2160,
+    "maximumPixelsPerFrame": 8294400,
+    "maximumBlinkAmount": 1,
+    "maximumBreathPixels": 4,
+    "maximumHeadDegrees": 3,
+    "maximumSteamRatePerSecond": 8,
+    "maximumSteamRisePixelsPerSecond": 28
+  },
+  "supportedControls": [
+    "POSE_BLEND:blink",
+    "TRANSLATE_Y:breathing",
+    "ROTATE:headGesture",
+    "EFFECT_RATE:steam"
+  ],
+  "limitations": [
+    "Blinking requires a supplied aligned pose and is clipped to the supplied subject silhouette.",
+    "Breathing requires a separated subject over a supplied clean environment layer.",
+    "Head gestures require a supplied HEAD_REGION mask and separated subject; drinking and page-turning are unsupported.",
+    "Steam is available only for a requested EFFECT_RATE capability with a supplied V18a effect anchor, follows supported source-subject motion, and remains behind recorded foreground occlusion for moving or static sources.",
+    "This compositor writes a bounded frame range and receipt; V19b owns scenery travel and long chunk assembly."
+  ]
+}
