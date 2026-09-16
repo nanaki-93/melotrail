@@ -133,8 +133,11 @@ Audition timbre is not authoritative and does not render audio files.
 ## Planned video isolation
 
 [TABI_VIDEO](TABI_VIDEO.md) specifies an independent Video tab in the same
-Kotlin/Compose application. It takes generic reference assets and a free-form
-prompt and exports a complete 180–300 second silent video. It needs no MIDI
+Kotlin/Compose application. It takes an externally finished scene image, optional
+ready character/background layers and a motion prompt, then exports a complete
+180–300 second silent video. In-app image generation, outfit/style synthesis and
+mandatory automatic asset extraction are deferred. V18b2 validates ready assets
+against V18a; V18 selects imported looks and compiles supported motion inputs. It needs no MIDI
 project, manifest, song or soundtrack. The app-level MIDI/Video switch stays
 above the existing six MIDI destinations; entering Video pauses the one MIDI
 session while preserving its position, and silent preview creates no MIDI player.
@@ -152,7 +155,7 @@ timeouts and unconfirmed native supervision retain process ownership and block
 restart. The pinned ComfyUI/GGUF import-source sets are rechecked at launch,
 separately from the large model hashes checked during explicit setup.
 It exposes no workflow submission or layer-preparation claim. The Video tab,
-application composition, ComfyUI jobs, automatic preparation and full assembly
+application composition, ready-artwork motion setup and full assembly
 remain planned in their later V10–V33 rows.
 
 The existing Swift companion, soundtrack intake and MIDI Export handoff are

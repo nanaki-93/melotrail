@@ -17,9 +17,11 @@ MIDI engineering is complete. Its UI, listening, Logic and release decisions
 remain in the [final review](docs/VALIDATION.md#final-manual-review). The new
 video workstream in [PLAN §9](PLAN.md#9-video-generation-from-assets-and-a-prompt)
 has implemented its isolated project, asset, planning, job, media and owned
-ComfyUI foundations. The Video tab, automatic multi-reference preparation,
-controlled continuous motion and complete 3–5 minute silent export remain later
-V10–V33 work. Video needs no MIDI project, export, song or soundtrack; audio is
+ComfyUI foundations. The current plan takes externally finished scene pictures,
+with optional character/background layers, and generates video only. In-app image
+generation and outfit/style synthesis are deferred. The Video tab, ready-asset
+motion setup, continuous animation and complete 3–5 minute silent export remain
+later V10–V33 work. Video needs no MIDI project, export, song or soundtrack; audio is
 added later in the user's external Apple editor.
 
 The repository still contains the superseded Swift soundtrack companion and its
@@ -59,7 +61,8 @@ protected MIDI roots. The generated `result.json` records the exact production
 job path, full media decode, frames, geometry, cadence, silence, timing, memory,
 swap, reconstructed-job recovery, an immediate sequential active-cancellation
 check, lifecycle stop and unchanged inputs. It is evidence for one short
-composed-image input only; V18b owns automatic multi-reference preparation.
+composed-image input only; it does not prove full-length continuity. The current
+plan supplies finished pictures externally; image synthesis V18b1/V18b is deferred.
 
 Input: one SMF 0/1 file, one note-bearing track/channel, fixed tempo/meter.
 Additional meta-only tracks are allowed. Sections use whole bars; chord durations

@@ -1,5 +1,6 @@
 package app.melotrail.video.adapter
 
+import app.melotrail.video.application.InspectedVideoAsset
 import app.melotrail.video.application.PreparedVideoImage
 import app.melotrail.video.application.PublishVideoAsset
 import app.melotrail.video.application.PublishedVideoAsset
@@ -10,6 +11,7 @@ import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoAsset
 import app.melotrail.video.domain.VideoAssetImage
 import app.melotrail.video.domain.VideoImageFormat
+import app.melotrail.video.domain.VideoMeasuredAlpha
 import app.melotrail.video.domain.VideoReferenceRecord
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
@@ -201,7 +203,15 @@ class VideoImageFiles(
         return PublishedVideoAsset(record, load(projectRoot, record))
     }
 
-    override fun load(projectRoot: Path, record: VideoReferenceRecord): VideoAsset {
+    override fun load(projectRoot: Path, record: VideoReferenceRecord): VideoAsset =
+        loadVerified(projectRoot, record).asset
+
+    override fun inspectOriginal(projectRoot: Path, record: VideoReferenceRecord): InspectedVideoAsset {
+        val verified = loadVerified(projectRoot, record)
+        return measurePixels(verified.asset, verified.original.image)
+    }
+
+    private fun loadVerified(projectRoot: Path, record: VideoReferenceRecord): VerifiedAsset {
         val root = requireProjectRoot(projectRoot)
         val expectedDescriptor = "references/${record.id.id}/v${record.id.version}/asset.json"
         if (record.artifact.relativePath != expectedDescriptor) {
@@ -248,9 +258,9 @@ class VideoImageFiles(
                 "Restore the matching descriptor and media bundle from a known-good copy.",
             )
         }
-        verifyStoredImage(root, asset.original, original = true)
+        val original = verifyStoredImage(root, asset.original, original = true)
         verifyStoredImage(root, asset.thumbnail, original = false)
-        return asset
+        return VerifiedAsset(asset, original)
     }
 
     override fun resolveOriginal(projectRoot: Path, record: VideoReferenceRecord): Path {
@@ -258,7 +268,7 @@ class VideoImageFiles(
         return resolveOwned(requireProjectRoot(projectRoot), asset.original.artifact.relativePath, "original reference")
     }
 
-    private fun verifyStoredImage(root: Path, expected: VideoAssetImage, original: Boolean) {
+    private fun verifyStoredImage(root: Path, expected: VideoAssetImage, original: Boolean): DecodedImage {
         val maximum = if (original) limits.maxEncodedBytes else limits.maxThumbnailBytes
         val path = resolveOwned(root, expected.artifact.relativePath, if (original) "original reference" else "thumbnail")
         val bytes = readBounded(
@@ -290,6 +300,7 @@ class VideoImageFiles(
         if (!original && (actual.image.width > limits.thumbnailMaxDimension || actual.image.height > limits.thumbnailMaxDimension)) {
             changed(expected.artifact.relativePath, "thumbnail dimensions")
         }
+        return actual
     }
 
     private fun decode(bytes: ByteArray, original: Boolean): DecodedImage {
@@ -666,6 +677,42 @@ class VideoImageFiles(
             bytes[2] == PNG_SIGNATURE[2] && bytes[3] == PNG_SIGNATURE[3]) ||
             (bytes.size >= 2 && bytes[0] == 0xff.toByte() && bytes[1] == 0xd8.toByte())
 
+    private fun measurePixels(asset: VideoAsset, decoded: BufferedImage): InspectedVideoAsset {
+        var opaque = 0L
+        var translucent = 0L
+        var transparent = 0L
+        var minimumLuminance = 255
+        var maximumLuminance = 0
+        val alphaRaster = decoded.alphaRaster
+        val opaqueSample = alphaRaster?.let { (1L shl it.sampleModel.getSampleSize(0)) - 1L } ?: 255L
+        val row = IntArray(decoded.width)
+        for (y in 0 until decoded.height) {
+            decoded.getRGB(0, y, decoded.width, 1, row, 0, decoded.width)
+            row.forEachIndexed { x, pixel ->
+                // Preserve 16-bit alpha distinctions that getRGB rounds to opaque 8-bit samples.
+                val alpha = alphaRaster?.getSample(x, y, 0)?.toLong() ?: (pixel ushr 24).toLong()
+                when (alpha) {
+                    0L -> transparent++
+                    opaqueSample -> opaque++
+                    else -> translucent++
+                }
+                if (alpha > 0L) {
+                    val red = pixel ushr 16 and 0xff
+                    val green = pixel ushr 8 and 0xff
+                    val blue = pixel and 0xff
+                    val luminance = (red * 2126 + green * 7152 + blue * 722) / 10_000
+                    minimumLuminance = minOf(minimumLuminance, luminance)
+                    maximumLuminance = maxOf(maximumLuminance, luminance)
+                }
+            }
+        }
+        return InspectedVideoAsset(
+            asset,
+            VideoMeasuredAlpha(opaque, translucent, transparent),
+            maximumLuminance > minimumLuminance,
+        )
+    }
+
     private fun hasTransparentPixel(image: BufferedImage): Boolean {
         if (!image.colorModel.hasAlpha()) return false
         val alpha = image.alphaRaster
@@ -706,6 +753,8 @@ class VideoImageFiles(
         nextAction: String,
         cause: Throwable? = null,
     ): Nothing = throw VideoAssetFileException(code, message, nextAction, cause)
+
+    private data class VerifiedAsset(val asset: VideoAsset, val original: DecodedImage)
 
     private data class DecodedImage(
         val image: BufferedImage,

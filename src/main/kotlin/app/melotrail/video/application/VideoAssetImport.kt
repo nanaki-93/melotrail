@@ -6,6 +6,7 @@ import app.melotrail.video.domain.VideoAssetRights
 import app.melotrail.video.domain.VideoAssetSource
 import app.melotrail.video.domain.VideoAssetUsageIntent
 import app.melotrail.video.domain.VideoImageFormat
+import app.melotrail.video.domain.VideoMeasuredAlpha
 import app.melotrail.video.domain.VideoReferenceRecord
 import app.melotrail.video.domain.VideoReferenceRole
 import app.melotrail.video.domain.VideoVersionedId
@@ -19,8 +20,17 @@ interface VideoAssetFiles {
     fun inspect(source: Path): PreparedVideoImage
     fun publish(projectRoot: Path, request: PublishVideoAsset): PublishedVideoAsset
     fun load(projectRoot: Path, record: VideoReferenceRecord): VideoAsset
+    /** Pixel facts and descriptor come from the same bounded, digest-verified original decode. */
+    fun inspectOriginal(projectRoot: Path, record: VideoReferenceRecord): InspectedVideoAsset
     fun resolveOriginal(projectRoot: Path, record: VideoReferenceRecord): Path
 }
+
+/** Read-only facts about an immutable imported original, not its thumbnail. */
+data class InspectedVideoAsset(
+    val asset: VideoAsset,
+    val alpha: VideoMeasuredAlpha,
+    val hasVisibleContrast: Boolean,
+)
 
 /** Raw bytes are retained only across inspect/publication and are never transformed in place. */
 class PreparedVideoImage internal constructor(

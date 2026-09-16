@@ -2,69 +2,55 @@
 
 Owner: planned video product, asset and media contract. Delivery is V10–V33 in
 [TASKS](../TASKS.md), under [PLAN §9](../PLAN.md#9-video-generation-from-assets-and-a-prompt).
-The integrated Video tab, model profile, media runtime and generation controls
-are not implemented yet. This document specifies their target behavior and
+The integrated Video tab and complete generation flow remain planned; implemented
+runtime/probe foundations are recorded below. This document specifies the target and
 preserves clearly marked artistic references and superseded Swift evidence.
 
 ## Outcome and scope
 
-Add an independent **Video** tab to the Kotlin/Compose Melotrail application.
-One or more generic reference assets plus a user-written free-form prompt drive
-generation of short clips, review and assembly into a complete **180–300 second
-silent video** (default 240 seconds). The result is a 1920×1080 H.264 MP4 with
-zero audio streams for later audio work in the user's external Apple editor.
+**Current scope, 2026-09-16:** the user creates all finished picture assets outside
+Melotrail. The app accepts a **finished scene image, with optional separate
+character/background layers**, then generates motion and a complete continuous
+180–300 second silent video (default 240s), 1920×1080 H.264 MP4 at 30 fps. No image
+generation, outfit/style transfer, inpainting or new background artwork is required
+or offered in this delivery. Audio editing and public upload remain external.
 
-Video needs no MIDI project, export, song or soundtrack. It never renders MIDI,
-edits audio, writes a MIDI project or adds a seventh MIDI destination. Its project,
-assets, jobs, models, media tools and outputs use separate storage and runtime.
-The app loads those services lazily so missing video setup cannot block MIDI
-startup, audition or export. The old Swift companion and soundtrack-led handoff
-are superseded and remain only as historical code/evidence until V30–V31.
+The planned Video tab needs no MIDI project or soundtrack. It owns separate
+projects, assets, jobs, models and media outputs, loaded lazily. Missing video
+tools cannot block MIDI. The superseded Swift companion remains until V30–V31.
 
-The planned normal workflow is:
+1. Open Video and import a finished PNG/JPEG scene.
+2. Optionally import ready transparent character/pose images, clean backgrounds,
+   extended scenery and foreground/masks. Clothing and style are already drawn.
+3. Enter a motion prompt, choose duration and optionally place supplied layers,
+   anchors or motion controls visually. No JSON or node editor is required.
+4. Generate a short preview or complete video using supported local video action
+   generation and controlled motion. Preserve the uploaded look; do not generate
+   another picture as a prerequisite. Explain missing motion inputs before work.
+5. Preview moving results, adjust/retry affected work, retain prior versions and
+   export a new silent MP4. Add music in the external Apple editor.
 
-1. Open Video and create or open an independent video project.
-2. Import PNG/JPEG pictures into three optional areas: **Character — moves &
-   expressions**, **Outfit**, and **City / scenery**, with multiple pictures per
-   area within the selected workflow's supported limits. Keep supplementary style
-   and complete-scene inputs available. Preserve source bytes and show what each
-   request consumes; no particular role combination is mandatory.
-3. Enter a free-form prompt and choose 3–5 minutes. Optional action, motion, style,
-   look and per-shot controls refine the request without becoming prerequisites.
-4. Choose the explicit local setup and click **Generate video**. The app prepares
-   needed looks and shots, records honest work estimates and retains results.
-5. Play the moving draft in the tab; keep, reject or regenerate clips, inspect
-   joins and unique/reused footage, and review the complete silent cut.
-6. Export to a new silent MP4 and reveal it in Finder.
+A finished scene is valid input to the measured ComfyUI image-to-video path;
+independent character/environment controls may need externally prepared layers
+or poses. Flat-image camera movement does not prove character animation or
+continuous 3–5 minute coherence. Validate actual alpha, alignment, depth,
+occlusion, anchors and scenery coverage before enabling controlled motions.
+Missing clean plates or travel coverage request more external artwork, never
+unrequested synthesis, stretching, freezing or whole-clip repetition.
 
-Tokyo, trains, coffee and TABI are examples only. They must never become a required
-preset, default prompt injection, action list or acceptance gate. Any supported
-references and prompt use the same workflow. Try one measured local backend first;
-a hosted fallback is optional and requires explicit selection, upload disclosure
-and a bounded authorized budget. No model download, paid job or upload occurs from
-opening the app.
+The earlier three inspiration areas (Character/Outfit/City) and automatic look
+creation are deferred. V18b1's failed experiment and V18b are OPTIONAL/unselected;
+they are not video-delivery gates. Reuse completed V14/V15/V18a/V18a2 contracts.
+V18b2 validates ready animation assets, V18 selects finished looks and prepares
+motion inputs, V19 supplies moving output, and V20–V23 expose the complete flow.
+This is a plan revision, not an implemented UI or approval of the final video.
 
-### Separate inspiration groups (2026-09-15 specification)
-
-Character references supply identity plus examples of poses and expressions;
-outfit references supply clothing/accessories; city/scenery references supply the
-environment. Keep each group's selected pictures separately when another group
-changes, and retain the chosen visual style. For TABI, the chosen banner style
-continues to guide rendering even when city references are photographs.
-
-An explicit outfit reference controls clothing over incidental clothing in other
-images; its depicted person or background must not replace the selected subject
-or city. City pictures must not change subject identity or outfit. Resolve a
-conflicting prompt or incompatible outfit references visibly before generation.
-Pose/expression inspiration is not a promise of arbitrary animation: V18b must
-measure supported preparation and motion capabilities and report gaps honestly.
-All groups remain optional, scenario-neutral and usable with multiple references.
-Original assets and accepted results remain immutable; changing one group only
-invalidates derived work that consumes it, including dependent masks/poses when
-an outfit changes the silhouette. V18a2 supplies the missing role/binding contract,
-V18b proves actual conditioning, V21 exposes the three upload areas, and V24/V32
-verify reference fidelity and the complete UI behavior. These are planned changes,
-not implemented controls or a new approval of generated video.
+The source picture controls appearance; prompts/controls describe motion. Requests
+for different outfits, cities or style require replacement artwork. Preserve all
+original bytes, immutable results and exact consumed pins; unused inspiration is
+context only. Unsupported actions stay visible. Tokyo, trains, coffee and TABI
+are examples, never required presets. Preserve the approved motion/steam checkpoint
+and latest charcoal/stone v6 artistic choice without inferring new visual approval.
 
 ## What the existing references establish
 
@@ -847,8 +833,8 @@ This boundary does not submit a workflow. The retained graph supports a short
 LTX-2.3 image-to-video take from one already composed image and uses Gemma 3,
 not T5. It does not establish multi-reference conditioning, automatic subject
 layers/masks/anchors, guided complex actions, arbitrary-scene quality or a
-complete 3–5 minute video. V17b owns API jobs and V18b owns the missing automatic
-reference-conditioned preparation proof. The Video tab and normal setup UI
+complete 3–5 minute video. V17b owns API jobs. Automatic reference-conditioned
+artwork preparation is now deferred; finished external artwork supplies the input. The Video tab and normal setup UI
 remain planned in V20–V21, so this lazy adapter adds no MIDI startup dependency.
 
 ## Production ComfyUI short-shot probe (V17)
@@ -891,7 +877,119 @@ measurements selected this bounded configuration but do not prove the production
 adapter command. Its generated report owns the fresh measurement after the host
 run. Neither result proves automatic multi-reference composition, subject layers,
 masks or anchors, complex-action control, arbitrary-scene quality, or a complete
-180–300 second video. V18b and the later visual/full-video gates own those claims.
+180–300 second video. Ready-asset motion work and later visual/full-video gates
+own the current delivery; automatic artwork preparation V18b is deferred.
+
+## Deferred reference-image host experiment (V18b1)
+
+As of 2026-09-16 picture generation is outside the delivery scope. This section
+retains the failed experiment and its provenance; it is not an active prerequisite
+or permission for further inference. Uploaded finished artwork replaces this stage.
+
+
+The opt-in `videoReferenceImageProbe` pins the separately installed FLUX.2 Klein
+4B distilled model, 8,044,982,048-byte Qwen 3 4B encoder and 336,211,292-byte
+FLUX.2 VAE by exact SHA-256. The original 4,070,624,520-byte approved FP8 Klein
+file stays immutable beside a 7,751,105,920-byte local FP16 dequantized derivative
+and its pinned conversion receipt. Both model files and their derivation are
+verified before and after the host probe. It also pins the V17 runtime profile,
+complete ComfyUI executable source set and the three core node files used by the
+graph. Before runtime start it verifies every model, source, graph, request and
+input pin. Ordinary tests parse and exercise only the graph, profile, path and
+ledger contracts; they do not load these models.
+
+The v2 host profile retains 512×512 output, 0.25-megapixel aspect-preserving
+reference encoding, four Euler steps, CFG 1, batch size one and one owned inference
+at a time. A subject pass accepts at most two identity/pose/expression images and
+one outfit image. A scene pass accepts the retained subject result, one scenery
+image and one optional style image. A single complete-scene image uses one direct
+pass. Missing groups omit their graph nodes; overflow and conflicting roles fail
+before upload. No collage, filename, crop, pixel mask or manual region supplies
+conditioning.
+
+With the base subject shared by the scenery-only case, the six-case comparison
+requires ten unique submissions: four subjects, five scenes and one complete
+scene. Subject reuse binds ordered image bytes/roles, exact prompt, guidance,
+seed, settings, graph and profile pins, independently of case labels or source
+paths. Admission accounts for both same-run reuse and verified prior outputs.
+The user authorized a fresh v2 trial of at most **24 additional attempts** with
+updated assets from commit `f96a7f36430d45c576de511be94480e31762570b`; its new trial
+ID, directory and ledger are separate from the exhausted twelve-attempt trial.
+Each reservation precedes upload and counts failures or interruption across
+invocations. The old ledger cannot be expanded, reset or migrated. Verified
+completed stages resume by fingerprint and output digest; changed or missing
+output bytes fail instead of being regenerated silently. Each invocation uses a
+fresh output directory, quarantines every subject intermediate and final PNG without
+overwrite, preserves the exact original prompt beside separate stage guidance,
+and records all transitive image pins. Cancellation and the 1,200-second stage
+limit use the V17 owned runtime and stop only its session.
+
+The first native subject attempt failed with `Undefined type Float8_e4m3fn`,
+produced no image and consumed one of the twelve attempts. Its owned runtime
+stopped with normal memory pressure and no additional swap. A tiny synthetic
+weight reproduced the failure in the installed MPS FP8 dequantization operation;
+CPU dequantization passed. The separately executed CPU conversion materialized
+`FP16(weight) × FP16(weight_scale)` for 80 FP8 tensors and copied 69 BF16 tensors
+byte-exactly. Independent numerical checks and tensor readback passed; conversion
+took 16.47 seconds, peaked at 349,388,800 bytes process RSS and added no swap.
+The ordinary loader now selects these dequantized weights using the existing
+`--fp16-unet` runtime. This remains the same Apache-2.0 source model, without a
+new download or runtime source change. It does not restore precision or establish
+whole-model forward equivalence after removing mixed-quantization wrappers and
+their input scales. Stage fingerprints include the changed graph, original and
+derived model pins, and conversion provenance.
+
+The completed historical v1 host trial on 2026-09-16 produced all six 512×512
+comparison outputs. Its twelve-attempt allowance is exhausted: one failed FP8 attempt and eleven
+successful FP16 stages. The final batch reused two verified base stages, peaked
+at 17,565,138,944 bytes of owned-process RSS and added 262,144 bytes of host swap;
+pressure samples included NORMAL and WARNING. The earlier base run added about
+470 MB of swap. All nine selected originals remained byte-exact and the owned
+runtime stopped. Focused checks, 794 tests, build and whitespace checks passed.
+
+**Execution passed; reference-conditioning acceptance failed.** The selected cat
+identity still produced a Tabi-like character; the green outfit did not transfer;
+changing scenery retained the train-window composition; the closed-eye reference
+left the eyes open; and the selected warm banner style was lost. Outfit/pose
+changes also altered unrelated scene details. The comparison planner additionally
+regenerated an unchanged subject for the scenery-only case instead of reusing its
+exact bytes. Independent review therefore keeps V18b1 incomplete. Capacity of
+three bound image slots per pass is measured execution capacity, not reliable
+control of three independent reference roles. No human artistic approval is
+inferred. The as-tested graph and v1 profile remain pinned in the retained trial
+evidence at
+`~/.codex/melotrail-video-sequential/evidence/V18b1/reference-proof-20260916`.
+
+The v2 retry used byte-exact assets from user commit `f96a7f364` and the explicitly
+selected charcoal/stone v6 banner. It completed all six 512×512 comparisons in
+ten unique submissions, reusing the exact base subject for changed scenery.
+Graph, guidance, model and source pins remained unchanged. The comparison batch
+peaked at 17,074,372,608 bytes owned-process RSS and added 402,980,864 bytes host
+swap, with NORMAL/WARNING pressure samples. The owned runtime stopped and all
+selected originals remained byte-exact. Focused checks, 795 tests, build and
+whitespace checks passed; these do not establish reference fidelity.
+
+**Updated-asset role fidelity still fails:** the cat request remains Tabi-like,
+Japan denim/orange workwear and coffee/sleeping poses do not transfer reliably,
+Singapore scenery retains Tokyo, and the complete v6 reference loses its indoor
+setting. Five single-reference diagnostics with a simpler prompt preserve the
+cat, outfit, coffee pose and Tokyo scene much better; the character sheet still
+adds unwanted marks. Both prompt and reference count changed in those diagnostics,
+so they suggest an interaction rather than isolate its cause. A final two-stage
+retry changed only the base prompt to shorter warm-light wording: lighting and
+texture improved, but clothing still mixed and the coffee pose was absent.
+
+The new ledger consumed **17 of 24** authorized additional attempts, all successful
+native stages; seven remain unused. The original twelve-entry ledger is unchanged.
+The as-tested v2 profile retains its pre-trial limitations; these measured results
+and complete output/role receipts are retained at
+`~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3`.
+V18b1 remains incomplete and is now deferred. Single-reference fidelity is not independent role control,
+and no animation or human artistic approval is inferred.
+
+This profile emits complete still compositions only. It
+does not emit semantic layers, masks, landmarks, pose data, effect anchors,
+motion, video, UI behavior or artistic approval.
 
 ## Selected video-only media runtime (V12)
 
@@ -1247,13 +1345,13 @@ publication stays under user control.
 
 ## Pilot acceptance
 
-A real user first reviews one generated look and three real clips at V24: a base
-assets/prompt request, a materially different prompt with the same assets and a
-changed-reference request. Review reference fidelity, prompt adherence, requested
+A real user first reviews three real clips from externally finished artwork at
+V24: a base motion request, a materially different motion prompt with the same
+artwork and a replaced finished scene/layer. No generated-look gate is required. Review reference fidelity, prompt adherence, requested
 motion/style, object coherence and temporal stability. The chosen content has no
 mandatory TABI, train, prop, location or camera behavior.
 
-At V33, start only with user-chosen references and a free-form prompt in the app,
+At V33, start with externally finished artwork, optional ready layers and a motion prompt in the app,
 then generate, assemble, export and watch one complete 3–5 minute silent video.
 Review every join, unique/reused footage, prompt adherence and reference fidelity,
 then import/play it in the user's chosen Apple editor. Record actual local

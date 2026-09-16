@@ -20,7 +20,7 @@ procedure below. Preserve the packets; fill copies of their forms.
 | U07 · UI | Six-page comparisons and blank scores (`u07/visual-review/index.html`). Review hierarchy, reference fidelity, keyboard flow and resizing. Run `./gradlew :desktopApp:nativeDesktopCapture` on the visible desktop; the previous wallpaper failure remains unresolved. Frame replay is not compositor proof. |
 | Q01 · Music | Development comparisons (`q01-development/review.md`), final-set requirements (`q01-evaluation/review.md`), song intake (`song-intake-template.json`) and blank score worksheet (`score-template.json`). Five owned/licensed full songs, including three unseen, are still missing. Supply actual current MIDI projects, ownership/exposure and settings before freezing a final set. Use generated per-case forms after export; no scores are invented. |
 | Q02 · Logic | Current matrix and blank results (`q02-logic-matrix/review.md`): 20 packages plus one expected rejection. Verify its 571 hashes, import complete and separate tracks at bar 1, play, save/close/reopen and record exact Logic version, bars and results. |
-| V24 · Early video review | After V11/V22/V23, use the in-app Video flow with user-chosen references and a free-form prompt. Review one look and three real clips: base, contrasting-prompt and changed-reference cases. This remains WAITING_USER until actual visual evidence and feedback exist. |
+| V24 · Early video review | After V18/V22/V23, upload externally finished scene artwork with optional ready layers and enter a motion prompt. Review three real 20–30s clips: base motion, contrasting motion with the same artwork, and a replaced finished scene/layer. No generated-look review is required. This remains WAITING_USER until actual visual evidence and feedback exist. |
 | V33 · Complete video | After V24/V32, generate, watch and import into the user's chosen Apple editor one real 3–5 minute silent video. Review prompt/reference fidelity, temporal quality, every join and disclosed unique/reused footage. This remains WAITING_USER until the real full cut and decision exist. |
 | Q03 · Release | After U07/Q01/Q02, record the actual MIDI release decision and final build. Musical quality remains unmeasured against the original 5/10 feedback. |
 
@@ -85,9 +85,11 @@ audition or export. The app-level Video tab leaves all six MIDI destinations and
 the one persistent MIDI player intact.
 
 V11 separately measures the selected local reference-conditioned generation
-workflow on the real host. V24 requires user review of a base assets/prompt case,
-a contrasting prompt using the same assets and a changed-reference case. V32
-then proves the complete UI path with owned/fake inputs and prepares a review
+workflow on the real host. V24 requires user review of three real clips from
+externally finished scene artwork with optional ready layers: a base motion
+request, a contrasting motion prompt using the same artwork, and a replaced
+finished scene/layer. No generated-look review is required; V24 remains
+WAITING_USER until actual visual evidence and feedback exist. V32 then proves the complete UI path with owned/fake inputs and prepares a review
 packet. V33 requires the user to watch the real 3–5 minute silent cut and every
 join at normal speed, verify prompt/reference fidelity and repetition, then
 import/play it in the chosen Apple editor. Technical checks, file decodability

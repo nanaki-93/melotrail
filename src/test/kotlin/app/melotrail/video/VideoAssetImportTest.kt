@@ -6,6 +6,7 @@ import app.melotrail.video.adapter.VideoImageLimits
 import app.melotrail.video.adapter.VideoProjectStore
 import app.melotrail.video.application.CreateVideoProject
 import app.melotrail.video.application.ImportVideoAsset
+import app.melotrail.video.application.VideoAssetFileException
 import app.melotrail.video.application.VideoAssetImport
 import app.melotrail.video.application.VideoAssetImportResult
 import app.melotrail.video.application.VideoAssetLibraryResult
@@ -18,6 +19,7 @@ import app.melotrail.video.domain.VideoAssetRights
 import app.melotrail.video.domain.VideoAssetUsageIntent
 import app.melotrail.video.domain.VideoBriefReference
 import app.melotrail.video.domain.VideoImageFormat
+import app.melotrail.video.domain.VideoMeasuredAlpha
 import app.melotrail.video.domain.VideoReferenceRole
 import java.awt.Color
 import java.awt.Transparency
@@ -43,6 +45,7 @@ import javax.imageio.ImageIO
 import kotlin.io.path.name
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -182,6 +185,10 @@ class VideoAssetImportTest {
         assertTrue(imported.asset.original.hasAlphaChannel)
         assertTrue(imported.asset.original.hasTransparentPixels)
         assertTrue(imported.asset.thumbnail.hasTransparentPixels)
+        val inspected = harness.imageFiles.inspectOriginal(harness.projectRoot, imported.session.project.referenceVersions.single())
+        assertEquals(imported.asset, inspected.asset)
+        assertEquals(VideoMeasuredAlpha(1, 0, 255), inspected.alpha)
+        assertFalse(inspected.hasVisibleContrast) // The other palette color is entirely invisible.
         assertEquals(listOf(imported.asset), harness.loaded(harness.importer.open(harness.projectRoot)).assets)
     }
 
@@ -207,9 +214,75 @@ class VideoAssetImportTest {
 
             assertTrue(imported.asset.original.hasAlphaChannel)
             assertEquals(alpha < 65_535, imported.asset.original.hasTransparentPixels)
+            val inspected = harness.imageFiles.inspectOriginal(harness.projectRoot, imported.session.project.referenceVersions.last())
+            assertEquals(imported.asset, inspected.asset)
+            assertEquals(if (alpha == 65_535) VideoMeasuredAlpha(4, 0, 0) else VideoMeasuredAlpha(0, 4, 0), inspected.alpha)
+            assertFalse(inspected.hasVisibleContrast)
             session = imported.session
         }
         assertEquals(3, harness.loaded(harness.importer.open(harness.projectRoot)).assets.size)
+    }
+
+    @Test
+    fun `original inspection measures native alpha extremes and visible mask contrast without modifying assets`() {
+        val harness = harness()
+        val model = ComponentColorModel(
+            ColorSpace.getInstance(ColorSpace.CS_sRGB), intArrayOf(16, 16, 16, 16),
+            true, false, Transparency.TRANSLUCENT, DataBuffer.TYPE_USHORT,
+        )
+        val raster = Raster.createInterleavedRaster(DataBuffer.TYPE_USHORT, 4, 1, 4, null)
+        listOf(0, 1, 65_534, 65_535).forEachIndexed { x, alpha ->
+            val color = if (x == 3) 65_535 else 0
+            raster.setPixel(x, 0, intArrayOf(color, color, color, alpha))
+        }
+        val source = root.resolve("mixed-native-alpha.png")
+        assertTrue(ImageIO.write(BufferedImage(model, raster, false, null), "png", source.toFile()))
+        val imported = harness.imported(harness.importer.import(harness.session, ImportVideoAsset(source)))
+        val record = imported.session.project.referenceVersions.single()
+        val protectedFiles = listOf(source, harness.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)) +
+            listOf(record.artifact, imported.asset.original.artifact, imported.asset.thumbnail.artifact)
+                .map { harness.projectRoot.resolve(it.relativePath) }
+        val before = protectedFiles.associateWith(Files::readAllBytes)
+
+        val inspected = harness.imageFiles.inspectOriginal(harness.projectRoot, record)
+
+        assertEquals(imported.asset, inspected.asset)
+        assertEquals(VideoMeasuredAlpha(1, 2, 1), inspected.alpha)
+        assertTrue(inspected.hasVisibleContrast)
+        before.forEach { (path, bytes) -> assertContentEquals(bytes, Files.readAllBytes(path)) }
+    }
+
+    @Test
+    fun `original inspection enforces original decode bounds and exact descriptor and media pins`() {
+        val harness = harness()
+        val source = imageFile("inspection-bounds.png", "png", 20, 20)
+        val imported = harness.imported(harness.importer.import(harness.session, ImportVideoAsset(source)))
+        val record = imported.session.project.referenceVersions.single()
+        val originals = listOf(record.artifact, imported.asset.original.artifact, imported.asset.thumbnail.artifact)
+            .associate { harness.projectRoot.resolve(it.relativePath) to Files.readAllBytes(harness.projectRoot.resolve(it.relativePath)) }
+        val projectBefore = Files.readAllBytes(harness.projectRoot.resolve(VideoProjectStore.PROJECT_FILE))
+        val sourceBefore = Files.readAllBytes(source)
+        listOf(VideoImageLimits(maxPixels = 399), VideoImageLimits(maxDimension = 19), VideoImageLimits(maxEncodedBytes = 1)).forEach { limits ->
+            val failure = assertFailsWith<VideoAssetFileException> {
+                VideoImageFiles(limits).inspectOriginal(harness.projectRoot, record)
+            }
+            assertEquals(VideoAssetProblemCode.ASSET_CHANGED, failure.code)
+        }
+        originals.forEach { (path, bytes) ->
+            val changed = bytes.copyOf().also { it[it.lastIndex] = (it.last() + 1).toByte() }
+            Files.write(path, changed)
+            val failure = assertFailsWith<VideoAssetFileException> {
+                harness.imageFiles.inspectOriginal(harness.projectRoot, record)
+            }
+            assertEquals(VideoAssetProblemCode.ASSET_CHANGED, failure.code)
+            assertTrue(failure.message.orEmpty().contains("SHA-256"))
+            assertContentEquals(changed, Files.readAllBytes(path))
+            Files.write(path, bytes)
+        }
+        assertEquals(imported.asset, harness.imageFiles.inspectOriginal(harness.projectRoot, record).asset)
+        assertContentEquals(projectBefore, Files.readAllBytes(harness.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)))
+        assertContentEquals(sourceBefore, Files.readAllBytes(source))
+        originals.forEach { (path, bytes) -> assertContentEquals(bytes, Files.readAllBytes(path)) }
     }
 
     @Test

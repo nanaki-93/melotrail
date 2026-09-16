@@ -61,8 +61,13 @@ separate; one coordinator owns task status and integration.
 ## TABI video boundary
 
 The planned Video tab is an independent creative workspace inside the Kotlin/
-Compose Melotrail application. Its generic reference assets and free-form prompt
-produce a complete 3–5 minute silent video; Tokyo, trains, coffee and TABI are
+Compose Melotrail application. The user supplies externally finished scene images
+and optional ready character/background layers; a motion prompt produces a
+complete 3–5 minute silent video. In-app picture generation, outfit/style transfer
+and mandatory automatic extraction are deferred; V18b1/V18b are unselected
+optional work, not video-delivery gates. Preserve imported appearance and expose
+missing motion inputs rather than invent artwork.
+Generic scenarios remain supported; Tokyo, trains, coffee and TABI are
 examples, never required presets or acceptance criteria. It needs no MIDI project,
 export, song or soundtrack. Look and shot review are optional refinements.
 

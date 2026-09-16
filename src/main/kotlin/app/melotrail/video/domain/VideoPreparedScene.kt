@@ -51,7 +51,10 @@ data class VideoPreparedScene(
         val coverageIds = sceneryCoverage.map(VideoSceneryCoverage::id).toSet()
         require(coverageIds.size == sceneryCoverage.size) { "Scenery coverage IDs must be unique" }
 
-        layers.forEach { layer -> requireRect(layer.bounds, spaces, "Layer '${layer.id}'") }
+        layers.forEach { layer ->
+            requireRect(layer.bounds, spaces, "Layer '${layer.id}'")
+            requirePlacement(layer.image, layer.bounds, layer.transform, layer.pivot, layer.alpha, spaces, "Layer '${layer.id}'")
+        }
         poses.forEach { pose ->
             val subject = layerById[pose.subjectLayerId]
                 ?: throw IllegalArgumentException("Pose '${pose.id}' identifies a missing layer")
@@ -60,6 +63,7 @@ data class VideoPreparedScene(
             }
             requireRect(pose.bounds, spaces, "Pose '${pose.id}'")
             require(subject.bounds.contains(pose.bounds)) { "Pose '${pose.id}' must lie within its subject layer geometry" }
+            requirePlacement(pose.image, pose.bounds, pose.transform, pose.pivot, pose.alpha, spaces, "Pose '${pose.id}'")
         }
         masks.forEach { mask ->
             requireRect(mask.bounds, spaces, "Mask '${mask.id}'")
@@ -67,6 +71,12 @@ data class VideoPreparedScene(
             require(mask.layerIds.all { layerById.getValue(it).bounds.intersects(mask.bounds) }) {
                 "Mask '${mask.id}' must overlap every target layer in the same coordinate space"
             }
+            if (mask.purpose in SUBJECT_MASK_PURPOSES) {
+                require(mask.layerIds.size == 1 && layerById.getValue(mask.layerIds.single()).kind == VideoLayerKind.SUBJECT) {
+                    "Semantic subject mask '${mask.id}' must identify exactly one subject layer"
+                }
+            }
+            requirePlacement(mask.image, mask.bounds, mask.transform, mask.pivot, mask.alpha, spaces, "Mask '${mask.id}'")
         }
         subjectLandmarks.forEach { landmark ->
             val subject = layerById[landmark.subjectLayerId]
@@ -150,7 +160,7 @@ data class VideoPreparedScene(
         dependencies.mapNotNullTo(this) { it.artifact }
     }.distinct()
 
-    companion object { const val CURRENT_SCHEMA_VERSION = 1 }
+    companion object { const val CURRENT_SCHEMA_VERSION = 2 }
 }
 
 /** Compact project-document entry; the descriptor owns the complete immutable scene metadata. */
@@ -256,11 +266,53 @@ data class VideoPreparedLayer(
     val kind: VideoLayerKind,
     val image: VideoAssetImage,
     val bounds: VideoRect,
+    /** Exact source-pixel to scene-coordinate transform supplied by placement UI or import metadata. */
+    val transform: VideoLayerTransform? = null,
+    val pivot: VideoPlacedPoint? = null,
+    val alpha: VideoMeasuredAlpha? = null,
     val reviewStatus: VideoComponentReviewStatus = VideoComponentReviewStatus.UNREVIEWED,
 ) { init { requireToken(id, "Layer ID") } }
 
 @Serializable
-enum class VideoLayerKind { SUBJECT, ENVIRONMENT, SCENERY, FOREGROUND, EFFECT }
+enum class VideoLayerKind { FINISHED_SCENE, SUBJECT, ENVIRONMENT, SCENERY, FOREGROUND, EFFECT }
+
+@Serializable
+data class VideoLayerTransform(
+    val translateX: Double,
+    val translateY: Double,
+    val scaleX: Double,
+    val scaleY: Double,
+    val rotationDegrees: Double = 0.0,
+) {
+    init {
+        require(
+            translateX.isFinite() && translateY.isFinite() && scaleX.isFinite() && scaleY.isFinite() &&
+                rotationDegrees.isFinite() && scaleX > 0.0 && scaleY > 0.0,
+        ) { "Layer transform values must be finite with positive scales" }
+    }
+}
+
+/** Pixel counts measured from the decoded immutable original, not inferred from its container. */
+@Serializable
+data class VideoMeasuredAlpha(
+    val opaquePixels: Long,
+    val translucentPixels: Long,
+    val transparentPixels: Long,
+) {
+    init {
+        require(opaquePixels >= 0L && translucentPixels >= 0L && transparentPixels >= 0L) {
+            "Measured alpha pixel counts must not be negative"
+        }
+        require(opaquePixels > 0L || translucentPixels > 0L || transparentPixels > 0L) {
+            "Measured alpha needs at least one decoded pixel"
+        }
+    }
+
+    val visiblePixels: Long get() = opaquePixels + translucentPixels
+    val totalPixels: Long get() = visiblePixels + transparentPixels
+    val hasNonOpaquePixels: Boolean get() = translucentPixels > 0L || transparentPixels > 0L
+    val isUsableCutout: Boolean get() = visiblePixels > 0L && transparentPixels > 0L
+}
 
 @Serializable
 data class VideoPreparedPose(
@@ -268,6 +320,9 @@ data class VideoPreparedPose(
     val subjectLayerId: String,
     val image: VideoAssetImage,
     val bounds: VideoRect,
+    val transform: VideoLayerTransform? = null,
+    val pivot: VideoPlacedPoint? = null,
+    val alpha: VideoMeasuredAlpha? = null,
     val reviewStatus: VideoComponentReviewStatus = VideoComponentReviewStatus.UNREVIEWED,
 ) {
     init {
@@ -282,6 +337,11 @@ data class VideoPreparedMask(
     val image: VideoAssetImage,
     val bounds: VideoRect,
     val layerIds: List<String>,
+    /** A generic mask never implies semantic eye, head, or effect support. */
+    val purpose: VideoMaskPurpose = VideoMaskPurpose.GENERIC,
+    val transform: VideoLayerTransform? = null,
+    val pivot: VideoPlacedPoint? = null,
+    val alpha: VideoMeasuredAlpha? = null,
     val reviewStatus: VideoComponentReviewStatus = VideoComponentReviewStatus.UNREVIEWED,
 ) {
     init {
@@ -290,6 +350,9 @@ data class VideoPreparedMask(
         layerIds.forEach { requireToken(it, "Mask layer ID") }
     }
 }
+
+@Serializable
+enum class VideoMaskPurpose { GENERIC, OCCLUSION, SUBJECT_SEGMENTATION, EYE_REGION, HEAD_REGION, EFFECT_REGION }
 
 @Serializable
 data class VideoSubjectLandmark(
@@ -361,6 +424,7 @@ data class VideoSceneryCoverage(
     }
 }
 
+/** Each range applies independently at the supplied placement; combined motion needs timeline validation. */
 @Serializable
 data class VideoMotionCapability(
     val id: String,
@@ -387,7 +451,7 @@ data class VideoMotionCapability(
 enum class VideoMotionTargetType { LAYER, POSE, EFFECT_ANCHOR, SCENERY_COVERAGE }
 
 @Serializable
-enum class VideoMotionControl { TRANSLATE_X, TRANSLATE_Y, ROTATE, SCALE, OPACITY, POSE_BLEND, EFFECT_RATE }
+enum class VideoMotionControl { IMAGE_TO_VIDEO, TRANSLATE_X, TRANSLATE_Y, ROTATE, SCALE, OPACITY, POSE_BLEND, EFFECT_RATE }
 
 @Serializable
 enum class VideoMotionUnit { PIXELS, DEGREES, RATIO, PER_SECOND }
@@ -443,6 +507,11 @@ private fun VideoRect.intersects(other: VideoRect): Boolean =
 
 private fun VideoMotionCapability.requireSupportedShape() {
     when (control) {
+        VideoMotionControl.IMAGE_TO_VIDEO ->
+            require(
+                unit == VideoMotionUnit.RATIO && targetType == VideoMotionTargetType.LAYER &&
+                    minimum == 0.0 && maximum == 1.0 && defaultValue == 1.0,
+            ) { "Image-to-video eligibility requires a layer target and the enabled ratio" }
         VideoMotionControl.TRANSLATE_X, VideoMotionControl.TRANSLATE_Y ->
             require(unit == VideoMotionUnit.PIXELS && targetType in setOf(VideoMotionTargetType.LAYER, VideoMotionTargetType.SCENERY_COVERAGE)) {
                 "Translation controls require a layer or scenery target and pixel units"
@@ -467,6 +536,73 @@ private fun VideoMotionCapability.requireSupportedShape() {
             require(unit == VideoMotionUnit.PER_SECOND && targetType == VideoMotionTargetType.EFFECT_ANCHOR && minimum >= 0.0) {
                 "Effect-rate controls require an effect anchor and non-negative per-second bounds"
             }
+    }
+}
+
+private fun requirePlacement(
+    image: VideoAssetImage,
+    bounds: VideoRect,
+    transform: VideoLayerTransform?,
+    pivot: VideoPlacedPoint?,
+    alpha: VideoMeasuredAlpha?,
+    spaces: Map<String, VideoCoordinateSpace>,
+    label: String,
+) {
+    val tolerance = 0.000_001
+    transform?.let {
+        require(kotlin.math.abs(it.translateX - bounds.x) <= tolerance && kotlin.math.abs(it.translateY - bounds.y) <= tolerance) {
+            "$label transform translation must match its placed bounds"
+        }
+        require(
+            kotlin.math.abs(image.width * it.scaleX - bounds.width) <= tolerance &&
+                kotlin.math.abs(image.height * it.scaleY - bounds.height) <= tolerance,
+        ) { "$label transform scale must map its decoded pixels to its placed bounds" }
+        require(it.rotationDegrees == 0.0 || pivot != null) {
+            "$label needs an explicit pivot for a non-zero rotation"
+        }
+    }
+    pivot?.let {
+        requirePoint(it, spaces, "$label pivot")
+        require(it.coordinateSpaceId == bounds.coordinateSpaceId && bounds.contains(it.point)) {
+            "$label pivot must lie inside its placed bounds"
+        }
+        transform?.takeIf { placed -> placed.rotationDegrees != 0.0 }?.let { placed ->
+            val radians = Math.toRadians(placed.rotationDegrees)
+            val cosine = kotlin.math.cos(radians)
+            val sine = kotlin.math.sin(radians)
+            val rotatedCorners = listOf(
+                VideoPoint(bounds.x, bounds.y),
+                VideoPoint(bounds.x + bounds.width, bounds.y),
+                VideoPoint(bounds.x, bounds.y + bounds.height),
+                VideoPoint(bounds.x + bounds.width, bounds.y + bounds.height),
+            ).map { corner ->
+                val offsetX = corner.x - it.point.x
+                val offsetY = corner.y - it.point.y
+                VideoPoint(
+                    it.point.x + offsetX * cosine - offsetY * sine,
+                    it.point.y + offsetX * sine + offsetY * cosine,
+                )
+            }
+            val space = spaces.getValue(bounds.coordinateSpaceId)
+            require(rotatedCorners.all { corner ->
+                corner.x >= -tolerance && corner.y >= -tolerance &&
+                    corner.x <= space.width + tolerance && corner.y <= space.height + tolerance
+            }) { "$label rotated geometry exceeds coordinate space '${space.id}'" }
+        }
+    }
+    requireAlpha(image, alpha, label)
+}
+
+private fun requireAlpha(image: VideoAssetImage, alpha: VideoMeasuredAlpha?, label: String) {
+    alpha ?: return
+    require(alpha.totalPixels == image.width.toLong() * image.height.toLong()) {
+        "$label measured alpha must cover every decoded pixel"
+    }
+    require(alpha.hasNonOpaquePixels == image.hasTransparentPixels) {
+        "$label measured transparency must match its immutable image facts"
+    }
+    require(!alpha.hasNonOpaquePixels || image.hasAlphaChannel) {
+        "$label transparent pixels require a decoded alpha channel"
     }
 }
 
@@ -500,3 +636,8 @@ private fun requireText(value: String, label: String, maximumLength: Int) {
 
 private val SAFE_TOKEN = Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,159}")
 private val SHA_256 = Regex("[0-9a-f]{64}")
+private val SUBJECT_MASK_PURPOSES = setOf(
+    VideoMaskPurpose.SUBJECT_SEGMENTATION,
+    VideoMaskPurpose.EYE_REGION,
+    VideoMaskPurpose.HEAD_REGION,
+)

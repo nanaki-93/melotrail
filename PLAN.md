@@ -1,6 +1,6 @@
 # Melotrail improvement plan
 
-Updated: 2026-09-14. Status: MIDI engineering complete with manual acceptance
+Updated: 2026-09-16. Status: MIDI engineering complete with manual acceptance
 pending; video foundations V10–V16 implemented, ComfyUI integration and complete
 video delivery planned, not implemented.
 
@@ -8,24 +8,24 @@ This is the only roadmap. [TASKS.md](TASKS.md) owns implementation order and
 status. It replaces the MIDI Core and UI task suites; their history stays in
 Git. Existing working behavior is the starting point, not work to repeat.
 
-**Current video direction (2026-09-14):** use the promising local ComfyUI and
-controlled-animation tests as the basis for the remaining work. Recommend a thin
-Video tab in Melotrail, a pinned local ComfyUI workflow for visual preparation,
-and a small replaceable external compositor for controlled motion. The user
-selected **one continuous 3–5 minute scene**, changing scenery and occasional
-character actions, and authorized reuse of subtle motions without an obvious
-repeated whole clip. Section 9 and TASKS V10–V33, including new suffixed slices,
-supersede the earlier short-shot assembly proposal. Existing V10–V16 results
-remain valid foundations, not proof of the new creative pipeline. The approved
-steam and earlier checkpoint remain preserved; the latest five-second example
-is a starting point, not full-length or in-app acceptance.
+**Current video direction (2026-09-16):** the user creates finished picture
+assets outside Melotrail. The app imports a **finished scene image, with optional
+separate character/background layers**, then generates motion and a complete
+silent video. This explicitly supersedes in-app image generation, outfit/style
+transfer and mandatory automatic multi-reference preparation. V18b1's failed
+fidelity proof is deferred, not passed, and no longer blocks video delivery.
 
-The user authorized restarting the scheduler with this revision on 2026-09-14.
-The execution checkout is reconciled to this ComfyUI plan before resumption.
-Execution remains Sol High implementation, Astra High repairs for concrete
-failures, and one local commit per validated task. TASKS owns that policy. Music
-and synchronization remain in the user's external Apple editor; public upload
-and hosted generation are outside this planning action.
+Keep the selected **one continuous 3–5 minute scene**, evolving scenery and
+occasional character actions. Reuse subtle motions without repeating the whole
+clip. Reuse the existing ComfyUI video API and controlled-motion work; do not
+redraw finished artwork as a prerequisite. The approved steam and five-second
+checkpoint remain preserved, with charcoal/stone v6 the latest selected artistic
+reference for externally authored TABI assets. No new visual approval is inferred.
+
+Execution policy remains Sol High implementation/review, Astra High repairs and
+one commit per validated task under TASKS. This scope/planning update does not
+restart the paused scheduler, download models or launch new inference. Image
+creation, audio synchronization and public publishing stay outside Melotrail.
 
 ## 1. Product decision
 
@@ -54,7 +54,8 @@ still determines musical acceptance; passing tests cannot award that acceptance.
 TABI video is an independent creative workspace inside the same Kotlin/Compose
 application. It needs no MIDI project, export, song or soundtrack. Its assets,
 generation jobs and outputs stay separate from MIDI data. The core function is
-**uploaded assets + a user-written prompt → generated video**. TABI riding a
+**externally finished pictures + a motion prompt → generated video**. The app
+does not generate or restyle picture assets in this delivery. TABI riding a
 train through Tokyo and drinking coffee was an example, not a required scenario,
 preset, action list or acceptance gate. Content comes from each user request.
 
@@ -381,146 +382,108 @@ mixing or public upload. The only delivered creative application is Melotrail.
 
 ### 9.2 Visible workflow
 
-1. Open **Video** from the normal window and create/open a video project.
-2. Add pictures in three separate, optional upload areas: **Character — moves &
-   expressions**, **Outfit**, and **City / scenery**. Each accepts multiple PNG/JPEG
-   references through file selection or drag-and-drop. Character references cover
-   identity and examples of poses/expressions; outfit references guide clothing
-   and accessories; city references guide the environment. Keep supplementary
-   **Style** and **Complete scene** inputs available without adding required steps.
-   Display consumed references and preserve originals. Keep chosen character,
-   outfit and style references when changing the scenery, and vice versa.
-3. Write a free-form prompt describing the desired video. Optional controls for
-   actions, motion, style and guidelines refine it; a named scenario or preset
-   is never required. Set total duration (3–5 min). No JSON, masks, node graph,
-   manual cutouts or pre-cut animation is required for the normal workflow.
-4. Click **Generate video**. The app prepares a scene through ComfyUI, derives
-   usable layers and motion controls, then renders the full continuous scene in
-   bounded chunks. A short preview can be requested first. Optional look/motion
-   review is a refinement, not a mandatory manual rigging or storyboard step.
-   Automatic intermediate choices remain unreviewed until the user reviews them.
-5. Play the draft in the tab. Keep the look while adjusting character motion,
-   environment speed or effects; regenerate only affected preparations/chunks.
-   Review the full silent result. Earlier versions survive edits. Show actual
-   progress, cancellation/recovery, component reuse and any missing scenery.
-6. Export a new silent MP4 and reveal it in Finder. Adding music in the user's
-   chosen Apple editor is the next step outside Melotrail.
+1. Open **Video** and create/open an independent video project.
+2. Upload a finished PNG/JPEG scene. Optionally add externally prepared transparent
+   character layers, clean background/scenery, foreground/occlusion masks and
+   expression/pose images. These are ready artwork, not inspiration to synthesize.
+   Preserve originals and display exactly which images the current video consumes.
+3. Write a motion prompt and choose 3–5 minutes. Optional controls refine camera,
+   character motion, scenery direction/speed and source-attached effects. A visual
+   setup panel can place supplied layers and anchors; no hand-authored JSON,
+   source-code coordinates or node graph is required.
+4. Click **Generate video**, or request a short preview first. Preserve the uploaded
+   look. Use the measured ComfyUI image-to-video path for supported action takes
+   and the controlled compositor for supported continuous motion. Do not create
+   a new image/wardrobe/background first. Explain missing motion inputs before
+   launch; a flat picture does not automatically provide independent layers.
+5. Play the moving draft, adjust motion and regenerate only affected takes/chunks.
+   Keep previous versions, actual progress/cancellation/recovery and full-duration
+   scenery coverage visible. Changing artwork means importing another finished
+   picture or layer; the app does not redesign it from a prompt.
+6. Export a new silent MP4. Music and synchronization happen in the external editor.
 
-Reuse the current theme and reference 08's broad preview composition. At
-1280×900 the next action and preview are visible; at 720×900 uploads, prompt,
-generation and review remain keyboard-reachable. Put technical IDs/hashes/model
-internals in details. Setup explains missing tools/models; after setup, normal
-creation does not require a terminal or operating another creative app.
+A single finished scene is a valid input for the measured image-to-video path;
+it does not guarantee independently controllable blinking, scenery or a coherent
+five-minute result. Additional prepared layers/poses may be needed for the
+controlled-motion target. A camera pan over a still cannot be presented as
+successful character animation. Report capability gaps with the missing input or
+supported alternative, never silently downgrade the requested motion.
+
+Reuse the existing theme, broad preview and keyboard-accessible controls at
+1536×1024, 1280×900 and 720×900. Technical workflow/model details stay in setup.
+Normal video creation requires no terminal or operation of ComfyUI's node editor.
 
 ### 9.3 General reference and prompt contract
 
-The supplied assets and prompt are the content authority. Preserve recognizable
-subjects and the requested reference characteristics while allowing the scene,
-actions, camera, environment and style changes the prompt asks for. Character,
-background and style references are optional roles, not a mandatory TABI kit.
-Conflicting instructions or references require a visible choice rather than a
-silent override. Do not force headphones, a cup, a seated pose or pastel style.
+Finished artwork defines appearance, clothing, composition and visual style.
+The prompt describes movement, camera behavior, pace and effects. Preserve it
+exactly and distinguish executable controls from advisory free-form text. If it
+asks for new clothing, a new city or a visual redesign, explain that the user
+must provide replacement artwork. Do not silently blend inspiration references.
 
-The 2026-09-15 upload specification separates three kinds of inspiration:
-
-| Upload area | Intended influence | Preserve independently |
+| Input | Current purpose | Motion implications |
 | --- | --- | --- |
-| Character — moves & expressions | Recognizable subject, silhouette, pose and facial-expression examples | Identity is retained when outfit or scenery changes; pose pictures do not guarantee supported animation |
-| Outfit | Selected clothing, colors, accessories and outfit details | Do not copy a reference model's face/body or incidental background; outfit selection supersedes incidental clothing in other references |
-| City / scenery | Buildings, landmarks, streets, landscape and environmental mood | Do not replace the selected character, outfit or visual style with people/clothing/style from scenery pictures |
+| Finished scene | Primary composed artwork; one selected base image | Available to the measured image-to-video workflow; independent regions are not assumed |
+| Character / expression / pose layers | Ready character images with the intended outfit already drawn | Validate alpha, alignment and usable poses before enabling controlled subject motion |
+| Background / scenery | Ready clean environment or extended panorama | Validate coverage for the full camera path; ask for more external artwork when insufficient |
+| Foreground, masks and effect support | Optional externally prepared occlusion or effect artwork | Validate coordinate space and attach effects through visible anchors |
 
-All three groups are optional and support multiple images within the measured
-workflow capacity. A single reference plus a prompt still works where supported.
-Use generic roles rather than requiring TABI or a city. Retain the selected style
-reference (including the approved banner style when chosen) across outfit/scenery
-changes. Explicit prompt/reference disagreements and incompatible outfits require
-a visible resolution; no silent averaging or arbitrary last-upload-wins behavior.
-Moving/removing a reference changes the current request binding, not original
-bytes or accepted versions. Show duplicate-role/capacity/unsupported-role issues
-before generation; do not silently drop images or treat filenames as conditioning.
+The earlier Character/Outfit/City inspiration synthesis is deferred. Existing
+V14/V15/V18a/V18a2 storage, import, role and fingerprint contracts remain useful;
+completed rows do not need replay. Do not advertise an Outfit transfer or Generate
+look action in the current UI. Style inspiration may be retained as project
+context but cannot be counted as a consumed generative input when unused.
 
-Reusable guidelines address reference fidelity, object coherence, continuity
-where requested, temporal stability and avoiding unintended visual artifacts.
-Camera movement, background movement, pace and action come from the prompt or
-explicit optional settings. A static background can be correct for one request
-and incorrect for another; evaluate generated motion against the actual request.
+Keep immutable originals and accepted versions. Replacement images invalidate
+only dependent motion/prepared-scene/chunk work. Bound inputs by measured capacity;
+never discard extra images silently or pass filenames as conditioning. Separate
+ready-layer composition from AI synthesis: placing supplied artwork is allowed,
+while inventing backgrounds, inpainting holes, restyling and asset generation are
+outside this delivery. Missing clean plates, poses or scenery remain visible gaps.
 
-Expose a small set of executable constraints: preserve subject appearance,
-allowed character motions and their intensity, camera movement, environment pace
-and direction, and effects anchored to visible objects. Keep free-form guidance
-separate from controls the selected workflow actually enforces. Do not promise
-that a negative prompt guarantees correct anatomy, prevents all drift or locates
-a cup. Unsupported actions must be reported with an actionable alternative;
-silently replacing a requested action with breathing does not satisfy it.
-
-The Tokyo train/coffee idea may appear as optional example text or a test input.
-It must not become a required preset, hardcoded scene model, default prompt
-injection or release criterion. For that example, passing scenery and coffee
-actions matter only because the example prompt requests them. Any other supported
-assets and prompt must use the same main workflow, without a separate custom mode.
+No fixed character, location, outfit, prop or action is required. For the TABI
+example, preserve externally authored v6 colors/style and only animate coffee or
+train motion when requested. Complex actions still need measured support; a
+coffee picture alone does not prove a natural sipping action.
 
 ### 9.4 ComfyUI preparation and controlled motion
 
-The **M5 Pro / 48 GB** host has now run local trials. Draw Things tuning produced
-short LTX video; subsequent ComfyUI trials improved the images, but generated
-character motion and scenery coherence remained unsatisfactory. The promising
-five-second checkpoint combines ComfyUI-derived artwork with a separate Node
-Canvas compositor for blinking, breathing, head movement, steam and window
-scenery. Its masks, eye replacements and coordinates were prepared manually.
-It does not prove automatic rigging, multi-reference scene preparation or a
-five-minute ComfyUI inference.
+The existing five-second checkpoint uses ComfyUI-derived artwork with a separate
+Node Canvas compositor for blinking, breathing, head motion, steam and moving
+scenery. It has manually prepared masks/poses/anchors. Preserve that evidence;
+this revision permits externally prepared picture assets and visible setup of
+animation geometry, rather than making automatic artwork generation/extraction
+an entry requirement. Generic input handling and actual motion quality still
+require proof across different finished scenes.
 
-| Option | What it provides | Tradeoff / decision |
-| --- | --- | --- |
-| Use ComfyUI directly | Immediate access to workflows and manual experimentation | More node-graph/file work; long video still needs preparation and composition |
-| Thin Melotrail tab + ComfyUI + controlled compositor | Separate asset uploads, prompt constraints and recoverable local production | Recommended; requires a small reusable motion tool and automatic preparation proof |
-| Generative video only | Ask one model to animate the whole image | Current local tests drift or freeze; not the selected quality strategy |
+Kotlin owns the Video tab, immutable assets, jobs, validation and orchestration.
+Reuse the existing owned ComfyUI/LTX video API for supported image-to-video takes;
+use the versioned external controlled compositor for continuous motion and
+assembly. These stages share one project/job contract. Do not build another
+Swift app, general timeline editor, image generator or model marketplace.
+Image-to-video naturally produces new video frames; it does not publish a new
+picture-asset library or silently replace the supplied base artwork.
 
-Use **one ComfyUI local generation adapter**, replacing the planned Draw Things
-production adapter. Retain completed probe evidence without shipping two active
-generators. Kotlin owns projects, validation, orchestration and UI; ComfyUI owns
-the pinned visual workflows; an external, versioned motion tool owns controlled
-frame composition. Adapt the useful tested compositor after making its inputs
-generic. Do not port it into Kotlin, restore the old Python worker, build a
-general timeline editor, or describe this as eliminating all custom code.
+V18b1 and automatic generative preparation V18b are **OPTIONAL and unselected**.
+Their failed proof stays recorded, with no further inference/download implied.
+V18b2 instead validates externally supplied animation assets against the existing
+V18a descriptor; V18 imports/selects their look and compiles usable motion
+capabilities. No new extractor/model is required to admit these tasks. Do not
+claim semantic eye/head data exist for a flattened image: use supplied layers or
+visible anchors where adequate, otherwise report the unsupported operation.
 
-ComfyUI already documents image uploads, workflow submission, history and
-WebSocket progress. Use a dedicated app-owned loopback server: its interrupt
-endpoint stops the current execution, so it is unsafe as a per-job cancellation
-operation on an unowned shared server. Persist attempt identity before submission,
-reconcile uncertain submissions and verify actual outputs. A disconnected socket
-is not completion or cancellation. Check workflow/node/model versions before use.
-[ComfyUI API](https://docs.comfy.org/development/comfyui-server/comms_routes),
-[execution messages](https://docs.comfy.org/development/comfyui-server/comms_messages).
+Keep the proven dedicated app-owned loopback runtime, pinned workflows and
+models, one inference at a time, durable attempt identity, uncertain-submission
+reconciliation and owned cancellation. Missing optional video setup cannot block
+MIDI. No changes to the approved LTX profile or new model downloads are selected
+by this scope change. Installed image-model files and earlier trials stay intact;
+exclude image-generation probes from the active product path.
 
-The first creative prerequisite is an automated, reference-conditioned prepared
-scene: subject layers, usable eye/head poses or landmarks, clean background fill,
-effect source anchors, occlusion masks and sufficient scenery for the requested
-travel. Prove both a changed scenario and a changed subject using the same input
-contract. Also compare outfit-only and pose/expression-reference-only changes,
-holding other selections fixed. Verify the outfit changes without changing subject
-identity or scenery, and that supplied pose/expression examples influence supported
-prepared outputs. Record each selected role's actual workflow image binding and
-capacity; a role unsupported by the chosen profile must be reported before a job.
-A reference collage or passing asset filenames as text is not proof
-that all selected references condition generation. Prefer maintained ComfyUI nodes
-where they work; pin and validate their actual outputs. At most two bounded
-preparation profiles are tried before reporting a concrete capability gap.
-
-The installed LTX-2.3 Q4 profile, Gemma encoder, tiled decode and spatial upscaler
-are evidence for short generative shots, not a complete image/layer-preparation
-stack. Select that stack in V18b with current commercial-use terms and host
-measurements. New downloads still use an explicit setup choice. Keep models,
-Python/Node runtimes and outputs outside Git/MIDI, one inference at a time, and
-normal creation offline after setup. Pin tested memory controls rather than
-assuming FP8, tiling or quantization removes all memory/quality risks.
-
-Measure preparation cost once per scene, optional action generation, composition
-seconds per frame, encoding time and peak memory/swap separately. Estimate a
-3–5 minute output from these actual stages; the old estimate of 30–60 independent
-diffusion takes no longer describes the chosen approach. Optional hosted V25
-remains unselected and requires an explicit service choice, reviewed upload and
-capped budget; this revision authorizes no cloud jobs.
+Measure action-generation, input/setup, composition and encoding cost separately.
+Use real host measurements for full-video estimates; a short I2V clip is not
+proof of 3–5 minute temporal coherence. Local-first remains selected. A hosted
+fallback still needs explicit provider choice, disclosed uploads and a bounded
+budget. This plan authorizes none.
 
 ### 9.5 Producing 3–5 minutes
 
@@ -530,7 +493,7 @@ the whole five-second video to fill the duration is not. Separate motion-pattern
 reuse from whole-footage reuse in storage and UI. Do not label composed frames as
 fresh diffusion footage or add overlapping layer durations into a false total.
 
-Prepare the look and reusable elements once, then render a continuous world and
+Import the finished look and ready reusable elements once, then render a continuous world and
 character timeline. Use seeded, varied intervals for supported blinks and subtle
 gestures; retain breathing and the approved steam behavior where requested.
 More complex actions such as drinking or page-turning require suitable guided
@@ -540,8 +503,8 @@ story/action parser or silently ignoring actions the workflow cannot perform.
 
 For moving scenery, derive rigid near/middle/far layer movement from one camera
 trajectory and depth relationships, respecting perspective, occlusion and shutter
-blur. Prepare enough coherent scenery for the whole travel distance, in bounded
-sections; join sections outside the visible region. No house morphing, visible
+blur. Import enough externally prepared coherent scenery for the whole travel distance,
+in bounded sections; join sections outside the visible region. No house morphing, visible
 texture wrapping, repeated short-city reset or unrequested direction reversal.
 Numerical speed alone is not proof of realistic train motion. The Tokyo example
 tests this requirement; other environments use their requested motion instead.
@@ -550,8 +513,8 @@ Render in bounded chunks using absolute frame numbers, shared motion state and
 seeds. Resuming a chunk cannot reset a blink, particle age, scenery position or
 random sequence. Include any required boundary frames for blur/temporal effects,
 then trim to exact output frame ranges. Do not retain all 5,400–9,000 1080p frames
-in RAM. Detect inadequate scenery coverage before rendering; generate more or
-report the gap rather than stretch, freeze, reverse or silently loop material.
+in RAM. Detect inadequate scenery coverage before rendering; request more external artwork
+and report the gap rather than stretch, freeze, reverse or silently loop material.
 
 Use a measured ladder: preserve the approved **5-second baseline**, produce a
 **20–30 second** reusable-scene test, then a **60-second** sustained-motion and
@@ -571,7 +534,7 @@ losing its position; silent video preview creates no MIDI player.
 New domain/application/adapters live under `app.melotrail.video`, and presentation
 under `app.melotrail.desktop.video`. MIDI project/application code must not import
 video; only the app composition root coordinates both workspaces. A new video
-project schema owns references, scene looks, immutable takes, selection/assembly,
+project schema owns finished assets, imported scene looks, immutable takes, selection/assembly,
 job attempts and export snapshots. Store it in a chosen video directory outside
 MIDI project/export paths. No Swift session/ledger or old-project migration.
 
@@ -619,13 +582,13 @@ keep failed partials out of the results gallery. Export provenance contains no
 credentials. Test actual import/playback in the user's chosen Apple editor;
 music placement, synchronization and public upload remain outside scope.
 
-**V24 early visual checkpoint:** one prepared scene and three real 20–30 second clips: a
-base assets/prompt case, a materially different prompt with the same assets, and
-a changed-reference case that changes only the outfit while retaining character,
-city/scenery and style selections. Check all supplied groups' fidelity, visible
-compliance with the requested scene/action/motion/style, coherent objects and
-temporal stability; changed-scenery and pose/expression evidence remains required
-in the preparation proof.
+**V24 early visual checkpoint:** import one finished scene and its optional ready
+layers, then generate three real 20–30 second clips: the base motion request, a
+contrasting motion prompt using the same artwork, and a replaced finished scene
+or layer with other selections/settings held fixed where compatible. Check source
+appearance, visible requested motion, coherent objects and temporal stability.
+Outfit transfer and image generation are not acceptance criteria. Externally
+prepared source assets are explicitly allowed; app use needs no hand-edited JSON.
 Check derived masks/poses, effect anchoring, depth and absence of obvious repeat
 resets at normal speed, not only selected still frames. TABI identity is checked
 when TABI references are supplied. No location, prop,
@@ -634,8 +597,8 @@ this approach works. Unpaid storage/UI/assembly
 work can proceed while a human decision is pending; synthetic media never counts
 as that decision. Local failure triggers a reviewable hosted comparison proposal.
 
-**V33 final checkpoint:** start with only user-chosen reference assets and a
-free-form prompt in Melotrail, then generate, review, compose and export one
+**V33 final checkpoint:** start with user-created finished artwork, optional ready
+layers and a motion prompt in Melotrail, then generate, review, compose and export one
 real 3–5 minute video matching that request. The user reviews the full cut,
 reference fidelity, prompt adherence, repetition and joins at normal speed.
 Technical tests prove integrity; visual quality and channel suitability require
@@ -684,7 +647,7 @@ outside this first delivery.
 | Musical preparation | M02–M03, U04 | Explainable melody/harmony context, explicit chord durations and safe song extent |
 | Song arrangement | M04–M09, U05–U06 | Melody-compatible piano, deliberate section plan, coordinated roles and targeted repairs |
 | Validation | U07, Q01–Q03 | Visual approval, improvement on frozen music cases, fresh Logic checks and clean build/install |
-| Video replacement | V10–V33 | Reference assets + free-form prompt → complete silent video; measured local trial; Swift removal |
+| Video replacement | V10–V33, excluding unselected optional rows | Finished artwork + motion prompt → complete silent video; measured motion and full export; Swift removal |
 
 The user chose on 2026-09-11 to perform manual listening, scores, Logic tests
 and visual/video review only after all unpaid engineering. TASKS parks these

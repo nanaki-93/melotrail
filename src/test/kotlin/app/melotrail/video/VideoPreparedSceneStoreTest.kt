@@ -17,6 +17,8 @@ import app.melotrail.video.domain.VideoCoordinateSpace
 import app.melotrail.video.domain.VideoDepthRelation
 import app.melotrail.video.domain.VideoEffectAnchor
 import app.melotrail.video.domain.VideoLayerKind
+import app.melotrail.video.domain.VideoLayerTransform
+import app.melotrail.video.domain.VideoMeasuredAlpha
 import app.melotrail.video.domain.VideoLookRecord
 import app.melotrail.video.domain.VideoMotionCapability
 import app.melotrail.video.domain.VideoMotionControl
@@ -124,7 +126,7 @@ class VideoPreparedSceneStoreTest {
 
         val descriptor = fixture.projectRoot.resolve("prepared-scenes/${scene.id.id}/v${scene.id.version}/scene.json")
         val oldDigest = sha256(descriptor)
-        val unsupported = Files.readString(descriptor).replaceFirst("\"schemaVersion\": 1", "\"schemaVersion\": 99")
+        val unsupported = Files.readString(descriptor).replaceFirst("\"schemaVersion\": 2", "\"schemaVersion\": 99")
         assertTrue(unsupported.contains("\"schemaVersion\": 99"))
         Files.writeString(descriptor, unsupported)
         val newDigest = sha256(descriptor)
@@ -161,6 +163,55 @@ class VideoPreparedSceneStoreTest {
                     1.0,
                 ),
             ))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            valid.copy(
+                layers = listOf(
+                    valid.layers.single().copy(
+                        transform = VideoLayerTransform(3.0, 0.0, 1.0, 1.0),
+                    ),
+                ),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            valid.copy(
+                layers = listOf(
+                    valid.layers.single().copy(
+                        alpha = VideoMeasuredAlpha(9_999L, 0L, 0L),
+                    ),
+                ),
+            )
+        }
+        assertContentEquals(before, Files.readAllBytes(document))
+    }
+
+    @Test
+    fun `rotated placement accepts boundary rounding and rejects corners outside its coordinate space`() {
+        val fixture = fixture()
+        val subject = fixture.imagePin("prepared-assets/subject.png", 100, 100, 8)
+        val pose = fixture.imagePin("prepared-assets/pose.png", 100, 100, 9)
+        val base = subjectScene(fixture, subject, pose)
+        val pivot = VideoPlacedPoint("canvas", VideoPoint(50.0, 50.0))
+        val rotated = base.layers.single().copy(
+            transform = VideoLayerTransform(0.0, 0.0, 1.0, 1.0, 90.0),
+            pivot = pivot,
+        )
+        val valid = base.copy(
+            layers = listOf(rotated),
+            poses = emptyList(),
+            motionCapabilities = base.motionCapabilities.filter { it.targetType != VideoMotionTargetType.POSE },
+        )
+        fixture.scenes.save(fixture.projectRoot, fixture.revision, valid)
+        assertEquals(valid, fixture.scenes.load(fixture.projectRoot, valid.id))
+        val document = fixture.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val before = Files.readAllBytes(document)
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            valid.copy(layers = listOf(rotated.copy(transform = rotated.transform!!.copy(rotationDegrees = 45.0))))
+        }
+        assertTrue(error.message!!.contains("rotated geometry exceeds coordinate space"))
+        assertFailsWith<IllegalArgumentException> {
+            valid.copy(layers = listOf(rotated.copy(pivot = null)))
         }
         assertContentEquals(before, Files.readAllBytes(document))
     }
