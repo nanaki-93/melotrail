@@ -1,13 +1,13 @@
 {
   "schema": "melotrail-controlled-motion-runtime",
-  "version": 1,
+  "version": 3,
   "tool": {
     "id": "melotrail-controlled-motion",
     "version": "1.0.0",
     "entryPoint": "tools/video-motion/render.cjs",
     "installCommand": "npm ci --prefix tools/video-motion",
     "fixtureCommand": "./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'",
-    "testCommand": "MELOTRAIL_MOTION_FIXTURE_ROOT=\"$PWD/build/video-motion-fixtures\" node --test tools/video-motion/render.test.cjs",
+    "testCommand": "MELOTRAIL_MOTION_FIXTURE_ROOT=\"$PWD/build/video-motion-fixtures\" node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs",
     "comparisonCommand": "node tools/video-motion/render.test.cjs --list-production-comparisons \"$PWD/build/video-motion-fixtures\""
   },
   "runtime": {
@@ -28,19 +28,29 @@
     "maximumBreathPixels": 4,
     "maximumHeadDegrees": 3,
     "maximumSteamRatePerSecond": 8,
-    "maximumSteamRisePixelsPerSecond": 28
+    "maximumSteamRisePixelsPerSecond": 28,
+    "maximumCameraDurationFrames": 3600,
+    "maximumMotionBlurSamples": 8,
+    "maximumTravelPixels": 16384,
+    "maximumSceneryPlanes": 16,
+    "maximumScenerySections": 32
   },
   "supportedControls": [
     "POSE_BLEND:blink",
     "TRANSLATE_Y:breathing",
     "ROTATE:headGesture",
-    "EFFECT_RATE:steam"
+    "EFFECT_RATE:steam",
+    "SCENERY_COVERAGE:rigid-camera"
   ],
   "limitations": [
     "Blinking requires a supplied aligned pose and is clipped to the supplied subject silhouette.",
     "Breathing requires a separated subject over a supplied clean environment layer.",
     "Head gestures require a supplied HEAD_REGION mask and separated subject; drinking and page-turning are unsupported.",
     "Steam is available only for a requested EFFECT_RATE capability with a supplied V18a effect anchor, follows supported source-subject motion, and remains behind recorded foreground occlusion for moving or static sources.",
-    "This compositor writes a bounded frame range and receipt; V19b owns scenery travel and long chunk assembly."
+    "Scenery accepts only non-rejected V18a coverage layers through one explicit static or linear camera trajectory. The output canvas is the finished-scene viewport aperture; supplied same-depth sections use explicit absolute world placement and activation rather than stretching or wrapping.",
+    "Moving scenery validates all camera and shutter samples before output, derives canonical far-to-near order and relative speed from non-rejected V18a depth relations, and composites compatible supplied static foreground masks over scenery.",
+    "Every source-section handoff keeps both supplied edges outside the aperture and requires exact decoded overlap pixels at the activation boundary and every shutter sample before output ownership. Supplied overlaps that do not match are rejected.",
+    "Scenery-only requests may omit character/effect controls. Bounded absolute frame ranges resume only from the prior receipt finalState with the same seed, camera, canonical plane order, and active section state.",
+    "This compositor has no generated filler, wrapping, reverse camera segment, or last-frame freeze; unsupported scenery geometry remains an admission error."
   ]
 }

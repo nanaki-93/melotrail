@@ -1,7 +1,8 @@
 /*
  * V19a controlled motion is deliberately a small compositor, not an image generator.
  * It consumes the V18a prepared-scene descriptor, verifies its immutable image pins,
- * and moves only supplied layer pixels. V19b owns scenery travel and long assembly.
+ * and moves only supplied layer pixels. V19b adds bounded rigid scenery travel,
+ * explicit source-section joins, and absolute chunk continuity to that contract.
  */
 'use strict';
 
@@ -9,6 +10,9 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const {
+  SceneryInputError, activeSection, sampleOffsets, sectionOffset, stateForFrame, validateScenery,
+} = require('./scenery.cjs');
 
 const TOOL_ID = 'melotrail-controlled-motion';
 const TOOL_VERSION = '1.0.0';
@@ -280,16 +284,22 @@ function validateRequest(request) {
   }
   if (!safeId.test(canvas.coordinateSpaceId || '')) throw new MotionInputError('Canvas coordinateSpaceId must be a safe V18a coordinate-space ID.');
   const space = (scene.coordinateSpaces || []).filter((candidate) => candidate.id === canvas.coordinateSpaceId);
-  if (space.length !== 1 || space[0].width !== width || space[0].height !== height) {
-    throw new MotionInputError('Canvas dimensions must exactly match one V18a coordinate space.');
+  if (space.length !== 1 || space[0].width < width || space[0].height < height) {
+    throw new MotionInputError('Canvas dimensions must fit inside one V18a coordinate space.');
+  }
+  const finishedViewport = (scene.layers || []).filter((layer) => layer.kind === 'FINISHED_SCENE' &&
+    layer.bounds?.coordinateSpaceId === canvas.coordinateSpaceId && layer.bounds.x === 0 && layer.bounds.y === 0 &&
+    layer.bounds.width === width && layer.bounds.height === height);
+  if (finishedViewport.length !== 1) {
+    throw new MotionInputError('Canvas must exactly match the prepared FINISHED_SCENE viewport; wider scenery is not stretched into the output.');
   }
   const fps = number(request.fps, 'Frames per second', 1, 120);
   const frameRange = request.frameRange || {};
   const startFrame = number(frameRange.startFrame, 'frameRange.startFrame', 0, Number.MAX_SAFE_INTEGER);
   const frameCount = number(frameRange.frameCount, 'frameRange.frameCount', 1, LIMITS.maximumFramesPerInvocation);
   if (!Number.isInteger(startFrame) || !Number.isInteger(frameCount)) throw new MotionInputError('Frame range must contain whole frame numbers.');
-  if (!Array.isArray(request.controls) || request.controls.length === 0 || request.controls.length > 16) {
-    throw new MotionInputError('Request needs between one and sixteen explicit supported controls.');
+  if (!Array.isArray(request.controls) || request.controls.length > 16) {
+    throw new MotionInputError('Request controls must be an array with at most sixteen entries.');
   }
   const ids = new Set();
   const subjectControlKinds = new Set();
@@ -356,7 +366,18 @@ function validateRequest(request) {
     }
   }
   if (subjectLayerId) cleanBase(scene, width, height);
-  return Object.freeze({ request, scene, width, height, fps, startFrame, frameCount, controls, subjectLayerId, spaceId: canvas.coordinateSpaceId });
+  let scenery;
+  try {
+    scenery = validateScenery(scene, { coordinateSpaceId: canvas.coordinateSpaceId, width, height }, fps,
+      { startFrame, frameCount }, request.scenery, request.seed, request.initialState);
+  } catch (error) {
+    if (error instanceof SceneryInputError) throw new MotionInputError(error.message);
+    throw error;
+  }
+  if (controls.length === 0 && !scenery) {
+    throw new MotionInputError('Request needs controlled subject/effect motion, validated scenery, or both.');
+  }
+  return Object.freeze({ request, scene, width, height, fps, startFrame, frameCount, controls, subjectLayerId, scenery, spaceId: canvas.coordinateSpaceId });
 }
 
 function requireSameSubject(existing, candidate, controlKind) {
@@ -616,7 +637,7 @@ function finishedSceneBase(scene, width, height) {
   const candidates = (scene.layers || []).filter((layer) => layer.kind === 'FINISHED_SCENE' &&
     layer.bounds?.x === 0 && layer.bounds?.y === 0 && layer.bounds?.width === width && layer.bounds?.height === height);
   if (candidates.length !== 1) {
-    throw new MotionInputError('Effect-only controlled motion requires exactly one supplied full-canvas FINISHED_SCENE layer.');
+    throw new MotionInputError('Rendering without a separated subject requires exactly one supplied full-canvas FINISHED_SCENE layer.');
   }
   return candidates[0];
 }
@@ -625,9 +646,10 @@ function activeOcclusionRelations(validated) {
   const sourceIds = new Set(validated.controls.filter((control) => control.kind === 'steam').map((control) => control.source.id));
   if (validated.subjectLayerId) sourceIds.add(validated.subjectLayerId);
   const seen = new Set();
-  return (validated.scene.occlusionRelations || []).filter((relation) => {
-    if (!sourceIds.has(relation.occludedLayerId)) return false;
-    const key = `${relation.occluderLayerId}:${relation.occludedLayerId}:${relation.maskId}`;
+  return [...(validated.scene.occlusionRelations || []), ...(validated.scenery?.occlusions || [])].filter((relation) => {
+    const sceneryOcclusion = validated.scenery?.occlusions.includes(relation);
+    if (!sourceIds.has(relation.occludedLayerId) && !sceneryOcclusion) return false;
+    const key = `${relation.occluderLayerId}:${relation.maskId}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -647,6 +669,64 @@ function drawRecordedOccluder(ctx, validated, images, relation) {
   ctx.drawImage(occluder, 0, 0);
 }
 
+function sectionViewport(validated, images, plane, section, frame) {
+  const canvas = createCanvas(validated.width, validated.height);
+  const context = canvas.getContext('2d');
+  const layer = layerById(validated.scene, section.layerId, 'scenery layer');
+  const offset = sectionOffset(validated.scenery, plane, section, frame);
+  context.save();
+  context.translate(offset.x, offset.y);
+  drawAsset(context, images.get(`layer:${layer.id}`), layer);
+  context.restore();
+  return canvas;
+}
+
+/** Decoded source-section pixels must agree throughout every admitted offscreen handoff. */
+function validateSceneryJoins(validated, images) {
+  if (!validated.scenery) return;
+  for (const join of validated.scenery.joins) {
+    const plane = validated.scenery.planes.find((candidate) => candidate.id === join.planeId);
+    const outgoing = plane.sections.find((section) => section.coverageId === join.outgoingCoverageId);
+    const incoming = plane.sections.find((section) => section.coverageId === join.incomingCoverageId);
+    for (const sampleFrame of join.sampleFrames) {
+      const outgoingPixels = sectionViewport(validated, images, plane, outgoing, sampleFrame)
+        .getContext('2d').getImageData(0, 0, validated.width, validated.height).data;
+      const incomingPixels = sectionViewport(validated, images, plane, incoming, sampleFrame)
+        .getContext('2d').getImageData(0, 0, validated.width, validated.height).data;
+      if (!Buffer.from(outgoingPixels).equals(Buffer.from(incomingPixels))) {
+        throw new MotionInputError(`Supplied scenery sections '${outgoing.coverageId}' and '${incoming.coverageId}' do not match exactly across the offscreen join at absolute frame ${join.boundaryFrame}.`);
+      }
+    }
+  }
+}
+
+function drawScenery(ctx, validated, images, frame) {
+  const scenery = validated.scenery;
+  if (!scenery) return;
+  const shutters = sampleOffsets(scenery);
+  const total = new Uint32Array(validated.width * validated.height * 4);
+  for (const shutter of shutters) {
+    const layerFrame = frame + shutter;
+    const sampleCanvas = createCanvas(validated.width, validated.height);
+    const sampleContext = sampleCanvas.getContext('2d');
+    for (const plane of scenery.planes) {
+      const section = activeSection(plane, layerFrame);
+      if (!section) throw new MotionInputError(`Scenery plane '${plane.id}' has no active source section at frame ${layerFrame}.`);
+      const layer = layerById(validated.scene, section.layerId, 'scenery layer');
+      const offset = sectionOffset(scenery, plane, section, layerFrame);
+      sampleContext.save();
+      sampleContext.translate(offset.x, offset.y);
+      drawAsset(sampleContext, images.get(`layer:${layer.id}`), layer);
+      sampleContext.restore();
+    }
+    const pixels = sampleContext.getImageData(0, 0, validated.width, validated.height).data;
+    for (let index = 0; index < pixels.length; index += 1) total[index] += pixels[index];
+  }
+  const result = ctx.createImageData(validated.width, validated.height);
+  for (let index = 0; index < result.data.length; index += 1) result.data[index] = Math.round(total[index] / shutters.length);
+  ctx.putImageData(result, 0, 0);
+}
+
 /** Renders one frame from absolute time. The caller owns persistence of its bytes. */
 function renderFrame(validated, images, frame) {
   if (!Number.isSafeInteger(frame) || frame < validated.startFrame || frame >= validated.startFrame + validated.frameCount) {
@@ -657,17 +737,19 @@ function renderFrame(validated, images, frame) {
   const dynamic = validated.subjectLayerId;
   const occlusions = activeOcclusionRelations(validated);
   const foreground = new Set(occlusions.map((relation) => relation.occluderLayerId));
+  const sceneryLayerIds = new Set(validated.scenery?.planes.flatMap((plane) => plane.sections.map((section) => section.layerId)));
   const base = dynamic ? cleanBase(validated.scene, validated.width, validated.height) : null;
   if (base) {
     drawAsset(ctx, images.get(`layer:${base.id}`), base);
     for (const layer of validated.scene.layers || []) {
-      if (layer.id === base.id || layer.id === dynamic || foreground.has(layer.id) || layer.kind === 'FINISHED_SCENE') continue;
+      if (layer.id === base.id || layer.id === dynamic || foreground.has(layer.id) || sceneryLayerIds.has(layer.id) || layer.kind === 'FINISHED_SCENE') continue;
       drawAsset(ctx, images.get(`layer:${layer.id}`), layer);
     }
   } else {
     const finished = finishedSceneBase(validated.scene, validated.width, validated.height);
     drawAsset(ctx, images.get(`layer:${finished.id}`), finished);
   }
+  drawScenery(ctx, validated, images, frame);
   const state = motionAt(validated, frame);
   if (dynamic) {
     const subject = subjectCanvas(validated, images, state);
@@ -681,7 +763,12 @@ function renderFrame(validated, images, frame) {
 
 function canonicalRequest(validated) {
   const request = validated.request;
-  return JSON.stringify({ schema: request.schema, preparedScene: request.preparedScene, seed: request.seed, fps: request.fps, canvas: request.canvas, frameRange: request.frameRange, controls: request.controls });
+  return JSON.stringify({ schema: request.schema, preparedScene: request.preparedScene, seed: request.seed, fps: request.fps, canvas: request.canvas, frameRange: request.frameRange, controls: request.controls, scenery: request.scenery, initialState: request.initialState });
+}
+
+function canonicalSeriesRequest(validated) {
+  const request = validated.request;
+  return JSON.stringify({ schema: request.schema, preparedScene: request.preparedScene, seed: request.seed, fps: request.fps, canvas: request.canvas, controls: request.controls, scenery: request.scenery });
 }
 
 function claimOutputDirectory(outputDirectory, requestHash) {
@@ -706,22 +793,42 @@ function claimOutputDirectory(outputDirectory, requestHash) {
 async function renderBounded(request, projectRoot, outputDirectory, options = {}) {
   const validated = validateRequest(request);
   const requestSha256 = sha256(Buffer.from(canonicalRequest(validated)));
+  const seriesSha256 = validated.scenery ? sha256(Buffer.from(canonicalSeriesRequest(validated))) : requestSha256;
   const images = await loadPreparedImages(validated, projectRoot);
+  validateSceneryJoins(validated, images);
   // Source confinement and every immutable pin are verified before any output
   // directory, owner marker, frame, or receipt is written.
-  const output = claimOutputDirectory(outputDirectory, requestSha256);
+  const outputAlreadyExisted = fs.existsSync(path.resolve(outputDirectory));
+  const output = claimOutputDirectory(outputDirectory, seriesSha256);
   const frames = [];
-  for (let offset = 0; offset < validated.frameCount; offset += 1) {
-    if (options.isCancelled?.()) throw new MotionInputError('Controlled-motion render was cancelled before the next frame.');
-    const frame = validated.startFrame + offset;
-    const fileName = `frame-${String(frame).padStart(8, '0')}.png`;
-    const target = path.join(output, fileName);
-    if (fs.existsSync(target)) throw new MotionInputError(`Refusing to overwrite existing output frame '${fileName}'.`);
-    const rendered = renderFrame(validated, images, frame);
-    const bytes = rendered.canvas.toBuffer('image/png');
-    fs.writeFileSync(target, bytes, { flag: 'wx', mode: 0o600 });
-    frames.push({ frame, timeSeconds: rendered.state.time, file: fileName, sha256: sha256(bytes) });
+  const written = [];
+  try {
+    for (let offset = 0; offset < validated.frameCount; offset += 1) {
+      if (options.isCancelled?.()) throw new MotionInputError('Controlled-motion render was cancelled before the next frame.');
+      const frame = validated.startFrame + offset;
+      const fileName = `frame-${String(frame).padStart(8, '0')}.png`;
+      const target = path.join(output, fileName);
+      if (fs.existsSync(target)) throw new MotionInputError(`Refusing to overwrite existing output frame '${fileName}'.`);
+      const rendered = renderFrame(validated, images, frame);
+      const bytes = rendered.canvas.toBuffer('image/png');
+      fs.writeFileSync(target, bytes, { flag: 'wx', mode: 0o600 });
+      written.push(target);
+      frames.push({ frame, timeSeconds: rendered.state.time, file: fileName, sha256: sha256(bytes) });
+    }
+  } catch (error) {
+    if (options.isCancelled?.()) {
+      // Only files this invocation created are reaped. Existing chunks, inputs,
+      // and unrelated output-directory entries are never touched.
+      for (const target of written) fs.rmSync(target, { force: true });
+      if (!outputAlreadyExisted) {
+        fs.rmSync(path.join(output, '.melotrail-controlled-motion-owner.json'), { force: true });
+        try { fs.rmdirSync(output); } catch { /* an unrelated concurrent entry remains */ }
+      }
+    }
+    throw error;
   }
+  const finalState = validated.scenery ? stateForFrame(validated.scenery, validated.request.seed,
+    validated.startFrame + validated.frameCount - 1) : null;
   const receipt = {
     schema: 'melotrail-controlled-motion-receipt-v1', tool: { id: TOOL_ID, version: TOOL_VERSION },
     requestSha256,
@@ -731,14 +838,35 @@ async function renderBounded(request, projectRoot, outputDirectory, options = {}
       ...(validated.scene.masks || []),
     ].map((component) => component.image.artifact.sha256))].sort(),
     frameRange: { startFrame: validated.startFrame, frameCount: validated.frameCount, fps: validated.fps },
+    ...(validated.scenery ? { scenery: {
+      mode: validated.scenery.mode,
+      viewport: validated.scenery.viewport,
+      planes: validated.scenery.planes.map((plane) => ({
+        id: plane.id,
+        depthFactor: plane.depthFactor,
+        sections: plane.sections.map((section) => ({
+          coverageId: section.coverageId,
+          worldX: section.worldX,
+          worldY: section.worldY,
+          startFrame: section.startFrame,
+          endFrameExclusive: section.endFrameExclusive,
+        })),
+      })),
+      joins: validated.scenery.joins,
+      initialState: validated.scenery.initialState,
+      finalState,
+    } } : {}),
     frames, limitations: [
       'This bounded compositor moves only supplied prepared-layer pixels; it does not regenerate surrounding scene pixels.',
       'Blinking uses supplied aligned pose pixels; head gesture uses only a supplied HEAD_REGION mask.',
-      'Steam is a source-anchored soft rise/fade effect. V19b owns scenery travel and long-duration chunk assembly.',
+      'Steam is a source-anchored soft rise/fade effect. Scenery uses only supplied declared-coverage pixels, exact supplied section overlaps, and a bounded camera track.',
       'Drinking and page-turning are not supported by this motion set.',
     ],
   };
-  fs.writeFileSync(path.join(output, 'render-receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  const receiptName = validated.scenery
+    ? `render-receipt-${String(validated.startFrame).padStart(8, '0')}-${String(validated.frameCount).padStart(8, '0')}.json`
+    : 'render-receipt.json';
+  fs.writeFileSync(path.join(output, receiptName), `${JSON.stringify(receipt, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
   return receipt;
 }
 
@@ -762,10 +890,13 @@ async function main(argv) {
   const receipt = await renderBounded(request, values.get('--project-root'), values.get('--output'), {
     isCancelled: () => Boolean(cancelFile && fs.existsSync(cancelFile)),
   });
-  process.stdout.write(`${JSON.stringify({ receipt: 'render-receipt.json', frames: receipt.frames.length })}\n`);
+  const receiptName = receipt.scenery
+    ? `render-receipt-${String(receipt.frameRange.startFrame).padStart(8, '0')}-${String(receipt.frameRange.frameCount).padStart(8, '0')}.json`
+    : 'render-receipt.json';
+  process.stdout.write(`${JSON.stringify({ receipt: receiptName, frames: receipt.frames.length })}\n`);
 }
 
-module.exports = { LIMITS, MotionInputError, blinkClosedAmount, drawAsset, effectAnchorPoint, frameTime, maskCoverageCanvas, motionAt, renderBounded, renderFrame, validateRequest };
+module.exports = { LIMITS, MotionInputError, blinkClosedAmount, drawAsset, drawScenery, effectAnchorPoint, frameTime, maskCoverageCanvas, motionAt, renderBounded, renderFrame, validateRequest, validateSceneryJoins };
 
 if (require.main === module) main(process.argv.slice(2)).catch((error) => {
   process.stderr.write(`${error.name || 'Error'}: ${error.message}\n`);

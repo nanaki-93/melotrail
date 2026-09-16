@@ -168,7 +168,7 @@ selecting a dependency-ready mandatory row. No docs/tasks.md or second queue.
 | V18b | Prove automated reference-conditioned preparation | V17, V18a, V18a2, V18b1 | OPTIONAL | Deferred generative preparation; outside current delivery and excluded unless explicitly reselected. |
 | V18 | Import finished looks and prepare motion inputs | V14, V15, V16, V18a, V18b2 | DONE | Finished-look selection and supported motion admission preserve imported appearance, share complete consumed-component fingerprints/reviews and block unsupported preservation guidance. Three Astra High repairs (third user-authorized); 36 focused and 822 full tests, make test/build, diff check and fresh Sol High review PASS. Evidence: `~/.codex/melotrail-video-sequential/evidence/V18/finished-artwork-20260916`. Rendering and UI remain later tasks. |
 | V19a | Generalize controlled subject motion and effects | V12, V18a | DONE | Versioned Node compositor uses actual prepared-scene placement, supplied poses and both mask representations for bounded subject motion and source-anchored steam. Real-importer fixtures, 7 Node tests, 823 project tests, build/diff and fresh Sol review PASS; 4 comparison renders/1,200 frame hashes verified. Eight writer attempts, last two user-authorized. Evidence `~/.codex/melotrail-video-sequential/evidence/V19a/controlled-motion-20260916`; scenery, app integration and artistic approval remain later work. |
-| V19b | Render coherent scenery with continuous time | V19a | TODO | New 2026-09-14; depth, coverage, occlusion and resumable frame ranges. |
+| V19b | Render coherent scenery with continuous time | V19a | DONE | Supplied same-depth sections join offscreen with exact overlap validation; canonical depth, static foreground masks, scenery-only motion and rejected-component admission. 18 Node/823 project tests, build/diff, fresh Sol review PASS after Terra initial+2 retries and Sol escalation. Actual two-section 30s/900-frame render matches split/resume byte-for-byte; CLI cancellation preserves prior work. Evidence `~/.codex/melotrail-video-sequential/evidence/V19b/coherent-scenery-20260916`; V24 artistic review remains pending. |
 | V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary. |
 | V20 | Add Video tab and independent create/open | V13, V16 | TODO | Planned 2026-09-13; not implemented. |
 | V21 | Wire finished-scene upload and motion setup | V14, V15, V17a, V18a, V18, V20 | TODO | Finished scene primary; optional ready layers/poses/masks, visual anchors and motion prompt; no outfit/style synthesis UI. |
@@ -1432,7 +1432,9 @@ renders retained for later user review rather than self-awarded artistic approva
 
 **Target files:** `tools/video-motion/scenery.cjs` (new),
 `tools/video-motion/scenery.test.cjs` (new), `tools/video-motion/render.cjs`,
-`tools/video-motion/render.test.cjs`, `src/main/resources/video/motion-runtime.json`.
+`tools/video-motion/render.test.cjs`, `src/main/resources/video/motion-runtime.json`,
+`src/test/kotlin/app/melotrail/video/VideoMotionDescriptorFixtureTest.kt`
+(extend the existing real-importer fixture bridge for scenery/viewport proof).
 **Inputs / dependencies:** V19a and V18a's depth/occlusion/coverage contract.
 **Implementation rules:** Derive rigid layer movement from one camera trajectory
 and depth model, with compatible projection, occlusion and motion blur. Near
@@ -1444,7 +1446,7 @@ freeze. Join new scenery sections while offscreen. Pass absolute frame indices,
 seed and initial state across chunks so blinks, steam and scenery cannot restart.
 Write bounded frame ranges and reap owned outputs on cancellation. Preserve
 approved character/steam behavior when only scenery changes.
-**Verification command:** `node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`.
+**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'`; `npm ci --prefix tools/video-motion`; `MELOTRAIL_MOTION_FIXTURE_ROOT="$PWD/build/video-motion-fixtures" node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`.
 **Done:** a 20–30 second owned render and a split/resumed equivalent have matching
 boundary states, no geometry drift or coverage holes; real scenery realism still
 requires V24 user feedback.

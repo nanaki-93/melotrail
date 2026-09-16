@@ -15,6 +15,7 @@ import app.melotrail.video.application.VideoPlacedAnimationAsset
 import app.melotrail.video.application.VideoPoseAnimationAsset
 import app.melotrail.video.application.VideoProjectLifecycle
 import app.melotrail.video.application.VideoProjectLifecycleResult
+import app.melotrail.video.application.VideoSceneryAnimationAsset
 import app.melotrail.video.domain.VideoDepthRelation
 import app.melotrail.video.domain.VideoEffectAnchor
 import app.melotrail.video.domain.VideoMaskPurpose
@@ -127,6 +128,23 @@ class VideoMotionDescriptorFixtureTest {
                 opaqueGrayscaleHeadMask = true,
                 blackAlphaOcclusionMask = true,
             ),
+            FixtureSpec(
+                name = "wide-scenery",
+                width = 120,
+                height = 80,
+                subjectBounds = PixelRect(34, 20, 30, 40),
+                subjectSourceWidth = 30,
+                subjectSourceHeight = 40,
+                foregroundBounds = PixelRect(56, 20, 8, 40),
+                foregroundSourceWidth = 8,
+                foregroundSourceHeight = 40,
+                headBounds = PixelRect(34, 20, 30, 16),
+                headSourceWidth = 30,
+                headSourceHeight = 16,
+                anchor = PixelPoint(48, 30),
+                sceneryWidth = 300,
+                sceneryWorldOffsets = listOf(0, 80),
+            ),
         )
         specs.forEach { emitFixture(output.resolve(it.name), it) }
         Files.writeString(
@@ -177,6 +195,11 @@ class VideoMotionDescriptorFixtureTest {
             spec.foregroundSourceHeight,
             occlusionMaskColor,
         )
+        val sceneryPaths = spec.sceneryWidth?.let { width ->
+            spec.sceneryWorldOffsets.mapIndexed { index, worldX ->
+                sceneryImage(inputs.resolve("scenery-${'a' + index}.png"), width, spec.height, worldX)
+            }
+        }.orEmpty()
 
         val store = VideoProjectStore(listOf(fixtureRoot.resolve("protected-midi"), fixtureRoot.resolve("protected-exports")))
         val lifecycle = VideoProjectLifecycle(store, CLOCK, idFactory = { "motion-fixture-${spec.name}" })
@@ -197,6 +220,9 @@ class VideoMotionDescriptorFixtureTest {
         val pose = imported("pose", posePath, VideoReferenceRole.SUBJECT)
         val headMask = imported("head-mask", headMaskPath, VideoReferenceRole.ENVIRONMENT)
         val occlusionMask = imported("occlusion-mask", occlusionMaskPath, VideoReferenceRole.ENVIRONMENT)
+        val scenery = sceneryPaths.mapIndexed { index, source ->
+            imported("scenery-${'a' + index}", source, VideoReferenceRole.ENVIRONMENT)
+        }
         val headInspection = imageFiles.inspectOriginal(
             projectRoot,
             session.project.referenceVersions.single { it.id == headMask.asset.id },
@@ -226,6 +252,17 @@ class VideoMotionDescriptorFixtureTest {
             finishedSceneReferenceId = finished.asset.id,
             subjectLayers = listOf(VideoPlacedAnimationAsset("subject", subject.asset.id, subjectBounds, subjectPivot)),
             cleanBackground = VideoPlacedAnimationAsset("clean-background", clean.asset.id, PixelRect(0, 0, spec.width, spec.height).videoRect()),
+            scenery = scenery.mapIndexed { index, importedScenery ->
+                VideoSceneryAnimationAsset(
+                    asset = VideoPlacedAnimationAsset(
+                        "scenery-${'a' + index}",
+                        importedScenery.asset.id,
+                        PixelRect(0, 0, requireNotNull(spec.sceneryWidth), spec.height).videoRect(),
+                    ),
+                    coverageBounds = PixelRect(0, 0, requireNotNull(spec.sceneryWidth), spec.height).videoRect(),
+                    coverageId = "scenery-${'a' + index}-coverage",
+                )
+            },
             foregroundLayers = listOf(VideoPlacedAnimationAsset("foreground", foreground.asset.id, spec.foregroundBounds.videoRect())),
             poses = listOf(VideoPoseAnimationAsset(
                 VideoPlacedAnimationAsset("blink-pose", pose.asset.id, subjectBounds, subjectPivot),
@@ -239,7 +276,7 @@ class VideoMotionDescriptorFixtureTest {
                 ),
                 VideoMaskAnimationAsset(
                     VideoPlacedAnimationAsset("foreground-occlusion", occlusionMask.asset.id, spec.foregroundBounds.videoRect()),
-                    listOf("foreground", occludedId),
+                    listOf("foreground", occludedId) + scenery.indices.map { "scenery-${'a' + it}" },
                     VideoMaskPurpose.OCCLUSION,
                 ),
             ),
@@ -253,13 +290,20 @@ class VideoMotionDescriptorFixtureTest {
                     VideoEffectAnchor("steam-source", "subject", landmarkId = "effect-point")
                 },
             ),
-            depthRelations = listOf(VideoDepthRelation("foreground", occludedId)),
-            occlusionRelations = listOf(VideoOcclusionRelation("foreground", occludedId, "foreground-occlusion")),
+            depthRelations = listOf(VideoDepthRelation("foreground", occludedId)) +
+                scenery.indices.map { VideoDepthRelation("foreground", "scenery-${'a' + it}") },
+            occlusionRelations = listOf(VideoOcclusionRelation("foreground", occludedId, "foreground-occlusion")) +
+                scenery.indices.map { VideoOcclusionRelation("foreground", "scenery-${'a' + it}", "foreground-occlusion") },
         )
         val scenes = VideoPreparedSceneStore(store, imageFiles)
+        val importResult = VideoPreparedSceneImport(store, scenes, imageFiles, clock = CLOCK)
+            .import(projectRoot, session.project.revision, request)
         val importedScene = assertIs<VideoPreparedSceneImportResult.Saved>(
-            VideoPreparedSceneImport(store, scenes, imageFiles, clock = CLOCK)
-                .import(projectRoot, session.project.revision, request),
+            importResult,
+            "Fixture '${spec.name}' was rejected: " + (importResult as? VideoPreparedSceneImportResult.Rejected)
+                ?.deficiencies?.joinToString("; ") { deficiency ->
+                    "${deficiency.code}: ${deficiency.message}"
+                }.orEmpty(),
         )
         val scene = importedScene.scene
         assertEquals(scene, scenes.load(projectRoot, sceneId))
@@ -268,10 +312,28 @@ class VideoMotionDescriptorFixtureTest {
             expectNonUnitScale = spec.subjectBounds.width != spec.subjectSourceWidth ||
                 spec.subjectBounds.height != spec.subjectSourceHeight,
         )
+        spec.sceneryWidth?.let { sceneryWidth ->
+            assertEquals(sceneryWidth, scene.coordinateSpaces.single().width)
+            assertEquals(spec.width.toDouble(), scene.layers.single { it.kind.name == "FINISHED_SCENE" }.bounds.width)
+            assertEquals(spec.sceneryWorldOffsets.size, scene.sceneryCoverage.size)
+            assertTrue(scene.sceneryCoverage.all { it.bounds.width == sceneryWidth.toDouble() })
+            assertEquals(
+                spec.sceneryWorldOffsets.size,
+                scene.layers.filter { it.kind.name == "SCENERY" }.map { it.image.artifact.sha256 }.distinct().size,
+                "Each runtime source section must retain a distinct imported artifact pin",
+            )
+            assertEquals(
+                spec.sceneryWorldOffsets.size,
+                scene.occlusionRelations.count { it.occludedLayerId.startsWith("scenery-") },
+                "The actual imported foreground mask must cover every supplied scenery section",
+            )
+        }
 
         val sceneDocument = Files.readString(projectRoot.resolve("prepared-scenes/${sceneId.id}/v${sceneId.version}/scene.json"))
         val sceneJson = JSON.parseToJsonElement(sceneDocument)
-        val controls = if (spec.effectOnly) {
+        val controls = if (spec.sceneryWidth != null) {
+            buildJsonArray { }
+        } else if (spec.effectOnly) {
             buildJsonArray { add(steamControl(scene)) }
         } else {
             buildJsonArray {
@@ -293,8 +355,12 @@ class VideoMotionDescriptorFixtureTest {
                     put("width", spec.width)
                     put("height", spec.height)
                 })
-                put("frameRange", buildJsonObject { put("startFrame", 90); put("frameCount", 300) })
+                put("frameRange", buildJsonObject {
+                    put("startFrame", if (spec.sceneryWidth == null) 90 else 0)
+                    put("frameCount", 300)
+                })
                 put("controls", controls)
+                if (spec.sceneryWidth != null) put("scenery", sceneryRequest(spec))
             }) + "\n",
         )
         val componentBounds = linkedMapOf(
@@ -306,6 +372,11 @@ class VideoMotionDescriptorFixtureTest {
             "mask:head-mask" to if (spec.opaqueGrayscaleHeadMask) spec.headBounds else headPixels,
             "mask:foreground-occlusion" to occlusionPixels,
         )
+        spec.sceneryWidth?.let { width ->
+            spec.sceneryWorldOffsets.indices.forEach { index ->
+                componentBounds["layer:scenery-${'a' + index}"] = PixelRect(0, 0, width, spec.height)
+            }
+        }
         Files.writeString(
             fixtureRoot.resolve("fixture-metadata.json"),
             JSON.encodeToString(JsonObject.serializer(), buildJsonObject {
@@ -352,6 +423,35 @@ class VideoMotionDescriptorFixtureTest {
         put("ratePerSecond", 3.0); put("risePixelsPerSecond", 18.0)
     }
 
+    private fun sceneryRequest(spec: FixtureSpec): JsonObject = buildJsonObject {
+        put("schema", "melotrail-rigid-scenery-v1")
+        put("mode", "moving")
+        put("viewport", buildJsonObject {
+            put("coordinateSpaceId", SPACE); put("x", 0); put("y", 0)
+            put("width", spec.width); put("height", spec.height)
+        })
+        put("camera", buildJsonObject {
+            put("startFrame", 0); put("durationFrames", 900)
+            put("travelXPixels", 240); put("travelYPixels", 0)
+            put("motionBlurSamples", 3); put("shutterFraction", 0.5)
+        })
+        put("planes", buildJsonArray {
+            add(buildJsonObject {
+                put("id", "world")
+                put("sections", buildJsonArray {
+                    spec.sceneryWorldOffsets.forEachIndexed { index, worldX ->
+                        add(buildJsonObject {
+                            put("coverageId", "scenery-${'a' + index}-coverage")
+                            put("worldX", worldX); put("worldY", 0)
+                            put("startFrame", if (index == 0) 0 else 450)
+                            put("endFrameExclusive", if (index == 0) 450 else 900)
+                        })
+                    }
+                })
+            })
+        })
+    }
+
     private fun assertCanonicalTransforms(scene: VideoPreparedScene, expectNonUnitScale: Boolean) {
         val components = scene.layers.map { Triple(it.image, it.bounds, it.transform) } +
             scene.poses.map { Triple(it.image, it.bounds, it.transform) } +
@@ -391,6 +491,22 @@ class VideoMotionDescriptorFixtureTest {
         val image = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
         val graphics = image.createGraphics()
         try { graphics.color = color; graphics.fillRect(0, 0, width, height) } finally { graphics.dispose() }
+        assertTrue(ImageIO.write(image, "png", path.toFile()))
+        return path
+    }
+
+    /** Sections encode the same absolute world colors in their overlap and distinct pixels beyond it. */
+    private fun sceneryImage(path: Path, width: Int, height: Int, worldX: Int): Path {
+        Files.createDirectories(requireNotNull(path.parent))
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+        val colors = listOf(Color(72, 106, 132), Color(113, 151, 166), Color(159, 119, 96), Color(79, 122, 102))
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val absoluteX = worldX + x
+                val color = colors[(absoluteX / 60) % colors.size]
+                image.setRGB(x, y, color.rgb)
+            }
+        }
         assertTrue(ImageIO.write(image, "png", path.toFile()))
         return path
     }
@@ -470,6 +586,8 @@ class VideoMotionDescriptorFixtureTest {
         val effectOnly: Boolean = false,
         val opaqueGrayscaleHeadMask: Boolean = false,
         val blackAlphaOcclusionMask: Boolean = false,
+        val sceneryWidth: Int? = null,
+        val sceneryWorldOffsets: List<Int> = emptyList(),
     )
 
     private companion object {

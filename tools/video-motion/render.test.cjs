@@ -9,6 +9,7 @@ const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const {
   MotionInputError, drawAsset, effectAnchorPoint, maskCoverageCanvas, motionAt, renderBounded, renderFrame, validateRequest,
 } = require('./render.cjs');
+const { stateForFrame } = require('./scenery.cjs');
 
 const copy = (value) => JSON.parse(JSON.stringify(value));
 const comparisonMode = require.main === module && process.argv[2] === '--list-production-comparisons';
@@ -283,6 +284,159 @@ test('renders actual importer descriptors at exact unit and nonunit placements f
     assert.equal(receipt.frames.length, 3);
     assert.equal(receipt.frames[0].frame, 90);
     assert.equal(fs.existsSync(path.join(temporary, 'render', 'render-receipt.json')), true);
+  }
+});
+
+test('renders real importer scenery-only static and moving environments without stretching or dummy controls', async (t) => {
+  const sample = fixture('wide-scenery');
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-scenery-static-'));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const images = await imagesFor(sample);
+  const request = copy(sample.request);
+  request.frameRange = { startFrame: 0, frameCount: 3 };
+  request.controls = [];
+  request.scenery.mode = 'static';
+  request.scenery.camera = { startFrame: 0, durationFrames: 1, travelXPixels: 0, travelYPixels: 0, motionBlurSamples: 1 };
+  request.scenery.planes[0].sections = [{ coverageId: 'scenery-a-coverage', worldX: 0, worldY: 0, startFrame: 0, endFrameExclusive: 3 }];
+  const validated = validateRequest(request);
+  assert.equal(validated.width, 120);
+  assert.equal(validated.controls.length, 0, 'validated scenery is sufficient admission without character/effect scaffolding');
+  assert.equal(validated.scene.coordinateSpaces[0].width, 300, 'scenery extends the actual importer coordinate space');
+  const rendered = renderFrame(validated, images, 0).canvas;
+  const source = createCanvas(300, 80);
+  source.getContext('2d').drawImage(images.get('layer:scenery-a'), 0, 0);
+  assert.deepEqual(pixel(rendered, 100, 5), pixel(source, 100, 5),
+    'output pixel reads the matching source pixel, rather than a full-wide image scaled into the viewport');
+  assert.equal(renderFrame(validated, images, 0).canvas.toBuffer('image/png').equals(
+    renderFrame(validated, images, 2).canvas.toBuffer('image/png')), true, 'multi-frame static scenery remains exact');
+  const receipt = await renderBounded(request, sample.projectRoot, path.join(temporary, 'static-output'));
+  assert.equal(receipt.frames.length, 3, 'bounded static scenery writes only the requested multi-frame range');
+  const neither = copy(request); neither.controls = []; delete neither.scenery;
+  assert.throws(() => validateRequest(neither), /controlled subject\/effect motion, validated scenery/);
+});
+
+test('uses absolute section state across a split join and reaps only cancelled chunk outputs', async (t) => {
+  const sample = fixture('wide-scenery');
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-scenery-chunks-'));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const request = copy(sample.request);
+  request.controls = [];
+  const output = path.join(temporary, 'owned-output');
+  request.frameRange = { startFrame: 0, frameCount: 300 };
+  const first = await renderBounded(request, sample.projectRoot, output);
+  assert.ok(first.scenery.finalState, 'the first bounded chunk retains its absolute final state');
+  const resumed = copy(request);
+  resumed.frameRange = { startFrame: 300, frameCount: 150 };
+  resumed.initialState = first.scenery.finalState;
+  const second = await renderBounded(resumed, sample.projectRoot, output);
+  assert.equal(second.scenery.initialState.stateSha256, first.scenery.finalState.stateSha256);
+  assert.equal(second.scenery.finalState.planes[0].coverageId, 'scenery-a-coverage');
+  const acrossJoin = copy(request);
+  acrossJoin.frameRange = { startFrame: 450, frameCount: 1 };
+  acrossJoin.initialState = second.scenery.finalState;
+  const third = await renderBounded(acrossJoin, sample.projectRoot, output);
+  assert.equal(third.scenery.initialState.planes[0].coverageId, 'scenery-a-coverage');
+  assert.equal(third.scenery.finalState.planes[0].coverageId, 'scenery-b-coverage');
+  const images = await imagesFor(sample);
+  const expected = renderFrame(validateRequest(acrossJoin), images, 450).canvas.toBuffer('image/png');
+  assert.equal(fs.readFileSync(path.join(output, 'frame-00000450.png')).equals(expected), true,
+    'resumed section boundary is byte-equivalent to the same absolute state');
+  const foreground = recordedOccluderCanvas(sample, images,
+    sample.request.preparedScene.occlusionRelations.find((relation) => relation.occludedLayerId === 'scenery-b'));
+  const foregroundPoint = sample.metadata.componentPixelBounds['layer:foreground'];
+  assert.deepEqual(pixel(renderFrame(validateRequest(acrossJoin), images, 450).canvas, foregroundPoint.x + 2, foregroundPoint.y + 2),
+    pixel(foreground, foregroundPoint.x + 2, foregroundPoint.y + 2),
+    'static imported foreground mask exactly occludes blurred scenery across the resumed boundary');
+
+  const cancelled = copy(request);
+  cancelled.frameRange = { startFrame: 451, frameCount: 2 };
+  cancelled.initialState = third.scenery.finalState;
+  let probes = 0;
+  await assert.rejects(renderBounded(cancelled, sample.projectRoot, output, { isCancelled: () => probes++ >= 1 }), /cancelled/);
+  assert.equal(fs.existsSync(path.join(output, 'frame-00000000.png')), true, 'completed prior chunk remains');
+  assert.equal(fs.existsSync(path.join(output, 'frame-00000450.png')), true, 'completed resumed join remains');
+  assert.equal(fs.existsSync(path.join(output, 'frame-00000451.png')), false, 'cancelled invocation reaps only its owned frame');
+});
+
+test('derives exact far-to-near pixels independent of plane order and keeps the near feature faster', async () => {
+  const sample = fixture('wide-scenery');
+  const images = await imagesFor(sample);
+  const near = createCanvas(300, 80);
+  near.getContext('2d').fillStyle = 'rgba(20,240,90,1)';
+  near.getContext('2d').fillRect(100, 0, 20, 80);
+  images.set('layer:scenery-b', near);
+  const request = copy(sample.request);
+  request.frameRange = { startFrame: 0, frameCount: 11 };
+  request.scenery.camera = { startFrame: 0, durationFrames: 11, travelXPixels: 20, travelYPixels: 0, motionBlurSamples: 3, shutterFraction: 0.5 };
+  request.scenery.planes = [
+    { id: 'near', sections: [{ coverageId: 'scenery-b-coverage', worldX: 0, worldY: 0, startFrame: 0, endFrameExclusive: 11 }] },
+    { id: 'far', sections: [{ coverageId: 'scenery-a-coverage', worldX: 0, worldY: 0, startFrame: 0, endFrameExclusive: 11 }] },
+  ];
+  request.preparedScene.depthRelations.push({ nearerLayerId: 'scenery-b', fartherLayerId: 'scenery-a', reviewStatus: 'UNREVIEWED' });
+  const first = renderFrame(validateRequest(request), images, 5).canvas;
+  const reversed = copy(request); reversed.scenery.planes.reverse();
+  const second = renderFrame(validateRequest(reversed), images, 5).canvas;
+  assert.equal(first.toBuffer('image/png').equals(second.toBuffer('image/png')), true,
+    'caller plane order cannot change canonical far-to-near pixels');
+  assert.deepEqual(pixel(first, 90, 10), [20, 240, 90, 255], 'near feature is visible at its depth-scaled faster position');
+});
+
+test('preserves absolute blink, breathing, head, steam, and foreground pixels across a scenery-section activation', async () => {
+  const sample = fixture('wide-scenery');
+  const images = await imagesFor(sample);
+  const scene = sample.request.preparedScene;
+  const capability = (control, targetId) => scene.motionCapabilities.find((item) => item.control === control && item.targetId === targetId).id;
+  const controls = [
+    { id: 'blink', kind: 'blink', capabilityId: capability('POSE_BLEND', 'blink-pose'), amount: 1 },
+    { id: 'breathing', kind: 'breathing', capabilityId: capability('TRANSLATE_Y', 'subject'), amplitudePixels: 2 },
+    { id: 'head', kind: 'headGesture', capabilityId: capability('ROTATE', 'subject'), amplitudeDegrees: 2 },
+    { id: 'steam', kind: 'steam', capabilityId: capability('EFFECT_RATE', 'steam-source'), ratePerSecond: 3, risePixelsPerSecond: 18 },
+  ];
+  function atBoundary(boundaryFrame) {
+    const request = copy(sample.request);
+    request.controls = controls;
+    request.scenery.planes[0].sections[0].endFrameExclusive = boundaryFrame;
+    request.scenery.planes[0].sections[1].startFrame = boundaryFrame;
+    request.frameRange = { startFrame: 0, frameCount: 1 };
+    const trajectory = validateRequest(request).scenery;
+    request.frameRange = { startFrame: 450, frameCount: 1 };
+    request.initialState = stateForFrame(trajectory, request.seed, 449);
+    return request;
+  }
+  const beforeActivation = renderFrame(validateRequest(atBoundary(451)), images, 450).canvas;
+  const afterActivation = renderFrame(validateRequest(atBoundary(450)), images, 450).canvas;
+  assert.equal(beforeActivation.toBuffer('image/png').equals(afterActivation.toBuffer('image/png')), true,
+    'exact scenery overlap changes no absolute-time character, steam, or foreground pixel at activation');
+});
+
+test('rejects mismatched supplied section overlap before claiming output', async (t) => {
+  const sample = fixture('wide-scenery');
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-scenery-mismatch-'));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const request = copy(sample.request);
+  request.frameRange = { startFrame: 0, frameCount: 1 };
+  request.scenery.planes[0].sections[1].worldX += 1;
+  const output = path.join(temporary, 'must-not-exist');
+  await assert.rejects(renderBounded(request, sample.projectRoot, output), /do not match exactly across the offscreen join/);
+  assert.equal(fs.existsSync(output), false, 'mismatched source overlap is rejected before output ownership');
+});
+
+test('rejects every selected rejected scenery dependency before creating output', async (t) => {
+  const sample = fixture('wide-scenery');
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-scenery-rejected-'));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const cases = [
+    ['layer', (request) => { request.preparedScene.layers.find((layer) => layer.id === 'scenery-a').reviewStatus = 'REJECTED'; }],
+    ['coverage', (request) => { request.preparedScene.sceneryCoverage.find((coverage) => coverage.id === 'scenery-a-coverage').reviewStatus = 'REJECTED'; }],
+    ['depth', (request) => { request.preparedScene.depthRelations.find((relation) => relation.fartherLayerId === 'scenery-a').reviewStatus = 'REJECTED'; }],
+    ['occlusion', (request) => { request.preparedScene.occlusionRelations.find((relation) => relation.occludedLayerId === 'scenery-a').reviewStatus = 'REJECTED'; }],
+    ['capability', (request) => { request.preparedScene.motionCapabilities.find((capability) => capability.targetId === 'scenery-a-coverage').reviewStatus = 'REJECTED'; }],
+  ];
+  for (const [name, reject] of cases) {
+    const request = copy(sample.request); request.frameRange = { startFrame: 0, frameCount: 1 }; reject(request);
+    const output = path.join(temporary, name);
+    await assert.rejects(renderBounded(request, sample.projectRoot, output), /rejected/);
+    assert.equal(fs.existsSync(output), false, `${name} rejection is pure admission with no output owner`);
   }
 });
 
