@@ -169,16 +169,22 @@ selecting a dependency-ready mandatory row. No docs/tasks.md or second queue.
 | V18 | Import finished looks and prepare motion inputs | V14, V15, V16, V18a, V18b2 | DONE | Finished-look selection and supported motion admission preserve imported appearance, share complete consumed-component fingerprints/reviews and block unsupported preservation guidance. Three Astra High repairs (third user-authorized); 36 focused and 822 full tests, make test/build, diff check and fresh Sol High review PASS. Evidence: `~/.codex/melotrail-video-sequential/evidence/V18/finished-artwork-20260916`. Rendering and UI remain later tasks. |
 | V19a | Generalize controlled subject motion and effects | V12, V18a | DONE | Versioned Node compositor uses actual prepared-scene placement, supplied poses and both mask representations for bounded subject motion and source-anchored steam. Real-importer fixtures, 7 Node tests, 823 project tests, build/diff and fresh Sol review PASS; 4 comparison renders/1,200 frame hashes verified. Eight writer attempts, last two user-authorized. Evidence `~/.codex/melotrail-video-sequential/evidence/V19a/controlled-motion-20260916`; scenery, app integration and artistic approval remain later work. |
 | V19b | Render coherent scenery with continuous time | V19a | DONE | Supplied same-depth sections join offscreen with exact overlap validation; canonical depth, static foreground masks, scenery-only motion and rejected-component admission. 18 Node/823 project tests, build/diff, fresh Sol review PASS after Terra initial+2 retries and Sol escalation. Actual two-section 30s/900-frame render matches split/resume byte-for-byte; CLI cancellation preserves prior work. Evidence `~/.codex/melotrail-video-sequential/evidence/V19b/coherent-scenery-20260916`; V24 artistic review remains pending. |
-| V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary. |
-| V20 | Add Video tab and independent create/open | V13, V16 | TODO | Planned 2026-09-13; not implemented. |
+| V19r1 | Restore displaced local data or authorize its retained relocation | — | BLOCKED | Verify `.venv-worker`, `sounds`, and `data/audio` at their original locations without merge/overwrite, or record an explicit authorization naming all retained relocations. |
+| V19r2 | Locate and authenticate the V18b1 archive | — | BLOCKED | Preserve and verify the authentic failed candidate/evidence archive and isolate its unfinished probe from active code; recovery input is required. |
+| V19r3 | Validate the exact candidate in an isolated checkout | V19r1, V19r2 | BLOCKED | Reproduce the dirty candidate in an explicitly inventoried isolated directory and run fresh baseline checks without deleting restored local data. |
+| V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b, V19r3 | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary; blocked until V19r3. |
+| V20a | Prepare Video-flow design alignment | — | WAITING_USER | Obtain design-process/scope confirmation, then prepare a reviewable Video-workspace flow; no production UI work. |
+| V20b | Obtain explicit Video-flow approval | V20a | WAITING_USER | A genuine reviewer must approve a specific artifact revision and all required Video-flow surfaces. |
+| V20 | Add Video tab and independent create/open | V13, V16, V19r3, V20b | TODO | Planned 2026-09-13; not implemented; blocked until isolated admission and approved flow. |
 | V21 | Wire finished-scene upload and motion setup | V14, V15, V17a, V18a, V18, V20 | TODO | Finished scene primary; optional ready layers/poses/masks, visual anchors and motion prompt; no outfit/style synthesis UI. |
 | V22 | Wire generation look selection and retry | V17, V18, V19, V20, V21 | TODO | Planned 2026-09-13; not implemented. |
 | V23 | Play actual generated video in the tab | V12, V19, V22 | TODO | Planned 2026-09-13; not implemented. |
 | V24 | Review video generated from finished artwork | V18, V22, V23 | WAITING_USER | Three real20–30s app clips: base motion, changed motion with same art, replacement finished art. Earlier checkpoint/steam approval preserved; image synthesis no longer a gate. |
 | V25 | Add selected hosted fallback | V11, V16, V18, V19, V21 | OPTIONAL | Only after local evidence and explicit user selection. |
-| V26 | Plan one continuous scene to exact duration | V15, V18a, V19 | TODO | Revised 2026-09-14; replace the old primary short-shot/repeat planner. |
+| V26a | Remove the full-trajectory duration limit | V19b | TODO | Raise the checked trajectory ceiling to 9,000 frames while retaining the 300-frame render-invocation bound. |
+| V26 | Plan one continuous scene to exact duration | V15, V18a, V19, V26a | TODO | Revised 2026-09-14; replace the old primary short-shot/repeat planner after V26a. |
 | V27 | Encode and validate silent MP4 | V12, V19, V26 | TODO | Planned 2026-09-13; not implemented. |
-| V28 | Expose full-cut review and export | V23, V26, V27 | TODO | Planned 2026-09-13; not implemented. |
+| V28 | Expose full-cut review and export | V23, V26, V27 | TODO | Planned 2026-09-13; use the approved Video flow or obtain explicit approval for uncovered/materially changed surfaces. |
 | V29 | Prove installed app and runtime isolation | V20, V23, V28 | TODO | Planned 2026-09-13; not implemented. |
 | V30 | Remove MIDI soundtrack companion handoff | V28, V29 | TODO | Planned 2026-09-13; not implemented. |
 | V31 | Delete Swift companion and launch wiring | V29, V30 | TODO | Planned 2026-09-13; not implemented. |
@@ -1451,6 +1457,48 @@ approved character/steam behavior when only scenery changes.
 boundary states, no geometry drift or coverage holes; real scenery realism still
 requires V24 user feedback.
 
+### V19r1 — Restore displaced local data or authorize retained relocation
+
+**Scope:** `~/.melotrail-preserved-local-data/2026-09-22-step-1-1/{.venv-worker,sounds,data-audio,manifest.txt}`, the three original checkout destinations, and this row's concise evidence only.
+**Rules:** Inventory source and destination ancestors, hidden entries, types, sizes, digests, executable permissions and symlink targets before writes. Refuse collisions, changed sources and unsafe symlinks; never merge, overwrite, execute the virtual environment, or remove either copy. Restore verified copies to `.venv-worker`, `sounds`, and `data/audio` while retaining the source and manifest. If relocation remains desired, require explicit authorization naming all three original and retained paths.
+**Verification:** After symlink inspection, compare full inventories and run `diff -qr` for each source/destination pair, `git status --short`, and `git diff --check`.
+**Done:** Metadata- and content-equivalent copies exist at all original locations, or explicit authorization covers every retained relocation. A documented blocker is not completion.
+
+### V19r2 — Locate and authenticate the V18b1 archive
+
+**Scope:** Only the documented V18b1 evidence root, known Melotrail preservation roots, user-supplied backup locations, active probe owners, and this row's concise evidence pointer.
+**Rules:** Search bounded relevant locations for `updated-assets-f96a7f3`; do not scan unrelated private data or regenerate the failed experiment. Authenticate a candidate against revision `f96a7f36430d45c576de511be94480e31762570b`, original manifests/checksums, requests, results and recorded failures. Determine the four unfinished probe files and opt-in Gradle registration from authentic evidence, verify their absence from active code, and preserve V11/V17 probes. A partial archive remains BLOCKED.
+**Verification:** Use the discovered manifest's documented hash procedure, targeted active-owner searches derived from authentic identifiers, and `git diff --check`.
+**Done:** The complete authentic failed archive is preserved at the documented or explicitly recorded replacement path and isolated from active code; otherwise identify the missing recovery input without changing OPTIONAL V18b1/V18b.
+
+### V19r3 — Validate the exact candidate in an isolated checkout
+
+**Scope:** The exact current base revision and dirty task-owned changes, an external isolated candidate directory, and this row's concise identity/check evidence; never protected local-data paths.
+**Rules:** Create a detached isolated candidate without branch/ref changes. Record base revision, dirty-diff identity, copied task-owned untracked-file hashes and explicit exclusions. Exclude `.venv-worker`, `sounds`, `data/audio`, build products and workflow state by inventory, not by deleting them from the user checkout. Do not weaken architecture tests, alter `.gitignore`, or present older `HEAD` as this candidate.
+**Verification:** From the verified isolated candidate run `./gradlew :test --no-build-cache --rerun-tasks --tests 'app.melotrail.architecture.TargetArchitectureRulesTest' --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`, `make test`, `make build`, and `git diff --check`; record any restored-checkout failure separately.
+**Done:** V19r1 and V19r2 are satisfied, the candidate identity is reproducible, and all required isolated checks pass without modifying unrelated local data.
+
+### V20a — Prepare Video-flow design alignment
+
+**Scope:** The new Video workspace and shared application boundary only; `.mockups/flows/video-workspace/` and shared design-system assets only after explicit process permission; this row's evidence.
+**Rules:** Obtain required scope/design-process confirmations before creating artifacts. Reuse `WorkspaceTheme`, `WorkstationPrimitives`, `WorkspaceShellFrame`, `docs/UI_GUIDELINE.md`, and `docs/pictures/UI/08-video-preview.png` as composition input; do not redesign six MIDI pages or treat the reference as approval. The reviewable flow must cover create/open, finished-scene import, optional ready-layer setup, prompt/duration, generation/cancel/retry/recovery, moving preview/take review, continuous assembly and silent export at supported viewports.
+**Verification:** Verify navigator links, shared asset references, required states and supported viewports; run the documentation integrity test, `make test`, `make build`, and `git diff --check`.
+**Done:** A reviewable artifact path and digest are recorded. Without required confirmations, remain WAITING_USER.
+
+### V20b — Obtain explicit Video-flow approval
+
+**Scope:** The reviewable Video-flow artifact, its shared design-system assets, and this row's approval record.
+**Rules:** Obtain a genuine reviewer decision naming the approved artifact revision/digest, reviewer, date, covered surfaces and accepted deviations. Browser rendering, agent recommendation, MIDI goldens and prior TABI artistic approval are not approval. Material changes require renewed review.
+**Verification:** Recompute the approved artifact digest, verify recorded paths/links, and run `git diff --check`.
+**Done:** Explicit approval covers V20–V23 and planned review/export surfaces; otherwise remain WAITING_USER.
+
+### V26a — Remove the full-trajectory duration limit
+
+**Target files:** `tools/video-motion/scenery.cjs`, `tools/video-motion/scenery.test.cjs`, `tools/video-motion/render.cjs`, `tools/video-motion/render.test.cjs`, `src/main/resources/video/motion-runtime.json`, and `src/test/kotlin/app/melotrail/video/VideoMotionDescriptorFixtureTest.kt`.
+**Rules:** Replace the 3,600-frame trajectory ceiling with checked 5,400/7,200/9,000-frame support while retaining the 300-frame invocation limit. Preserve absolute frame time, deterministic seed/state, scenery coverage, cancellation and split/resume identity; reject unsafe arithmetic or inadequate coverage before rendering.
+**Verification:** Run `./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'`; `npm ci --prefix tools/video-motion`; `MELOTRAIL_MOTION_FIXTURE_ROOT="$PWD/build/video-motion-fixtures" node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`; then `make test`, `make build`, and `git diff --check`.
+**Done:** Required trajectory lengths validate deterministically without full-duration frame allocation in ordinary tests, and each render invocation remains bounded to 300 frames.
+
 ### V19 — Generate controlled previews and preserve independent takes
 
 **Target files:** `src/main/kotlin/app/melotrail/video/application/VideoClipGeneration.kt`
@@ -1460,7 +1508,7 @@ requires V24 user feedback.
 `src/main/kotlin/app/melotrail/video/adapter/LocalVideoBackend.kt`,
 `src/test/kotlin/app/melotrail/video/VideoClipGenerationTest.kt` (new),
 `src/test/kotlin/app/melotrail/video/VideoMotionRendererTest.kt` (new).
-**Inputs / dependencies:** V12, V15, V16, V17, V18, V19b.
+**Inputs / dependencies:** V12, V15, V16, V17, V18, V19b, V19r3.
 **Implementation rules:** Generate video validates imported finished-artwork motion inputs and coordinates
 bounded controlled-render requests under the existing durable job admission,
 ownership and cancellation contract. Extend typed job inputs for motion frame
@@ -1486,7 +1534,7 @@ rejected and replaced through production services without manual scripts or lost
 (new), `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoWorkspaceTest.kt`
 (new), `desktopApp/src/test/kotlin/app/melotrail/desktop/MelotrailAppShellTest.kt`
 (new), `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreDesktopCompositionTest.kt`.
-**Inputs / dependencies:** V13, V16.
+**Inputs / dependencies:** V13, V16, V19r3, V20b.
 **Implementation rules:** One window, app-level MIDI/Video tabs above the existing
 MIDI shell; preserve its six destinations and one MIDI player. Video create/open
 is available with no MIDI project. Keep its state when switching tabs/projects;
@@ -1628,7 +1676,7 @@ with no automatic local-to-cloud fallback. If local passes, leave this task OPTI
 `src/test/kotlin/app/melotrail/video/VideoShotPlannerTest.kt` (retire),
 `src/test/kotlin/app/melotrail/video/VideoPromptCompilerTest.kt`,
 `src/test/kotlin/app/melotrail/video/VideoAssemblyPlannerTest.kt` (new).
-**Inputs / dependencies:** V15, V18a, V19.
+**Inputs / dependencies:** V15, V18a, V19, V26a.
 **Implementation rules:** Replace the old primary unique/reused-short-shot
 proposal with one prepared-scene timeline: exact frame count, a global motion
 clock/seed, bounded chunk ranges, occasional supported actions and the selected
@@ -1680,7 +1728,7 @@ with no audio, and cancellation/collisions preserve prior outputs.
 (new), `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoWorkspace.kt`,
 `desktopApp/src/main/kotlin/app/melotrail/desktop/video/VideoDesktopComposition.kt`,
 `desktopApp/src/test/kotlin/app/melotrail/desktop/video/VideoExportFlowTest.kt` (new).
-**Inputs / dependencies:** V23, V26, V27.
+**Inputs / dependencies:** V23, V26, V27. Use the V20b-approved flow, or obtain explicit approval for every uncovered or materially changed review/export surface before implementation.
 **Implementation rules:** Expose duration, supported occasional actions, scenery
 coverage, subtle-motion reuse and real preparation/render estimates for one
 continuous scene. Do not require a clip-reordering timeline or reuse-to-fill mode.
