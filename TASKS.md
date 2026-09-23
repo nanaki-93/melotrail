@@ -165,8 +165,8 @@ V18b1/V18b/V25 remain OPTIONAL and unselected, outside the available work.
 | V27 | Encode and validate silent MP4 | V12, V19, V26 | TODO | Planned 2026-09-13; not implemented. |
 | V28 | Expose full-cut review and export | V23, V26, V27 | TODO | Planned 2026-09-13; use the approved Video flow or obtain explicit approval for uncovered/materially changed surfaces. |
 | V29 | Prove installed app and runtime isolation | V20, V23, V28 | TODO | Planned 2026-09-13; not implemented. |
-| V30 | Remove MIDI soundtrack companion handoff | V28, V29 | TODO | Planned 2026-09-13; not implemented. |
-| V31 | Delete Swift companion and launch wiring | V29, V30 | TODO | Planned 2026-09-13; not implemented. |
+| V30 | Remove MIDI soundtrack companion handoff | V28, V29 | DONE | Removed the optional probe/action and handoff-only tests; preserved MIDI snapshot publication, reveal and Logic guidance. Executed out of dependency order at user request; V28/V29 remain TODO. |
+| V31 | Delete Swift companion and launch wiring | V29, V30 | BLOCKED | Removed clean tracked Swift owners and launcher scripts without touching external evidence. A pre-existing edit in `companion/Sources/MelotrailTABIRegression/main.swift` and ignored `.build/` are preserved. `make video` routes to `--video`, but V20 has not implemented this option, so launch proof and full removal remain blocked. |
 | V32 | Verify complete UI and prepare evidence | V22, V23, V28, V31 | TODO | Planned 2026-09-13; not implemented. |
 | V33 | Accept complete prompted video and editor handoff | V24, V32 | WAITING_USER | Actual visual evidence/decision required; do not auto-admit. |
 
