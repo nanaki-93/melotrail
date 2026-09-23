@@ -21,3 +21,6 @@ out/
 # Exports
 exports/
 **/exports/
+
+# PI
+.pi/
