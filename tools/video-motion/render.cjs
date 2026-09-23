@@ -15,7 +15,7 @@ const {
 } = require('./scenery.cjs');
 
 const TOOL_ID = 'melotrail-controlled-motion';
-const TOOL_VERSION = '1.0.0';
+const TOOL_VERSION = '1.1.0';
 const REQUEST_SCHEMA = 'melotrail-controlled-motion-request-v1';
 const LIMITS = Object.freeze({
   maximumFramesPerInvocation: 300,
@@ -297,7 +297,10 @@ function validateRequest(request) {
   const frameRange = request.frameRange || {};
   const startFrame = number(frameRange.startFrame, 'frameRange.startFrame', 0, Number.MAX_SAFE_INTEGER);
   const frameCount = number(frameRange.frameCount, 'frameRange.frameCount', 1, LIMITS.maximumFramesPerInvocation);
-  if (!Number.isInteger(startFrame) || !Number.isInteger(frameCount)) throw new MotionInputError('Frame range must contain whole frame numbers.');
+  const endFrameExclusive = startFrame + frameCount;
+  if (!Number.isSafeInteger(startFrame) || !Number.isSafeInteger(frameCount) || !Number.isSafeInteger(endFrameExclusive)) {
+    throw new MotionInputError('Frame range start, count, and end must use safe integer arithmetic.');
+  }
   if (!Array.isArray(request.controls) || request.controls.length > 16) {
     throw new MotionInputError('Request controls must be an array with at most sixteen entries.');
   }

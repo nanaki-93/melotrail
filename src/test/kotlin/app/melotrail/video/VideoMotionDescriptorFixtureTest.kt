@@ -44,6 +44,9 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
@@ -59,6 +62,11 @@ import org.junit.jupiter.api.Test
 class VideoMotionDescriptorFixtureTest {
     @Test
     fun `emit deterministic production importer bundles for controlled motion pixel comparisons`() {
+        val runtimeDescriptor = Path.of(System.getProperty("user.dir"), "src", "main", "resources", "video", "motion-runtime.json")
+        val runtime = JSON.parseToJsonElement(Files.readString(runtimeDescriptor)).jsonObject
+        assertEquals("1.1.0", runtime.getValue("tool").jsonObject.getValue("version").jsonPrimitive.content)
+        assertEquals(300, runtime.getValue("limits").jsonObject.getValue("maximumFramesPerInvocation").jsonPrimitive.int)
+        assertEquals(9000, runtime.getValue("limits").jsonObject.getValue("maximumCameraDurationFrames").jsonPrimitive.int)
         val output = Path.of(System.getProperty("user.dir"), "build", "video-motion-fixtures").toAbsolutePath().normalize()
         require(output.endsWith(Path.of("build", "video-motion-fixtures"))) { "Fixture output must remain under owned build/video-motion-fixtures" }
         deleteOwnedOutput(output)

@@ -50,6 +50,58 @@ function depthRequest(planes = [
   };
 }
 
+test('admits full-length 30 fps camera trajectories without constructing frame batches', () => {
+  const request = wideFixture();
+  const original = copy(request.scenery);
+  for (const durationFrames of [5400, 7200, 9000]) {
+    request.scenery.camera = { ...original.camera, durationFrames, travelXPixels: 100, travelYPixels: 0 };
+    request.scenery.planes[0].sections = [{ coverageId: 'scenery-a-coverage', worldX: 0, worldY: 0, startFrame: 0, endFrameExclusive: durationFrames }];
+    const scenery = validateScenery(request.preparedScene, request.canvas, 30,
+      { startFrame: 0, frameCount: 1 }, request.scenery, request.seed);
+    assert.equal(scenery.durationFrames, durationFrames);
+    assert.equal(stateForFrame(scenery, request.seed, durationFrames - 1).frame, durationFrames - 1);
+  }
+  assert.throws(() => {
+    request.scenery.camera.durationFrames = 9001;
+    validateScenery(request.preparedScene, request.canvas, 30, { startFrame: 0, frameCount: 1 }, request.scenery, request.seed);
+  }, /durationFrames/);
+});
+
+test('rejects malformed supplied camera integers and unsafe trajectory arithmetic', () => {
+  const request = wideFixture();
+  for (const [field, value] of [['startFrame', '0'], ['durationFrames', 11.5], ['motionBlurSamples', null], ['startFrame', Number.MAX_SAFE_INTEGER]]) {
+    const malformed = copy(request.scenery);
+    malformed.camera[field] = value;
+    assert.throws(() => validateScenery(request.preparedScene, request.canvas, 30,
+      request.frameRange, malformed, request.seed), /safe integer|durationFrames/);
+  }
+  assert.throws(() => validateScenery(request.preparedScene, request.canvas, 30,
+    { startFrame: Number.MAX_SAFE_INTEGER, frameCount: 1 }, request.scenery, request.seed), /safe integer/);
+});
+
+test('rejects late full-trajectory gaps, shutter-boundary gaps, and incompatible resume receipts', () => {
+  const request = wideFixture();
+  const lateGap = copy(request.scenery);
+  lateGap.camera.durationFrames = 9000;
+  lateGap.planes[0].sections[0].endFrameExclusive = 8999;
+  assert.throws(() => validateScenery(request.preparedScene, request.canvas, 30,
+    { startFrame: 0, frameCount: 1 }, lateGap, request.seed), /complete absolute trajectory/);
+
+  const shutterGap = copy(request.scenery);
+  shutterGap.camera.motionBlurSamples = 8;
+  shutterGap.camera.shutterFraction = 1;
+  shutterGap.planes[0].sections[1].startFrame += 1;
+  assert.throws(() => validateScenery(request.preparedScene, request.canvas, 30,
+    request.frameRange, shutterGap, request.seed), /complete absolute trajectory/);
+
+  const firstRange = { startFrame: 0, frameCount: 300 };
+  const admitted = validateScenery(request.preparedScene, request.canvas, 30, firstRange,
+    request.scenery, request.seed);
+  const incompatible = stateForFrame(admitted, request.seed, 298);
+  assert.throws(() => validateScenery(request.preparedScene, request.canvas, 30,
+    { startFrame: 300, frameCount: 150 }, request.scenery, request.seed, incompatible), /immediately previous/);
+});
+
 test('admits real importer source sections with absolute world placement and deterministic handoff state', () => {
   const request = wideFixture();
   const admitted = validateScenery(request.preparedScene, request.canvas, request.fps, request.frameRange,

@@ -241,6 +241,17 @@ function matchingHeadFrame(validated) {
 }
 
 if (!comparisonMode) {
+test('rejects unsafe range endpoints and invocations above the 300-frame bound', () => {
+  const sample = fixture('wide-scenery');
+  const unsafe = copy(sample.request);
+  unsafe.controls = [];
+  unsafe.frameRange = { startFrame: Number.MAX_SAFE_INTEGER, frameCount: 1 };
+  assert.throws(() => validateRequest(unsafe), /safe integer/);
+  const oversized = copy(sample.request);
+  oversized.frameRange.frameCount = 301;
+  assert.throws(() => validateRequest(oversized), /frameRange.frameCount/);
+});
+
 test('renders actual importer descriptors at exact unit and nonunit placements for every component', async (t) => {
   for (const name of ['unit-scale', 'nonunit-scale']) {
     const sample = fixture(name);

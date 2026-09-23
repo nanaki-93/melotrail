@@ -3,7 +3,7 @@
   "version": 3,
   "tool": {
     "id": "melotrail-controlled-motion",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "entryPoint": "tools/video-motion/render.cjs",
     "installCommand": "npm ci --prefix tools/video-motion",
     "fixtureCommand": "./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'",
@@ -29,7 +29,7 @@
     "maximumHeadDegrees": 3,
     "maximumSteamRatePerSecond": 8,
     "maximumSteamRisePixelsPerSecond": 28,
-    "maximumCameraDurationFrames": 3600,
+    "maximumCameraDurationFrames": 9000,
     "maximumMotionBlurSamples": 8,
     "maximumTravelPixels": 16384,
     "maximumSceneryPlanes": 16,

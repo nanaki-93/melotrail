@@ -10,7 +10,7 @@ const crypto = require('node:crypto');
 
 const SCENERY_SCHEMA = 'melotrail-rigid-scenery-v1';
 const LIMITS = Object.freeze({
-  maximumCameraDurationFrames: 3600,
+  maximumCameraDurationFrames: 9000,
   maximumMotionBlurSamples: 8,
   maximumTravelPixels: 16384,
   maximumPlanes: 16,
@@ -285,9 +285,19 @@ function validateScenery(scene, canvas, fps, frameRange, raw, seed, initialState
   if (!sameRectangle(viewport, output)) throw new SceneryInputError('Scenery viewport must exactly name the explicit output canvas aperture.');
   const mode = raw.mode;
   if (!['static', 'moving'].includes(mode)) throw new SceneryInputError("Scenery mode must be 'static' or 'moving'.");
-  const camera = raw.camera || {};
-  const startFrame = Number.isSafeInteger(camera.startFrame) ? camera.startFrame : 0;
-  const durationFrames = Number.isSafeInteger(camera.durationFrames) ? camera.durationFrames : 1;
+  const camera = raw.camera ?? {};
+  if (!camera || typeof camera !== 'object' || Array.isArray(camera)) throw new SceneryInputError('Camera must be an object.');
+  const integerField = (name, fallback, minimum, maximum = Number.MAX_SAFE_INTEGER) => {
+    const value = camera[name] === undefined ? fallback : camera[name];
+    if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+      throw new SceneryInputError(`Camera ${name} must be a safe integer in ${minimum}..${maximum}.`);
+    }
+    return value;
+  };
+  const startFrame = integerField('startFrame', 0, 0);
+  const durationFrames = integerField('durationFrames', 1, 1, LIMITS.maximumCameraDurationFrames);
+  const trajectoryEnd = startFrame + durationFrames;
+  if (!Number.isSafeInteger(trajectoryEnd)) throw new SceneryInputError('Camera trajectory end must be a safe integer.');
   if (startFrame < 0 || durationFrames < 1 || durationFrames > LIMITS.maximumCameraDurationFrames) {
     throw new SceneryInputError(`Camera durationFrames must be 1..${LIMITS.maximumCameraDurationFrames} with a non-negative startFrame.`);
   }
@@ -296,10 +306,15 @@ function validateScenery(scene, canvas, fps, frameRange, raw, seed, initialState
   if (mode === 'static' && (travelXPixels !== 0 || travelYPixels !== 0 || durationFrames !== 1)) throw new SceneryInputError('Static scenery needs zero camera travel and durationFrames 1.');
   if (mode === 'moving' && durationFrames < 2) throw new SceneryInputError('Moving scenery needs at least two camera frames.');
   if (mode === 'moving' && travelXPixels === 0 && travelYPixels === 0) throw new SceneryInputError('Moving scenery needs non-zero explicit camera travel; a subject control is not camera motion.');
-  if (mode === 'moving' && (frameRange.startFrame < startFrame || frameRange.startFrame + frameRange.frameCount > startFrame + durationFrames)) {
+  const renderEnd = frameRange.startFrame + frameRange.frameCount;
+  if (!Number.isSafeInteger(frameRange.startFrame) || !Number.isSafeInteger(frameRange.frameCount) ||
+      frameRange.startFrame < 0 || frameRange.frameCount < 1 || !Number.isSafeInteger(renderEnd)) {
+    throw new SceneryInputError('Requested frame range start, count, and end must use safe integer arithmetic.');
+  }
+  if (mode === 'moving' && (frameRange.startFrame < startFrame || renderEnd > trajectoryEnd)) {
     throw new SceneryInputError('Requested frame range exceeds the declared camera trajectory; V19b never freezes the last frame.');
   }
-  const motionBlurSamples = Number.isSafeInteger(camera.motionBlurSamples) ? camera.motionBlurSamples : (mode === 'moving' ? 3 : 1);
+  const motionBlurSamples = integerField('motionBlurSamples', mode === 'moving' ? 3 : 1, 1, LIMITS.maximumMotionBlurSamples);
   if (motionBlurSamples < 1 || motionBlurSamples > LIMITS.maximumMotionBlurSamples) throw new SceneryInputError(`Camera motionBlurSamples must be 1..${LIMITS.maximumMotionBlurSamples}.`);
   const shutterFraction = number(camera.shutterFraction ?? (mode === 'moving' ? 0.5 : 0), 'Camera shutterFraction', 0, 1);
   const coverageById = new Map((scene.sceneryCoverage || []).map((coverage) => [coverage.id, coverage]));
