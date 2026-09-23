@@ -122,7 +122,7 @@ and semantic diffs appear in exception details, not a second primary workflow.
 complete/role/manifest file list, real export progress/result and reveal action.
 Instructions: import at song origin, confirm Logic tempo/meter behavior, assign
 instruments and check role alignment. No disabled audio/video format selector.
-The current Swift companion launch is a superseded handoff retained only until
+The former Swift companion launch was a superseded handoff removed during
 V30; it is not part of the planned Video-tab journey.
 The package summary describes current accepted selections, with a section/bar
 inventory distinguishing accepted notes, accepted rests, locks and work needing

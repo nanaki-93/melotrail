@@ -24,9 +24,9 @@ motion setup, continuous animation and complete 3–5 minute silent export remai
 later V10–V33 work. Video needs no MIDI project, export, song or soundtrack; audio is
 added later in the user's external Apple editor.
 
-The repository still contains the superseded Swift soundtrack companion and its
-owned technical fixtures pending V30–V31. They are preserved as historical
-evidence and do not satisfy or define the new asset-and-prompt workflow. Six
+The Swift soundtrack handoff and its repository-owned runtime have been removed.
+Historical evidence remains in the validation references; it does not satisfy the
+new asset-and-prompt workflow. Six
 human gates remain open: U07, Q01, Q02, Q03, V24 and V33.
 
 ## Run and validate
@@ -73,21 +73,11 @@ Output: an immutable complete-song MIDI file, aligned role files and a manifest.
 Import at song start in Logic Pro, confirm tempo/meter and choose instruments.
 Logic Pro performs all audio production. GarageBand is not a supported target.
 
-There is no implemented Video-tab command yet. V20 adds the tab and V32 verifies
-the complete in-app route. **Temporary launcher for the superseded Swift
-workflow:** on macOS 14+ with Xcode command-line tools and an existing composition
-request, the current checkout still supports:
-
-```bash
-make video VIDEO_REQUEST="/path/to/composition-request.json"
-```
-
-Optionally add `VIDEO_JOBS="/path/to/animation-jobs.json"` to display a saved job
-ledger. See the [historical native scene editor](companion/README.md#native-scene-editor)
-for input requirements and controls. This launcher and the MIDI Export handoff
-remain until V30–V31 replace their owners after the integrated owned-fixture path
-works. The MIDI app builds, runs, auditions and exports independently of them;
-the planned asset-and-prompt workflow is described above.
+`make video` now invokes the desktop application with `--video`, without a JSON
+request or Swift tools. **V20 has not implemented the Video tab yet**: this
+checkout rejects that option before opening a window, so this command is not
+functional until V20 implements its route. Use `make desktop` for the supported MIDI path.
+No soundtrack or MIDI export is required for the planned independent Video tab.
 
 For musical evaluation, `musicalEvaluation` freezes supplied owned projects before
 generating from isolated copies, and `musicalComparison` exports the separate M01

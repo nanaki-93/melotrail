@@ -120,7 +120,15 @@ class TargetArchitectureRulesTest {
             "Piano Song n.17.mp4",
         )
 
-        assertEquals(emptyList(), retiredData.filter { Files.exists(Path.of(it)) })
+        // Restored, untracked user data can be present in a developer checkout. The
+        // repository must not own or package these retired payloads.
+        val trackedData = ProcessBuilder(listOf("git", "ls-files", "--cached", "--") + retiredData)
+            .redirectErrorStream(true).start().let { process ->
+                val output = process.inputStream.bufferedReader().readLines()
+                check(process.waitFor() == 0) { "Could not inspect tracked legacy data: $output" }
+                output
+            }
+        assertEquals(emptyList(), trackedData)
         val targetSources = TargetArchitectureRules.readProductionSources()
         val staleConsumers = targetSources.flatMap { source ->
             listOf(
@@ -141,6 +149,24 @@ class TargetArchitectureRulesTest {
         listOf(".venv-worker", "sounds/", "/data/", "*.wav", "renders/").forEach { retiredIgnore ->
             assertFalse(ignores.contains(retiredIgnore), "Stale ignore entry remains: $retiredIgnore")
         }
+    }
+
+    @Test
+    fun `MIDI export and video launcher do not dispatch to a Swift soundtrack application`() {
+        val sources = TargetArchitectureRules.readProductionSources()
+        val activeFiles = listOf("Makefile", "tools/companion-check.mjs")
+        assertFalse(Files.exists(Path.of(activeFiles[1])))
+        assertFalse(Files.exists(Path.of("tools/companion-check.test.mjs")))
+        assertFalse(Files.exists(Path.of("companion")), "Swift application directory remains")
+        assertEquals(emptyList(), sources.filter { source ->
+            source.contents.contains("MidiCoreCompanionLauncher") ||
+                source.contents.contains("MidiCoreExportHandoffReference") ||
+                source.contents.contains("MELOTRAIL_TABI_EXECUTABLE")
+        }.map(SourceFile::path))
+        val makefile = Files.readString(Path.of(activeFiles[0]))
+        assertFalse(makefile.contains("swift run"))
+        assertFalse(makefile.contains("VIDEO_REQUEST"))
+        assertEquals(true, makefile.contains(":desktopApp:run --args='--video'"))
     }
 
     @Test

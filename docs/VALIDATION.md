@@ -24,7 +24,7 @@ procedure below. Preserve the packets; fill copies of their forms.
 | V33 · Complete video | After V24/V32, generate, watch and import into the user's chosen Apple editor one real 3–5 minute silent video. Review prompt/reference fidelity, temporal quality, every join and disclosed unique/reused footage. This remains WAITING_USER until the real full cut and decision exist. |
 | Q03 · Release | After U07/Q01/Q02, record the actual MIDI release decision and final build. Musical quality remains unmeasured against the original 5/10 feedback. |
 
-The retained Swift companion demo is superseded historical evidence; it is not
+The removed Swift companion demo is superseded historical evidence; it is not
 the V24/V33 product flow and needs no new review. To inspect that old packet, launch
 `/Users/marcoandreose/.codex/melotrail-terra/final-review-2026-09-13/companion/app/melotrail-tabi-editor`
 with `/Users/marcoandreose/.codex/melotrail-terra/final-review-2026-09-13/companion/fixture/composition-request.json`.
@@ -194,8 +194,8 @@ U07/Q03 gates; Q03b owns the integrated review handoff.
 ## Preserved superseded companion preflight evidence
 
 This entire section records technical checks for retired V01–V07 Swift code.
-It remains to preserve reproducible evidence until V31 removes its repository
-owners. None of it validates, configures or constrains the planned Video tab,
+Its external evidence remains after V31 removed the repository owners. The
+historical commands below are not runnable in this checkout. None of it validates, configures or constrains the planned Video tab,
 and it cannot satisfy V24 or V33.
 
 V07a recovery (2026-09-13) passed 572 JVM tests, required build, focused
@@ -209,9 +209,9 @@ and Aqua-host regression coverage. Independent review resolved the contrast
 finding. Three-size MIDI captures and fresh native intake images were inspected;
 this is technical rendering evidence, not the final human visual decision.
 
-V07a focused coordinator checks are `MidiCoreMidiPackageExporterTest`,
-`MidiCoreCompanionLauncherTest` and `MidiCoreExportPageTest`, plus
-`node tools/companion-check.mjs` and the required MIDI `make test`, `make build`
+Historical V07a coordinator checks were `MidiCoreMidiPackageExporterTest`,
+`MidiCoreCompanionLauncherTest` and `MidiCoreExportPageTest`, plus the removed
+companion check and the required MIDI `make test`, `make build`
 and `git diff --check`. The export tests exercise the real published snapshot:
 successful/failed launch, changed project revision/acceptance, unrecorded snapshot
 and corrupted manifest all preserve project/source/candidate/export bytes.
@@ -235,8 +235,8 @@ final Logic listening, foreground captures and production TABI review remain
 deferred to the Q03b/manual handoff. No new Logic sound or artistic approval is
 inferred from optional launch behavior.
 
-V01's companion checks are separate from the MIDI application. The coordinator
-runs `node tools/companion-check.mjs`, dispatching the boundary check, native
+V01's companion checks were separate from the MIDI application. The historical
+coordinator dispatched the boundary check, native
 regressions and Swift release build. No Gradle companion shim is needed. The
 coordinator also runs normal MIDI `make test`/`make build`; the root settings do
 not include the companion.

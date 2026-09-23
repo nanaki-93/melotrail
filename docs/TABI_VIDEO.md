@@ -17,7 +17,7 @@ or offered in this delivery. Audio editing and public upload remain external.
 
 The planned Video tab needs no MIDI project or soundtrack. It owns separate
 projects, assets, jobs, models and media outputs, loaded lazily. Missing video
-tools cannot block MIDI. The superseded Swift companion remains until V30–V31.
+tools cannot block MIDI. The superseded Swift handoff has been removed from active wiring.
 
 1. Open Video and import a finished PNG/JPEG scene.
 2. Optionally import ready transparent character/pose images, clean backgrounds,
@@ -1259,20 +1259,15 @@ must consume this plan rather than independently rounding timestamps.
 
 ### Historical optional Export handoff (superseded V07a)
 
-The MIDI Export page probes a separately installed `melotrail-tabi-editor`.
+The following describes removed behavior, not current installation instructions.
+The MIDI Export page used to probe a separately installed `melotrail-tabi-editor`.
 Its bounded `--capabilities` response must be exactly
 `melotrail-tabi-export-handoff-v1-manifest-v2`. Missing, incompatible or
 unresponsive installations leave ordinary MIDI export available without a video
 action. A compatible installation adds **Open in TABI…** to a saved snapshot;
 earlier accepted work requires a new current export before launch.
 
-Install the companion independently on macOS 14+:
-
-```bash
-sh companion/scripts/install.sh
-```
-
-This builds only the Swift release editor and copies its executable into a new
+The removed historical installer built only the Swift release editor and copies its executable into a new
 `~/Applications/Melotrail TABI/` directory. It refuses an existing destination.
 For another new installation directory, pass its absolute path to the script
 and set `MELOTRAIL_TABI_EXECUTABLE` to that directory's `melotrail-tabi-editor`
@@ -1406,7 +1401,7 @@ the planned Video tab, local profile or controls exist.
 
 ### Verified companion spike — 2026-09-08
 
-`companion/` is an independent Swift package with no third-party or MIDI
+The removed `companion/` package was an independent Swift package with no third-party or MIDI
 dependencies. The README owns the native Swift build/run commands. Host checks on
 macOS 26.6.2 (25G83), Swift 6.3.3, prove Apple AVFoundation ProRes 422 (`apcn`)
 encoding and passthrough MOV muxing: 320×180, 30fps, exactly one second of video
@@ -1443,8 +1438,8 @@ secure credentials, cancellation, budget admission and quarantined downloads.
 ### V01 decision record — 2026-09-09
 
 This is a conservative dependency and pilot decision, not an authorization to
-spend money, send media to a provider, or distribute a video. The companion stays
-at [`companion/`](../companion/), independently built with Swift Package Manager.
+spend money, send media to a provider, or distribute a video. The companion's repository package has been removed; retained external evidence
+is historical and not part of the current build.
 It is not included in the MIDI Gradle build and has no MIDI Core runtime,
 schema, project-path or export dependency.
 At the V01 decision, the proved local media configuration was the

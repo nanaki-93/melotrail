@@ -158,7 +158,7 @@ It exposes no workflow submission or layer-preparation claim. The Video tab,
 application composition, ready-artwork motion setup and full assembly
 remain planned in their later V10–V33 rows.
 
-The existing Swift companion, soundtrack intake and MIDI Export handoff are
-superseded implementation history retained temporarily for evidence. V30–V31
-remove their repository owners after the integrated owned-fixture path works;
-they are not a compatibility architecture for the new product.
+The Swift companion and MIDI Export soundtrack handoff have been removed from
+active production and build wiring. Historical external evidence remains; no
+Swift compatibility route exists. The independent Video tab and its installed
+runtime proof are still pending V20–V29.

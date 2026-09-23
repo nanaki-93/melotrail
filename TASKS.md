@@ -116,7 +116,7 @@ Next actions:
 3. **V20a** can proceed independently after user confirmation of design scope and
    process; **V20b** requires explicit approval of the resulting flow.
 
-All 13 TODOs are listed below. Unfinished prerequisites are shown here; the queue
+All 11 TODOs are listed below. Unfinished prerequisites are shown here; the queue
 retains the complete dependency lists. Order follows the earliest-ready rule,
 not a requirement to wait for UI approval before independent backend work.
 
@@ -132,8 +132,6 @@ not a requirement to wait for UI approval before independent backend work.
 | `V27` | Bounded full-length encoding and silent MP4 validation | V19, V26 |
 | `V28` | In-app full-cut review and export | V23, V26, V27 |
 | `V29` | Installed-app proof and optional-runtime isolation | V20, V23, V28 |
-| `V30` | Remove MIDI soundtrack/companion handoff | V28, V29 |
-| `V31` | Delete Swift companion and replace launch wiring | V29, V30 |
 | `V32` | Complete UI tests and final review packet | V22, V23, V28, V31 |
 
 Human gates remain U07/Q01/Q02/Q03, V20a/V20b and V24/V33. V24 does not
@@ -166,7 +164,7 @@ V18b1/V18b/V25 remain OPTIONAL and unselected, outside the available work.
 | V28 | Expose full-cut review and export | V23, V26, V27 | TODO | Planned 2026-09-13; use the approved Video flow or obtain explicit approval for uncovered/materially changed surfaces. |
 | V29 | Prove installed app and runtime isolation | V20, V23, V28 | TODO | Planned 2026-09-13; not implemented. |
 | V30 | Remove MIDI soundtrack companion handoff | V28, V29 | DONE | Removed the optional probe/action and handoff-only tests; preserved MIDI snapshot publication, reveal and Logic guidance. Executed out of dependency order at user request; V28/V29 remain TODO. |
-| V31 | Delete Swift companion and launch wiring | V29, V30 | BLOCKED | Removed clean tracked Swift owners and launcher scripts without touching external evidence. A pre-existing edit in `companion/Sources/MelotrailTABIRegression/main.swift` and ignored `.build/` are preserved. `make video` routes to `--video`, but V20 has not implemented this option, so launch proof and full removal remain blocked. |
+| V31 | Delete Swift companion and launch wiring | V29, V30 | DONE | Removed repository Swift package and exclusive checks; retained pre-existing Swift edit and generated build/evidence externally under `~/.melotrail-preserved-local-data/v31-swift-removal-20260923-213900/`. `make video` routes to the desktop `--video` argument without JSON; actual tab startup remains V20 because the user explicitly allowed it to be unavailable during development. Executed ahead of V29 by user request. |
 | V32 | Verify complete UI and prepare evidence | V22, V23, V28, V31 | TODO | Planned 2026-09-13; not implemented. |
 | V33 | Accept complete prompted video and editor handoff | V24, V32 | WAITING_USER | Actual visual evidence/decision required; do not auto-admit. |
 
