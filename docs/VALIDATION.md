@@ -41,6 +41,19 @@ Historical packets and failed checks remain preserved. U07, Q01, Q02, Q03, V24
 and V33 stay WAITING_USER; automated agents cannot complete them or retry absent
 human evidence as an implementation failure.
 
+## Historical V18b1 evidence and current probe isolation
+
+The reported archive `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3`
+is unavailable and no verified backup was supplied. Original checksums, ledgers
+and failed-candidate contents were not authenticated. Per the latest user
+instruction, historical re-verification of that archive is skipped and its
+recovery is no longer a delivery prerequisite; this is not archive recovery or a
+V18b1 pass. Current candidate, source, asset and model integrity checks remain
+required, as do all new implementation checks and human acceptance gates.
+The deferred reference-image resource/test owners and probe registration are
+verified absent from the present tree only; this does not authenticate their
+historical identities. Preserve the legitimate local, media and ComfyUI probes.
+
 ## Required automated checks
 
 ```bash

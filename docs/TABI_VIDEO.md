@@ -40,7 +40,13 @@ unrequested synthesis, stretching, freezing or whole-clip repetition.
 
 The earlier three inspiration areas (Character/Outfit/City) and automatic look
 creation are deferred. V18b1's failed experiment and V18b are OPTIONAL/unselected;
-they are not video-delivery gates. Reuse completed V14/V15/V18a/V18a2 contracts.
+they are not video-delivery gates. The reported archive
+`~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3` is
+unavailable and no verified backup was supplied. Its checksums, ledgers and
+failed-candidate contents remain unauthenticated. Historical re-verification is
+waived as a delivery prerequisite, not claimed recovered or passed; current-tree
+absence checks do not authenticate historical file identities. Reuse completed
+V14/V15/V18a/V18a2 contracts.
 V18b2 validates ready animation assets, V18 selects finished looks and prepares
 motion inputs, V19 supplies moving output, and V20–V23 expose the complete flow.
 This is a plan revision, not an implemented UI or approval of the final video.

@@ -87,12 +87,19 @@ need actual moving-video/user evidence. Neither accepting outside artwork nor
 passing image tests closes those gates. This planning update leaves the scheduler
 paused and authorizes no new inference or model setup.
 
-Before the next implementation admission, the coordinator must preserve and
-verify the existing V18b1 candidate/evidence archive, then isolate its unfinished
-four probe files and opt-in Gradle registration from the active candidate. Do not
-commit that failed probe as part of another task or delete external models/assets.
-Retain measured failures in TABI_VIDEO; reconcile the revised PLAN/TASKS before
-selecting a dependency-ready mandatory row. No docs/tasks.md or second queue.
+The V18b1 archive at
+`~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3`
+was reported absent on 2026-09-16; no verified backup was supplied. Its original
+checksums, ledgers and failed-candidate contents have not been authenticated.
+The user's later instruction supersedes archive recovery as a video-delivery
+admission prerequisite, but does not recover the archive or pass V18b1. Record
+unavailable historical evidence and skip only its historical re-verification;
+verify current candidate/source/assets and produce fresh evidence for new work.
+Verify current-tree absence (not historical identity authentication) of the two
+reference-image resources, two host-test owners and opt-in Gradle registration.
+Preserve legitimate local, media and ComfyUI probes. Do not retry archive searches,
+regenerate V18b1 or delete unexpected owners of unknown provenance; inventory and
+preserve such files before isolation. Keep V18b1/V18b optional and unselected. Normal-checkout architecture/build checks are separately blocked by restored legacy data; preserve that failure as a checkout limitation and perform required checks only against an inventoried isolated candidate.
 
 ## Queue
 
@@ -170,8 +177,8 @@ selecting a dependency-ready mandatory row. No docs/tasks.md or second queue.
 | V19a | Generalize controlled subject motion and effects | V12, V18a | DONE | Versioned Node compositor uses actual prepared-scene placement, supplied poses and both mask representations for bounded subject motion and source-anchored steam. Real-importer fixtures, 7 Node tests, 823 project tests, build/diff and fresh Sol review PASS; 4 comparison renders/1,200 frame hashes verified. Eight writer attempts, last two user-authorized. Evidence `~/.codex/melotrail-video-sequential/evidence/V19a/controlled-motion-20260916`; scenery, app integration and artistic approval remain later work. |
 | V19b | Render coherent scenery with continuous time | V19a | DONE | Supplied same-depth sections join offscreen with exact overlap validation; canonical depth, static foreground masks, scenery-only motion and rejected-component admission. 18 Node/823 project tests, build/diff, fresh Sol review PASS after Terra initial+2 retries and Sol escalation. Actual two-section 30s/900-frame render matches split/resume byte-for-byte; CLI cancellation preserves prior work. Evidence `~/.codex/melotrail-video-sequential/evidence/V19b/coherent-scenery-20260916`; V24 artistic review remains pending. |
 | V19r1 | Restore displaced local data or authorize its retained relocation | — | DONE | Restored and independently compared inventory-equivalent copies while retaining `~/.melotrail-preserved-local-data/2026-09-22-step-1-1/` and `manifest.txt`: `.venv-worker` (8,530 entries, `dc2b97e1…30cac3`), `sounds` (529, `9e8e8759…f1f0ac7`), and `data/audio` (175, `5e0c2951…556c38`); types, modes, symlink targets, regular-file SHA-256 digests and `diff -qr` match. |
-| V19r2 | Locate and authenticate the V18b1 archive | — | BLOCKED | Preserve and verify the authentic failed candidate/evidence archive and isolate its unfinished probe from active code; recovery input is required. |
-| V19r3 | Validate the exact candidate in an isolated checkout | V19r1, V19r2 | BLOCKED | Reproduce the dirty candidate in an explicitly inventoried isolated directory and run fresh baseline checks without deleting restored local data. |
+| V19r2 | Record unavailable historical evidence and verify active probe isolation | — | REVIEW | Archive `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3` unavailable; checksums, ledgers and candidate contents unauthenticated. User waived historical recovery as delivery prerequisite. Current-tree absence of deferred probe owners verified; legitimate probes retained. Normal-checkout checks fail at `TargetArchitectureRulesTest.kt:123` because restored legacy data is present; data preserved. Isolated-candidate checks remain required by V19r3. |
+| V19r3 | Validate the exact candidate in an isolated checkout | V19r1, V19r2 | TODO | Candidate base `b084fd2ba711678f28d035cd3e3731aa79d0710b`; detached isolation `/Users/marcoandreose/.codex/melotrail-v19r3-isolation-20260923`; dirty-diff SHA-256 `994ebda6c54e12859895b003c14de133022d6a0a2f7da010a6e3f2c1bec5323e`. Explicit exclusions: `.venv-worker`, `sounds`, `data/audio`, build outputs, `.pi/` workflow state, `.venv*`, `tools/__pycache__`; originals preserved. Isolated focused architecture+documentation tests, `make test`, `make build`, and `git diff --check` PASS (exit 0); normal-checkout architecture limitation remains. Candidate receipt: `/Users/marcoandreose/.codex/melotrail-video-sequential/evidence/V19r3/candidate-receipt.md` (SHA-256 `b8f55db1fc2c4df18c506d878d057e6d31b253fbf4bb39e1df7d1e3064b37b8d`). Historical waiver does not waive current candidate checks; remains TODO pending review. |
 | V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b, V19r3 | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary; blocked until V19r3. |
 | V20a | Prepare Video-flow design alignment | — | WAITING_USER | Obtain design-process/scope confirmation, then prepare a reviewable Video-workspace flow; no production UI work. |
 | V20b | Obtain explicit Video-flow approval | V20a | WAITING_USER | A genuine reviewer must approve a specific artifact revision and all required Video-flow surfaces. |
@@ -1464,19 +1471,19 @@ requires V24 user feedback.
 **Verification:** After symlink inspection, compare full inventories and run `diff -qr` for each source/destination pair, `git status --short`, and `git diff --check`.
 **Done:** Metadata- and content-equivalent copies exist at all original locations, or explicit authorization covers every retained relocation. A documented blocker is not completion.
 
-### V19r2 — Locate and authenticate the V18b1 archive
+### V19r2 — Record unavailable historical evidence and verify active probe isolation
 
-**Scope:** Only the documented V18b1 evidence root, known Melotrail preservation roots, user-supplied backup locations, active probe owners, and this row's concise evidence pointer.
-**Rules:** Search bounded relevant locations for `updated-assets-f96a7f3`; do not scan unrelated private data or regenerate the failed experiment. Authenticate a candidate against revision `f96a7f36430d45c576de511be94480e31762570b`, original manifests/checksums, requests, results and recorded failures. Determine the four unfinished probe files and opt-in Gradle registration from authentic evidence, verify their absence from active code, and preserve V11/V17 probes. A partial archive remains BLOCKED.
-**Verification:** Use the discovered manifest's documented hash procedure, targeted active-owner searches derived from authentic identifiers, and `git diff --check`.
-**Done:** The complete authentic failed archive is preserved at the documented or explicitly recorded replacement path and isolated from active code; otherwise identify the missing recovery input without changing OPTIONAL V18b1/V18b.
+**Scope:** This queue row, the documented V18b1 evidence path, and targeted inspection of active probe owners/registration. Do not modify or delete unknown files.
+**Rules:** Preserve as history the prior blocked archive-recovery result. The reported archive `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3` is unavailable and no verified backup was supplied; original checksums, ledgers and failed-candidate contents are unauthenticated. The latest user instruction supersedes recovery as a prerequisite for video delivery. Do not claim archive recovery or V18b1 success, repeat broad searches, or regenerate trials. Verify current-tree absence—not historical identities—of `reference-image-api.json`, `reference-image-profile.json`, `VideoReferenceImageHostCheck.kt`, `VideoReferenceImageHostCheckTest.kt`, and `videoReferenceImageProbe` registration. Preserve legitimate `videoLocalProbe`, `videoMediaProbe` and ComfyUI probe. If an unexpected owner exists, inventory and preserve its bytes; unknown ownership blocks isolation. V18b1/V18b/V25 stay OPTIONAL and unselected. This waiver covers only unavailable historical re-verification, not current correctness, integrity or human gates.
+**Verification:** Targeted owner searches and `./gradlew :test --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`; `git diff --check`. The prior normal-checkout `make test`/`make build` failure at `TargetArchitectureRulesTest.kt:123` is recorded separately; restored data was not removed. Isolated-candidate baseline belongs to V19r3.
+**Done:** Documentation records unavailability and unauthenticated history truthfully, and the named deferred owners are absent from the active tree with legitimate probes retained. DONE does not mean V18b1 archive recovery or success, nor does it certify isolated checks.
 
 ### V19r3 — Validate the exact candidate in an isolated checkout
 
 **Scope:** The exact current base revision and dirty task-owned changes, an external isolated candidate directory, and this row's concise identity/check evidence; never protected local-data paths.
-**Rules:** Create a detached isolated candidate without branch/ref changes. Record base revision, dirty-diff identity, copied task-owned untracked-file hashes and explicit exclusions. Exclude `.venv-worker`, `sounds`, `data/audio`, build products and workflow state by inventory, not by deleting them from the user checkout. Do not weaken architecture tests, alter `.gitignore`, or present older `HEAD` as this candidate.
+**Rules:** Create a detached isolated candidate without branch/ref changes. Record base revision, dirty-diff identity, copied task-owned untracked-file hashes and explicit exclusions. Exclude `.venv-worker`, `sounds`, `data/audio`, build products and workflow state by inventory, not by deleting them from the user checkout. Do not weaken architecture tests, alter `.gitignore`, or present older `HEAD` as this candidate. V19r2 waives only missing historical archive authentication; it does not waive exact-candidate reproduction or fresh checks.
 **Verification:** From the verified isolated candidate run `./gradlew :test --no-build-cache --rerun-tasks --tests 'app.melotrail.architecture.TargetArchitectureRulesTest' --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`, `make test`, `make build`, and `git diff --check`; record any restored-checkout failure separately.
-**Done:** V19r1 and V19r2 are satisfied, the candidate identity is reproducible, and all required isolated checks pass without modifying unrelated local data.
+**Candidate/evidence (not completion):** Base `b084fd2ba711678f28d035cd3e3731aa79d0710b`; detached checkout `/Users/marcoandreose/.codex/melotrail-v19r3-isolation-20260923`; current dirty-diff SHA-256 `5bb6f3e2beb721a48d41e7d0da8deab862e05bd047dec02958c17184c2339f43`. Exclusions are inventoried by path, type, and scope in `/Users/marcoandreose/.codex/melotrail-video-sequential/evidence/V19r3/candidate-receipt.md`; fresh outcomes must bind to this current hash. Previous candidate checks are not evidence for this revision.
 
 ### V20a — Prepare Video-flow design alignment
 
