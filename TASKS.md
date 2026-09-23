@@ -1,6 +1,7 @@
 # Implementation tasks
 
-Authority: [PLAN](PLAN.md). Updated: 2026-09-16 for externally finished artwork and continuous silent video. Task status is authoritative in this queue.
+Authority: [PLAN](PLAN.md). Task status is authoritative in this queue.
+Completed specifications are pruned; open task states and dependencies are unchanged.
 The old MC/UI/VID queues are retired. Reuse existing code and tests; do not
 replay completed import, draft, acceptance, export or UI-foundation work.
 
@@ -56,18 +57,11 @@ The user's 2026-09-13 request retires the Swift V01–V07 workstream and its fou
 production gates. Their code/evidence remain historical until V30–V31 remove
 exclusive runtime owners. **V10–V33 are the video queue**, including suffixed slices;
 old completion does not count toward the replacement. V24/V33 require visual
-feedback, and V25 is an optional hosted fallback. The user authorized the
-sequential scheduler, Sol High implementation, Astra High failure repair and one
-local commit per validated task on 2026-09-13. On 2026-09-16 the user replaced
-the writer/repair policy with Terra High plus two retries, then Sol High plus
-two retries; fresh Sol High review and per-task commits remain required. The first implementation slice was
-V10; V10–V16 are now completed as recorded below. The scheduler policy below
-supersedes the retired autopilot configuration. On 2026-09-14 the user approved
-restarting with the revised ComfyUI plan. The coordinator reconciled PLAN/queue
-into the execution checkout, retained the earlier V17/V24 evidence, and prepared
-V17a as the next dependency-ready row with its exact allowed paths. Include these
-coordinator-owned PLAN/TASKS changes with the next validated task commit; do not
-resume the superseded Draw Things production-adapter contract.
+feedback, and V25 is an optional hosted fallback. The configured policy below
+uses Terra High plus two retries, then Sol High plus two retries, fresh Sol High
+review and one local commit per validated implementation task. It supersedes
+retired autopilot policies. Reuse completed ComfyUI integration; do not resume
+the superseded Draw Things production-adapter contract.
 Q03b's [MIDI review](docs/VALIDATION.md#final-manual-review) remains available.
 
 The current video contract is PLAN §9, revised by the user on 2026-09-16:
@@ -81,104 +75,83 @@ on whole-clip repeat-to-fill remain. The user selected a finished scene as the
 primary upload, with optional separate character/background layers.
 
 V18b1 and V18b are OPTIONAL and unselected, not successfully completed. Their
-failed evidence remains outside Git. V18b2 now owns ready-asset validation; V18
+historical evidence is unavailable; it is not an active verification dependency. V18b2 now owns ready-asset validation; V18
 imports/selects finished artwork without generative preparation. V24/V33 still
 need actual moving-video/user evidence. Neither accepting outside artwork nor
 passing image tests closes those gates. This planning update leaves the scheduler
 paused and authorizes no new inference or model setup.
 
-The V18b1 archive at
+The user confirmed **`docs/pictures/video/` and all its subfolders** as the
+source asset collection for video work. Select suitable inputs from that tree,
+record their paths/digests and preserve originals. Existing inspiration-only
+labels remain meaningful: availability does not make every image a finished
+scene, ready layer, licensed production input or approved moving result. Validate
+actual dimensions, alpha, alignment, masks/poses and scenery coverage for each
+requested motion; report missing inputs rather than invent artwork. Ordinary
+technical tests use small owned fixtures; real video checks use selected supplied
+assets and fresh output/evidence paths.
+
+The unavailable V18b1 archive at
 `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3`
-was reported absent on 2026-09-16; no verified backup was supplied. Its original
-checksums, ledgers and failed-candidate contents have not been authenticated.
-The user's later instruction supersedes archive recovery as a video-delivery
-admission prerequisite, but does not recover the archive or pass V18b1. Record
-unavailable historical evidence and skip only its historical re-verification;
-verify current candidate/source/assets and produce fresh evidence for new work.
-Verify current-tree absence (not historical identity authentication) of the two
-reference-image resources, two host-test owners and opt-in Gradle registration.
-Preserve legitimate local, media and ComfyUI probes. Do not retry archive searches,
-regenerate V18b1 or delete unexpected owners of unknown provenance; inventory and
-preserve such files before isolation. Keep V18b1/V18b optional and unselected. Normal-checkout architecture/build checks are separately blocked by restored legacy data; preserve that failure as a checkout limitation and perform required checks only against an inventoried isolated candidate.
+is retired evidence, not a delivery dependency. The user approved dropping its
+recovery, historical hash reconciliation and reviews requiring its missing
+contents. No archive recovery or V18b1 pass is claimed. V19r2 closes the bounded
+current-tree probe-isolation check; V19r3 instead validates the current revision.
+Preserve legitimate local/media/ComfyUI probes and any unexpected files. Do not
+search for old archives, regenerate failed image trials or delete unknown owners.
+Normal-checkout architecture/build checks remain limited by restored legacy data;
+preserve that data and validate an inventoried isolated candidate instead.
+
+## Available work and TODO order
+
+**Next dependency-ready TODO: V19r3 (fresh current-revision validation).**
+No product implementation is admitted until it passes. This scope update does
+not restart the scheduler, authorize inference or approve a visual/design gate.
+
+Next actions:
+1. **V19r3**: validate the current revision and task-owned diff in isolation,
+   using current assets and fresh evidence. No old candidate/hash reconciliation
+   or missing-archive review is required.
+2. **V19**: implement controlled previews after V19r3 passes.
+3. **V20a** can proceed independently after user confirmation of design scope and
+   process; **V20b** requires explicit approval of the resulting flow.
+
+All 13 TODOs are listed below. Unfinished prerequisites are shown here; the queue
+retains the complete dependency lists. Order follows the earliest-ready rule,
+not a requirement to wait for UI approval before independent backend work.
+
+| TODO | Implementation scope | Unfinished prerequisites |
+| --- | --- | --- |
+| `V19r3` | Fresh current-revision isolated validation and review | None |
+| `V19` | Controlled previews and immutable takes | V19r3 |
+| `V20` | Video tab and independent create/open | V19r3, V20b |
+| `V21` | Finished-scene upload and motion setup | V20 |
+| `V22` | Generation, take selection, cancellation and retry | V19, V20, V21 |
+| `V23` | Actual moving-video playback | V19, V22 |
+| `V26` | Continuous 180/240/300-second scene planning | V19 |
+| `V27` | Bounded full-length encoding and silent MP4 validation | V19, V26 |
+| `V28` | In-app full-cut review and export | V23, V26, V27 |
+| `V29` | Installed-app proof and optional-runtime isolation | V20, V23, V28 |
+| `V30` | Remove MIDI soundtrack/companion handoff | V28, V29 |
+| `V31` | Delete Swift companion and replace launch wiring | V29, V30 |
+| `V32` | Complete UI tests and final review packet | V22, V23, V28, V31 |
+
+Human gates remain U07/Q01/Q02/Q03, V20a/V20b and V24/V33. V24 does not
+block independent assembly/packaging work; V33 requires its actual decision.
+V18b1/V18b/V25 remain OPTIONAL and unselected, outside the available work.
 
 ## Queue
 
 | ID | Task | Depends on | State | Result / implementation commit |
 | --- | --- | --- | --- | --- |
-| F01 | Verify baseline and real dependency boundaries | — | DONE | f8013adfe12f; Preserved the staged F01 repair. It makes the architecture guard scan the real desktop root and verifies raw MIDI imports with an actual MidiCore page path. Static review found no reproduced issue. Default desktop startup delegates to the MIDI Core composition; its target graph has no worker/model/mixer/renderer construction. No queue edits or commits made.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T15-14-51-831Z-F01 |
-| M01 | Freeze musical baseline and comparison harness | F01 | DONE | 7352ec8f050a; baseline fixture, deterministic comparison harness and review form; make test/build + fresh review passed; evidence runs/2026-09-06T17-31-17-824Z-M01 |
-| F02 | Delete legacy desktop | M01 | DONE | b22cb8c09d58; Deleted the legacy desktop router, view model, pages, worker/audio/library composition, preferences migration, obsolete theme branches, and exclusive tests. Retained the MIDI Core launcher, composition, six-route shell, theme/primitives, and persistent MIDI player. Fixed the reproduced logger test to assert MIDI-only diagnostics. Next dependency-ready task: F03.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T20-44-18-740Z-F02 |
-| F03 | Delete legacy application workflow | F02 | DONE | `596e605923f1`; legacy workflow/config entrypoints removed; `make test`, `make build`, diff check, and fresh coordinator review passed. |
-| F04 | Delete obsolete musical generators and model paths | F03 | DONE | b520e0908aa7; Deleted all seven exclusive Qwen fixtures and the obsolete schema-V4 pending-run fixture. Added regression coverage preventing their return. No source MIDI, retained fixtures, Logic evidence, or UI/TABI references changed.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T22-23-31-708Z-F04 |
-| F05 | Delete audio/worker runtime and finish schema/build cleanup | F04 | DONE | 9db46bd70a0f; Deleted obsolete audio/DSP/worker/Python runtime and exclusive tests, removed obsolete Make/Python wiring and root dependencies, retained MIDI storage/schema behavior, and added cleanup regression guards. Fixed the prior failure by removing empty retired directories from the worktree. Fresh diff review found no further issue. Next dependency-ready task: F06.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T23-17-34-111Z-F05 |
-| F06 | Delete verified legacy data and measure repository reduction | F05 | DONE | `d6adb18ce53c`; 5,250,264 bytes removed (16.1%); `make test`, `make build`, diff check, Sol debug, and fresh Terra review passed. |
-| A01 | Harden and verify bounded agent execution runner | F01 | DONE | a139773cdf8f; Requires a non-empty allowed-path policy for every allowlisted task before selection/admission. Added end-to-end coverage proving a now-next A01 with no policy creates no state, run directory, or worktree. Fresh diff review found no reproduced issue.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T15-42-09-677Z-A01 |
-| A02 | Reduce runner overhead and recover retained work | A01 | DONE | 87963895d3a1; bounded evidence, saved repair sessions, three-task batches, disjoint M04/M06 workers, safe retained recovery; 39 runner regressions + application test/build, live CLI resume and fresh review passed. |
-| A03 | Recover concrete review findings as bounded subtasks | A02 | DONE | Structured findings, preserved candidate and exact-file recovery with independent acceptance checks; one attempt per finding, three findings maximum, 20 min/150k tokens each. 60 runner regressions, 537 application tests/build, live Astra schema smoke and independent Astra Extra High review passed. Evidence ~/.codex/melotrail-terra/finding-recovery-evidence. |
-| U01 | Finish verified lanes and live timeline projection | F06 | DONE | `d983d2098d93`; factual shared lanes, real-position observation, stale evidence and device-loss lifecycle coverage; `make test`, `make build`, diff check, Sol debug, and fresh Terra review passed. |
-| U02 | Compact shell, player and inspector | U01 | DONE | 7d661a7a8eb1; Fixed review-reproduced U02 gaps: Arrange/Review use one 332dp selected-section inspector column at ≥1440px, retain inline inspectors below that width, and Review draft controls use rectangular shapes. Added reference-width regression coverage. No commit made.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-07T10-37-44-445Z-U02 |
-| U03 | Refine Project and MIDI import | U02 | DONE | Native one-file MIDI drop, factual Project/MIDI facts, consistent fractional BPM, scoped accepted/rejected findings and honest recovery; Sol High fixes plus `make test`, `make build`, diff check and fresh Terra review passed. |
-| M02 | Derive melody context and harmony-tension evidence | M01, F06 | DONE | 07924ab04ef3; read-only melody/harmony context; fixed 6/8 accents, pickup slicing and PPQ25; 8 focused + 337 full tests, build and fresh review passed; recovered preserved candidate. Musical acceptance remains advisory. |
-| M03 | Add explicit harmony durations and source extent | M02 | DONE | fa5bd0dfd3f5; Occurrence source audition now uses the confirmed arrangement end, retaining padded trailing silence without changing source melody events or bytes. Added padded-occurrence regression and MIDI contract note.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-07T18-28-52-249Z-M03 |
-| U04a | Expose compact chord-duration and source-end editing | U03, M03 | DONE | Selected-section durations and verified melody/source-end context; unique IDs after remove/add; confirmed-meter positions. 350 tests, build, diff check and fresh Terra review PASS; three sizes inspected. Evidence: ~/.codex/melotrail-terra/u04a-repair-evidence. Visual/Logic acceptance remains at U07/Q02. |
-| M04a | Build bounded legal piano voicing choices | M03 | DONE | Bounded open/guide/reduced pool; continuous accepted bass-root coverage guards omission; single deterministic selection path. Engine v2 with safe retained-candidate retries; frozen v1 comparison repaired. 355 tests, build, diff check and fresh Terra review PASS. Evidence: ~/.codex/melotrail-terra/m04a-repair-evidence; listening/Logic pending Q01/Q02. |
-| M04b | Rank piano voicings against protected melody | M04a | DONE | Engine v3 ranks M02 overlap, register and per-finding prominence, including held cross-chord suspensions. Validation record and frozen v1/current v3 MIDI pairs refreshed. 366 tests, focused checks, build and fresh Terra review PASS; Q01/Q02 listening/Logic pending. Evidence ~/.codex/melotrail-terra/m04b-repair-evidence. |
-| M04 | Improve piano voicing against melody | M04b | DONE | Engine v4 bounded phrase lookahead and durable piano-boundary identity; verified retry/reopen and draft-use checks preserve prior artifacts. V4 snapshots and v1/v4 listening pack refreshed. 372 tests, focused checks, build and fresh Terra review PASS. Q01/Q02 human gates pending; short-section drum fixture recorded for M08. Evidence ~/.codex/melotrail-terra/m04-repair-evidence. |
-| M05a | Anchor comping to meter and chord windows | M04 | DONE | Authored 4/4, 3/4 and 6/8 meter phase with exact harmony clipping; sustained offbeat revoicing retains bar attacks, unsupported meters reject explicitly. All real callers bind pattern identity. 379 tests, focused checks, build, Sol High repair and fresh Terra High review PASS. V1/v5 MIDI pack refreshed; Q01/Q02 pending. Evidence ~/.codex/melotrail-terra/m05a-repair-evidence. |
-| M05 | Add phrase-aware, meter-aware comping | M05a | DONE | Versioned melody/CC64-aware support and answers, complete inter-phrase bar rests, phrase-end breathing room and preserved voicing across rest-only harmony. Early phrase ends, real publication/reopen/source preservation and six exact MIDI snapshots verified. 388 tests, focused checks, build and fresh Terra High review PASS. Comparison pack refreshed; Q01/Q02 pending. Evidence ~/.codex/melotrail-terra/m05-repair-evidence. |
-| M06a | Persist versioned arrangement-plan records | M03 | DONE | 747e34385fcc; Added schema-v3 versioned arrangement-plan persistence, authority validation, role-scoped plan fingerprints, contract update, and reopen/malformed/no-op/protected-artifact regressions. No migration mode added.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-07T22-48-30-296Z-M06a |
-| M06b | Create and confirm arrangement-plan proposals | M06a | DONE | Real Arrange propose/confirm/cancel flow with session-held suggestions, readable intent summary, confirmed/reopened state and stale-authority guards. Source/drafts preserved. 363 tests, build, diff check and fresh Terra review PASS; three-size captures inspected. Evidence: ~/.codex/melotrail-terra/m06b-repair-evidence. Plan-edit invalidation and plan-driven generation remain M06/M07. |
-| M06 | Persist a deliberate whole-song arrangement plan | M06b | DONE | b7b57ecf27a9; Fixed the stale-write race: confirmed plan edits now run load/verify/preview/save under the shared project write lock. Snapshot capture now shares that lock, and a concurrent acceptance/snapshot regression verifies stale concurrent writes are rejected rather than overwritten.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-08T13-55-11-982Z-M06 |
-| M07a | Resolve per-occurrence generation context | M05, M06 | DONE | e7949bd3e7b3; Prepared the M07a candidate for coordinator validation. It resolves role-scoped occurrence, neighbor, repeat, and Bass/Drums groove inputs; requires a confirmed plan through full-draft generation; and fixes over-invalidation from groove-only edits and whole-song piano-boundary hashes. Added regressions for deterministic fingerprints, Chords→Bass→Drums ordering, bounded invalidation, preserved unrelated acceptance, repeat ambiguity, and distant plan edits. TASKS remains untouched per coordinator ownership.; test/build + fresh revie |
-| M07b | Represent planned rests in draft and acceptance | M07a | DONE | Schema-v4 typed rests through draft audition and atomic Use/Undo; revision-guarded unlock, inactive-role and rest-dependency guards, scoped invalidation and section repair. 401 tests, focused desktop/core checks, build, diff check and fresh Terra High review PASS. Evidence ~/.codex/melotrail-terra/m07b-recovery-evidence; M07 export and Q02 Logic evidence remain pending. |
-| M07 | Generate drafts from plan, boundaries and explicit rests | M07b | DONE | Recovered accepted-rest assembly/export and readiness; verified all-song role omission and exact later Bass entry after intro rest. Materialized both Logic packages; current manifest v2 companion consumer aligned. Focused/full tests, native checks, build and fresh Terra review; evidence ~/.codex/melotrail-terra/m07-repair-evidence. Actual Logic playback remains Q02. |
-| M08a | Coordinate bass support with chord and groove intent | M07 | DONE | Recovered shared groove/role fingerprints and repaired reduced-density held support, intro/outro kick ceilings and false pickup advisories. Focused regressions, 424 tests, build and Terra review passed. Evidence ~/.codex/melotrail-terra/m08a-repair-evidence; M08 full-song listening remains pending. |
-| M08b | Shape drum fills and section transitions | M08a | DONE | acd724e30c9b; Addressed review feedback: a quiet next Intro/Outro now suppresses its incoming phrase fill and final-bar Bass-derived kick support. Added deterministic Intro and Outro pickup regressions; bumped Drum transition identity to v2 and updated contract notes.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-10T10-40-00-057Z-M08b |
-| M08 | Coordinate bass/drums and section transitions | M08b | DONE | Recovered terminal-rest/end-boundary comparison evidence. Explicit uncached focused Bass/Drums/ComparisonHarness execution, 431 tests, build and Terra review passed. Three frozen-baseline/current pairs retained at ~/.codex/melotrail-terra/m08-repair-evidence/comparison-packages; 30 MIDI and 6 manifest digests verified. Listening/Logic approval remains Q01/Q02. |
-| M09a | Define scoped deterministic musical repair intents | M08 | DONE | ff881e53ed9c; Repaired the failing transition-scope regression. The invalidation planner canonically orders scopes by occurrence ID then role, so the expected list now matches the real deterministic caller output. Existing M09a implementation and documentation remain otherwise unchanged.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-10T12-13-32-218Z-M09a |
-| M09 | Add meaningful alternatives and targeted musical repair | M09a | DONE | Recovered bounded distinct alternatives and melody-inclusive A/B; repaired neighboring dependency generation, durable register identity, atomic batch/boundary validation and same-settings retries. Focused checks, 444 tests, build, diff check and fresh Terra High review passed. Evidence ~/.codex/melotrail-terra/m09-repair-evidence; Q01/Q02 listening/Logic pending. Arrange controls continue in U05b. |
-| U04b | Edit sections and confirmed arrangement purpose | U04a, M06 | DONE | Section duplicate/split/move/remove and separately reviewed purpose/phrase confirmation. Repaired canonical test publication, invalid phrase input, section/plan write race and removed-rest evidence preservation. 410 tests, build, diff check and fresh Terra High review PASS; three-size controls inspected. Evidence ~/.codex/melotrail-terra/u04b-recovery-evidence; U04 layout and human visual/Logic gates pending. |
-| U04 | Build compact Structure & Harmony editing | U04b | DONE | Recovered shared selection, unsaved impact and total recovery; fixed Compose test import/assertion, wrapped section actions and first-viewport name/save access. Unsaved sections cannot display another occurrence’s chords. 411 tests, build, three-size captures and fresh Terra review; evidence ~/.codex/melotrail-terra/u04-repair-evidence. |
-| U05a | Make Arrange lanes and full-draft action dominant | U04, M07 | DONE | Compact five-style gallery/full-draft CTA, selected-section plan/progress, distinct draft/accepted rests and accepted-work precedence. Three-size captures and unclipped wide card bounds, combined test/build and Terra review passed. Evidence ~/.codex/melotrail-terra/u05a-implementation-evidence. |
-| U05b | Wire bounded previews and contextual repair actions | U05a, M09 | DONE | Recovered six bounded repair actions and real one-bar loops; fixed saved-plan retry wording with Compose regression. Uncached focused checks, 445 tests/build, three-size visual inspection and fresh Terra review passed. Evidence ~/.codex/melotrail-terra/u05b-repair-evidence; full Arrange flow continues in U05, human gates pending. |
-| U05 | Build timeline-first Arrange with plan and repairs | U05b | DONE | Recovered plan-aware ephemeral previews and three-action full-draft playback. Fixed intro fixture, post-confirm exception recovery, late-cancel transport/UI state and variable-precision history ordering; keyboard Enter verified. Uncached focused checks, 450 tests/build, three-size inspection and fresh Terra review passed. Evidence ~/.codex/melotrail-terra/u05-repair-evidence; human musical/Logic/visual gates pending. |
-| U06a | Finish whole-song review and atomic decisions | U05 | DONE | Recovered exact Draft/Accepted identity, contextual melody playback, atomic mixed-rest Use/Undo/reuse and scoped blocker routing. Fixed confirmed-end test fixture and playback/candidate lane identity mismatch. Uncached focused checks, 456 tests/build, three-size inspection and fresh Terra High review passed. Evidence ~/.codex/melotrail-terra/u06a-repair-evidence; Logic/listening/visual gates pending; final Export handoff remains U06. |
-| U06 | Finish whole-song Review and Logic export handoff | U06a | DONE | e4d2990b8f05; Corrected the reported compilation error by calculating bounds width from right minus left, preserving the 407 dp regression assertion. Changes remain uncommitted.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-11T05-44-43-333Z-U06 |
-| U07a | Pin visual comparisons and accessibility regressions | U06 | DONE | Recovered exact image comparisons, geometry and accessibility guards; added 24 coherent accepted/ready and scrolled Review/Export captures, preserving existing baselines (69 total). Uncached focused checks, 537 tests, build, diff check and independent Astra Extra High review passed. Evidence ~/.codex/melotrail-terra/u07a-repair-evidence; native responsiveness/scaling remains U07b and human visual approval U07. |
-| U07b | Measure responsiveness and prepare visual review | U07a | DONE | Recovered native resize/capture lifecycle and verified selection retention; 20-sample preview/draft/cancellation measurements meet preparation/generation targets. 28 historical screen captures and 66 six-page comparisons prepared; 543 tests and build passed then. Current automatic native evidence uses explicit frame replay; fresh compositor capture is a separate U07/Q03 gate (Validation). Evidence ~/.codex/melotrail-terra/u07b-repair-evidence; acoustic onset unmeasured, human visual decision remains U07. |
 | U07 | Prove visuals, accessibility and responsiveness | U07b, Q03b | WAITING_USER | Final manual review deferred by user until engineering ends. Q03b reconciles current six-page evidence; foreground compositor capture and genuine visual scores remain required, including the recorded capture limitation. Prior failed candidate preserved. |
-| Q01a | Prepare frozen musical evaluation packages | U06, M09 | DONE | Recovered immutable evaluation freeze/export and M01 comparison commands; input integrity, reproduction and accepted-only export regressions pass. Focused/full checks, build and independent review recorded in ~/.codex/melotrail-terra/q01a-q02a-repair-evidence. Five final songs (three unseen) and real scores remain Q01. |
 | Q01 | Evaluate musical improvement and fix failures | Q01a, Q03b | WAITING_USER | Final listening deferred by user until engineering ends. Five owned/licensed full songs (three unseen) and genuine scores remain required. Preserve Q01 candidate and Q01a outputs; do not retry missing scores as code failures. |
-| Q02a | Generate current Logic matrix and manifests | U06, M03, M07, M08 | DONE | Recovered 21 deterministic probes (20 current packages and one expected import rejection), semantic re-import/project reopen and immutable inventories. Export copies omit bank hints while protected source/expression survives. Focused/full checks, build and independent review: ~/.codex/melotrail-terra/q01a-q02a-repair-evidence. Actual Logic import/play/reopen remains Q02. |
 | Q02 | Run the current Logic Pro matrix | Q02a, Q03b | WAITING_USER | Final manual Logic import/play/save/reopen deferred by user until engineering ends. Q02a packages are prepared; Q03b refreshes final build identity and instructions. No Logic pass claimed. |
-| Q03a | Prove clean native build and startup | F06, U06 | DONE | Recovered clean-install verifier; fixed early companion-crash observation (150 ms→2 s) found under clean-run load, with delayed-crash/persistent-process regressions. Uncached architecture/22 focused checks, 581 full tests, build, private DMG installation/bundled-JVM startup and independent review passed. 73 production Kotlin files/27,702 lines (62.4% fewer than baseline); no source media deleted. Evidence ~/.codex/melotrail-terra/final-engineering-recovery-evidence/q03-*. |
-| Q03b | Prepare the final manual-review handoff | Q03a | DONE | Fresh c20aecf583 implementation packets: empty final-song set (5/3 missing), development comparisons, 20 Logic packages/1 expected rejection/571 verified hashes, 66 pinned UI comparisons, 28 frame replays, timing and owned-video demos. Technical checks/build and independent review passed; README/Architecture/Validation reconciled. Evidence ~/.codex/melotrail-terra/final-review-2026-09-13; all human gates remain pending. |
 | Q03 | Prove clean install and obtain MIDI release decision | Q03b, U07, Q01, Q02 | WAITING_USER | Final MIDI release decision waits for the end-of-engineering manual review. No release approval inferred from automatic checks. |
-| V10 | Align video contracts and queue guards | — | DONE | Owner contracts aligned to planned assets-and-prompt Video tab; V24/V33 guarded and OPTIONAL V25 excluded. 61 Node tests, documentation check, make test/build and diff check passed; fresh Sol High review PASS after one Astra High repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V10. Video runtime/visual acceptance remain later tasks. |
-| V11a | Validate local profile and prepare bounded probe requests | V10 | DONE | Pinned request/profile preparation reports NOT_RUN with path, collision and preservation checks. 598 tests, owned probe, make test/build and diff check passed; fresh Sol High review PASS after three Astra repairs (third explicitly authorized by user). Evidence ~/.codex/melotrail-video-sequential/evidence/V11a. Real inference remains V11. |
-| V11 | Prove one local generation workflow | V11a | DONE | Measured negative local result: FLUX keyframes succeed; both bounded LTX attempts stop on host memory pressure, no video/backend selected. Two Astra repairs protect original models and confirm cancellation cleanup; latest source audit passes 8/8. 618 tests, make test/build, diff check and fresh Sol High review PASS. Evidence ~/.codex/melotrail-video-sequential/evidence/V11; optional hosted proposal unselected, visual approval remains V24. |
-| V12a | Supervise bounded owned media processes | V10 | DONE | Pinned native launch, private jobs, owned process groups and bounded cleanup; 13 real native cases, 611 total tests, build, diff check and fresh Sol High review PASS after one Astra High repair. Evidence: ~/.codex/melotrail-video-sequential/evidence/V12a. Real media proof remains V12. |
-| V12 | Prove video-only media runtime | V12a | DONE | Pinned separate FFmpeg 9.0.1 tools prove real decode, seek, frame access and silent VideoToolbox H.264 encode: 72 frames, 320x180, 24 fps, 3 seconds, zero audio streams; source preserved. 622 tests, actual launcher rejection checks, make test/build, diff check and fresh Sol High review PASS after one Astra repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V12. Final delivery/UI remain later tasks. |
-| V13 | Persist independent video projects | V10 | DONE | Independent v1 project lifecycle/store, versioned immutable records/selections, artifact hashes, MIDI path isolation and locked atomic revision saves. Real filesystem regressions protect symlink traversal, control-file self-reference and creation collisions. 636 tests, make test/build, diff check and fresh Sol High review PASS after one Astra repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V13. |
-| V14 | Import reference assets | V13 | DONE | Bounded PNG/JPEG import preserves immutable originals, thumbnails, optional metadata and duplicate identity; reopen verifies all pins. 658 tests, make test/build, diff check, seven real reference imports/reopens and fresh Sol High review PASS after three Astra repairs (third explicitly user-authorized). PNG integrity/transparency regressions pass. Evidence ~/.codex/melotrail-video-sequential/evidence/V14. |
-| V15 | Compile asset prompts and shot proposal | V13, V14 | DONE | Exact prompts and capability-aware reference/guidance bindings; 180–300s unique or explicitly reviewed reuse proposals with scoped fingerprints and profile-bound estimates. 681 tests, make test/build, diff check and fresh Sol High review PASS after one Astra repair. Evidence ~/.codex/melotrail-video-sequential/evidence/V15. No inference/backend selection or visual approval claimed. |
-| V16 | Persist bounded recoverable jobs | V13 | DONE | Durable admission/launch claims, owned cancellation, explicit bounded retry/recovery, immutable outputs and reserved hosted budgets. 702 tests, make test/build, diff check and fresh Sol High review PASS after three Astra repairs (third explicitly user-authorized); cancellation/claim, crash, late-result and root-rebinding regressions pass. Evidence ~/.codex/melotrail-video-sequential/evidence/V16. |
-| V17a | Pin ComfyUI setup and own its local server | V11, V12a | DONE | Pinned installed ComfyUI/Python/GGUF/LTX/Gemma/upscaler setup; verified owned server identity, bounded resources, cancellation/reaping and single inference admission. 727 tests, make test/build, diff check, real start/health/port-collision/stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17a. API jobs remain V17b. |
-| V17c | Expose a verified owned ComfyUI connection | V17a | DONE | Exact-session private HTTP/WebSocket connections reject copied/stale handles and protect replacement-listener dispatch; encoded queries preserved. 731 tests, make test/build, diff check, real private HTTP/WS/owned-stop proof and fresh Sol High review PASS after one Astra High repair. Source/model files preserved. Evidence ~/.codex/melotrail-video-sequential/evidence/V17c. API jobs remain V17b. |
-| V17b | Connect recoverable ComfyUI API jobs | V17a, V17c, V14, V16 | DONE | Recoverable ComfyUI jobs with pinned input bindings, bounded HTTP/WebSocket access, stable submission identity, exact-session inference leases, cancellation/restart reconciliation and immutable results. Focused checks, 759 tests, make test/build, diff check, installed-server HTTP/WebSocket/stop proof and fresh Sol High review PASS after five Astra repairs; extended repairs explicitly user-authorized. All six review findings closed. Sources/models preserved; no inference run, which remains V17. Evidence ~/.codex/melotrail-video-sequential/evidence/V17b. |
-| V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | DONE | Production ComfyUI probe, selected DynamicCombo validation, protected-root preflight and reliable native test readiness. Focused checks, 777 tests, make test/build, diff and fresh Sol High review PASS after five Astra repairs; extended repairs user-authorized. Real H264 768x448,129 frames,25fps,5.16s silent output fully decoded; recovery, terminal/active cancellation, immutable result, owned stop and source/model preservation verified. Evidence ~/.codex/melotrail-video-sequential/evidence/V17/production-adapter-20260914/host-4. Earlier 1024 memory stop retained; automatic preparation/full-video gates remain later rows. |
-| V18a1 | Requalify desktop visuals on macOS 27 | V17 | DONE | 69 fresh exact baselines on macOS 27.0; original images retained, text-only differences independently reviewed. 75 focused/777 full tests, build, diff and fresh Sol High review PASS. Evidence: ~/.codex/melotrail-video-sequential/evidence/V18a1/macos27-20260915. Human gates remain pending. |
-| V18a | Persist prepared scenes and motion capabilities | V13, V14, V15, V18a1 | DONE | Versioned scene layers/poses/masks, source and dependency pins, geometry, effect anchors and motion capabilities persist through the guarded append-only store; component review states and separate motion/footage reuse policies retained. 17 focused/781 full tests, build, diff and fresh Sol High review PASS after V18a1 host requalification. Evidence: ~/.codex/melotrail-video-sequential/evidence/V18a/prepared-scenes-20260915. |
-| V18a2 | Bind character, outfit and scenery inspiration | V14, V15, V18a | DONE | Optional multi-image character/pose/expression, outfit and city/scenery roles bind independently with scoped guidance, immutable role reassignment and complete dependency pins; unsupported roles/conflicts/capacity remain visible. 47 focused/784 full tests, build, diff and fresh Sol High review PASS. Evidence: ~/.codex/melotrail-video-sequential/evidence/V18a2/reference-bindings-20260915. Actual conditioning and upload controls remain V18b/V21. |
-| V18b1 | Prove local multi-reference image conditioning | V17, V18a2 | OPTIONAL | Deferred by user on 2026-09-16: app no longer creates picture assets. Fidelity proof failed; not DONE. Repair4 mechanics/795 tests pass, 17/24 new attempts used, old12 unchanged. Preserve candidate/evidence at ~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3; no further retries or failed-task commit. |
-| V18b2 | Validate externally prepared animation assets | V14, V18a | DONE | Finished artwork and optional ready layers reopen with exact pins, measured alpha, geometry and bounded motion capabilities; unsupported inputs fail actionably. Image decoding stays in VideoImageFiles. 47 focused/798 full tests, make test/build, diff and independent Sol High review PASS after three Astra repairs (third user-authorized) and coordinator scope alignment. Evidence ~/.codex/melotrail-video-sequential/evidence/V18b2/ready-assets-20260916. No generated-motion or visual approval claimed. |
+| V18b1 | Prove local multi-reference image conditioning | V17, V18a2 | OPTIONAL | Deferred by user on 2026-09-16: app no longer creates picture assets. Fidelity proof failed; not DONE. Historical attempt/check reports are unauthenticated because the reported archive is unavailable (V19r2); no further retries, archive searches or failed-task commit. |
 | V18b | Prove automated reference-conditioned preparation | V17, V18a, V18a2, V18b1 | OPTIONAL | Deferred generative preparation; outside current delivery and excluded unless explicitly reselected. |
-| V18 | Import finished looks and prepare motion inputs | V14, V15, V16, V18a, V18b2 | DONE | Finished-look selection and supported motion admission preserve imported appearance, share complete consumed-component fingerprints/reviews and block unsupported preservation guidance. Three Astra High repairs (third user-authorized); 36 focused and 822 full tests, make test/build, diff check and fresh Sol High review PASS. Evidence: `~/.codex/melotrail-video-sequential/evidence/V18/finished-artwork-20260916`. Rendering and UI remain later tasks. |
-| V19a | Generalize controlled subject motion and effects | V12, V18a | DONE | Versioned Node compositor uses actual prepared-scene placement, supplied poses and both mask representations for bounded subject motion and source-anchored steam. Real-importer fixtures, 7 Node tests, 823 project tests, build/diff and fresh Sol review PASS; 4 comparison renders/1,200 frame hashes verified. Eight writer attempts, last two user-authorized. Evidence `~/.codex/melotrail-video-sequential/evidence/V19a/controlled-motion-20260916`; scenery, app integration and artistic approval remain later work. |
-| V19b | Render coherent scenery with continuous time | V19a | DONE | Supplied same-depth sections join offscreen with exact overlap validation; canonical depth, static foreground masks, scenery-only motion and rejected-component admission. 18 Node/823 project tests, build/diff, fresh Sol review PASS after Terra initial+2 retries and Sol escalation. Actual two-section 30s/900-frame render matches split/resume byte-for-byte; CLI cancellation preserves prior work. Evidence `~/.codex/melotrail-video-sequential/evidence/V19b/coherent-scenery-20260916`; V24 artistic review remains pending. |
-| V19r1 | Restore displaced local data or authorize its retained relocation | — | DONE | Restored and independently compared inventory-equivalent copies while retaining `~/.melotrail-preserved-local-data/2026-09-22-step-1-1/` and `manifest.txt`: `.venv-worker` (8,530 entries, `dc2b97e1…30cac3`), `sounds` (529, `9e8e8759…f1f0ac7`), and `data/audio` (175, `5e0c2951…556c38`); types, modes, symlink targets, regular-file SHA-256 digests and `diff -qr` match. |
-| V19r2 | Record unavailable historical evidence and verify active probe isolation | — | REVIEW | Archive `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3` unavailable; checksums, ledgers and candidate contents unauthenticated. User waived historical recovery as delivery prerequisite. Current-tree absence of deferred probe owners verified; legitimate probes retained. Normal-checkout checks fail at `TargetArchitectureRulesTest.kt:123` because restored legacy data is present; data preserved. Isolated-candidate checks remain required by V19r3. |
-| V19r3 | Validate the exact candidate in an isolated checkout | V19r1, V19r2 | TODO | Candidate base `b084fd2ba711678f28d035cd3e3731aa79d0710b`; detached isolation `/Users/marcoandreose/.codex/melotrail-v19r3-isolation-20260923`; dirty-diff SHA-256 `994ebda6c54e12859895b003c14de133022d6a0a2f7da010a6e3f2c1bec5323e`. Explicit exclusions: `.venv-worker`, `sounds`, `data/audio`, build outputs, `.pi/` workflow state, `.venv*`, `tools/__pycache__`; originals preserved. Isolated focused architecture+documentation tests, `make test`, `make build`, and `git diff --check` PASS (exit 0); normal-checkout architecture limitation remains. Candidate receipt: `/Users/marcoandreose/.codex/melotrail-video-sequential/evidence/V19r3/candidate-receipt.md` (SHA-256 `b8f55db1fc2c4df18c506d878d057e6d31b253fbf4bb39e1df7d1e3064b37b8d`). Historical waiver does not waive current candidate checks; remains TODO pending review. |
+| V19r2 | Record unavailable historical evidence and verify active probe isolation | — | DONE | User retired missing-archive recovery/review. Current src tree has none of the four deferred reference-image owners; build.gradle.kts has no videoReferenceImageProbe registration and retains videoLocalProbe, videoMediaProbe and comfyVideoProbe. No historical authentication or V18b1 success claimed. |
+| V19r3 | Validate the current revision in an isolated checkout | V19r1, V19r2 | TODO | Fresh base/diff/asset identities and checks required; old candidate hashes, receipts and missing-archive reviews are retired admission requirements, not transferred PASS results. Use selected docs/pictures/video/ assets, owned technical fixtures and new evidence. Preserve restored local data. |
 | V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b, V19r3 | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary; blocked until V19r3. |
 | V20a | Prepare Video-flow design alignment | — | WAITING_USER | Obtain design-process/scope confirmation, then prepare a reviewable Video-workspace flow; no production UI work. |
 | V20b | Obtain explicit Video-flow approval | V20a | WAITING_USER | A genuine reviewer must approve a specific artifact revision and all required Video-flow surfaces. |
@@ -186,9 +159,8 @@ preserve such files before isolation. Keep V18b1/V18b optional and unselected. N
 | V21 | Wire finished-scene upload and motion setup | V14, V15, V17a, V18a, V18, V20 | TODO | Finished scene primary; optional ready layers/poses/masks, visual anchors and motion prompt; no outfit/style synthesis UI. |
 | V22 | Wire generation look selection and retry | V17, V18, V19, V20, V21 | TODO | Planned 2026-09-13; not implemented. |
 | V23 | Play actual generated video in the tab | V12, V19, V22 | TODO | Planned 2026-09-13; not implemented. |
-| V24 | Review video generated from finished artwork | V18, V22, V23 | WAITING_USER | Three real20–30s app clips: base motion, changed motion with same art, replacement finished art. Earlier checkpoint/steam approval preserved; image synthesis no longer a gate. |
+| V24 | Review video generated from finished artwork | V18, V22, V23 | WAITING_USER | Three real 20–30s app clips: base motion, changed motion with same art, replacement finished art. Earlier checkpoint/steam approval preserved; image synthesis no longer a gate. |
 | V25 | Add selected hosted fallback | V11, V16, V18, V19, V21 | OPTIONAL | Only after local evidence and explicit user selection. |
-| V26a | Remove the full-trajectory duration limit | V19b | DONE | Commit `0ad854c825effc74695ebb01287447970d355fc7`; raises checked trajectories to 9,000 frames and retains the 300-frame invocation bound. Step 2.1 integrated validation: fresh isolated worktree `/tmp/melotrail-step21-0ad854c` at exact commit; `make test` PASS (all 576 root + desktop tests, executed); `make build` PASS (UP-TO-DATE after tests); `git diff --check` PASS; isolated `git status --short` clean. Normal checkout remains blocked: `make test` fails `TargetArchitectureRulesTest.kt:123` because restored legacy data is present; preserved unchanged. Isolated candidate inventoried from exact commit, no exclusions required. Next mandatory TODO V19r3 remains blocked pending V19r2 REVIEW. |
 | V26 | Plan one continuous scene to exact duration | V15, V18a, V19, V26a | TODO | Revised 2026-09-14; replace the old primary short-shot/repeat planner after V26a. |
 | V27 | Encode and validate silent MP4 | V12, V19, V26 | TODO | Planned 2026-09-13; not implemented. |
 | V28 | Expose full-cut review and export | V23, V26, V27 | TODO | Planned 2026-09-13; use the approved Video flow or obtain explicit approval for uncovered/materially changed surfaces. |
@@ -198,473 +170,103 @@ preserve such files before isolation. Keep V18b1/V18b optional and unselected. N
 | V32 | Verify complete UI and prepare evidence | V22, V23, V28, V31 | TODO | Planned 2026-09-13; not implemented. |
 | V33 | Accept complete prompted video and editor handoff | V24, V32 | WAITING_USER | Actual visual evidence/decision required; do not auto-admit. |
 
-## Foundation and removal
+## Completed dependency index
 
-### F01 — Verify baseline and real dependency boundaries
+Completed implementation specifications and per-attempt logs have been removed.
+These compact rows retain task identities and dependency resolution; they are not
+work to repeat. Original results/commits remain in Git history. Evidence needed
+by pending gates remains in [Validation](docs/VALIDATION.md#final-manual-review)
+and [TABI video](docs/TABI_VIDEO.md), with current admission notes below.
 
-**Outcome:** a reproducible foundation and exact removal map, using the current
-working code rather than stale task status.
-**Inspect:** both Gradle files, native packaging, `DesktopMain`,
-`MidiCoreDesktopComposition`, `TargetArchitectureRulesTest`, existing core E2E,
-visual-evidence provider and tests, and all source/test/resource imports.
-**Work:** verify the pre-existing JDK/Kotlin changes and native startup; record
-runtime/compiler/toolchain versions. Repair the architecture check so actual
-root-level desktop owners are covered. Trace shared helpers and strongly
-connected legacy consumers; generate a compact keep/extract/delete inventory
-in build output. Verify the existing visual projection before extending it.
-**Tests:** real create/import/authority/draft/use/undo/reopen/export workflow;
-negative architecture fixtures at actual paths; package/startup smoke.
-**Done:** focused MIDI flow runs without worker/network, all gates pass, every
-legacy component has an exact deletion owner. No new runtime architecture yet.
+- Q03b: MIDI review packet `~/.codex/melotrail-terra/final-review-2026-09-13`,
+  implementation `c20aecf583`; U07/Q01/Q02/Q03 remain pending.
+- V17: measured short ComfyUI video, not full-length acceptance. Evidence:
+  `~/.codex/melotrail-video-sequential/evidence/V17/production-adapter-20260914/host-4`.
+- V18/V19a/V19b: finished-artwork admission and controlled subject/scenery motion
+  implemented; artistic approval and application integration remain pending.
+  Evidence under `~/.codex/melotrail-video-sequential/evidence/`:
+  `V18/finished-artwork-20260916`, `V19a/controlled-motion-20260916`,
+  `V19b/coherent-scenery-20260916`.
+- V19r1: restored inventory-equivalent `.venv-worker`, `sounds`, `data/audio`;
+  retained copies and `manifest.txt` at
+  `~/.melotrail-preserved-local-data/2026-09-22-step-1-1/`. Preserve both copies.
+  Normal-checkout architecture checks remain limited by this restored data.
+- V26a: commit `0ad854c825effc74695ebb01287447970d355fc7`; checked trajectories
+  support 9,000 frames while each invocation remains limited to 300 frames.
+  Exact-commit isolated test/build/diff checks passed at
+  `/tmp/melotrail-step21-0ad854c`; this does not close V19r3.
 
-### F02 — Delete legacy desktop
-
-**Inspect:** `WorkspaceApp`, `WorkspaceViewModel`, `WorkspacePageRouter`,
-`WorkspaceScreenTest`, `DesktopMain` legacy composition, preferences migration,
-old playback/readiness/library helpers and shared theme/primitives.
-**Work:** retain `MidiCoreDesktopEntrypoint` and live composition. Remove the
-old router, view model, pages, factories and exclusive tests. Extract a shared
-control only if a target caller needs it; remove legacy theme branches and
-obsolete preferences migration. Replace image-reader assertions with target
-behavior checks; preserve every UI and TABI reference image.
-**Tests:** target entrypoint/composition, six-route inventory, theme/components,
-keyboard navigation, current project open/reopen and no legacy route access.
-**Done:** one desktop graph; no hidden audio page or old composition reachable
-or retained for tests. New lanes and final styling can follow later.
-
-### F03 — Delete legacy application workflow
-
-**Inspect:** stage runner/registry, `BuildApplicationService`, old project and
-arrangement services, preparation/enhancement/cohesion/critic/release services,
-old CLI/config factories, orchestration tests and consumer map from F01.
-**Work:** delete the rejected pipeline, its entrypoints and exclusive application
-tests. Retain current `MidiCore*` use cases and only their proven live helpers.
-Remove dead configurations and public adapters. Do not create a compatibility
-facade. If old low-level tests still consume old models, assign those exact
-remaining model files to F04/F05; do not extend or newly reference them.
-**Tests:** current application workflow, cancellation, atomic acceptance/undo,
-scoped stale admission, export re-import and entrypoint dependency scans.
-**Done:** target services are the only application workflows; any temporary
-remaining legacy leaf has a named imminent deletion task and no target consumer.
-
-### F04 — Delete obsolete musical generators and model paths
-
-**Inspect:** old non-core `arrangement` generators/planners, harmony helpers,
-Qwen/client boundaries, critics, source repair/normalization/transposition,
-Pad/Strings/Lead/FX, global humanization and melody-connection branches.
-**Work:** prove required parser/pattern/voicing/artifact helpers already have
-current owners, extract narrowly where necessary, then delete old implementations
-and their exclusive tests. Remove optional-model configs/licenses and duplicate
-musical schemas when their final consumers disappear.
-**Tests:** M01 fixtures, current chord/bass/drum suites, authority/chromatic tests,
-protected-source identity and no AI/network/source-mutation runtime.
-**Done:** only current Chords/Bass/Drums generation remains; no “future” adapters
-or old implementation used to keep an obsolete test compiling.
-
-### F05 — Delete audio/worker runtime and finish schema/build cleanup
-
-**Inspect:** `audio`, `dsp`, `model`, `worker`, renderer/mixer/SFZ/library/licensing,
-commercial/release code, remaining legacy `Project`/stages, root resources,
-Python tools, old live E2E and Gradle/Make/config/dependency consumers.
-**Work:** delete the entire obsolete media/process boundary and exclusive tests;
-remove schema-v4 readers, aliases and constructors once unused. Remove worker
-requirements and tools; keep target storage/hash/logger behavior with one owner.
-Reduce Make to help/test/check/build/desktop/clean; remove unused HTTP/JSON/audio
-dependencies only after the consumer scan. Retain current serialization needs.
-**Tests:** full current JVM workflow, absent worker/synth-output separation,
-unsupported schema rejected without writes; clean target build/check.
-**Done:** zero tracked Python source and no worker/audio-production or old-project
-runtime; no dormant compatibility mode. Resolve dependency cycles as one tested
-removal, or split this task before work rather than leaving a broken commit.
-
-### F06 — Delete verified legacy data and measure reduction
-
-**Inspect:** resolve repository root and exact targets including `sounds`,
-`data/audio`, `.venv-worker`, old root media, caches and `App-pages.png` consumers.
-**Work:** record target realpaths, bytes, tracked/ignored state, symlink behavior,
-consumer absence and protected exclusions before deletion. Delete only verified
-repository-owned obsolete material. Preserve all supplied UI/TABI/train images,
-Logic evidence, owned MIDI fixtures and current user inputs/projects/snapshots.
-Remove empty packages/resources and stale ignore entries. Do not rewrite Git.
-**Tests:** no-reference scans, source/fixture digests, core workflow and clean
-build. Review every apparent legacy scan exception; no blanket allowlists.
-**Done:** publish file/line/disk/dependency deltas against PLAN, including the
-40% production-line investigation target. No 10 GB sound-library prerequisite,
-legacy sample/project payload or obsolete executable image reader remains.
-
-## Musical workflow
-
-### M01 — Freeze baseline and build comparison harness
-
-**Inspect:** owned MIDI fixtures, candidate generation/draft tests, current
-patterns, exporter, the user's 5/10 feedback and Validation's case taxonomy.
-**Work:** build a Kotlin test/harness using owned small fixtures plus a full-song
-fixture with repeated sections. Freeze source/authority/style/seed/engine IDs
-and current output hashes before changes. Include sustained close melody/piano,
-passing tones, low melody, sub-bar chords, repeated chorus, 3/4, 6/8 and endings.
-Produce side-by-side MIDI packages and a compact review form in build output.
-Accept optional user failure examples as development cases; never call them unseen.
-**Tests:** harness determinism, source immutability, case manifest integrity,
-invalid case rejection and reproducible semantic comparisons.
-**Done:** later agents can compare baseline/new MIDI without legacy renderers;
-5/10 remains the only supplied subjective result. Missing real songs does not
-block synthetic development work or F02.
-
-### M02 — Derive melody context and harmony-tension evidence
-
-**Inspect:** protected melody model, harmony timeline, generation context and
-current melody/register findings.
-**Work:** pure versioned per-window context for active/sounding notes, accents,
-rests, register, phrase hints and repetition. Weight interval tension by overlap
-and beat prominence; distinguish held/accented tension from passing tones.
-Define supported sustain/pitch-expression limitations. Return location, cause,
-confidence and evidence; do not infer or save new harmony automatically.
-**Tests:** held semitone versus passing tone, compound interval, suspension,
-chromatic chord, pickup/rest, sustain beyond key release, ambiguous bend and
-polyphony; identical inputs produce identical analysis, zero project writes.
-**Done:** explain a specific melody/harmony issue at a bar/beat and expose a
-usable read model; musical preference stays advisory.
-
-### M03 — Add explicit harmony durations and source extent
-
-**Inspect:** authority drafting/service/store, source end semantics, timeline,
-fingerprints, candidate invalidation, writer and exporter boundary tests.
-**Work:** persist/validate chord rows with explicit durations; losslessly seed
-unchanged canonical windows from progression shorthand. Add last-note/source-end
-facts and explicit trailing-silence padding to an arrangement end. Preserve
-source events and byte identity. Update MIDI_CONTRACT and relevant schema once;
-no general old-project migration. Explain unsupported schema before any write.
-**Tests:** 3+1+2+2 beat harmony, odd PPQ, sub-bar windows, no-op edit exactness,
-gap/overlap/overflow, non-bar note end, end-of-track silence, padding cancel,
-reopen and scoped invalidation; export whole-song boundaries and source equality.
-**Done:** services support musical duration editing without equal-slot ambiguity;
-Q02's updated Logic fixtures are prepared, not falsely signed off.
-
-### M04a — Build bounded legal piano voicing choices
-
-**Scope:** Add open, guide-tone and reduced voicing candidates behind the existing generator. Preserve chord/slash identity, bass space and deterministic fallback. Test legal ranges, required tones, voice crossing and bounded candidate count.
-**Inspect:** the M04 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M04b — Rank piano voicings against protected melody
-
-**Scope:** Consume M02 overlap/accent/register evidence in deterministic voicing costs. Test sustained close clash versus passing tension and low melody; do not rewrite melody or harmony.
-**Inspect:** the M04 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M04 — Improve piano voicing against melody
-
-**Remaining parent slice:** Connect phrase-boundary continuity and stable lookahead to the new pool/ranker; generate the baseline/new listening pack and validate the complete M04 contract.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** chord generator/validator, M01 failures and M02 context.
-**Work:** bounded voicing pool with open/guide-tone/reduced choices, required
-chord/slash semantics, melody-aware costs, stable tie-breaking and phrase
-lookahead. Specify bounds and deterministic fallback; carry an explicit boundary
-summary input without depending on an unrelated mutable accepted candidate.
-**Tests:** accented close clash improves against baseline; passing/intentional
-tension stays legal; guide-tone identity, low melody, bass space, voice crossing,
-common-tone continuity, search limits and deterministic results across seeds.
-**Done:** pool/ranking fixes measured failure cases, preserves all authority,
-and generates a short baseline/new listening pack. Ask for milestone feedback
-when useful; do not stall independent tasks or award a subjective score.
-
-### M05a — Anchor comping to meter and chord windows
-
-**Scope:** Implement authored 4/4, 3/4 and 6/8 phase and exact clipping at harmonic boundaries. Test offbeat changes, odd PPQ, short sections and compound accents.
-**Inspect:** the M05 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M05 — Add phrase-aware, meter-aware comping
-
-**Remaining parent slice:** Add activity/phrase-based support, answer and rest selection, version the changed patterns and compare audible development fixtures.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** chord rhythm expansion, pattern catalog/tick grid and articulation.
-**Work:** anchor pattern phase to meter/song bars, clip notes at harmony changes,
-choose complete support/answer/rest patterns from melody activity and phrase
-position. Define actual authored 4/4, 3/4 and 6/8 behavior and compound-meter
-accents. Version any changed pattern/timing rules.
-**Tests:** offbeat chord change keeps metrical phase; 3/4 downbeats, 6/8 grouping,
-short sections, dense melody leaves room, phrase ending rests, valid swing/grid
-rounding, no harmony-boundary overhang or source timing mutation.
-**Done:** the same melody/chords can receive audibly distinct useful comping;
-no forced 4/4 loop truncation masquerades as other-meter support.
-
-### M06a — Persist versioned arrangement-plan records
-
-**Scope:** Add purpose, phrase/repeat identity, role activity/settings, shared groove and boundary fields with exact persistence and fingerprints. Test reopen, malformed records, no-op identity and protected artifacts; do not add a migration mode.
-**Inspect:** the M06 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M06b — Create and confirm arrangement-plan proposals
-
-**Scope:** Add deterministic style-derived proposal and explicit confirmation use cases. Separate suggestion from saved authority and draft. Test no writes before confirmation, rename-independent purpose and cancellation.
-**Inspect:** the M06 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M06 — Persist a deliberate whole-song arrangement plan
-
-**Remaining parent slice:** Implement affected-scope preview and dependency invalidation for confirmed plan edits; prove locked/accepted work is preserved and every consumed input is versioned.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** style catalog, project schema/fingerprint, occurrence identity,
-M02 phrase/repeat suggestions and generation context.
-**Work:** plan records store version, occurrence purpose, repeat family,
-phrase groups, energy, role activity/density/register, shared groove intent and
-entry/exit rules. Style produces an editable proposal; explicit confirmation
-makes it arrangement authority. Never interpret a display label as the sole
-purpose. Keep suggestion, confirmed plan and generated draft distinct.
-**Tests:** intro/verse/chorus/bridge/outro differ by intended rules; repeat family
-is related but bounded variation is possible; rename without purpose change;
-reopen, no-op hashes, locked work and plan-edit invalidation previews.
-**Done:** one versioned plan drives the full song and names every generation
-input. Changing it never silently rewrites melody, chords or acceptances.
-
-### M07a — Resolve per-occurrence generation context
-
-**Scope:** Resolve plan, shared groove, bounded neighbor and repeat inputs in Chords→Bass→Drums order. Test deterministic fingerprints and precise invalidation; keep unrelated accepted scopes intact.
-**Inspect:** the M07 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M07b — Represent planned rests in draft and acceptance
-
-**Scope:** Make intentional rest distinct from missing/failed output through generation, audition and atomic use/undo. Test cancellation, retry, locked scopes and mixed candidate/rest batch acceptance.
-**Inspect:** the M07 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M07 — Generate drafts from plan, boundaries and explicit rests
-
-**Remaining parent slice:** Finish accepted-only assembly/export for rests, including all-song inactive-role omission and exact source/end boundaries; update contract and Logic fixtures.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** draft orchestration, generation context/publication, retry, accepted
-assembly, batch acceptance/undo, review/audition and export readiness.
-**Work:** resolve per-occurrence plans; preserve Chords → Bass → Drums dependency
-order, explicit groove input and bounded boundary/repeat context. Add planned
-rest evidence so absence of a role in an intro is intentional and complete.
-Hash every consumed dependency; allow scoped retry and exact affected-neighbor
-invalidation. Rest/candidate selections use the same atomic acceptance boundary.
-**Tests:** two identical seeds/versions, cancellation/retry, failure versus rest,
-locked scopes, stale neighbor, repeated chorus, partial acceptance rejection,
-all-song inactive role policy, source/role export origin/end and no overwrite.
-**Done:** draft playback and export agree on accepted activity; missing output
-cannot pass as silence. Update MIDI_CONTRACT and prepare Q02 fixtures.
-
-### M08a — Coordinate bass support with chord and groove intent
-
-**Scope:** Implement bounded bass approaches, chord space and shared kick intent without circular dependencies. Test low/held melody, resolution, deterministic fingerprints and 3/4/6/8.
-**Inspect:** the M08 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M08b — Shape drum fills and section transitions
-
-**Scope:** Use phrase and next-section intent for complete authored grooves and fills. Test one/two-bar sections, quiet intros, repeat variation and harmony-edge behavior.
-**Inspect:** the M08 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M08 — Coordinate bass/drums and section transitions
-
-**Remaining parent slice:** Integrate intentional endings and cross-role boundary regressions; generate full-song baseline/new comparison packages.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** bass/drum generators, shared groove plan, current kick-support and
-fill policies, M01 whole-song fixture.
-**Work:** use planned purpose and shared kick/bass intent, bounded bass approaches
-and chord-space constraints. Preserve authored drum groove completeness. Drive
-fills by phrases and next-section intent; avoid a fill at every arbitrary chord
-or section edge. Give repeated sections controlled variation and an intentional
-ending. Inputs cannot form a circular accepted-role dependency.
-**Tests:** bass/chord separation, approach resolution, kick coordination, held
-melody, 3/4 and 6/8, two-bar/one-bar sections, quiet intro/rest, boundary fill,
-last-note/end behavior and stable previous/next dependency fingerprints.
-**Done:** assembled songs have demonstrable role coordination and transitions;
-M01 comparison packages show the changes without extra melody editing.
-
-### M09a — Define scoped deterministic musical repair intents
-
-**Scope:** Map the six PLAN repair intents to bounded versioned settings and affected role/occurrence sets. Test precise invalidation, locked work and no accepted/source mutation.
-**Inspect:** the M09 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### M09 — Add meaningful alternatives and targeted musical repair
-
-**Remaining parent slice:** Rank up to three semantically distinct alternatives, reject cosmetic duplicates and wire real preview/apply intents with baseline context and honest no-result reasons.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** candidate diff/lifecycle, style preview cache, workspace intents,
-M04–M08 settings and validation findings.
-**Work:** bounded repair intents from PLAN map to versioned settings and an
-explicit role/occurrence or dependency set. Rank at most three semantically
-distinct choices. Add same-position melody-inclusive A/B, clear impact labels,
-rejection reason and same-scope retry. Acceptance remains explicit and atomic.
-**Tests:** changing intent yields meaningful event/texture differences; identical
-options deduplicate; unchanged unrelated accepted hashes; blocked/locked/stale
-repair; audition cannot write state; no valid solution stops after bounded work.
-**Done:** a musician can request “simplify piano” and hear/review that exact
-change without seed hunting or global regeneration.
+| ID | Task | Depends on | State | Result / implementation commit |
+| --- | --- | --- | --- | --- |
+| F01 | Verify baseline and real dependency boundaries | — | DONE | Retained dependency; history in Git. |
+| M01 | Freeze musical baseline and comparison harness | F01 | DONE | Retained dependency; history in Git. |
+| F02 | Delete legacy desktop | M01 | DONE | Retained dependency; history in Git. |
+| F03 | Delete legacy application workflow | F02 | DONE | Retained dependency; history in Git. |
+| F04 | Delete obsolete musical generators and model paths | F03 | DONE | Retained dependency; history in Git. |
+| F05 | Delete audio/worker runtime and finish schema/build cleanup | F04 | DONE | Retained dependency; history in Git. |
+| F06 | Delete verified legacy data and measure repository reduction | F05 | DONE | Retained dependency; history in Git. |
+| A01 | Harden and verify bounded agent execution runner | F01 | DONE | Retained dependency; history in Git. |
+| A02 | Reduce runner overhead and recover retained work | A01 | DONE | Retained dependency; history in Git. |
+| A03 | Recover concrete review findings as bounded subtasks | A02 | DONE | Retained dependency; history in Git. |
+| U01 | Finish verified lanes and live timeline projection | F06 | DONE | Retained dependency; history in Git. |
+| U02 | Compact shell, player and inspector | U01 | DONE | Retained dependency; history in Git. |
+| U03 | Refine Project and MIDI import | U02 | DONE | Retained dependency; history in Git. |
+| M02 | Derive melody context and harmony-tension evidence | M01, F06 | DONE | Retained dependency; history in Git. |
+| M03 | Add explicit harmony durations and source extent | M02 | DONE | Retained dependency; history in Git. |
+| U04a | Expose compact chord-duration and source-end editing | U03, M03 | DONE | Retained dependency; history in Git. |
+| M04a | Build bounded legal piano voicing choices | M03 | DONE | Retained dependency; history in Git. |
+| M04b | Rank piano voicings against protected melody | M04a | DONE | Retained dependency; history in Git. |
+| M04 | Improve piano voicing against melody | M04b | DONE | Retained dependency; history in Git. |
+| M05a | Anchor comping to meter and chord windows | M04 | DONE | Retained dependency; history in Git. |
+| M05 | Add phrase-aware, meter-aware comping | M05a | DONE | Retained dependency; history in Git. |
+| M06a | Persist versioned arrangement-plan records | M03 | DONE | Retained dependency; history in Git. |
+| M06b | Create and confirm arrangement-plan proposals | M06a | DONE | Retained dependency; history in Git. |
+| M06 | Persist a deliberate whole-song arrangement plan | M06b | DONE | Retained dependency; history in Git. |
+| M07a | Resolve per-occurrence generation context | M05, M06 | DONE | Retained dependency; history in Git. |
+| M07b | Represent planned rests in draft and acceptance | M07a | DONE | Retained dependency; history in Git. |
+| M07 | Generate drafts from plan, boundaries and explicit rests | M07b | DONE | Retained dependency; history in Git. |
+| M08a | Coordinate bass support with chord and groove intent | M07 | DONE | Retained dependency; history in Git. |
+| M08b | Shape drum fills and section transitions | M08a | DONE | Retained dependency; history in Git. |
+| M08 | Coordinate bass/drums and section transitions | M08b | DONE | Retained dependency; history in Git. |
+| M09a | Define scoped deterministic musical repair intents | M08 | DONE | Retained dependency; history in Git. |
+| M09 | Add meaningful alternatives and targeted musical repair | M09a | DONE | Retained dependency; history in Git. |
+| U04b | Edit sections and confirmed arrangement purpose | U04a, M06 | DONE | Retained dependency; history in Git. |
+| U04 | Build compact Structure & Harmony editing | U04b | DONE | Retained dependency; history in Git. |
+| U05a | Make Arrange lanes and full-draft action dominant | U04, M07 | DONE | Retained dependency; history in Git. |
+| U05b | Wire bounded previews and contextual repair actions | U05a, M09 | DONE | Retained dependency; history in Git. |
+| U05 | Build timeline-first Arrange with plan and repairs | U05b | DONE | Retained dependency; history in Git. |
+| U06a | Finish whole-song review and atomic decisions | U05 | DONE | Retained dependency; history in Git. |
+| U06 | Finish whole-song Review and Logic export handoff | U06a | DONE | Retained dependency; history in Git. |
+| U07a | Pin visual comparisons and accessibility regressions | U06 | DONE | Retained dependency; history in Git. |
+| U07b | Measure responsiveness and prepare visual review | U07a | DONE | Retained dependency; history in Git. |
+| Q01a | Prepare frozen musical evaluation packages | U06, M09 | DONE | Retained dependency; history in Git. |
+| Q02a | Generate current Logic matrix and manifests | U06, M03, M07, M08 | DONE | Retained dependency; history in Git. |
+| Q03a | Prove clean native build and startup | F06, U06 | DONE | Retained dependency; history in Git. |
+| Q03b | Prepare the final manual-review handoff | Q03a | DONE | Retained dependency; history in Git. |
+| V10 | Align video contracts and queue guards | — | DONE | Retained dependency; history in Git. |
+| V11a | Validate local profile and prepare bounded probe requests | V10 | DONE | Retained dependency; history in Git. |
+| V11 | Prove one local generation workflow | V11a | DONE | Retained dependency; history in Git. |
+| V12a | Supervise bounded owned media processes | V10 | DONE | Retained dependency; history in Git. |
+| V12 | Prove video-only media runtime | V12a | DONE | Retained dependency; history in Git. |
+| V13 | Persist independent video projects | V10 | DONE | Retained dependency; history in Git. |
+| V14 | Import reference assets | V13 | DONE | Retained dependency; history in Git. |
+| V15 | Compile asset prompts and shot proposal | V13, V14 | DONE | Retained dependency; history in Git. |
+| V16 | Persist bounded recoverable jobs | V13 | DONE | Retained dependency; history in Git. |
+| V17a | Pin ComfyUI setup and own its local server | V11, V12a | DONE | Retained dependency; history in Git. |
+| V17c | Expose a verified owned ComfyUI connection | V17a | DONE | Retained dependency; history in Git. |
+| V17b | Connect recoverable ComfyUI API jobs | V17a, V17c, V14, V16 | DONE | Retained dependency; history in Git. |
+| V17 | Verify the selected ComfyUI adapter on this host | V17a, V17b, V12 | DONE | Retained dependency; history in Git. |
+| V18a1 | Requalify desktop visuals on macOS 27 | V17 | DONE | Retained dependency; history in Git. |
+| V18a | Persist prepared scenes and motion capabilities | V13, V14, V15, V18a1 | DONE | Retained dependency; history in Git. |
+| V18a2 | Bind character, outfit and scenery inspiration | V14, V15, V18a | DONE | Retained dependency; history in Git. |
+| V18b2 | Validate externally prepared animation assets | V14, V18a | DONE | Retained dependency; history in Git. |
+| V18 | Import finished looks and prepare motion inputs | V14, V15, V16, V18a, V18b2 | DONE | Retained dependency; history in Git. |
+| V19a | Generalize controlled subject motion and effects | V12, V18a | DONE | Retained dependency; history in Git. |
+| V19b | Render coherent scenery with continuous time | V19a | DONE | Retained dependency; history in Git. |
+| V19r1 | Restore displaced local data or authorize its retained relocation | — | DONE | Retained dependency; history in Git. |
+| V26a | Remove the full-trajectory duration limit | V19b | DONE | Retained dependency; history in Git. |
 
 ## UI/UX
-
-### U01 — Finish verified lanes and live timeline projection
-
-**Inspect:** existing `MidiCoreVisualEvidenceProjection`, its tests/caches,
-workspace reducers, song-map geometry and audition position provider.
-**Work:** finish and reuse source/candidate/draft/accepted read models; render
-four factual lanes with one bar/chord/note/loop x-axis, fit/zoom and section
-selection. Observe actual player position at a bounded cadence while playing;
-stop observation on disposal/stop. No composable artifact reads or second clock.
-**Tests:** real semantic events at exact x positions, read-only projection,
-stale/missing/digest mismatch, clipping, zoom/scroll alignment, pause/seek/loop,
-device loss and no observer/thread leak across navigation.
-**Done:** real notes and moving playhead align; screenshot art is unnecessary.
-
-### U02 — Compact shell, player and inspector
-
-**Inspect:** shell frame, theme, primitives, player and page-local inspectors;
-UI_GUIDELINE and current wide/compact captures.
-**Work:** use existing tokens; collapse transport to the specified height,
-compact rectangular controls and one contextual inspector. Expose real names
-instead of internal IDs. Preserve six destinations, valid playhead/selection/
-scroll, compact keyboard navigation, expandable device/role controls and errors.
-**Tests:** player outside scroll on all pages, no duplicated inspector/transport,
-short-window fit, keyboard/focus, contrast/hit targets and device recovery.
-**Done:** first viewport reserves space for musical content; inspect images at
-1536×1024, 1280×900 and 720×900, including scrolled Arrange/Review.
-
-### U03 — Refine Project and MIDI import
-
-**Inspect:** current pages, native file dialogs, import service and projections;
-UI references 01 and 02.
-**Work:** factual project metrics and next action, honest last-opened support,
-one MIDI import well, compact source table/note lane and scoped findings.
-Implement and test drop support before advertising it; file chooser remains
-available. Add source/authority suggestion labels and recovery without replacement.
-**Tests:** empty/ready/error/long name, source protected automatically, format
-rejection explanations, keyboard chooser, real track counts and responsive layout.
-**Done:** create/open/import/listen is concise and truthful; no audio queue,
-cleaning options, fabricated history or source-replacement shortcut.
-
-### U04a — Expose compact chord-duration and source-end editing
-
-**Scope:** Use M03 services in a compact Structure & Harmony duration inspector with real melody/section context and explicit padding confirmation. Keep current plan behavior. Test unequal durations, cancel/save, non-bar source end and keyboard access; capture all three reference sizes.
-**Inspect:** the U04 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### U04b — Edit sections and confirmed arrangement purpose
-
-**Scope:** Add compact duplicate/move/split/remove section rows and purpose/phrase suggestion confirmation. Test repeated identity, source immutability and keyboard alternatives.
-**Inspect:** the U04 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### U04 — Build compact Structure & Harmony editing
-
-**Remaining parent slice:** Finish unsaved/affected-work preview, total-mismatch recovery and responsive shared-strip layout; inspect reference 03 and the three-size captures.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** M03 duration/extent services, M06 plan/purpose, authority drafts and
-existing structure page; reference 03.
-**Work:** shared section strip; compact musical settings and section rows with
-bar totals, duplicate/move/split/remove, explicit chord duration spans and
-selected-section context. Surface phrase/purpose suggestions for confirmation.
-Show unsaved state and affected work before save; separate arrangement-plan
-edits from source structure. Keep keyboard alternatives to dragging.
-**Tests:** unequal chord lengths persist, reorder leaves melody fixed, repeated
-labels stay distinct, source padding explained, cancel/no-op edits, total
-mismatch, scoped invalidation and first-viewport edit/save accessibility.
-**Done:** structure and harmonic rhythm are visible over the real melody, not
-hidden inside equal-slot text or multiple scrolling cards.
-
-### U05a — Make Arrange lanes and full-draft action dominant
-
-**Scope:** Build the reference 04 timeline composition, compact five-style gallery and selected-section plan/role inspector with factual rest/progress states. Test primary-action visibility and selection at all three sizes.
-**Inspect:** the U05 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### U05b — Wire bounded previews and contextual repair actions
-
-**Scope:** Wire actual plan/repair services, latest-wins cancellation and one-bar looping. Test ephemeral versus persisted state, retry scope and no duplicate player.
-**Inspect:** the U05 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### U05 — Build timeline-first Arrange with plan and repairs
-
-**Remaining parent slice:** Complete real-service ready-authority→draft playback within three actions, recovery and keyboard flow; inspect actual images and validate full/preview plan parity.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** current Arrange/song map, M06 plan and M09 repair; references 04/07.
-**Work:** dominant map/lanes, compact five-style gallery, top-right Create full
-draft, selected-section plan/role inspector, per-scope real progress/cancel/retry,
-planned rest states and meaningful repair intents. Support a one-bar occurrence
-preview by looping its real content rather than demanding a two-bar source.
-Use the same plan resolution for preview and full draft; label persisted versus
-ephemeral work. Advanced pattern/profile details stay disclosed on demand.
-**Tests:** full draft within three actions from ready authority, all visible
-lanes and CTA, first/rapid/one-bar preview, latest-wins cancellation, plan
-confirmation boundary, exceptions retain style/section and no double playback.
-**Done:** the user can understand and hear the whole-song proposal and fix a
-selected part without a section/role generation ladder.
-
-### U06a — Finish whole-song review and atomic decisions
-
-**Scope:** Use shared lanes for clear Draft/Accepted identity, contextual repair comparison and Play/Use/Undo. Test batch atomicity, rests, selection/loop continuity and exact blocker routing.
-**Inspect:** the U06 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### U06 — Finish whole-song Review and Logic export handoff
-
-**Remaining parent slice:** Finish accepted-only Export summary, immutable result/reveal and concise Logic handoff; prove real-service import→repair→use→undo→reuse→export at all three sizes.
-The original contract below is the overall acceptance checklist. Reuse completed
-children; do not reimplement them or expand this task to the whole workstream.
-
-**Inspect:** Review/Export pages, accepted assembly, batch undo and writer;
-reference 04 for Review and 09 for Export.
-**Work:** shared lanes, obvious Draft/Accepted identity, Play/Use/Undo and exact
-blocker locations. Compare repairs with melody in context and route back without
-losing selection. Export a truthful package summary, accepted-role/rest inventory,
-files/result/reveal and concise Logic steps. No bitrate/mix/master controls.
-**Tests:** draft is playable but not exportable; batch use/undo atomic; role
-rest reflected accurately; accepted-only export, stale/missing/locked errors,
-no overwrite, reopen and loop continuity between Arrange/Review.
-**Done:** real-service import→draft→repair→use→undo→reuse→export passes at all
-three sizes, with no project-file edits or fake settings required.
-
-### U07a — Pin visual comparisons and accessibility regressions
-
-**Scope:** Create deterministic actual/expected/diff image artifacts and independent geometry, color, focus and hit-bound checks. Prove comparator rejects shifted panels, wrong primary color/radius and missing lanes; do not auto-approve changed goldens.
-**Inspect:** the U07 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### U07b — Measure responsiveness and prepare visual review
-
-**Scope:** Exercise large songs, long names, short windows and native density; measure the specified preparation/cancellation timings on a recorded machine. Prepare six-page image comparison and report unmeasured acoustic onset honestly.
-**Inspect:** the U07 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
 
 ### U07 — Prove visuals, accessibility and responsiveness
 
@@ -687,13 +289,6 @@ Leave WAITING_USER if review is outstanding; Q01/Q02 preparation can continue.
 
 ## Product evidence
 
-### Q01a — Prepare frozen musical evaluation packages
-
-**Scope:** Build the comparison/evaluation export command and compact score forms with source/settings/version hashes. Freeze only supplied owned final cases; explicitly flag any missing three unseen songs and keep synthetic development cases separate. Test reproducibility and case integrity.
-**Inspect:** the Q01 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
 ### Q01 — Evaluate musical improvement and fix failures
 
 **Remaining parent slice:** Collect genuine scores against Validation thresholds; record specific failed bars as bounded corrective queue work. Missing songs or ratings are WAITING_USER and do not block independent engineering.
@@ -711,13 +306,6 @@ failure. Re-evaluate changed engines on all cases, retaining failed results.
 record failed bars/intents and add bounded corrective tasks. Never use automated
 metrics or the old 5/10 feedback as evidence of a new 8/10 score.
 
-### Q02a — Generate current Logic matrix and manifests
-
-**Scope:** Prepare deterministic import/extent/harmony/rest/controller/ending packages and semantic re-import checks with build/source/output identity. Produce concise import/play/reopen instructions; never claim actual Logic playback.
-**Inspect:** the Q02 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
 ### Q02 — Run the current Logic Pro matrix
 
 **Remaining parent slice:** Record real user Logic import/play/reopen results and exact versions against the frozen current packages, or WAITING_USER with the prepared artifacts.
@@ -734,21 +322,6 @@ then saves/closes/reopens. Preserve the 2026-08-28 record as historical evidence
 finding, musical corruption cannot. WAITING_USER is valid until evidence arrives;
 an export test alone cannot complete this task.
 
-### Q03a — Prove clean native build and startup
-
-**Scope:** Run isolated clean install/package/startup and the automated six-page MIDI path without worker/model/sound library. Foreground `:desktopApp:nativeDesktopCapture` is deferred to U07 final manual review; keep automated real-window frame replay and all other technical checks. Record build identity, reduction and any concrete install regressions; preserve source media and prior evidence.
-**Inspect:** the Q03 contract below and its relevant source/test owners.
-**Done:** this slice works through its real caller, focused regressions and required
-coordinator checks pass; leave later slices to their queue owners.
-
-### Q03b — Prepare the final manual-review handoff
-
-**Dependencies:** Q03a. DONE; retain the existing MIDI evaluation, Logic matrix,
-UI/native-install and manual-review packets. The old companion portion is
-historical evidence, not acceptance of the 2026-09-13 video replacement.
-V32 prepares new video evidence; V33 owns its real visual decision. Do not replay
-this completed task or reinstate the retired V gates.
-
 ### Q03 — Prove clean install and obtain MIDI release decision
 
 **Remaining parent slice:** Reconcile acceptance evidence with the final engine/UI/export versions, update README to shipped behavior and obtain the actual MIDI release decision.
@@ -763,59 +336,6 @@ Update README to shipped behavior and keep only concise limitations/evidence.
 **Done:** fresh gates including `:desktopApp:nativeDesktopCapture`, native smoke, user musical/UI decision and applicable Logic
 matrix pass. Record final build and user decision in Validation. Do not delete
 acceptance evidence or rewrite the source to obtain a pass.
-
-## Optional automation
-
-### A01 — Harden and verify bounded agent execution runner
-
-**Scope:** developer tooling outside the shipped app; selected on 2026-09-06. Read PLAN §11. Harden the prepared Node/installed-CLI runner instead of building another runner.
-**Work:** the dependency-free `tools/terra-runner.mjs` runner, one coordinator and writer,
-fresh reviewer, worktree per task, stable integration branch, and a strict
-result schema containing task/status/base/commit/tests/artifacts/blocker.
-Use explicit output/worktree locations and task-specific permission settings.
-Coordinator validates actual Git state and commands, never just model JSON.
-**Controls:** project lock with owner/PID and safe recovery; dependency and
-in-progress checks; maximum tasks, elapsed time and configured usage/spend cap;
-at most two fix retries; cancellation/resume; preserve dirty unrelated work.
-No automatic public push/merge/upload or paid media job without scoped policy.
-**Tests:** dry-run queue selection, double start, crash/restart, reviewer failure,
-false success report, changed integration base, missing human evidence, budget
-exhaustion and interrupted worktree cleanup. Keep logs out of tracked docs.
-**Done:** dry-run and one real low-risk task complete end-to-end; summary points
-to reviewable changes. Scheduling is configured only for the requested cadence.
-
-### A02 — Reduce runner overhead and recover retained work
-
-**Work:** bound review evidence to the current candidate and explicit check logs;
-keep transcripts out of prompts; resume implementation context for focused
-repairs, with fresh reviews and Sol High escalation after two failed attempts.
-Run bounded continuous batches with explicitly owned independent workers and
-serialized revalidation/integration. Preserve interrupted candidates and actual
-failure reasons; never reset budgets within a batch or recycle failures forever.
-Recover the retained M02 candidate after fresh review. Install only tested runner
-code and preserve the user's checked-out branch and staged changes.
-**Tests:** original runner gates plus real-process fixtures for session reuse,
-transcript isolation, bounded evidence, task/time/usage limits, retained retries,
-overlapping ownership, actual worker concurrency and combined-tree validation.
-**Done:** required checks and fresh reviews pass, installed script matches Git,
-M02 is recovered, and the existing heartbeat uses the tested bounded policy.
-
-### A03 — Recover concrete review findings as bounded subtasks
-
-**Scope:** Extend the existing runner after its normal retry/Sol repair sequence.
-A fresh reviewer returns concrete finding IDs, exact owned files and verifiable
-acceptance conditions. Up to three code findings become ordered execution
-subtasks under the retained parent; never create a second product queue.
-**Work:** one fresh Astra attempt per finding, one finding per wake, capped at
-20 minutes and 150,000 reported tokens. Preserve the original contract, diff,
-check errors and completed work. Validate the entire candidate and independently
-resolve each original finding; integrate only after the whole parent passes.
-Stop on unchanged/unresolved work, failed checks, scope violations, interruption
-or exhausted limits. Human/environment/scope blockers stay outside recovery.
-**Tests:** real-process fixtures for ordered partial repair and final integration,
-exact ownership, preserved checkpoints/history, budget/pause/admission controls,
-malformed reviews, interrupted recovery and no-progress deferral. Run the runner
-suites, application test/build and fresh review before installing the script.
 
 ## Integrated generation from assets and a prompt — V10–V33
 
@@ -861,432 +381,12 @@ do not implement the superseded unique/repeated-short-shot modes as primary UI.
 Audio sync and public upload are
 excluded. Required human decisions cannot be inferred from source scans or tests.
 
-When a future implementation run explicitly requests parallel agents, safe
-initial pairs are V11 + V13 and, after prerequisites, V14 + V16. V11/V12
-share Gradle/documentation owners and must run sequentially. Both writers
-must have disjoint exact file lists and no shared resource/build edits. The
+Parallel writers require an explicit future user request and dependency-ready
+rows with disjoint exact file lists and no shared resource/build edits. The
 coordinator serializes Gradle/build-file, app-shell, documentation, runner and
 removal changes. Default to one writer and a fresh reviewer; workers do not spawn
 other workers. If a row exceeds a focused pass, the coordinator splits it here
 before expanding file ownership. No fixed token budget is created by this plan.
-
-### V10 — Align contracts and protect the new queue
-
-**Target files:** `AGENTS.md`, `README.md`, `docs/ARCHITECTURE.md`,
-`docs/TABI_VIDEO.md`, `docs/UI_GUIDELINE.md`, `docs/VALIDATION.md`,
-`tools/terra-runner.mjs`, `tools/terra-runner.test.mjs`.
-**Inputs / dependencies:** None; PLAN §9 and the 2026-09-13 user correction.
-**Implementation rules:** Replace the separate-app/soundtrack requirement with
-an independent Video tab and silent output. Preserve artistic references and
-historical evidence with clear supersession; do not claim planned controls
-already exist. Keep six MIDI destinations and separate video storage/runtime.
-Update runner human-gate protection from retired V gates to V24/V33, ensure V25
-cannot be selected while OPTIONAL, and add queue tests. Never change the user's
-active heartbeat/configuration during this task. The coordinator handles any
-future allowlist with exact row paths; retire old V IDs from that run.
-**Verification command:** `node --test tools/terra-runner.test.mjs tools/terra-throughput.test.mjs`; `./gradlew :test --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`.
-**Done:** all owner guidance describes the same new product, and automated agents
-cannot mark V24/V33 complete or run an unchosen cloud task.
-
-### V11a — Validate local profiles and prepare bounded probe requests
-
-**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoProfile.kt`
-(new), `src/test/kotlin/app/melotrail/video/VideoLocalFeasibilityCheck.kt` (new),
-`src/test/kotlin/app/melotrail/video/LocalVideoProfileTest.kt` (new),
-`src/main/resources/video/local-profile.json` (new), `build.gradle.kts`,
-`docs/TABI_VIDEO.md` (local profile/probe preparation section only).
-**Inputs / dependencies:** V10. Setup-independent slice of V11; no model download,
-installed inference executable, production references or paid account required.
-**Implementation rules:** Define a versioned local-profile/probe-request contract
-and validate required tool/model/reference pins, supported local backend identity,
-reference bindings, prompt, bounded attempts and explicit output locations. Keep
-candidate/unverified configuration separate from measured/selected facts; never
-ship invented model digests, supported flags or runtime/quality measurements.
-Register `videoLocalProbe` on the test classpath to validate and prepare a supplied
-request, reporting missing setup or NOT_RUN explicitly. Preparation is read-only
-for tools/models/references, rejects missing/mismatched files and preserves existing
-outputs. It never executes arbitrary commands, downloads, starts inference or
-contacts a provider. Tests use small owned files and malformed requests to prove
-pin validation, reference preservation, bounds and honest unmeasured outcomes.
-Document exact preparation usage and that real invocation, measurement and model
-selection remain V11. Do not implement the V17 provider adapter or V12 media runtime.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoProfileTest'`;
-`./gradlew :videoLocalProbe` must fail with actionable missing-request guidance;
-prepare an owned fixture request and verify an explicit NOT_RUN/setup report.
-**Done:** the local request/profile boundary and preparation command are tested
-and usable without a model, with no fake inference or production-readiness claim.
-
-### V11 — Prove and pin one local generation workflow
-
-**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoProfile.kt`
-(new), `src/test/kotlin/app/melotrail/video/VideoLocalFeasibilityCheck.kt` (new),
-`src/test/kotlin/app/melotrail/video/LocalVideoProfileTest.kt` (new),
-`src/main/resources/video/local-profile.json` (new), `build.gradle.kts`,
-`docs/TABI_VIDEO.md` (measured local decision section only).
-**Inputs / dependencies:** V11a. User-selected references and an explicit local
-model setup/download choice for real inference; preparation is already owned by
-V11a and does not establish model feasibility. Initial machine: M5 Pro, 20 GPU cores, 48 GB memory.
-Missing setup is WAITING_USER for the real host probe; do not label a fake probe
-as measured local evidence.
-**Implementation rules:** Register `videoLocalProbe` on the test classpath. Test
-Draw Things released CLI with a supported reference/editing model and LTX-2.3
-distilled I2V. Pin full model dependencies, quantization, tool digest, reference
-limits, input/output formats and offline flags. Prove uploaded reference assets
-and a free-form prompt condition a scene keyframe and a real 5–10 second video.
-Exercise a single-reference request and multiple reference roles; a particular
-character, background image, location or action must not be required.
-Try one Wan I2V alternative only for a reproduced failure. If needed assess
-ComfyUI's exact local API/workflow; select one backend in the same profile,
-without arbitrary custom nodes or invented dtype/MPS support. Bound the probe
-(maximum two video profiles, three takes each); stop on memory pressure. Record
-cold/warm runtime, memory/swap, quality failures, output cadence and projected
-four-minute effort. Verify no remote fallback and review the selected model
-terms. A failed local trial produces an explicit fallback recommendation, not
-an endless model search or a fabricated pass; it need not block independent code.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoProfileTest'`; real host probe: `./gradlew :videoLocalProbe -PvideoProbeRequest=/absolute/path/to/probe.json`.
-**Done:** a versioned, automatable profile and measured recommendation, or a
-concrete local failure with the optional hosted proposal. Visual acceptance is V24.
-
-### V12a — Supervise bounded owned media processes
-
-**Target files:** `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProcess.kt`
-(new), `src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt` (new),
-`build.gradle.kts` (one pinned native-access dependency only if required),
-`docs/TABI_VIDEO.md` (bounded media-process section only).
-**Inputs / dependencies:** V10. Native owned child-process fixtures; no models,
-character assets or installed FFmpeg build required.
-**Implementation rules:** Add a lazy video-only process supervisor for macOS
-arm64. Pin the selected executable's actual bytes, pass argument arrays without
-shell interpolation, use a private per-job working directory, and bound time and
-captured stdout/stderr. Validate path identity before launch; never silently
-normalize dot/dot-dot through symlinks or replace supplied inputs/previous jobs.
-Launch children in an atomically owned process group (or equivalent proven
-ownership); a post-launch group assignment or descendant-polling race must not
-lose children when a parent exits. Support cancellation before/during launch and
-execution, timeout, output overflow, failed launch and nonzero/crash exit; drain
-pipes and terminate/reap owned work without hanging or touching unrelated
-processes. Preserve bounded diagnostics and report failure honestly, including a
-child-reported disk error. Native access may use one version-pinned JNA dependency
-loaded only by this video adapter; do not link Swift, introduce an inference or
-media framework, or add startup work to MIDI. Inspect historical supervision only
-for proven behavior, without calling or importing the companion. Tests launch
-small owned fixtures on the real host for Unicode/spaced paths, path/pin rejection,
-stdout/stderr limits, deadline/cancel, early parent exit with a live descendant,
-nonzero/disk diagnostics, input preservation and unrelated-process survival.
-Do not implement the V12 media decode/encode API or claim codec/network/visual
-acceptance from process fixtures.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMediaProcessTest'`;
-all required native cases must actually run on this Mac, plus normal project checks.
-**Done:** bounded native process ownership/lifecycle and failure behavior are
-proven; FFmpeg distribution and real media operations remain V12.
-
-### V12 — Prove the video-only media process boundary
-
-**Target files:** `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProcess.kt`, `src/main/kotlin/app/melotrail/video/adapter/VideoMediaProbe.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt`,
-`src/test/kotlin/app/melotrail/video/VideoMediaHostCheck.kt` (new),
-`src/test/resources/fixtures/video/owned-motion.mp4` (new), `build.gradle.kts`,
-`docs/TABI_VIDEO.md` (media runtime decision only).
-**Inputs / dependencies:** V12a. Reuse its proven process supervisor. Owned generated fixture; no character assets/model.
-**Implementation rules:** Select a pinned FFmpeg/ffprobe build for macOS arm64,
-record its source/distribution/digest/build options and notices, and prove decode,
-frame access, seek and silent H.264 encode (prefer available VideoToolbox).
-Register test-classpath `videoMediaProbe`. Launch with argument arrays, bounded
-output/timeout and per-job directories; cancel/reap only owned process trees.
-Handle missing binary, crash, disk exhaustion and Unicode paths without harming
-inputs. Media decoding must not read arbitrary network URLs or launch at MIDI
-startup. Do not link the old Swift package or add audio processing.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMediaProcessTest'`; `./gradlew :videoMediaProbe -PvideoToolsDirectory=/absolute/path/to/tools`.
-**Done:** real owned frames and silent file decode correctly on the host, with
-process lifecycle/error evidence and one chosen distribution strategy.
-
-### V13 — Persist independent video projects and immutable records
-
-**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoProject.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/VideoProjectStore.kt` (new),
-`src/main/kotlin/app/melotrail/video/application/VideoProjectLifecycle.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoProjectStoreTest.kt` (new),
-`src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt`.
-**Inputs / dependencies:** V10.
-**Implementation rules:** One current video schema, independent create/open/save,
-versioned references/looks/takes, selected IDs and export records. Require a video
-root outside MIDI projects/exports; account for existing parents, symlinks and
-path escape. Atomic saves with revision/concurrent-write checks; reject unsupported
-schemas before writing and preserve originals. No Swift session or MIDI schema
-migration. Add architectural negative controls for video→MIDI storage writes,
-MIDI→video imports, and I/O in video domain code.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoProjectStoreTest' --tests 'app.melotrail.architecture.TargetArchitectureRulesTest'`.
-**Done:** a video project reopens independently; corrupt saves and MIDI paths
-cannot destroy current work.
-
-### V14 — Import reference assets safely
-
-**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoAsset.kt` (new),
-`src/main/kotlin/app/melotrail/video/application/VideoAssetImport.kt` (new),
-`src/main/kotlin/app/melotrail/video/adapter/VideoImageFiles.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoAssetImportTest.kt` (new),
-`src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt`
-(confine ImageIO to the video image adapter; retain MIDI exclusion).
-**Inputs / dependencies:** V13.
-**Implementation rules:** Decode PNG/JPEG initially; support optional subject/character,
-environment, style and complete-scene roles without requiring a role combination.
-Preserve raw source bytes, copy to immutable owned paths,
-produce bounded thumbnails and record hashes/dimensions. Reject unsupported or
-oversized/corrupt content with specific guidance. A duplicate reuses the exact
-asset identity without overwriting. Derivative resizing/metadata removal is
-separate. Never auto-approve identity or treat inspiration artwork as licensed
-production input. No manually authored asset manifest or mask requirement.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAssetImportTest'`.
-**Done:** selected references are usable, hash-pinned and recoverable after reopen.
-
-### V15 — Compile free-form prompts and a duration-aware shot proposal
-
-Completed contract retained below as evidence of V15. PLAN §9.5 and V26 supersede
-its primary short-shot/whole-footage reuse proposal; do not reimplement that old
-product flow. Its exact prompt handling and dependency fingerprints remain useful.
-
-**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoBrief.kt` (new),
-`src/main/kotlin/app/melotrail/video/application/VideoShotPlanner.kt` (new),
-`src/main/kotlin/app/melotrail/video/application/VideoPromptCompiler.kt` (new),
-`src/main/resources/video/video-generation-guidelines.json` (new),
-`src/test/kotlin/app/melotrail/video/VideoPromptCompilerTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoShotPlannerTest.kt` (new).
-**Inputs / dependencies:** V13, V14.
-**Implementation rules:** Free-form prompt is the primary input alongside
-selected assets; reference roles and action/camera/motion/style guidelines are
-optional refinements. Compile only backend-supported inputs and preserve the
-user's prompt. No required preset or separate Custom mode, fixed camera, moving
-background or injected action list. A generic shot proposal divides 180–300
-seconds (default 240), retaining the prompt with optional user-written per-shot
-overrides; do not invent semantic story parsing or hardcoded scenario templates.
-Default to unique footage (roughly 30–60 useful short takes for
-four minutes before transition/trim adjustments). An explicit reuse option may
-propose 12–18 distinct takes and reviewed repeats; show the real unique/reused
-seconds and revised local time estimate for each mode. No separate
-LLM, automatic approval or silent reference omission. Hash all consumed inputs
-and template versions; clip generation is not promised deterministic. Changes
-invalidate only dependent pending requests, retaining earlier takes.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoPromptCompilerTest' --tests 'app.melotrail.video.VideoShotPlannerTest'`.
-**Done:** the exact proposed prompts, asset bindings and unique/reused duration
-are inspectable before inference. Contrasting prompts and changed assets use
-the same pipeline; regressions reject injected Tokyo/train/coffee requirements.
-
-### V16 — Persist bounded jobs and recover interrupted work
-
-**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoGenerationJob.kt`
-(new), `src/main/kotlin/app/melotrail/video/application/VideoJobCoordinator.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/VideoJobStore.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoJobCoordinatorTest.kt` (new).
-**Inputs / dependencies:** V13.
-**Implementation rules:** Define backend and setup-capability ports for
-keyframe/video requests, availability/model requirements and explicit setup
-actions so UI code can compile independently of the chosen adapter. Durable
-attempts before launch, one local inference at a time, cancellation scoped to
-owned work, bounded retries and restart reconciliation. Keep request/attempt/
-output identities distinct. Unknown progress stays unknown. Local mode records
-time/resources; hosted admission additionally requires a current estimate and
-explicit spend cap. Reserve in-flight maximum cost across concurrent callers.
-Never auto-retry a possibly charged request or equate stopped polling with
-provider cancellation. Fixtures cover crash windows and late completion.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoJobCoordinatorTest'`.
-**Done:** restart/retry/cancel cannot duplicate admission or overwrite a prior take.
-
-### V17a — Pin ComfyUI setup and own its local server
-
-**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoSetup.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/ComfyVideoRuntime.kt` (new),
-`src/main/resources/video/comfyui/runtime-profile.json` (new),
-`src/test/kotlin/app/melotrail/video/LocalVideoSetupTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/ComfyVideoRuntimeTest.kt` (new),
-`docs/TABI_VIDEO.md`, `docs/ARCHITECTURE.md` (current/planned boundary only).
-**Inputs / dependencies:** V11, V12a; the retained external ComfyUI installation,
-launch scripts, model receipts and memory measurements in the V17 evidence.
-**Implementation rules:** Pin actual Python/ComfyUI/node/model versions, paths,
-terms and tested host settings; reuse the installed files after verification.
-Describe capabilities honestly: LTX short shots do not prove layer preparation.
-Start only a dedicated loopback server in owned directories/process groups, with
-one inference job and bounded startup/resource/shutdown monitoring. Refuse an
-occupied port instead of attaching to an unowned instance. Never kill an unrelated
-process. Setup lists missing/corrupt dependencies and explicit download choices;
-no download at app startup, cloud node activation or MIDI dependency. Reuse V12a's
-process supervision instead of another process framework.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.LocalVideoSetupTest' --tests 'app.melotrail.video.ComfyVideoRuntimeTest'`.
-**Done:** owned start/health/stop and port-collision behavior are tested; the
-selected external runtime is pinned, with absent setup handled without breaking MIDI.
-
-### V17c — Expose a verified owned ComfyUI connection
-
-**Target files:** `src/main/kotlin/app/melotrail/video/adapter/ComfyVideoRuntime.kt`,
-`src/test/kotlin/app/melotrail/video/ComfyVideoRuntimeTest.kt`.
-**Inputs / dependencies:** V17a. Its public session value contains metadata;
-the private listener identity is currently unavailable to a real API consumer.
-**Implementation rules:** Expose a small runtime-issued connection for the future
-HTTP/WebSocket client, tied to the exact live owned session and server identity.
-A copied session value or arbitrary URI must not establish ownership. Reject
-stale connections after stop, failure or restart; retain the existing inference
-admission and bounded process cleanup. Close the gap between checking health and
-sending a mutating request: a replacement unrelated listener on the same port
-must never receive a usable ComfyUI mutation. Prefer a private per-launch route
-namespace/handshake in the existing bootstrap over another server or process
-framework. Keep the verified connection usable for the documented ComfyUI HTTP
-and WebSocket operations without exposing raw server access as a fallback.
-Validate operation paths, avoid network work while holding the runtime lifecycle
-lock, and preserve the installed source/model files. No workflow submission,
-asset binding, job persistence, inference or application UI in this slice.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.ComfyVideoRuntimeTest'`.
-**Done:** fixtures cover copied/stale session rejection, same-port replacement,
-HTTP/WebSocket access and shutdown races; an opt-in real installed-server check
-proves read-only API and WebSocket access, then owned shutdown without inference.
-
-### V17b — Connect recoverable ComfyUI API jobs
-
-**Target files:** `src/main/kotlin/app/melotrail/video/adapter/LocalVideoBackend.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/ComfyVideoClient.kt` (new),
-`src/main/kotlin/app/melotrail/video/domain/VideoGenerationJob.kt`,
-`src/test/kotlin/app/melotrail/video/LocalVideoBackendTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/ComfyVideoClientTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoJobCoordinatorTest.kt`,
-`src/main/kotlin/app/melotrail/video/adapter/ComfyVideoRuntime.kt`,
-`src/test/kotlin/app/melotrail/video/ComfyVideoRuntimeTest.kt`.
-**Inputs / dependencies:** V17a, V17c, V14, V16 and the existing
-`VideoGenerationBackendPort` in `VideoJobCoordinator.kt`.
-**Implementation rules:** Use V17c's runtime-issued verified connection for every
-HTTP/WebSocket operation. Explicit typed bindings resolve digest-pinned owned
-reference files, workflow slots and output identities; never interpret a user
-prompt as executable node code or a filesystem path. Upload only consumed images,
-validate `/object_info` requirements, submit API-format workflows to `/prompt`,
-track the returned prompt ID over `/ws`, and reconcile `/history` and `/queue`.
-Runtime inference leases are keyed to the persisted attempt and exact session,
-so reconstructed backends can release only their own terminal work. Reacquiring
-the same lease must not reset its deadline; stale releases cannot free newer work.
-Bound response-body consumption as well as connection/headers. Server errors
-after submission remain uncertain. Reconcile interrupted history as cancellation,
-and recheck completion when cancellation races a successful result.
-Persist stable attempt identity before submission; an ambiguous response must not
-trigger a duplicate submit. Validate history and result files before success;
-`executed` events alone do not mean a whole workflow finished. Handle reconnects,
-node errors, restart and late results under V16's durable admission rules.
-Interrupt only the dedicated owned server's verified work; never globally clear
-an external queue. Ordinary tests use a local fake HTTP/WebSocket server.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.ComfyVideoRuntimeTest' --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.ComfyVideoClientTest' --tests 'app.melotrail.video.VideoJobCoordinatorTest'`.
-**Done:** submit, observe, cancel and recover preserve job ownership and immutable
-results; unsupported bindings fail before inference rather than losing references.
-The existing opt-in `ComfyVideoConnectionHostCheck` confirms the runtime changes
-against the installed owned server without inference; actual generation remains V17.
-
-### V17 — Verify the selected ComfyUI adapter on this host
-
-**Target files:** `src/main/resources/video/comfyui/short-shot-api.json` (new),
-`src/main/resources/video/comfyui/runtime-profile.json`,
-`src/test/kotlin/app/melotrail/video/ComfyVideoHostCheck.kt` (new),
-`build.gradle.kts`, `docs/TABI_VIDEO.md`, `README.md` (actual setup status only),
-`src/main/kotlin/app/melotrail/video/adapter/ComfyVideoClient.kt`,
-`src/test/kotlin/app/melotrail/video/ComfyVideoClientTest.kt`,
-`src/test/kotlin/app/melotrail/video/VideoMediaProcessTest.kt` (required native validation fixture).
-**Inputs / dependencies:** V17a, V17b, V12. Use the already tested external generic
-LTX workflow and its source/model pins; no new provider or model purchase.
-**Implementation rules:** Register `comfyVideoProbe` using a request file in an
-owned output directory. Through the production adapter, run a bounded image-
-conditioned five-second case, verify full decode/frames/audio, record timings,
-memory/swap, cancellation/recovery and unchanged sources. Bind named workflow
-inputs rather than embedding TABI paths or prompts. Validate pinned ComfyUI
-DynamicCombo inputs by resolving only the selected schema branches after scalar
-binding; preserve explicit export settings and reject malformed schemas, unknown
-choices and arbitrary or inactive dotted inputs. Report the persisted failure
-cause when submission fails. Native validation readiness must publish a complete
-PID before tests can cancel its process; retain real signal/cleanup assertions
-and add a deterministic regression for partial readiness publication. The old Draw Things probe
-remains historical evidence, not a second active backend. Do not mark this short-
-shot capability as automatic multi-reference preparation or artistic acceptance.
-**Verification command:** `./gradlew :comfyVideoProbe -PcomfyVideoRequest=/absolute/path/to/owned-request.json`; `./gradlew :test --tests 'app.melotrail.video.ComfyVideoHostCheckTest' --tests 'app.melotrail.video.ComfyVideoClientTest' --tests 'app.melotrail.video.LocalVideoBackendTest' --tests 'app.melotrail.video.LocalVideoSetupTest' --tests 'app.melotrail.video.VideoMediaProcessTest'`.
-**Done:** a real pinned ComfyUI result is reached through the production job port
-on this host; the capability record distinguishes tested and unproven stages.
-
-### V18a1 — Requalify desktop visuals on macOS 27
-
-**Target files:** the existing 69 PNGs under
-`desktopApp/src/test/resources/visual/` (`panel.png`, `primary-focused.png`,
-`primary-unfocused.png` and the 66 existing `shell/*.png` fixtures),
-`desktopApp/src/test/resources/visual/renderer.properties`, and only the current
-U07a renderer paragraph in `docs/VALIDATION.md`.
-**Inputs / dependencies:** V17; the user's 2026-09-15 authorization to requalify
-macOS 27.0 after the V18a host mismatch. Exact owned filenames and original
-hashes are retained in the external qualification packet.
-**Implementation rules:** This is a bounded Astra High failure repair, followed
-by fresh Sol High review. Preserve the retained V18a source candidate in its
-execution checkout and commit this prerequisite separately. Capture all 69
-technical snapshots on the genuine current OS, including a fresh focused button.
-Inspect original/actual/difference images and retain old hashes and artifacts.
-Keep font, renderer-class and native pins, all zero-tolerance comparisons,
-geometry/accessibility assertions and negative controls intact. Do not change
-production UI or test assertions to accommodate a snapshot. Update only measured
-OS metadata and reviewed expected PNGs; no historical evidence rewrite, human
-visual/Logic approval, skipped check or tolerance waiver.
-**Verification command:** `./gradlew :desktopApp:test --rerun-tasks --tests 'app.melotrail.desktop.MidiCorePinnedVisualTest' --tests 'app.melotrail.desktop.WorkstationPrimitivesTest' --tests 'app.melotrail.desktop.VisualImageComparatorTest' --tests 'app.melotrail.desktop.MidiCoreVisualReviewTest'`, then `make test`, `make build`, and `git diff --check` on the frozen candidate.
-**Done:** fresh actual captures match all 69 reviewed current-host baselines
-exactly; independent geometry/focus/accessibility and deliberate negative-control
-assertions pass, old references are preserved, and independent review passes.
-
-### V18a — Persist prepared scenes and motion capabilities
-
-**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoPreparedScene.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/VideoPreparedSceneStore.kt`
-(new), `src/main/kotlin/app/melotrail/video/domain/VideoProject.kt`,
-`src/main/kotlin/app/melotrail/video/adapter/VideoProjectStore.kt`,
-`src/test/kotlin/app/melotrail/video/VideoPreparedSceneStoreTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoProjectStoreTest.kt`.
-**Inputs / dependencies:** V13, V14, V15, V18a1; current immutable project/artifact contracts.
-**Implementation rules:** Version and retain source look/reference pins, layer/
-pose/mask assets, coordinate spaces, subject landmarks, effect anchors, depth and
-occlusion relations, scenery coverage and supported motion controls. Persist
-component-specific review status and the explicit subtle-motion reuse policy,
-separate from old whole-footage reuse. Pin every consumed dependency. Validate
-geometry, missing or changed assets, invalid anchors, unsafe paths and unsupported
-schema without overwriting records. No fixed TABI coordinates, mandatory cup,
-train/window assumption, duplicated project store or old-project migration.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoPreparedSceneStoreTest' --tests 'app.melotrail.video.VideoProjectStoreTest'`.
-**Done:** two structurally different owned prepared scenes reopen with verified
-pins and capabilities; scene metadata cannot silently change accepted sources.
-
-### V18a2 — Bind character, outfit and scenery inspiration
-
-**Target files:** `src/main/kotlin/app/melotrail/video/domain/VideoAsset.kt`,
-`src/main/kotlin/app/melotrail/video/domain/VideoBrief.kt`,
-`src/main/kotlin/app/melotrail/video/application/VideoPromptCompiler.kt`,
-`src/main/resources/video/video-generation-guidelines.json`,
-`src/test/kotlin/app/melotrail/video/VideoAssetImportTest.kt`,
-`src/test/kotlin/app/melotrail/video/VideoPromptCompilerTest.kt`, and
-`src/test/kotlin/app/melotrail/video/VideoShotPlannerTest.kt` (existing prompt-template
-version invalidation fixture only).
-**Inputs / dependencies:** V14, V15, V18a; PLAN sections 9.2–9.4 and the user's
-2026-09-15 three-group inspiration request. The coordinator's pending PLAN/TASKS/
-TABI specification edits belong with this task's validated commit.
-**Implementation rules:** Reuse CHARACTER/SUBJECT for identity and pose/expression
-examples and ENVIRONMENT for city/scenery; add a distinct OUTFIT reference role.
-Retain optional STYLE, COMPLETE_SCENE and unassigned inputs. Support multiple
-assets per group through existing brief bindings and actual backend limits, with
-one reference plus a prompt still valid where supported. Preserve immutable asset
-identity, original bytes, provenance and existing import deduplication. A selected
-brief binding may explicitly reassign a reused asset's role without rewriting its
-import descriptor; conflicting duplicate bindings remain visible blockers.
-Compile/pin every selected image and its role. Role-scoped guidance assigns
-clothing/accessories to outfit references, identity/pose/expression to character
-references and environment to scenery references, preserving selected style.
-Do not transfer an outfit model's identity or a city image's people/clothing into
-the selected character. Keep the user prompt exact; conflicting explicit intent
-requires visible resolution at preparation/UI boundaries. Pictures are inspiration,
-not executable arbitrary-action guarantees. Never silently bind an unsupported
-role or truncate extra pictures; adding the enum must not advertise unmeasured
-backend support. Invalidate request fingerprints on changed image/role/guidelines,
-preserve earlier artifacts, and do not add migration or a second reference schema.
-Do not modify the historical LocalVideoReferenceRole probe or claim ComfyUI
-conditioning is proved here; V18b owns the real workflow capability proof.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAssetImportTest' --tests 'app.melotrail.video.VideoPromptCompilerTest' --tests 'app.melotrail.video.VideoShotPlannerTest'`.
-**Done:** all three groups round-trip and bind distinctly; outfit-only and role-only
-edits change request identity while unrelated selected assets remain pinned.
-Regressions cover multiple pictures, optional/absent groups, duplicate-byte role
-reassignment without descriptor mutation, unsupported outfit roles and capacity
-limits. Focused checks, `make test`, `make build`, diff and fresh review pass.
 
 ### V18b1 — Prove local multi-reference image conditioning
 
@@ -1338,38 +438,6 @@ source stays byte-exact, limits/recovery/cleanup are exercised, and actual suppo
 capacities/limitations are recorded. A concrete failed native profile is retained
 as failure evidence and does not count as a completed capability proof.
 
-### V18b2 — Validate externally prepared animation assets
-
-**Target files:** `src/main/kotlin/app/melotrail/video/application/VideoAnimationAssets.kt`
-(new), `src/main/kotlin/app/melotrail/video/adapter/VideoPreparedSceneImport.kt`
-(new), `src/main/kotlin/app/melotrail/video/domain/VideoPreparedScene.kt`
-(only necessary source/validation changes),
-`src/test/kotlin/app/melotrail/video/VideoAnimationAssetsTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoPreparedSceneStoreTest.kt`,
-`src/main/kotlin/app/melotrail/video/application/VideoAssetImport.kt`,
-`src/main/kotlin/app/melotrail/video/adapter/VideoImageFiles.kt`,
-`src/test/kotlin/app/melotrail/video/VideoAssetImportTest.kt`
-(only the existing image-files boundary and regression coverage needed by the
-2026-09-16 user-authorized Astra repair; retain architecture policy checks).
-**Inputs / dependencies:** V14, V18a; completed immutable asset import and prepared
-scene/store contract. User supplies finished artwork, optional ready layers/poses.
-**Implementation rules:** Map existing imported asset pins into one V18a descriptor;
-do not create a parallel project/prepared-scene schema. Accept a finished scene
-as an immutable source, with optional transparent subject/pose images, clean
-backgrounds, scenery, foreground and masks. Validate decoded dimensions, measured
-alpha, common coordinates/transforms, masks, pivots, depth/occlusion, effect
-anchors and actual scenery coverage. Do not infer semantic eyes/head support from
-a generic foreground mask. Derive supported operations only from available inputs;
-missing clean plates/poses/coverage return explicit actionable deficiencies.
-Allow visible placement/anchor metadata from the future UI, with pure validation;
-no hardcoded TABI coordinates, mandatory automatic extractor or image generation.
-No replacement art, inpainting, model download or external original mutation.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoAnimationAssetsTest' --tests 'app.melotrail.video.VideoPreparedSceneStoreTest'`; required full checks.
-**Done:** finished-scene-only and ready-layer inputs persist/reopen with exact pins;
-malformed geometry/alpha, unsupported motions and missing scenery fail visibly.
-Different characters/scenes use the same contract. This is asset/motion capability
-validation, not automatic extraction or a visual motion approval.
-
 ### V18b — Prove automated reference-conditioned scene preparation
 
 **Status: OPTIONAL and unselected.** Deferred by the 2026-09-16 external-artwork
@@ -1388,102 +456,26 @@ because externally supplied artwork bypasses those functions.
 **Verification command:** Future reactivation must name focused and bounded native
 checks before admission; no executable current task is authorized.
 
-### V18 — Import finished looks and prepare motion inputs
+### V19r3 — Validate the current revision in an isolated checkout
 
-**Target files:** `src/main/kotlin/app/melotrail/video/application/VideoSceneLooks.kt`
-(new), `src/main/kotlin/app/melotrail/video/application/VideoScenePreparation.kt`
-(new), `src/main/kotlin/app/melotrail/video/application/VideoPromptCompiler.kt`,
-`src/main/resources/video/video-generation-guidelines.json`, `src/test/kotlin/app/melotrail/video/VideoSceneLooksTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoScenePreparationTest.kt` (new),
-`src/test/kotlin/app/melotrail/video/VideoPromptCompilerTest.kt`.
-**Inputs / dependencies:** V14, V15, V16, V18a, V18b2; imported ready-asset validation
-and current job/prompt contracts. No dependency on deferred V18b1/V18b.
-**Implementation rules:** Select the uploaded finished scene as the look without
-calling image generation. Compile the exact motion prompt and supported controls
-against available ready assets. Preserve identity/outfit/style as drawn; appearance
-redesign asks for replacement external artwork. Use the V18b2 importer to build
-motion inputs and validate required layers/poses/anchors. Keep flattened-image I2V
-capability distinct from controlled regional motion: a camera-only result cannot
-silently satisfy requested blinking, character action or moving window scenery.
-No asset synthesis, restyling, inpainting, scenery extension or mandatory rig model.
-Retain imported look versions and scoped component review; changed source bytes,
-geometry or motion settings invalidate only dependent work and preserve earlier
-results. Expose missing assets/unsupported actions before expensive dispatch.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoSceneLooksTest' --tests 'app.melotrail.video.VideoScenePreparationTest' --tests 'app.melotrail.video.VideoPromptCompilerTest'`.
-**Done:** Generate video can consume a selected finished scene and optional ready
-layers without producing new picture assets; reopen/replacement preserves source
-pins, motion-capability limits and scoped review. Actual moving output remains V19.
-
-### V19a — Generalize controlled subject motion and effects
-
-**Target files:** `tools/video-motion/package.json` (new),
-`tools/video-motion/package-lock.json` (new), `tools/video-motion/render.cjs`
-(new), `tools/video-motion/render.test.cjs` (new),
-`src/main/resources/video/motion-runtime.json` (new),
-`src/test/kotlin/app/melotrail/video/VideoMotionDescriptorFixtureTest.kt` (new;
-production importer fixture bridge added after the V19a transform review finding).
-**Inputs / dependencies:** V12, V18a; preserved controlled-motion v1 checkpoint,
-v2 approved steam and v3 renderer evidence. Ordinary tests use owned fixtures.
-**Implementation rules:** Adapt the useful external Node Canvas compositor into
-one versioned, parameter-driven video tool, not a Kotlin frame renderer or new
-service. Pin the Node/library runtime for explicit video-only installation.
-Consume V18a layers and measured landmarks/poses, never baked-in face patches,
-eye drawings or scene coordinates. Provide supported blinking, breathing and
-small head gestures with bounded amplitudes; retain subject silhouette and
-occlusion. Preserve the approved steam's soft rise/fade behavior relative to its
-source anchor, only when that effect is requested and a source exists. Use absolute
-frame time and seeded schedules; regenerate no surrounding cabin pixels to move
-the face. Match the source illustration style. Output bounded frames and a receipt;
-no full-video frame batch in memory. Do not promise drinking/page-turning from this
-motion set. Verify the same controls on different scene geometries.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'` (emit actual importer descriptors and assets under owned build output for Node comparison); `npm ci --prefix tools/video-motion`; `node --test tools/video-motion/render.test.cjs`.
-**Done:** reusable subject/effect motion is independent of TABI/Tokyo coordinates;
-owned pixel/geometry and repeatability regressions pass, with real comparison
-renders retained for later user review rather than self-awarded artistic approval.
-
-### V19b — Render coherent scenery with continuous time
-
-**Target files:** `tools/video-motion/scenery.cjs` (new),
-`tools/video-motion/scenery.test.cjs` (new), `tools/video-motion/render.cjs`,
-`tools/video-motion/render.test.cjs`, `src/main/resources/video/motion-runtime.json`,
-`src/test/kotlin/app/melotrail/video/VideoMotionDescriptorFixtureTest.kt`
-(extend the existing real-importer fixture bridge for scenery/viewport proof).
-**Inputs / dependencies:** V19a and V18a's depth/occlusion/coverage contract.
-**Implementation rules:** Derive rigid layer movement from one camera trajectory
-and depth model, with compatible projection, occlusion and motion blur. Near
-objects pass faster than distant ones when the requested travel implies it;
-buildings retain shape. Support the requested static or moving environment,
-not a compulsory train-window overlay. Validate full visible coverage before
-rendering; no visible wrapping, invented filler, reversed travel or last-frame
-freeze. Join new scenery sections while offscreen. Pass absolute frame indices,
-seed and initial state across chunks so blinks, steam and scenery cannot restart.
-Write bounded frame ranges and reap owned outputs on cancellation. Preserve
-approved character/steam behavior when only scenery changes.
-**Verification command:** `./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'`; `npm ci --prefix tools/video-motion`; `MELOTRAIL_MOTION_FIXTURE_ROOT="$PWD/build/video-motion-fixtures" node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`.
-**Done:** a 20–30 second owned render and a split/resumed equivalent have matching
-boundary states, no geometry drift or coverage holes; real scenery realism still
-requires V24 user feedback.
-
-### V19r1 — Restore displaced local data or authorize retained relocation
-
-**Scope:** `~/.melotrail-preserved-local-data/2026-09-22-step-1-1/{.venv-worker,sounds,data-audio,manifest.txt}`, the three original checkout destinations, and this row's concise evidence only.
-**Rules:** Inventory source and destination ancestors, hidden entries, types, sizes, digests, executable permissions and symlink targets before writes. Refuse collisions, changed sources and unsafe symlinks; never merge, overwrite, execute the virtual environment, or remove either copy. Restore verified copies to `.venv-worker`, `sounds`, and `data/audio` while retaining the source and manifest. If relocation remains desired, require explicit authorization naming all three original and retained paths.
-**Verification:** After symlink inspection, compare full inventories and run `diff -qr` for each source/destination pair, `git status --short`, and `git diff --check`.
-**Done:** Metadata- and content-equivalent copies exist at all original locations, or explicit authorization covers every retained relocation. A documented blocker is not completion.
-
-### V19r2 — Record unavailable historical evidence and verify active probe isolation
-
-**Scope:** This queue row, the documented V18b1 evidence path, and targeted inspection of active probe owners/registration. Do not modify or delete unknown files.
-**Rules:** Preserve as history the prior blocked archive-recovery result. The reported archive `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3` is unavailable and no verified backup was supplied; original checksums, ledgers and failed-candidate contents are unauthenticated. The latest user instruction supersedes recovery as a prerequisite for video delivery. Do not claim archive recovery or V18b1 success, repeat broad searches, or regenerate trials. Verify current-tree absence—not historical identities—of `reference-image-api.json`, `reference-image-profile.json`, `VideoReferenceImageHostCheck.kt`, `VideoReferenceImageHostCheckTest.kt`, and `videoReferenceImageProbe` registration. Preserve legitimate `videoLocalProbe`, `videoMediaProbe` and ComfyUI probe. If an unexpected owner exists, inventory and preserve its bytes; unknown ownership blocks isolation. V18b1/V18b/V25 stay OPTIONAL and unselected. This waiver covers only unavailable historical re-verification, not current correctness, integrity or human gates.
-**Verification:** Targeted owner searches and `./gradlew :test --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`; `git diff --check`. The prior normal-checkout `make test`/`make build` failure at `TargetArchitectureRulesTest.kt:123` is recorded separately; restored data was not removed. Isolated-candidate baseline belongs to V19r3.
-**Done:** Documentation records unavailability and unauthenticated history truthfully, and the named deferred owners are absent from the active tree with legitimate probes retained. DONE does not mean V18b1 archive recovery or success, nor does it certify isolated checks.
-
-### V19r3 — Validate the exact candidate in an isolated checkout
-
-**Scope:** The exact current base revision and dirty task-owned changes, an external isolated candidate directory, and this row's concise identity/check evidence; never protected local-data paths.
-**Rules:** Create a detached isolated candidate without branch/ref changes. Record base revision, dirty-diff identity, copied task-owned untracked-file hashes and explicit exclusions. Exclude `.venv-worker`, `sounds`, `data/audio`, build products and workflow state by inventory, not by deleting them from the user checkout. Do not weaken architecture tests, alter `.gitignore`, or present older `HEAD` as this candidate. V19r2 waives only missing historical archive authentication; it does not waive exact-candidate reproduction or fresh checks.
-**Verification:** From the verified isolated candidate run `./gradlew :test --no-build-cache --rerun-tasks --tests 'app.melotrail.architecture.TargetArchitectureRulesTest' --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`, `make test`, `make build`, and `git diff --check`; record any restored-checkout failure separately.
-**Candidate/evidence (not completion):** Base `b084fd2ba711678f28d035cd3e3731aa79d0710b`; detached checkout `/Users/marcoandreose/.codex/melotrail-v19r3-isolation-20260923`; current dirty-diff SHA-256 `5bb6f3e2beb721a48d41e7d0da8deab862e05bd047dec02958c17184c2339f43`. Exclusions are inventoried by path, type, and scope in `/Users/marcoandreose/.codex/melotrail-video-sequential/evidence/V19r3/candidate-receipt.md`; fresh outcomes must bind to this current hash. Previous candidate checks are not evidence for this revision.
+**Scope:** Current base revision plus task-owned changes, an external isolated
+candidate, selected current assets and fresh identity/check evidence. No recovery
+or review of missing historical assets, candidate hashes or receipts.
+**Rules:** Create a detached isolated candidate without changing user branches or
+refs. Record current base, dirty-diff identity, copied task-owned untracked-file
+hashes and explicit exclusions. Preserve `.venv-worker`, `sounds`, `data/audio`,
+build products and workflow state in the normal checkout; exclude them from the
+candidate by inventory, never deletion. Include current tracked video assets;
+pin selected inputs from `docs/pictures/video/` recursively. Use small owned
+fixtures for technical regressions and validate actual capability before real
+asset use. Do not infer alpha, poses, scenery coverage or artistic approval from
+file presence. Missing motion inputs need actionable findings, not old archives.
+Do not weaken architecture tests, alter `.gitignore` or certify an older HEAD.
+**Verification:** In the verified candidate run `./gradlew :test --no-build-cache --rerun-tasks --tests 'app.melotrail.architecture.TargetArchitectureRulesTest' --tests 'app.melotrail.documentation.DocumentationIntegrityTest'`,
+`make test`, `make build` and `git diff --check`. Record candidate/input identities,
+executed versus cached results and any normal-checkout limitation separately.
+**Done:** Fresh checks and current-candidate technical review pass. No inherited
+PASS, historical identity authentication or V24/V33 visual approval is claimed.
 
 ### V20a — Prepare Video-flow design alignment
 
@@ -1498,13 +490,6 @@ requires V24 user feedback.
 **Rules:** Obtain a genuine reviewer decision naming the approved artifact revision/digest, reviewer, date, covered surfaces and accepted deviations. Browser rendering, agent recommendation, MIDI goldens and prior TABI artistic approval are not approval. Material changes require renewed review.
 **Verification:** Recompute the approved artifact digest, verify recorded paths/links, and run `git diff --check`.
 **Done:** Explicit approval covers V20–V23 and planned review/export surfaces; otherwise remain WAITING_USER.
-
-### V26a — Remove the full-trajectory duration limit
-
-**Target files:** `tools/video-motion/scenery.cjs`, `tools/video-motion/scenery.test.cjs`, `tools/video-motion/render.cjs`, `tools/video-motion/render.test.cjs`, `src/main/resources/video/motion-runtime.json`, and `src/test/kotlin/app/melotrail/video/VideoMotionDescriptorFixtureTest.kt`.
-**Rules:** Replace the 3,600-frame trajectory ceiling with checked 5,400/7,200/9,000-frame support while retaining the 300-frame invocation limit. Preserve absolute frame time, deterministic seed/state, scenery coverage, cancellation and split/resume identity; reject unsafe arithmetic or inadequate coverage before rendering.
-**Verification:** Run `./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'`; `npm ci --prefix tools/video-motion`; `MELOTRAIL_MOTION_FIXTURE_ROOT="$PWD/build/video-motion-fixtures" node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`; then `make test`, `make build`, and `git diff --check`.
-**Done:** Required trajectory lengths validate deterministically without full-duration frame allocation in ordinary tests, and each render invocation remains bounded to 300 frames.
 
 ### V19 — Generate controlled previews and preserve independent takes
 

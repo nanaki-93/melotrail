@@ -46,10 +46,20 @@ human evidence as an implementation failure.
 The reported archive `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3`
 is unavailable and no verified backup was supplied. Original checksums, ledgers
 and failed-candidate contents were not authenticated. Per the latest user
-instruction, historical re-verification of that archive is skipped and its
-recovery is no longer a delivery prerequisite; this is not archive recovery or a
-V18b1 pass. Current candidate, source, asset and model integrity checks remain
-required, as do all new implementation checks and human acceptance gates.
+instruction, archive recovery, historical hash reconciliation and reviews that
+require its unavailable contents are retired delivery prerequisites; this is not
+archive recovery or a V18b1 pass. V19r2 closes the bounded current-tree isolation
+check; V19r3 validates the current revision rather than old candidate receipts.
+Current candidate, source, asset and model integrity checks remain required,
+as do new implementation checks, technical review and human acceptance gates.
+
+The user-designated current video inputs are `docs/pictures/video/` and all
+subfolders. Select suitable files, record current relative paths and digests,
+validate motion capabilities and preserve originals. Existing inspiration-only
+labels and production-rights requirements remain; availability alone approves
+neither independent animation nor visual quality. Technical regressions use small
+owned fixtures. Real video checks create fresh evidence from selected current
+assets, with explicit missing-input findings instead of historical archive waits.
 The deferred reference-image resource/test owners and probe registration are
 verified absent from the present tree only; this does not authenticate their
 historical identities. Preserve the legitimate local, media and ComfyUI probes.

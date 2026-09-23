@@ -438,6 +438,16 @@ completed rows do not need replay. Do not advertise an Outfit transfer or Genera
 look action in the current UI. Style inspiration may be retained as project
 context but cannot be counted as a consumed generative input when unused.
 
+The user-designated source collection for current video work is
+`docs/pictures/video/` and all subfolders. Select appropriate finished scenes or
+ready layers from that tree and preserve original bytes. File presence does not
+establish motion readiness, production rights or visual approval; existing
+inspiration-only labels still apply. Use fresh evidence from these current inputs
+and small owned technical fixtures. Missing historical archives, old candidate
+hash reconciliation and reviews requiring unavailable evidence are retired
+admission requirements, not successful checks. Current-code integrity, technical
+review and V24/V33 decisions remain required.
+
 Keep immutable originals and accepted versions. Replacement images invalidate
 only dependent motion/prepared-scene/chunk work. Bound inputs by measured capacity;
 never discard extra images silently or pass filenames as conditioning. Separate

@@ -43,9 +43,11 @@ creation are deferred. V18b1's failed experiment and V18b are OPTIONAL/unselecte
 they are not video-delivery gates. The reported archive
 `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3` is
 unavailable and no verified backup was supplied. Its checksums, ledgers and
-failed-candidate contents remain unauthenticated. Historical re-verification is
-waived as a delivery prerequisite, not claimed recovered or passed; current-tree
-absence checks do not authenticate historical file identities. Reuse completed
+failed-candidate contents remain unauthenticated. Historical recovery, hash reconciliation and review requiring that missing
+archive are retired delivery requirements, not claimed recovered or passed.
+The bounded current-tree probe-isolation check is closed in V19r2; it does not
+authenticate historical file identities. V19r3 validates the current revision
+with fresh evidence instead. Reuse completed
 V14/V15/V18a/V18a2 contracts.
 V18b2 validates ready animation assets, V18 selects finished looks and prepares
 motion inputs, V19 supplies moving output, and V20–V23 expose the complete flow.
@@ -59,6 +61,17 @@ are examples, never required presets. Preserve the approved motion/steam checkpo
 and latest charcoal/stone v6 artistic choice without inferring new visual approval.
 
 ## Current TABI asset kit
+
+The user confirmed **this entire `docs/pictures/video/` tree, including all
+subfolders**, as the source collection for video work, not just the kit linked
+below. Select inputs appropriate to each requested video and pin their actual
+paths/bytes. Preserve originals; derived files and outputs belong in separate
+video-project/evidence storage. Existing inspiration-only references are not
+silently promoted to finished artwork or licensed production assets. Validate
+alpha, geometry, poses/masks and scenery coverage before promising independent
+motion. Missing inputs are actionable capability gaps, not reasons to recover
+old archives. Use small owned fixtures for technical tests and current selected
+assets for fresh moving-video evidence; V24/V33 still need real user decisions.
 
 The user refreshed the supplied artwork in commit
 `f96a7f36430d45c576de511be94480e31762570b`, merged into the video implementation
