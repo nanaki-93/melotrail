@@ -104,19 +104,16 @@ preserve that data and validate an inventoried isolated candidate instead.
 
 ## Available work and TODO order
 
-**Next dependency-ready TODO: V19r3 (fresh current-revision validation).**
-No product implementation is admitted until it passes. This scope update does
-not restart the scheduler, authorize inference or approve a visual/design gate.
+**Next dependency-ready TODO: V19 (controlled previews).** V19r3 isolated
+admission passed technical review. This status does not restart the scheduler,
+authorize inference or approve a visual/design gate.
 
 Next actions:
-1. **V19r3**: validate the current revision and task-owned diff in isolation,
-   using current assets and fresh evidence. No old candidate/hash reconciliation
-   or missing-archive review is required.
-2. **V19**: implement controlled previews after V19r3 passes.
-3. **V20a** can proceed independently after user confirmation of design scope and
+1. **V19**: implement controlled previews using the admitted current revision.
+2. **V20a** can proceed independently after user confirmation of design scope and
    process; **V20b** requires explicit approval of the resulting flow.
 
-All 11 TODOs are listed below. Unfinished prerequisites are shown here; the queue
+All 10 TODOs are listed below. Unfinished prerequisites are shown here; the queue
 retains the complete dependency lists. Order follows the earliest-ready rule,
 not a requirement to wait for UI approval before independent backend work.
 
@@ -149,7 +146,7 @@ V18b1/V18b/V25 remain OPTIONAL and unselected, outside the available work.
 | V18b1 | Prove local multi-reference image conditioning | V17, V18a2 | OPTIONAL | Deferred by user on 2026-09-16: app no longer creates picture assets. Fidelity proof failed; not DONE. Historical attempt/check reports are unauthenticated because the reported archive is unavailable (V19r2); no further retries, archive searches or failed-task commit. |
 | V18b | Prove automated reference-conditioned preparation | V17, V18a, V18a2, V18b1 | OPTIONAL | Deferred generative preparation; outside current delivery and excluded unless explicitly reselected. |
 | V19r2 | Record unavailable historical evidence and verify active probe isolation | — | DONE | User retired missing-archive recovery/review. Current src tree has none of the four deferred reference-image owners; build.gradle.kts has no videoReferenceImageProbe registration and retains videoLocalProbe, videoMediaProbe and comfyVideoProbe. No historical authentication or V18b1 success claimed. |
-| V19r3 | Validate the current revision in an isolated checkout | V19r1, V19r2 | TODO | Fresh base/diff/asset identities and checks required; old candidate hashes, receipts and missing-archive reviews are retired admission requirements, not transferred PASS results. Use selected docs/pictures/video/ assets, owned technical fixtures and new evidence. Preserve restored local data. |
+| V19r3 | Validate the current revision in an isolated checkout | V19r1, V19r2 | DONE | Current base `4fbb30b5cad140646b2bbb3590a766b9cf35b8c0` validated in detached external candidate `~/.melotrail-preserved-local-data/20260923-225814-v19r3-current/candidate`; sibling `evidence/identity.json` pins all 432 tracked files and 96 video assets, empty input diff and exclusions. Focused checks (6 executed), make test (9 executed/5 up-to-date), make build (14 up-to-date) and diff check passed. Fresh read-only Sol High exact-candidate review: PASS, no blocking findings (`evidence/sol-review.txt`). No inference or visual approval claimed. |
 | V19 | Generate controlled previews and preserve takes | V12, V15, V16, V17, V18, V19b, V19r3 | TODO | Revised 2026-09-14; real prepared-scene pipeline through the existing job boundary; blocked until V19r3. |
 | V20a | Prepare Video-flow design alignment | — | WAITING_USER | Obtain design-process/scope confirmation, then prepare a reviewable Video-workspace flow; no production UI work. |
 | V20b | Obtain explicit Video-flow approval | V20a | WAITING_USER | A genuine reviewer must approve a specific artifact revision and all required Video-flow surfaces. |
@@ -474,6 +471,14 @@ Do not weaken architecture tests, alter `.gitignore` or certify an older HEAD.
 executed versus cached results and any normal-checkout limitation separately.
 **Done:** Fresh checks and current-candidate technical review pass. No inherited
 PASS, historical identity authentication or V24/V33 visual approval is claimed.
+
+**Review result (2026-09-23):** The fresh Sol High reviewer passed the exact
+isolated candidate with no blocking findings (`evidence/sol-review.txt`). The V31
+tracked-payload assertion is unchanged: its pass alone does not prove filesystem
+absence; the candidate inventory independently verified that restored local data
+was excluded. Selected opaque assets do not establish separate motion layers,
+poses, masks or full scenery coverage. No inference, V24/V33 approval, retired
+archive authentication or scheduler restart is claimed.
 
 ### V20a — Prepare Video-flow design alignment
 
