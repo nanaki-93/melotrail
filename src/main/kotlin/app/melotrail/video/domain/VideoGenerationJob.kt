@@ -1,5 +1,7 @@
 package app.melotrail.video.domain
 
+import java.nio.ByteBuffer
+import java.security.MessageDigest
 import java.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -94,6 +96,8 @@ sealed interface VideoGenerationInput {
     val dependencyPins: List<VideoGenerationDependencyPin>
     /** Persisted executable binding; the free-form prompt is never parsed as a graph or path. */
     val comfyWorkflow: VideoComfyWorkflowRequest?
+    /** Null for existing keyframe/ComfyUI inputs; non-null bindings are compositor-only. */
+    val controlledMotion: VideoControlledMotionRequest? get() = null
 }
 
 @Serializable
@@ -131,6 +135,96 @@ data class VideoClipGenerationInput(
         require(durationMillis in 100L..60_000L) { "One generated video request must be 0.1..60 seconds" }
         require(width in 64..8192 && height in 64..8192) { "Video dimensions are outside supported orchestration bounds" }
         require(framesPerSecond in 1..120) { "Video frame rate is outside supported orchestration bounds" }
+    }
+}
+
+@Serializable
+@SerialName("controlled-motion")
+data class VideoControlledMotionGenerationInput(
+    override val prompt: String,
+    override val dependencyPins: List<VideoGenerationDependencyPin>,
+    val motion: VideoControlledMotionRequest,
+) : VideoGenerationInput {
+    override val comfyWorkflow: VideoComfyWorkflowRequest? = null
+    override val controlledMotion: VideoControlledMotionRequest get() = motion
+
+    init {
+        requireVideoPrompt(prompt)
+        requireVideoDependencyPins(dependencyPins)
+        require((motion.preparedPins + motion.runtimeDependencies).all { pin -> dependencyPins.any { it == pin } }) {
+            "Every prepared and runtime motion pin must be included in the durable input pins"
+        }
+    }
+}
+
+/** Canonical controlled-motion identity. Length-prefixed UTF-8 fields prevent prompt/control
+ * text from impersonating pin or range records; version changes invalidate older identities. */
+fun controlledMotionRequestFingerprint(
+    backendId: String,
+    input: VideoControlledMotionGenerationInput,
+    models: List<VideoModelRequirement>,
+): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    fun number(value: Long) { digest.update(ByteBuffer.allocate(Long.SIZE_BYTES).putLong(value).array()) }
+    fun count(value: Int) { digest.update(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(value).array()) }
+    fun field(value: String) {
+        val encoded = value.toByteArray(Charsets.UTF_8)
+        count(encoded.size)
+        digest.update(encoded)
+    }
+    fun pins(values: List<VideoGenerationDependencyPin>) {
+        count(values.size)
+        values.sortedBy { it.id }.forEach { pin ->
+            field(pin.id)
+            field(pin.sha256)
+            // A null path must not alias an empty path even for an invalid persisted request.
+            field(if (pin.ownedPath == null) "absent" else "present")
+            pin.ownedPath?.let(::field)
+        }
+    }
+    field("melotrail-controlled-motion-v2")
+    field(backendId)
+    field(input.prompt)
+    pins(input.dependencyPins)
+    number(input.motion.startFrame)
+    number(input.motion.endFrameExclusive)
+    number(input.motion.seed)
+    count(input.motion.controls.size)
+    input.motion.controls.toSortedMap().forEach { (key, value) -> field(key); field(value) }
+    pins(input.motion.preparedPins)
+    pins(input.motion.runtimeDependencies)
+    count(models.size)
+    models.sortedBy { it.id }.forEach { model ->
+        field(model.id)
+        field(model.version)
+        field(if (model.sha256 == null) "absent" else "present")
+        model.sha256?.let(::field)
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+/** Executable compositor controls are persisted separately from advisory prompt text. */
+@Serializable
+data class VideoControlledMotionRequest(
+    val preparedPins: List<VideoGenerationDependencyPin>,
+    val controls: Map<String, String>,
+    val startFrame: Long,
+    val endFrameExclusive: Long,
+    val seed: Long,
+    val runtimeDependencies: List<VideoGenerationDependencyPin>,
+) {
+    init {
+        requireVideoDependencyPins(preparedPins)
+        requireVideoDependencyPins(runtimeDependencies)
+        require(preparedPins.isNotEmpty()) { "Controlled motion requires prepared scene pins" }
+        require(controls.size <= 128 && controls.all { (key, value) ->
+            key.matches(Regex("[A-Za-z][A-Za-z0-9_.-]{0,127}")) && value.length <= 4_096 && value.none(Char::isISOControl)
+        }) { "Controlled motion controls are invalid" }
+        require(startFrame >= 0L && endFrameExclusive > startFrame) { "Controlled motion frame range must be non-empty and absolute" }
+        require(runtimeDependencies.isNotEmpty()) { "Controlled motion runtime dependencies are required" }
+        require((preparedPins + runtimeDependencies).map(VideoGenerationDependencyPin::id).distinct().size == preparedPins.size + runtimeDependencies.size) {
+            "Controlled motion pin identifiers must be unique across prepared and runtime inputs"
+        }
     }
 }
 

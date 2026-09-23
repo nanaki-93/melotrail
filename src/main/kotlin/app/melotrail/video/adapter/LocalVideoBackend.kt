@@ -12,6 +12,8 @@ import app.melotrail.video.application.VideoGenerationBackendPort
 import app.melotrail.video.application.VideoGenerationInputKind
 import app.melotrail.video.application.VideoOwnedBackendAttempt
 import app.melotrail.video.domain.VideoClipGenerationInput
+import app.melotrail.video.domain.controlledMotionRequestFingerprint
+import app.melotrail.video.domain.VideoControlledMotionGenerationInput
 import app.melotrail.video.domain.VideoComfyWorkflowRequest
 import app.melotrail.video.domain.VideoGenerationInput
 import app.melotrail.video.domain.VideoGenerationJobRequest
@@ -96,7 +98,8 @@ class LocalVideoBackend private constructor(
     override fun submit(command: VideoBackendSubmissionCommand): VideoBackendSubmission {
         val invalid = validateCommand(command)
         if (invalid != null) return VideoBackendSubmission.Rejected(invalid, retryable = false)
-        val workflowBinding = requireNotNull(command.input.comfyWorkflow)
+        val workflowBinding = command.input.comfyWorkflow
+            ?: return VideoBackendSubmission.Rejected("A persisted typed ComfyUI workflow binding is required.", retryable = false)
         val workflow = try {
             loadWorkflow(command.input, workflowBinding)
         } catch (error: Exception) {
@@ -179,10 +182,11 @@ class LocalVideoBackend private constructor(
 
     private fun validateCommand(command: VideoBackendSubmissionCommand): String? {
         if (command.ownedAttempt.backendId != backendId) return "Attempt backend does not match ComfyUI."
+        if (command.input is VideoControlledMotionGenerationInput) return "Controlled compositor requests are not supported by ComfyUI."
         if (command.execution !is VideoLocalExecutionPolicy) return "ComfyUI local backend requires a local execution policy."
         val binding = command.input.comfyWorkflow ?: return "A persisted typed ComfyUI workflow binding is required."
-        val expected = comfyRequestFingerprint(backendId, command.input, command.modelRequirements)
-        if (expected != command.ownedAttempt.requestFingerprint) return "Request fingerprint does not include the exact ComfyUI bindings and dependency pins."
+        val expected = videoRequestFingerprint(backendId, command.input, command.modelRequirements)
+        if (expected != command.ownedAttempt.requestFingerprint) return "Request fingerprint does not include the exact executable bindings and dependency pins."
         val pins = command.input.dependencyPins.associateBy { it.id }
         val consumed = listOf(binding.workflowDependencyId) + binding.referenceInputs.map { it.dependencyId }
         if (consumed.any { pins[it]?.ownedPath == null }) return "Every consumed ComfyUI input must have a persisted owned path and digest."
@@ -237,6 +241,9 @@ class LocalVideoBackend private constructor(
                     scalar[it] = JsonPrimitive(frames.toInt())
                 }
             }
+            is VideoControlledMotionGenerationInput -> throw IllegalArgumentException(
+                "Controlled compositor requests cannot be submitted to ComfyUI."
+            )
         }
         return ComfyClientSubmission(
             promptId = identity.promptId,
@@ -364,7 +371,21 @@ fun comfyRequestFingerprint(
     input: VideoGenerationInput,
     models: List<app.melotrail.video.domain.VideoModelRequirement>,
 ): String {
-    val workflow = requireNotNull(input.comfyWorkflow) { "ComfyUI workflow binding is required" }
+    require(input.comfyWorkflow != null) { "ComfyUI workflow binding is required" }
+    return videoRequestFingerprint(backendId, input, models)
+}
+
+/** Canonical identity for either ComfyUI or controlled compositor requests. */
+fun videoRequestFingerprint(
+    backendId: String,
+    input: VideoGenerationInput,
+    models: List<app.melotrail.video.domain.VideoModelRequirement>,
+): String {
+    val workflow = input.comfyWorkflow
+    if (input is VideoControlledMotionGenerationInput) {
+        return controlledMotionRequestFingerprint(backendId, input, models)
+    }
+    val binding = requireNotNull(workflow) { "ComfyUI workflow binding is required" }
     val text = buildString {
         append("melotrail-comfy-request-v1\n").append(backendId).append('\n').append(input.prompt).append('\n')
         input.dependencyPins.sortedBy { it.id }.forEach { append(it.id).append(':').append(it.sha256).append(':').append(it.ownedPath).append('\n') }
@@ -389,6 +410,7 @@ fun comfyRequestFingerprint(
         when (input) {
             is VideoKeyframeGenerationInput -> append("keyframe:${input.width}:${input.height}")
             is VideoClipGenerationInput -> append("video:${input.durationMillis}:${input.width}:${input.height}:${input.framesPerSecond}")
+            is VideoControlledMotionGenerationInput -> error("Controlled motion uses its domain identity")
         }
     }
     return sha256(text.toByteArray(Charsets.UTF_8))

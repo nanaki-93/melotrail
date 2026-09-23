@@ -11,6 +11,8 @@ import app.melotrail.video.domain.VideoGenerationResourceUsage
 import app.melotrail.video.domain.VideoHostedExecutionPolicy
 import app.melotrail.video.domain.VideoJobLedger
 import app.melotrail.video.domain.VideoClipGenerationInput
+import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.domain.VideoKeyframeGenerationInput
 import app.melotrail.video.domain.VideoLocalExecutionPolicy
 import app.melotrail.video.domain.VideoSubmissionPhase
@@ -58,7 +60,7 @@ data class VideoBackendAvailability(
 }
 
 enum class VideoBackendAvailabilityStatus { AVAILABLE, SETUP_REQUIRED, OFFLINE }
-enum class VideoGenerationInputKind { KEYFRAME, VIDEO }
+enum class VideoGenerationInputKind { KEYFRAME, VIDEO, CONTROLLED_MOTION }
 
 data class VideoAvailableModel(val id: String, val version: String, val sha256: String? = null)
 
@@ -178,6 +180,7 @@ class VideoJobCoordinator(
     fun setup(backendId: String): VideoBackendSetup? = setupById[backendId]?.describeSetup()
 
     fun submit(request: VideoGenerationJobRequest): VideoJobResult {
+        validateControlledFingerprint(request)?.let { return VideoJobResult.Rejected(it) }
         val persisted = try { snapshot() } catch (error: Exception) { return persistenceRejected(error) }
         persisted.jobs.singleOrNull { it.request.id == request.id }?.let { existing ->
             return if (existing.request == request) VideoJobResult.Accepted(existing, existing.attempts.lastOrNull(), false)
@@ -343,6 +346,19 @@ class VideoJobCoordinator(
         return VideoJobResult.Accepted(finalJob, finalJob.attempts.single { it.id == attemptId }, true)
     }
 
+    private fun validateControlledFingerprint(request: VideoGenerationJobRequest): VideoJobProblem? {
+        val input = request.input as? VideoControlledMotionGenerationInput ?: return null
+        val expected = try {
+            controlledMotionRequestFingerprint(request.backendId, input, request.modelRequirements)
+        } catch (error: IllegalArgumentException) {
+            return VideoJobProblem(VideoJobProblemCode.INPUT_NOT_SUPPORTED, error.message ?: "Controlled-motion fingerprint inputs are invalid.")
+        }
+        return if (request.requestFingerprint == expected) null else VideoJobProblem(
+            VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+            "Controlled-motion request fingerprint does not match its executable inputs and dependency pins.",
+        )
+    }
+
     private fun availabilityProblem(
         request: VideoGenerationJobRequest,
         backend: VideoGenerationBackendPort,
@@ -358,6 +374,7 @@ class VideoJobCoordinator(
         val inputKind = when (request.input) {
             is VideoKeyframeGenerationInput -> VideoGenerationInputKind.KEYFRAME
             is VideoClipGenerationInput -> VideoGenerationInputKind.VIDEO
+            is VideoControlledMotionGenerationInput -> VideoGenerationInputKind.CONTROLLED_MOTION
         }
         if (inputKind !in availability.supportedInputs) {
             return VideoJobProblem(VideoJobProblemCode.INPUT_NOT_SUPPORTED, "Video backend '${request.backendId}' does not support $inputKind requests.")

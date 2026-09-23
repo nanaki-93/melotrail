@@ -16,6 +16,7 @@ import app.melotrail.video.adapter.ComfyVideoSession
 import app.melotrail.video.adapter.LocalVideoBackend
 import app.melotrail.video.adapter.VideoJobStore
 import app.melotrail.video.adapter.comfyRequestFingerprint
+import app.melotrail.video.adapter.videoRequestFingerprint
 import app.melotrail.video.application.VideoBackendObservation
 import app.melotrail.video.application.VideoBackendSubmission
 import app.melotrail.video.application.VideoBackendSubmissionCommand
@@ -29,6 +30,9 @@ import app.melotrail.video.domain.VideoComfyOutputBinding
 import app.melotrail.video.domain.VideoComfyReferenceInput
 import app.melotrail.video.domain.VideoComfyWorkflowRequest
 import app.melotrail.video.domain.VideoGenerationAttempt
+import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import app.melotrail.video.domain.VideoControlledMotionRequest
+import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoGenerationJobRequest
@@ -201,6 +205,57 @@ class LocalVideoBackendTest {
             if (it.id == "subject") it.copy(sha256 = "e".repeat(64)) else it
         })
         assertTrue(comfyRequestFingerprint(LocalVideoBackend.BACKEND_ID, changedPin, emptyList()) != request.requestFingerprint)
+    }
+
+    @Test
+    fun `controlled motion fingerprint binds prompt controls range seed and consumed runtime pins`() {
+        val fixture = fixture()
+        val ordinary = fixture.request()
+        val scene = ordinary.input.dependencyPins.single { it.id == "subject" }
+        val renderer = VideoGenerationDependencyPin("renderer", "e".repeat(64), fixture.root.resolve("render.cjs").toString())
+        val input = VideoControlledMotionGenerationInput(
+            "exact prompt", listOf(scene, renderer),
+            VideoControlledMotionRequest(listOf(scene), mapOf("camera.pan" to "0.1"), 10, 20, 42, listOf(renderer)),
+        )
+        val fingerprint = videoRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements)
+        assertEquals(controlledMotionRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements), fingerprint)
+        assertEquals(fingerprint, videoRequestFingerprint(ordinary.backendId, input.copy(), ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId, input.copy(prompt = "changed"), ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId,
+            input.copy(motion = input.motion.copy(controls = mapOf("camera.pan" to "0.2"))), ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId,
+            input.copy(motion = input.motion.copy(startFrame = 11)), ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId,
+            input.copy(motion = input.motion.copy(seed = 43)), ordinary.modelRequirements))
+        val changedRuntime = renderer.copy(sha256 = "f".repeat(64))
+        val changedPins = input.copy(dependencyPins = listOf(scene, changedRuntime),
+            motion = input.motion.copy(runtimeDependencies = listOf(changedRuntime)))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId, changedPins, ordinary.modelRequirements))
+    }
+
+    @Test
+    fun `ComfyUI rejects typed controlled motion without leasing or submitting`() {
+        val fixture = fixture()
+        val ordinary = fixture.request()
+        val scene = ordinary.input.dependencyPins.single { it.id == "subject" }
+        val renderer = VideoGenerationDependencyPin("renderer", "e".repeat(64), fixture.root.resolve("render.cjs").toString())
+        val input = VideoControlledMotionGenerationInput(
+            "keep this exact prompt",
+            listOf(scene, renderer),
+            VideoControlledMotionRequest(
+                listOf(scene), mapOf("camera.pan" to "0.1"), 300, 600, 99, listOf(renderer),
+            ),
+        )
+        val request = ordinary.copy(input = input, requestFingerprint = videoRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements))
+        val api = FakeApi()
+        val slotClaims = AtomicInteger()
+        val backend = fixture.backend(api, request, acquire = { slotClaims.incrementAndGet(); true })
+
+        val result = assertIs<VideoBackendSubmission.Rejected>(backend.submit(fixture.command(request)))
+
+        assertTrue(result.reason.contains("not supported by ComfyUI"))
+        assertEquals(0, slotClaims.get())
+        assertEquals(0, api.submitCalls)
     }
 
     @Test

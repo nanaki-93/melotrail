@@ -1,6 +1,7 @@
 package app.melotrail.video
 
 import app.melotrail.video.adapter.VideoJobStore
+import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.adapter.VideoJobAtomicWriteObserver
 import app.melotrail.video.application.VideoAvailableModel
 import app.melotrail.video.application.VideoBackendAvailability
@@ -23,6 +24,8 @@ import app.melotrail.video.application.VideoSetupActionKind
 import app.melotrail.video.application.VideoSetupCapabilityPort
 import app.melotrail.video.application.VideoSetupRequirement
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
+import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import app.melotrail.video.domain.VideoControlledMotionRequest
 import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoGenerationJobRequest
 import app.melotrail.video.domain.VideoComfyInputSlot
@@ -479,6 +482,103 @@ class VideoJobCoordinatorTest {
                 assertIs<VideoJobResult.Rejected>(coordinator.submit(localRequest("request-b", 'b'))).problem.code)
             assertEquals(1, backend.submissions.size)
         }
+    }
+
+    @Test
+    fun `controlled requests are durably deduplicated by fingerprint and backend capability`() {
+        val fixture = fixture()
+        val backend = ControlledBackend()
+        val coordinator = fixture.coordinator(backend)
+        val pins = listOf(
+            VideoGenerationDependencyPin("scene", HASH_1, "/owned/scene.json"),
+            VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs"),
+        )
+        fun request(id: String, sceneHash: String = HASH_1) : VideoGenerationJobRequest {
+            val actualPins = listOf(pins[0].copy(sha256 = sceneHash), pins[1])
+            val input = VideoControlledMotionGenerationInput(
+                "exact prompt text", actualPins,
+                VideoControlledMotionRequest(
+                    preparedPins = listOf(actualPins[0]), controls = mapOf("camera.pan" to "0.25"),
+                    startFrame = 120, endFrameExclusive = 420, seed = 17, runtimeDependencies = listOf(actualPins[1]),
+                ),
+            )
+            val request = localRequest(id, 'a').copy(input = input)
+            return request.copy(requestFingerprint = controlledMotionRequestFingerprint(request.backendId, input, request.modelRequirements))
+        }
+        val original = request("motion-a")
+        backend.availabilityValue = backend.availabilityValue.copy(
+            supportedInputs = backend.availabilityValue.supportedInputs + VideoGenerationInputKind.CONTROLLED_MOTION,
+        )
+        val admitted = accepted(coordinator.submit(original))
+        assertTrue(admitted.launchedByCaller)
+        val duplicate = accepted(coordinator.submit(request("motion-b")))
+        assertEquals(original.id, duplicate.job.request.id)
+        assertTrue(!duplicate.launchedByCaller)
+        assertEquals(1, backend.submissions.size)
+        backend.submitBehavior = { VideoBackendSubmission.Accepted("provider-${it.ownedAttempt.attemptId}") }
+        accepted(coordinator.cancel("motion-a"))
+        backend.cancelBehavior = { VideoBackendCancellation.ConfirmedStopped }
+        accepted(coordinator.cancel("motion-a"))
+        backend.cancelBehavior = { VideoBackendCancellation.ConfirmedStopped }
+        accepted(coordinator.cancel("motion-a"))
+        val changedScene = accepted(coordinator.submit(request("motion-c", "f".repeat(64))))
+        assertEquals("motion-c", changedScene.job.request.id)
+        accepted(coordinator.cancel("motion-c"))
+        val changedRuntime = request("motion-d").let { changed ->
+            val input = changed.input as VideoControlledMotionGenerationInput
+            val runtimePin = input.motion.runtimeDependencies.single().copy(sha256 = "e".repeat(64))
+            val pinsWithRuntimeChange = input.dependencyPins.map { if (it.id == runtimePin.id) runtimePin else it }
+            val changedInput = input.copy(
+                dependencyPins = pinsWithRuntimeChange,
+                motion = input.motion.copy(runtimeDependencies = listOf(runtimePin)),
+            )
+            changed.copy(input = changedInput,
+                requestFingerprint = controlledMotionRequestFingerprint(changed.backendId, changedInput, changed.modelRequirements))
+        }
+        val staleRuntime = changedRuntime.copy(id = "motion-stale", requestFingerprint = request("motion-stale").requestFingerprint)
+        val staleResult = assertIs<VideoJobResult.Rejected>(coordinator.submit(staleRuntime))
+        assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED, staleResult.problem.code)
+        assertEquals(2, fixture.store.snapshot().jobs.size)
+        val changedRuntimeResult = accepted(coordinator.submit(changedRuntime))
+        assertEquals("motion-d", changedRuntimeResult.job.request.id)
+        assertEquals(3, backend.submissions.size)
+        assertEquals(3, fixture.store.snapshot().jobs.size)
+
+        val unsupportedRequest = request("motion-unsupported", "d".repeat(64))
+        val unsupportedBackend = ControlledBackend().apply {
+            availabilityValue = availabilityValue.copy(supportedInputs = setOf(VideoGenerationInputKind.KEYFRAME, VideoGenerationInputKind.VIDEO))
+        }
+        val unavailable = coordinator(fixture.store, unsupportedBackend, AtomicInteger())
+        assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+            assertIs<VideoJobResult.Rejected>(unavailable.submit(unsupportedRequest)).problem.code)
+    }
+
+    @Test
+    fun `newline prompt cannot impersonate an additional durable dependency pin`() {
+        val fixture = fixture()
+        val backend = ControlledBackend().apply {
+            availabilityValue = availabilityValue.copy(supportedInputs = availabilityValue.supportedInputs + VideoGenerationInputKind.CONTROLLED_MOTION)
+            submitBehavior = { VideoBackendSubmission.Rejected("fixture complete", false) }
+        }
+        val coordinator = fixture.coordinator(backend)
+        val scene = VideoGenerationDependencyPin("scene", HASH_1, "/owned/scene.json")
+        val runtime = VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/render.cjs")
+        val extra = VideoGenerationDependencyPin("a-extra", "e".repeat(64), "/owned/extra.png")
+        val motion = VideoControlledMotionRequest(listOf(scene), emptyMap(), 0, 150, 9, listOf(runtime))
+        fun request(id: String, prompt: String, pins: List<VideoGenerationDependencyPin>): VideoGenerationJobRequest {
+            val input = VideoControlledMotionGenerationInput(prompt, pins, motion)
+            val base = localRequest(id, 'a').copy(input = input)
+            return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
+        }
+        // In the old newline format, the injected line is indistinguishable from the
+        // sorted extra pin record, before the shared renderer and scene records.
+        val injected = request("motion-injected", "x\npin=${extra.id}:${extra.sha256}:${extra.ownedPath}", listOf(scene, runtime))
+        val distinct = request("motion-extra", "x", listOf(extra, scene, runtime))
+        assertNotEquals(injected.requestFingerprint, distinct.requestFingerprint)
+        assertEquals("motion-injected", accepted(coordinator.submit(injected)).job.request.id)
+        assertEquals("motion-extra", accepted(coordinator.submit(distinct)).job.request.id)
+        assertEquals(2, backend.submissions.size)
+        assertEquals(2, fixture.store.snapshot().jobs.size)
     }
 
     private fun childNames(path: Path): Set<String> = Files.list(path).use { children ->
