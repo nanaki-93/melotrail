@@ -253,7 +253,7 @@ class LocalVideoBackendTest {
 
         val result = assertIs<VideoBackendSubmission.Rejected>(backend.submit(fixture.command(request)))
 
-        assertTrue(result.reason.contains("not supported by ComfyUI"))
+        assertTrue(result.reason.contains("media stage"))
         assertEquals(0, slotClaims.get())
         assertEquals(0, api.submitCalls)
     }

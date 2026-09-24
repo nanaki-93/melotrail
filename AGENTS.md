@@ -64,8 +64,8 @@ The planned Video tab is an independent creative workspace inside the Kotlin/
 Compose Melotrail application. The user supplies externally finished scene images
 and optional ready character/background layers; a motion prompt produces a
 complete 3–5 minute silent video. In-app picture generation, outfit/style transfer
-and mandatory automatic extraction are deferred; V18b1/V18b are unselected
-optional work, not video-delivery gates. Preserve imported appearance and expose
+and mandatory automatic extraction are outside this delivery, not video-delivery
+gates. Preserve imported appearance and expose
 missing motion inputs rather than invent artwork.
 Generic scenarios remain supported; Tokyo, trains, coffee and TABI are
 examples, never required presets or acceptance criteria. It needs no MIDI project,
@@ -75,7 +75,8 @@ Keep video projects, assets, jobs, models, provider credentials, media tools and
 outputs outside MIDI storage and the six MIDI destinations. Try the selected
 local generation workflow first; any hosted fallback requires explicit selection
 and a bounded authorized budget. Adding audio in an external Apple editor and
-public upload stay outside Melotrail. The integrated controls and runtime are
-planned in V10–V33 and must not be described as implemented before their rows pass.
-Preserve the existing Swift companion and its evidence as superseded history until
-V30–V31 remove its repository owners; do not revive its soundtrack-led workflow.
+public upload stay outside Melotrail. PLAN's VG1–VG6 features distinguish existing
+backend foundations from planned integrated controls and full delivery; TASKS owns
+current completion status. Do not describe a planned capability as implemented.
+The Swift companion's repository owners are removed; preserve its external evidence
+as superseded history and do not revive its soundtrack-led workflow.

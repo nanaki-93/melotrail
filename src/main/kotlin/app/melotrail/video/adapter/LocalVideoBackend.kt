@@ -182,7 +182,7 @@ class LocalVideoBackend private constructor(
 
     private fun validateCommand(command: VideoBackendSubmissionCommand): String? {
         if (command.ownedAttempt.backendId != backendId) return "Attempt backend does not match ComfyUI."
-        if (command.input is VideoControlledMotionGenerationInput) return "Controlled compositor requests are not supported by ComfyUI."
+        if (command.input is VideoControlledMotionGenerationInput) return "Controlled compositor requests are not supported by ComfyUI; use the dedicated media stage."
         if (command.execution !is VideoLocalExecutionPolicy) return "ComfyUI local backend requires a local execution policy."
         val binding = command.input.comfyWorkflow ?: return "A persisted typed ComfyUI workflow binding is required."
         val expected = videoRequestFingerprint(backendId, command.input, command.modelRequirements)

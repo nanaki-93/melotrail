@@ -1,10 +1,16 @@
 # TABI video
 
-Owner: planned video product, asset and media contract. Delivery is V10–V33 in
-[TASKS](../TASKS.md), under [PLAN §9](../PLAN.md#9-video-generation-from-assets-and-a-prompt).
-The integrated Video tab and complete generation flow remain planned; implemented
-runtime/probe foundations are recorded below. This document specifies the target and
-preserves clearly marked artistic references and superseded Swift evidence.
+Owner: video product, asset and media contract. Current delivery is organized as
+**VG1–VG6** in [PLAN](../PLAN.md#6-video-generation-features) and
+[TASKS](../TASKS.md). Backend/runtime foundations exist; the integrated Video tab
+and complete generation flow remain planned.
+
+This document preserves supplied artwork, scoped artistic decisions and runtime
+measurements. Older task IDs, commands and dated status statements below identify
+their original evidence; they are not active queue dependencies or authorization
+to resume an experiment. TASKS alone owns current work. The current early visual
+gate is **VG6-02** and full-video/editor acceptance is **VG6-06**; neither is passed.
+Video-flow design permission/approval is separately required by VG3.
 
 ## Outcome and scope
 
@@ -38,20 +44,18 @@ occlusion, anchors and scenery coverage before enabling controlled motions.
 Missing clean plates or travel coverage request more external artwork, never
 unrequested synthesis, stretching, freezing or whole-clip repetition.
 
-The earlier three inspiration areas (Character/Outfit/City) and automatic look
-creation are deferred. V18b1's failed experiment and V18b are OPTIONAL/unselected;
-they are not video-delivery gates. The reported archive
+The earlier Character/Outfit/City inspiration synthesis and automatic look
+creation are outside the delivery. Their failed experiments are not prerequisites
+or permission for further inference. The reported archive
 `~/.codex/melotrail-video-sequential/evidence/V18b1/updated-assets-f96a7f3` is
-unavailable and no verified backup was supplied. Its checksums, ledgers and
-failed-candidate contents remain unauthenticated. Historical recovery, hash reconciliation and review requiring that missing
-archive are retired delivery requirements, not claimed recovered or passed.
-The bounded current-tree probe-isolation check is closed in V19r2; it does not
-authenticate historical file identities. V19r3 validates the current revision
-with fresh evidence instead. Reuse completed
-V14/V15/V18a/V18a2 contracts.
-V18b2 validates ready animation assets, V18 selects finished looks and prepares
-motion inputs, V19 supplies moving output, and V20–V23 expose the complete flow.
-This is a plan revision, not an implemented UI or approval of the final video.
+unavailable and no verified backup was supplied; its historical identities remain
+unauthenticated. Recovery/reconciliation is not a current delivery requirement,
+and no historical pass is inferred. Current input/runtime integrity still matters.
+
+Reuse existing project, import, prepared-scene, ready-asset and prompt contracts.
+VG1 verifies them, VG2 completes durable previews, VG3 exposes the application flow,
+and VG4–VG6 deliver continuous rendering/export and real acceptance. Existing
+uncommitted preview work is not a completed product or artistic approval.
 
 The source picture controls appearance; prompts/controls describe motion. Requests
 for different outfits, cities or style require replacement artwork. Preserve all
@@ -71,7 +75,7 @@ silently promoted to finished artwork or licensed production assets. Validate
 alpha, geometry, poses/masks and scenery coverage before promising independent
 motion. Missing inputs are actionable capability gaps, not reasons to recover
 old archives. Use small owned fixtures for technical tests and current selected
-assets for fresh moving-video evidence; V24/V33 still need real user decisions.
+assets for fresh moving-video evidence; VG6 still needs real user decisions.
 
 The user refreshed the supplied artwork in commit
 `f96a7f36430d45c576de511be94480e31762570b`, merged into the video implementation
@@ -83,7 +87,7 @@ branch. Use the [character profile](pictures/video/tabi-assets/character-profile
 [country artwork](pictures/video/tabi-assets/country-outfits) as selected inputs.
 The approved style reference remains the
 [charcoal/stone v6 banner](pictures/video/tabi-eki-channel-banner-charcoal-stone-v6-upload.jpg).
-These supplied pictures still need V18b2 validation before being treated as
+These supplied pictures still need ready-asset validation before being treated as
 separate motion-ready layers; their presence does not prove animation readiness.
 
 ## Historical references
@@ -450,31 +454,38 @@ checkerboard or pretty but geometrically incompatible cutout does not pass.
 Render text/signage separately from generated scenery where stable spelling is
 required; do not rely on a model reproducing readable route labels every frame.
 
-## Generative animation strategy
+## Current continuous-animation strategy
 
-V11 measures one local reference-conditioned image/video workflow on the user's
-Mac, then V17 connects that selected backend. It must consume the selected
-references and free-form prompt through an automatable interface and produce
-moving 5–10 second shots. A particular character, scene, action, camera move or
-style is never required. Missing local setup is explicit; the app does not
-download a model automatically or silently send references to a hosted service.
+Use the selected owned ComfyUI/LTX API for measured short image-to-video/action
+takes and the external Node/Canvas compositor for supported continuous motion.
+They share Kotlin project/job orchestration, but remain different execution stages.
+The measured I2V route consumes one composed image, not independent inspiration
+roles. Missing setup is explicit; no model download or hosted upload is automatic.
 
-Generate short shots and assemble them to the chosen 180–300 second duration.
-Unique footage is the default. An explicit reuse mode may repeat only takes the
-user marks repeatable, with generated and repeated seconds shown separately.
-Never reverse requested action or motion to manufacture a loop. Look review and
-shot-level overrides are optional; the primary Generate video action may create
-unreviewed draft intermediates while recording their status honestly.
+The primary output is one continuous 180–300-second scene at 30 fps, with evolving
+scenery and supported occasional character actions. Reuse of small motion patterns
+is allowed; repeating a complete short clip to fill the duration is not. The old
+short-shot/whole-footage reuse planner is being replaced in VG4, not offered as
+another primary mode. Record fresh action footage, procedural motion and reused
+components honestly without summing overlapping layers into false unique seconds.
 
-Quality review checks real playback against the actual references and prompt:
-recognizable requested subjects/traits, scene/action/motion/style compliance,
-coherent objects, temporal stability, joins and any requested continuity.
-Matching first/last images is insufficient if the intervening animation drifts.
+Validate scenery coverage for the complete trajectory before render. Derive rigid
+depth-layer motion and occlusion from a shared camera path; join supplied scenery
+outside the visible area. Missing clean plates, poses or travel coverage require
+external artwork. Never silently stretch, freeze, wrap or reverse the scene.
 
-Record requested and actual clip duration; reuse/trim visual clips only within
-explicit scene policy. Rejected takes remain excluded from production. Provider
-seeds may help traceability but do not promise identical video on rerun.
-Determinism applies to composition from pinned assets, not cloud generation.
+Render bounded chunks with absolute frames and shared state/seed, preserving
+blink phase, particle age, scenery position and random sequence on resume. Include
+and trim temporal boundary support explicitly. Do not hold a whole 1080p cut in
+RAM. Follow the measured ladder: retained five-second reference, fresh 20–30-second
+previews, 60-second continuity/resource check, then actual 180–300-second output.
+Short success does not prove full-length quality or a four-minute inference estimate.
+
+Quality review checks actual moving output against the supplied appearance and
+motion request: coherent objects, requested actions/effects, temporal stability,
+continuity and joins. Look/take review is optional before a draft; unreviewed is
+not approved, and rejected takes cannot silently become selected production work.
+AI seeds are traceability inputs, not promises of deterministic model output.
 
 ## Local profile and bounded probe preparation (V11a)
 
@@ -874,7 +885,7 @@ not T5. It does not establish multi-reference conditioning, automatic subject
 layers/masks/anchors, guided complex actions, arbitrary-scene quality or a
 complete 3–5 minute video. V17b owns API jobs. Automatic reference-conditioned
 artwork preparation is now deferred; finished external artwork supplies the input. The Video tab and normal setup UI
-remain planned in V20–V21, so this lazy adapter adds no MIDI startup dependency.
+remain planned in VG3, so this lazy adapter adds no MIDI startup dependency.
 
 ## Production ComfyUI short-shot probe (V17)
 
@@ -1341,8 +1352,9 @@ actual encoder progress and useful redacted errors, not a simulated percentage.
 
 Validate streams, codec/container, dimensions, frame rate, total duration, first/
 last decodable frames and every join. The published file is 1920×1080 H.264 with
-square pixels, a constant cadence selected from measured V11/V12 evidence, the
-chosen 180–300 second duration and zero audio streams. Strip any generated audio
+square pixels, constant 30 fps, the chosen 180–300 second duration and zero audio
+streams. Render controlled motion at that cadence; disclose conversions for native
+action takes rather than calling duplicated/upscaled frames native 1080p motion. Strip any generated audio
 during normalization; do not add audio editing. Record native versus upscaled
 resolution. Byte identity is not promised after codec conversion; input identity,
 selected trim ranges and exact frame duration are preserved and tested.
@@ -1352,7 +1364,7 @@ restrained export action. Keep those regions reachable at 1536×1024, 1280×900
 and 720×900. Preview uses moving decoded frames, suppresses source audio, owns
 one video session and does not create or substitute a MIDI player. Entering Video
 pauses MIDI while retaining its position. These controls remain planned until
-their V20–V28 rows pass.
+their VG3/VG5 tasks pass.
 
 ## YouTube and commercial intent
 
@@ -1379,13 +1391,13 @@ publication stays under user control.
 
 ## Pilot acceptance
 
-A real user first reviews three real clips from externally finished artwork at
-V24: a base motion request, a materially different motion prompt with the same
+A real user first reviews three real 20–30-second clips from externally finished
+artwork at VG6-02: a base motion request, a materially different motion prompt with the same
 artwork and a replaced finished scene/layer. No generated-look gate is required. Review reference fidelity, prompt adherence, requested
 motion/style, object coherence and temporal stability. The chosen content has no
 mandatory TABI, train, prop, location or camera behavior.
 
-At V33, start with externally finished artwork, optional ready layers and a motion prompt in the app,
+For VG6-05/06, start with externally finished artwork, optional ready layers and a motion prompt in the app,
 then generate, assemble, export and watch one complete 3–5 minute silent video.
 Review every join, unique/reused footage, prompt adherence and reference fidelity,
 then import/play it in the user's chosen Apple editor. Record actual local

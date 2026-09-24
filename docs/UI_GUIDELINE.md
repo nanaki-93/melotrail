@@ -6,7 +6,7 @@ product behavior; [TASKS](../TASKS.md) assigns delivery. Existing shell/theme/
 primitive work is retained and improved.
 
 The existing six-page MIDI workspace is implemented. The app-level Video tab and
-its controls described below are the planned V20–V32 target; this document does
+its controls described below are the planned VG3/VG5/VG6 target; this document does
 not claim that they already exist.
 
 ## References and interpretation
@@ -96,7 +96,7 @@ projects, sample metrics or video stage.
 **MIDI:** one chooser/import well before import; source identity, protected note
 lane and compact track/channel/range/expression facts afterward. Findings
 explain severity and the next correction. Distinguish source suggestions from
-confirmed authority; show last note and file end when M03 adds those facts.
+confirmed authority; show the existing last-note and file-end facts separately.
 A “drop file” instruction exists only if working native drop is tested.
 
 **Structure & Harmony:** section strip, compact settings row, editable section
@@ -122,8 +122,7 @@ and semantic diffs appear in exception details, not a second primary workflow.
 complete/role/manifest file list, real export progress/result and reveal action.
 Instructions: import at song origin, confirm Logic tempo/meter behavior, assign
 instruments and check role alignment. No disabled audio/video format selector.
-The former Swift companion launch was a superseded handoff removed during
-V30; it is not part of the planned Video-tab journey.
+The removed Swift companion launch is not part of the planned Video-tab journey.
 The package summary describes current accepted selections, with a section/bar
 inventory distinguishing accepted notes, accepted rests, locks and work needing
 attention. The saved result identifies whether it matches current accepted work;
@@ -133,19 +132,29 @@ at reference width and stays inline at smaller widths. Atomic publication shows
 its actual result; it does not offer an unsupported cancellation boundary.
 
 **Video (planned application-level tab):** create/open a video project without a
-MIDI project; import one or more generic PNG/JPEG references, enter a prominent
-free-form prompt and choose 180–300 seconds. Subject, environment, style and full
-scene are optional asset roles. The main action is **Generate video**; look review,
-shot prompts and storyboard detail are optional refinements rather than gates.
-Show actual setup availability, consumed references, duration/work estimate,
-job progress and recovery, immutable takes, unique/reused seconds, silent preview,
-joins and export facts. Never inject Tokyo, train, coffee, TABI or another preset.
+MIDI project; import one finished PNG/JPEG scene with optional ready character,
+pose, background/scenery, foreground or mask layers. Enter a prominent free-form
+motion prompt and choose 180–300 seconds. The main action is **Generate video**;
+short preview, look/take review and visible layer/anchor setup are refinements,
+not mandatory artwork-generation or storyboard stages. Explain unsupported actions
+and missing externally prepared motion inputs. No outfit/style-transfer controls.
+Show actual setup availability, exact consumed inputs, duration/work estimate,
+job progress/recovery, immutable takes, disclosed component reuse, silent moving
+preview, chunk/scenery joins and export facts. Never offer whole-clip repeat-to-fill
+or inject Tokyo, train, coffee, TABI or another preset.
 
 Use an app-level MIDI/Video switch above the MIDI shell, leaving all six MIDI
 destinations intact. At 1280×900 keep prompt/next action and preview visible; at
 720×900 keep upload, prompt, generation, review and export keyboard-reachable.
 Technical hashes, model identities and provider details stay disclosed on demand.
-The normal flow requires no JSON, mask, node graph, soundtrack or MIDI export.
+The normal flow requires no hand-authored JSON, code coordinates, node graph,
+soundtrack or MIDI export. Some independent motions require optional externally
+prepared layers/masks; a flat scene must not be presented as already rigged.
+
+VG3 requires design-process permission, then a reviewable feature-level flow and
+explicit artifact-specific approval before production UI. Reuse the existing
+visual system; preserve all six MIDI pages. Approval must cover later full-cut
+review/export surfaces or be renewed for uncovered/materially changed designs.
 
 ## Interaction and data
 

@@ -15,7 +15,7 @@ Compose Desktop
        <- local MIDI audition adapter
        -> immutable MIDI package -> Logic Pro
 
-  -> Video workspace (planned in V10–V33; loaded lazily)
+  -> Video workspace (VG1–VG6; backend foundations present, UI/delivery planned; loaded lazily)
        -> video application and domain
        <- independent video project/asset/job stores
        <- selected local inference and video-only media adapters
@@ -32,7 +32,7 @@ Compose Desktop
 | Orchestration | `application/MidiCore*` | Import, authority changes, generation, drafts, acceptance, export |
 | Playback | `audition`, `audition/adapter` | One MIDI session, managed synth/output, device/resource cleanup |
 | Presentation | `desktopApp/.../desktop/MidiCore*`, shared shell/theme/primitives | Six pages, intents, visual projections, one persistent dock |
-| Video (planned) | `video` and `desktopApp/.../desktop/video` | Independent projects, references, prompts, generation jobs, silent preview/assembly/export |
+| Video | `video` (backend foundations) and `desktopApp/.../desktop/video` (planned UI) | Independent projects, artwork, prompts and generation jobs; integrated preview/continuous assembly/export remain planned |
 
 Names identify observed owners, not an instruction to keep/delete by prefix.
 `DesktopMain.main` calls `MidiCoreDesktopEntrypoint`; obsolete desktop factory
@@ -79,24 +79,25 @@ reject it before writes and preserve its files; any conversion must be a
 separately authorized, explicit operation. New additive records must not
 reinterpret already accepted MIDI or silently upgrade artifacts.
 
-Planned video projects use a separately selected root outside MIDI projects and
-exports. They own immutable reference copies, prompt/shot versions, scene looks,
-takes, job attempts, assemblies and export snapshots. Video code cannot write a
+Video project storage uses a separately selected root outside MIDI projects and
+exports. It owns immutable reference copies, scene looks, prepared scenes, takes,
+job attempts and export records. Continuous-plan persistence and complete export
+orchestration remain VG4–VG5 work. Video code cannot write a
 MIDI project or import MIDI application/storage owners. Only the application
 composition root coordinates the two workspaces.
 
-## Planned derived data and arrangement authority
+## Derived data and arrangement authority
 
-M02 adds a pure, versioned melody-context projection. It contains musical
+The current engine provides a pure, versioned melody-context projection. It contains musical
 observations and uncertainty; it cannot edit source, chords or project authority.
 
-M06 adds one confirmed arrangement-plan record referencing authoritative
+The project stores one confirmed arrangement-plan record referencing authoritative
 occurrences. Per-occurrence purpose, repeat family, phrase group, energy, role
 activity, density, register, groove and boundary intent have one owner. An
 unconfirmed style proposal is session state; a confirmed plan is an explicit
 project mutation. Candidates record the plan/scoped settings they consumed.
 
-M07 introduces a typed planned-rest selection alongside generated candidates.
+A typed planned-rest selection exists alongside generated candidates.
 A complete draft covers every required scope with one of these states; a failed
 or missing candidate cannot be recast as silence. Assembly, use/undo, currentness,
 audition and export consume the same scope-selection contract.
@@ -130,22 +131,23 @@ bounded and lifecycle-managed; no page-local clock or second sequencer. Seek,
 pause, stop, loop, mute/solo and device loss release notes/resources predictably.
 Audition timbre is not authoritative and does not render audio files.
 
-## Planned video isolation
+## Video isolation and remaining integration
 
 [TABI_VIDEO](TABI_VIDEO.md) specifies an independent Video tab in the same
 Kotlin/Compose application. It takes an externally finished scene image, optional
 ready character/background layers and a motion prompt, then exports a complete
 180–300 second silent video. In-app image generation, outfit/style synthesis and
-mandatory automatic asset extraction are deferred. V18b2 validates ready assets
-against V18a; V18 selects imported looks and compiles supported motion inputs. It needs no MIDI
-project, manifest, song or soundtrack. The app-level MIDI/Video switch stays
+mandatory automatic asset extraction are deferred. Existing ready-asset validation
+uses the prepared-scene descriptor; look selection and preparation compile supported
+motion inputs. VG1 verifies these foundations; VG2 completes preview orchestration.
+Video needs no MIDI project, manifest, song or soundtrack. The app-level MIDI/Video switch stays
 above the existing six MIDI destinations; entering Video pauses the one MIDI
 session while preserving its position, and silent preview creates no MIDI player.
 
 Video services are constructed lazily. Missing models, credentials or media
 tools cannot prevent MIDI startup, audition or export. Models and large media
 stay outside Git and MIDI storage; hosted uploads require an explicit mode and
-authorization. The current V17a adapter validates a separately installed,
+authorization. The current local setup adapter validates a separately installed,
 hash-pinned ComfyUI/LTX/Gemma profile and starts one dedicated loopback server
 through the existing owned-process supervisor. Its private input/output/temp/user
 directories, one-inference admission and bounded health/resource/stop lifecycle
@@ -154,11 +156,14 @@ an occupied port or competing listener is never treated as that runtime. Cleanup
 timeouts and unconfirmed native supervision retain process ownership and block
 restart. The pinned ComfyUI/GGUF import-source sets are rechecked at launch,
 separately from the large model hashes checked during explicit setup.
-It exposes no workflow submission or layer-preparation claim. The Video tab,
-application composition, ready-artwork motion setup and full assembly
-remain planned in their later V10–V33 rows.
+The runtime owns server lifecycle; `ComfyVideoClient` and `LocalVideoBackend`
+separately own short I2V API jobs. This does not supply semantic layer extraction
+or full-video orchestration. `VideoMotionRenderer` supervises the external
+Node/Canvas controlled compositor in bounded absolute-frame ranges; it is a media
+stage, not a second generative provider. The Video tab/application composition,
+visible motion setup and full assembly/export remain planned in VG2–VG6.
 
 The Swift companion and MIDI Export soundtrack handoff have been removed from
 active production and build wiring. Historical external evidence remains; no
 Swift compatibility route exists. The independent Video tab and its installed
-runtime proof are still pending V20–V29.
+runtime proof are still pending in VG3 and VG6.

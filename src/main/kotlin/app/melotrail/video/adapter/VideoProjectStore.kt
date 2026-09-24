@@ -111,6 +111,29 @@ class VideoProjectStore(
         return verifyArtifact(root, artifact)
     }
 
+    /** Copy verified bytes into a previously absent immutable project path. */
+    fun copyImmutableArtifact(projectRoot: Path, source: Path, relativePath: String, expectedSha256: String): VideoArtifact {
+        val root = existingSafeRoot(validateLocation(projectRoot))
+        val artifact = VideoArtifact(relativePath, expectedSha256)
+        require(Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(source)) { "Take source is missing or unsafe." }
+        require(sha256(source) == expectedSha256) { "Take source digest does not match its output pin." }
+        val target = root.resolve(relativePath).normalize()
+        require(target.startsWith(root)) { "Take destination escapes the project root." }
+        val parent = requireNotNull(target.parent)
+        requireNoSymlinkComponents(root, parent)
+        Files.createDirectories(parent)
+        requireNoSymlinkComponents(root, parent)
+        require(parent.toRealPath().startsWith(root) && !Files.exists(target, LinkOption.NOFOLLOW_LINKS)) { "Take destination already exists or is unsafe." }
+        val temporary = Files.createTempFile(parent, ".take-import-", ".tmp")
+        try {
+            Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING)
+            require(sha256(temporary) == expectedSha256 && sha256(source) == expectedSha256) { "Take bytes changed during immutable copy." }
+            publishNewFile(temporary, target)
+            verifyArtifact(root, artifact)
+            return artifact
+        } finally { runCatching { Files.deleteIfExists(temporary) } }
+    }
+
     /**
      * Publishes a prepared-scene descriptor and appends its record under the same
      * project lock used by ordinary saves. The caller owns descriptor encoding;
@@ -294,6 +317,13 @@ class VideoProjectStore(
 
     private fun verifyArtifacts(root: Path, project: VideoProject) {
         project.artifacts().forEach { verifyArtifact(root, it) }
+    }
+
+    private fun sha256(path: Path): String = Files.newInputStream(path).use { input ->
+        val digest = MessageDigest.getInstance("SHA-256")
+        val bytes = ByteArray(64 * 1024)
+        while (true) { val n = input.read(bytes); if (n < 0) break; digest.update(bytes, 0, n) }
+        digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun verifyArtifact(root: Path, artifact: VideoArtifact): Path {

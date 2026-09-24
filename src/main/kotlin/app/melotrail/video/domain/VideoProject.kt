@@ -137,8 +137,26 @@ data class VideoTakeRecord(
     val artifact: VideoArtifact,
     val lookId: VideoVersionedId?,
     val createdAt: String,
+    val mediaFacts: VideoTakeMediaFactsRecord? = null,
 ) {
     init { requireTimestamp(createdAt, "Take record") }
+}
+
+@Serializable
+data class VideoTakeMediaFactsRecord(
+    val frameCount: Long,
+    val frameRate: Double,
+    val nativeWidth: Int,
+    val nativeHeight: Int,
+    val outputWidth: Int,
+    val outputHeight: Int,
+    val conversion: String,
+) {
+    init {
+        require(frameCount > 0 && frameRate.isFinite() && frameRate > 0.0)
+        require(nativeWidth > 0 && nativeHeight > 0 && outputWidth > 0 && outputHeight > 0)
+        require(conversion.isNotBlank() && conversion.length <= 512)
+    }
 }
 
 @Serializable

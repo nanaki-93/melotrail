@@ -1,7 +1,8 @@
 # MIDI contract
 
-Owner: supported input, preserved semantics and output. Current behavior is
-separated from planned changes below. [Architecture](ARCHITECTURE.md) owns
+Owner: supported input, preserved semantics and output. The implemented contracts
+below are verified by PLAN features AC1–AC4; AC5 owns musical acceptance. Historical
+implementation labels identify provenance, not tasks to repeat. [Architecture](ARCHITECTURE.md) owns
 persistence; [Validation](VALIDATION.md) owns proof.
 
 ## Current input
@@ -108,7 +109,7 @@ Advisory: unusual density/range, chromaticism, intentionally omitted reference
 messages, missing source metadata to confirm, and musical tensions inside hard
 limits. Report location and musical context. Existing exact protected-anchor
 collision blocking remains until a specific tested musical-policy change;
-M02/M04 improve the treatment of proximity/tension without relaxing integrity.
+melody-aware analysis/ranking improves proximity/tension handling without relaxing integrity.
 
 ## Read-only melody and harmony evidence
 
@@ -189,8 +190,8 @@ manifest. Marker text uses `<ordinal>:<occurrence-label>` and exact boundary
 ticks. Duplicate names remain distinguishable. Marker display in Logic is
 best effort; note/bar alignment is mandatory.
 
-The current export manifest schema is version 2. The companion timing reader
-accepts that version; unsupported manifests are rejected without rewriting them.
+The current export manifest schema is version 2. There is no active companion
+reader or video dependency. Unsupported manifests are rejected without rewriting them.
 
 Manifest fields: schema/build/snapshot/project IDs, source and candidate hashes,
 PPQ/tempo/meter/key, occurrences and chord windows, role presence, generator
@@ -204,9 +205,9 @@ track order/names, channels, tempo/meter, marker ticks, every note field, allowe
 expression and exact end boundary. Byte-identical round-trip is unnecessary;
 semantic identity under the documented omission/remapping policy is required.
 
-## Planned contract extensions
+## Confirmed plans, coordination and repair contracts
 
-M06a persists one versioned confirmed-plan record referencing every authoritative
+The current project persists one versioned confirmed-plan record referencing every authoritative
 occurrence in order. Its purpose, phrase/repeat identities, energy, role activity/
 density/register settings, shared groove and entry/exit intent are exact
 authority inputs. The canonical per-role plan inputs are included in scoped
@@ -222,7 +223,7 @@ acceptance references, locks and export snapshots unchanged for inspection.
 A no-op edit is write-free. Its confirmation is one serialized project-state
 transaction with candidate review and snapshot capture, so a stale concurrent
 write is rejected rather than being overwritten. Bounded neighbor dependency
-resolution remains M07 work. This is the current project schema version; older
+resolution is consumed by the current complete-draft workflow. This is the current project schema version; older
 project schemas are rejected before writes, with no automatic migration.
 
 A changed generator/catalog invalidates applicability of its earlier musical
@@ -318,8 +319,8 @@ Generator identity binds repair policy, intent ordinal under that version,
 explicit register offset, style, pattern/profile, comping and coordination
 versions. Lower piano uses a −12-semitone voicing-center preference, preserving
 legal ranges and chord identity; constraints may yield no distinct result.
-Changing the intent mapping requires a new repair-policy version. Q01 listening
-and Q02 Logic checks remain human evidence, not a consequence of these tests.
+Changing the intent mapping requires a new repair-policy version. AC5 listening
+and AC4 Logic checks remain human evidence, not a consequence of these tests.
 
 U05 style previews resolve the same arrangement-plan proposal policy as full
 creation before confirmation, entirely in memory. Confirmed plans remain

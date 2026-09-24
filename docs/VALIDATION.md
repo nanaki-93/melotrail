@@ -1,15 +1,21 @@
 # Validation and evidence
 
 Owner: automated checks, real listening/visual acceptance and Logic Pro evidence.
-Implementation status is in [TASKS](../TASKS.md). The old participant/holdout
-queues are superseded; their incomplete gates are not passes.
+Implementation status is in [TASKS](../TASKS.md), using PLAN features AC1–AC5 and
+VG1–VG6. Older task IDs and dated status statements below label retained evidence,
+not executable queue rows or current-build approval. Do not replay them. The old
+participant/holdout queues are superseded; incomplete gates are not passes.
 
 ## Final manual review
 
-**Q03b MIDI handoff · 2026-09-13.** MIDI engineering is complete; manual MIDI
-acceptance is pending. The replacement Video-tab workstream is planned in
-V10–V33 and is not implemented by this packet. These fresh packets use integrated implementation `c20aecf583`;
-the handoff changes documentation only. The local review packet is
+The implemented MIDI workflow still needs manual acceptance. AC4–AC5 refresh and
+review its evidence against the current build; VG6 owns separate early/full-video
+review, and VG3 owns design approval before Video UI implementation.
+
+**Retained MIDI handoff · 2026-09-13 (original label Q03b).** This packet used
+implementation `c20aecf583`; it does not establish current-build success or the
+planned Video workspace. Preserve useful fixtures/forms, refresh applicable outputs
+through current services and never rewrite the old packet. Its local directory is
 `~/.codex/melotrail-terra/final-review-2026-09-13/`; paths below are relative to it.
 Start with its identity/check receipt (`verification.json`).
 The DMG (`Melotrail-1.0.0.dmg`) passed the isolated installation/startup
@@ -17,12 +23,12 @@ procedure below. Preserve the packets; fill copies of their forms.
 
 | Gate | Open / do next |
 | --- | --- |
-| U07 · UI | Six-page comparisons and blank scores (`u07/visual-review/index.html`). Review hierarchy, reference fidelity, keyboard flow and resizing. Run `./gradlew :desktopApp:nativeDesktopCapture` on the visible desktop; the previous wallpaper failure remains unresolved. Frame replay is not compositor proof. |
-| Q01 · Music | Development comparisons (`q01-development/review.md`), final-set requirements (`q01-evaluation/review.md`), song intake (`song-intake-template.json`) and blank score worksheet (`score-template.json`). Five owned/licensed full songs, including three unseen, are still missing. Supply actual current MIDI projects, ownership/exposure and settings before freezing a final set. Use generated per-case forms after export; no scores are invented. |
-| Q02 · Logic | Current matrix and blank results (`q02-logic-matrix/review.md`): 20 packages plus one expected rejection. Verify its 571 hashes, import complete and separate tracks at bar 1, play, save/close/reopen and record exact Logic version, bars and results. |
-| V24 · Early video review | After V18/V22/V23, upload externally finished scene artwork with optional ready layers and enter a motion prompt. Review three real 20–30s clips: base motion, contrasting motion with the same artwork, and a replaced finished scene/layer. No generated-look review is required. This remains WAITING_USER until actual visual evidence and feedback exist. |
-| V33 · Complete video | After V24/V32, generate, watch and import into the user's chosen Apple editor one real 3–5 minute silent video. Review prompt/reference fidelity, temporal quality, every join and disclosed unique/reused footage. This remains WAITING_USER until the real full cut and decision exist. |
-| Q03 · Release | After U07/Q01/Q02, record the actual MIDI release decision and final build. Musical quality remains unmeasured against the original 5/10 feedback. |
+| AC5-04/05 · MIDI UI | Refresh six-page comparisons and blank scores (retained starting point: `u07/visual-review/index.html`). Review hierarchy, reference fidelity, keyboard flow and resizing. Run `./gradlew :desktopApp:nativeDesktopCapture` on the visible desktop; the recorded wallpaper failure is not a pass. Frame replay is not compositor proof. |
+| AC5-01/02/03 · Music | Retained development comparisons (`q01-development/review.md`), set requirements (`q01-evaluation/review.md`), intake (`song-intake-template.json`) and blank scores (`score-template.json`) inform fresh preparation. Five owned/licensed full songs, including three unseen, and real scores are still needed. Supply current MIDI projects, ownership/exposure and settings before freezing; no scores are invented. |
+| AC4-01/02 · Logic | Refresh the current matrix and blank results; the retained starting point (`q02-logic-matrix/review.md`) contains 20 packages plus one expected rejection and 571 hashes. Verify the new packet's own hashes, import complete/separate tracks at bar 1, play, save/close/reopen and record exact Logic version, bars and results. |
+| VG6-01/02 · Early video | After the VG3 app flow works, import finished scene artwork with optional ready layers and enter a motion prompt. Review three real 20–30s clips: base motion, contrasting motion with the same artwork, and replaced finished artwork. No image-generation review is required; actual visual evidence and feedback are still needed. |
+| VG6-05/06 · Complete video | After early approach acceptance and installed/UI proof, generate/watch one real 3–5-minute silent video and import/play it in the chosen Apple editor. Review prompt/reference fidelity, temporal quality, every join and disclosed component reuse. No whole-clip repeat-to-fill or synthetic acceptance. |
+| AC5-07 · MIDI release | After current music, Logic, visual and native-install checks, record the actual release decision and final build. Musical quality remains unmeasured against the original 5/10 feedback. |
 
 The removed Swift companion demo is superseded historical evidence; it is not
 the V24/V33 product flow and needs no new review. To inspect that old packet, launch
@@ -37,9 +43,9 @@ The final packet retains 66 unchanged pinned image comparisons, 28 real-window
 frame replays, 20-sample timing records, source/build/runtime identities and
 hash-verified MIDI/video artifacts. Automated checks do not establish acoustic
 onset, musical scores, foreground screen capture or human artistic approval.
-Historical packets and failed checks remain preserved. U07, Q01, Q02, Q03, V24
-and V33 stay WAITING_USER; automated agents cannot complete them or retry absent
-human evidence as an implementation failure.
+Historical packets and failed checks remain preserved. Current AC4/AC5/VG3/VG6
+human gates are listed in TASKS; automated agents cannot complete them or retry
+absent human evidence as an implementation failure.
 
 ## Historical V18b1 evidence and current probe isolation
 
@@ -49,7 +55,8 @@ and failed-candidate contents were not authenticated. Per the latest user
 instruction, archive recovery, historical hash reconciliation and reviews that
 require its unavailable contents are retired delivery prerequisites; this is not
 archive recovery or a V18b1 pass. V19r2 closes the bounded current-tree isolation
-check; V19r3 validates the current revision rather than old candidate receipts.
+check. That historical admission does not certify the current working tree;
+CORE-01 identifies and validates the candidate used by the fresh feature queue.
 Current candidate, source, asset and model integrity checks remain required,
 as do new implementation checks, technical review and human acceptance gates.
 
@@ -95,7 +102,7 @@ Keep deterministic fixtures small and owned. Test actual outcomes/invariants;
 source-text absence scans supplement behavior tests rather than replace them.
 Every fixed bug receives a regression that would fail before the fix.
 
-### Planned Video-tab validation
+### Video feature validation
 
 Video validation is independent of the MIDI/Logic gates and requires no MIDI
 project, export, song or soundtrack. Ordinary tests use owned fixtures and fake
@@ -107,20 +114,24 @@ streams. Missing video tools, models or credentials cannot break MIDI startup,
 audition or export. The app-level Video tab leaves all six MIDI destinations and
 the one persistent MIDI player intact.
 
-V11 separately measures the selected local reference-conditioned generation
-workflow on the real host. V24 requires user review of three real clips from
-externally finished scene artwork with optional ready layers: a base motion
-request, a contrasting motion prompt using the same artwork, and a replaced
-finished scene/layer. No generated-look review is required; V24 remains
-WAITING_USER until actual visual evidence and feedback exist. V32 then proves the complete UI path with owned/fake inputs and prepares a review
-packet. V33 requires the user to watch the real 3–5 minute silent cut and every
-join at normal speed, verify prompt/reference fidelity and repetition, then
-import/play it in the chosen Apple editor. Technical checks, file decodability
-and synthetic clips cannot supply either human decision.
+Retained local measurements cover short image-to-video, not full-length coherence.
+VG6-01/02 requires three real 20–30-second app clips from finished artwork with
+optional ready layers: base motion, contrasting motion using the same artwork,
+and replaced artwork. No generated-look review is required. VG4/VG5 independently
+prove exact continuous plans and bounded encoding, including a real 60-second
+continuity/resource run before complete 180–300-second output. Subtle-motion reuse
+is allowed; whole-clip repeat-to-fill is not. Validate cadence at 30 fps and disclose
+native versus converted/upscaled action footage.
+
+VG6-03/04 proves installed behavior and the complete UI with owned/fake inputs,
+preparing current review evidence. VG6-05/06 requires the user to watch a real
+3–5-minute silent cut and every join at normal speed, verify prompt/reference
+fidelity and repetition, then import/play it in the chosen Apple editor. Technical
+checks, file decodability and synthetic clips cannot supply either human decision.
 
 Tokyo, train, coffee and TABI are optional examples. Validation follows the
 actual prompt and selected references; it never requires those contents. Local
-generation is tried first. OPTIONAL V25 stays out of automatic selection until
+generation is tried first. OPTIONAL VG-OPT-01 stays out of automatic selection until
 the user explicitly chooses the hosted fallback after local evidence; any live
 provider request also needs a reviewable capped budget.
 
@@ -135,7 +146,7 @@ The installed launcher used bundled Adoptium 21.0.11+10-LTS on macOS 26.6.2/arm6
 opened an 802×621 native window, exposed all six routes and closed its MIDI session.
 Every installed payload byte/symlink and protected input remained unchanged.
 Current MIDI production Kotlin: 73 files / 27,702 lines, 62.4% fewer lines than
-PLAN's baseline; the independently packaged Swift companion is excluded. The
+the recorded 73,677-line baseline; the then-independent Swift companion is excluded. The
 installed MIDI image is 182,911,648 bytes; no package-size reduction is inferred.
 
 The first full run exposed a companion early-exit race: 150 ms could expire
@@ -182,7 +193,7 @@ The ordinary launcher still opens the interactive workspace.
 
 The report binds Git/diff/input hashes (including new uncommitted source), actual
 macOS/JVM identity, DMG and installed-file hashes/sizes, dependency JARs, current
-source counts against PLAN's 73,677-line baseline, and unchanged protected MIDI,
+source counts against the recorded 73,677-line historical baseline, and unchanged protected MIDI,
 UI/TABI references and Logic captures. Tracked payload, source-line reduction and
 package size are separate measures; no historical package-size delta or new data
 deletion is inferred. Failed checks retain INCOMPLETE evidence and diagnostic logs.
@@ -943,7 +954,7 @@ The historical package settings were PPQ 480, 120 BPM, 4/4, C major, marker
 channels 1/2/3/10. Very short historical fixtures are compatibility probes, not
 current full-song musical acceptance cases.
 
-## Current planning handoff and release record
+## Retained planning evidence and release record
 
 2026-09-06: baseline `make test` passed with fresh root/desktop execution before
 document consolidation. Final consolidation checks: `make test`, `make build`
@@ -980,7 +991,7 @@ removed.
 The F06 test, evidence, and ignore changes add 4,815 bytes, reducing tracked
 worktree payload from 32,610,480 to 27,360,216 bytes (16.1%).
 
-Against PLAN's 2026-09-06 tracked-source baseline, the current tree has 56
+Against the recorded 2026-09-06 tracked-source baseline, the F06 tree had 56
 production Kotlin files / 20,415 lines versus 236 / 73,677 (180 files and
 53,262 lines removed: 76.3% / 72.3%). It has 57 test Kotlin files / 12,855
 lines versus 187 / 34,912, and zero Python files / lines versus 33 / 4,782.

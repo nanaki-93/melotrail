@@ -77,6 +77,52 @@ class VideoMediaProbe internal constructor(
 ) {
     constructor() : this({ request, cancellation -> VideoMediaProcess().run(request, cancellation) })
 
+    /** Full probe/decode for a candidate take without creating an encoded derivative. */
+    fun inspectTake(
+        request: VideoMediaProbeRequest,
+        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
+    ): VideoMediaMetadata {
+        val output = validateTake(request)
+        return output.first
+    }
+
+    /** Returns validated metadata and, when needed, an audio-stripped immutable candidate. */
+    fun validateTake(
+        request: VideoMediaProbeRequest,
+        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
+    ): Pair<VideoMediaMetadata, Path> {
+        val validated = validate(request)
+        val digest = sha256(validated.input)
+        val output = createPrivateDirectory(validated.outputDirectory, "take validation output")
+        val operations = mutableListOf<OperationEvidence>()
+        try {
+            val ffmpegVersion = invoke("take-ffmpeg-version", validated.ffmpeg, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
+            val ffprobeVersion = invoke("take-ffprobe-version", validated.ffprobe, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
+            verifyReportedBuild(ffmpegVersion, validated.manifest, "ffmpeg")
+            verifyReportedBuild(ffprobeVersion, validated.manifest, "ffprobe")
+            val metadata = metadata("take-metadata", validated.ffprobe, validated.input, output, request, cancellation, operations)
+            requireUsableVideo(metadata, requireSilent = false, label = "Generated take")
+            decodeFully("take-full-decode", validated.ffmpeg, validated.input, output, request, cancellation, operations)
+            if (metadata.audioStreamCount > 0) {
+                require(metadata.videoCodec == "h264" && metadata.width == 1920 && metadata.height == 1080 && metadata.frameRate == 30.0) {
+                    "Incidental-audio stripping is admitted only for existing H.264 1920x1080 30-fps previews; this output needs an explicit remux conversion policy."
+                }
+                val silent = output.resolve("silent-take.mp4")
+                invoke("strip-incidental-audio", validated.ffmpeg, listOf("-nostdin", "-hide_banner", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe", "-i", validated.input.toString(), "-map", "0:v:0", "-an", "-sn", "-dn", "-c:v", "copy", "-f", "mp4", silent.toString()), output, request, cancellation, operations)
+                val stripped = metadata("stripped-take-metadata", validated.ffprobe, silent, output, request, cancellation, operations)
+                requireUsableVideo(stripped, requireSilent = true, label = "Audio-stripped take")
+                decodeFully("stripped-take-full-decode", validated.ffmpeg, silent, output, request, cancellation, operations)
+                require(Files.size(silent) > 0L && sha256(silent) != digest) { "Audio-stripping did not produce a distinct silent video." }
+                Files.writeString(output.resolve("take-validation.json"), "{\"inputSha256\":\"$digest\",\"publishedSha256\":\"${sha256(silent)}\",\"decodedFrames\":${stripped.decodedFrameCount},\"audioStreamCount\":0}", CREATE_NEW)
+                return stripped to silent
+            }
+            if (sha256(validated.input) != digest) invalidOutput("Generated take changed during full decode.")
+            Files.writeString(output.resolve("take-validation.json"), "{\"inputSha256\":\"$digest\",\"publishedSha256\":\"$digest\",\"decodedFrames\":${metadata.decodedFrameCount},\"audioStreamCount\":0}", CREATE_NEW)
+            return metadata to validated.input
+        } catch (error: VideoMediaProbeException) { throw error }
+        catch (error: Exception) { throw storageFailure("Generated take validation failed: ${usefulMessage(error)}", error) }
+    }
+
     fun run(
         request: VideoMediaProbeRequest,
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),

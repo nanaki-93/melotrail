@@ -1,740 +1,339 @@
-# Melotrail improvement plan
+# Melotrail feature plan
 
-Updated: 2026-09-16. Status: MIDI engineering complete with manual acceptance
-pending; video foundations V10–V16 implemented, ComfyUI integration and complete
-video delivery planned, not implemented.
+This is the only product roadmap. [TASKS.md](TASKS.md) contains the executable
+steps, dependencies and current status. This clean baseline replaces the previous
+planning queues and execution history; it does not reset working software,
+acceptance evidence, Git history or user data.
 
-This is the only roadmap. [TASKS.md](TASKS.md) owns implementation order and
-status. It replaces the MIDI Core and UI task suites; their history stays in
-Git. Existing working behavior is the starting point, not work to repeat.
+## 1. Two independent product outcomes
 
-**Current video direction (2026-09-16):** the user creates finished picture
-assets outside Melotrail. The app imports a **finished scene image, with optional
-separate character/background layers**, then generates motion and a complete
-silent video. This explicitly supersedes in-app image generation, outfit/style
-transfer and mandatory automatic multi-reference preparation. V18b1's failed
-fidelity proof is deferred, not passed, and no longer blocks video delivery.
+### Audio composition: protected melody to a complete MIDI arrangement
 
-Keep the selected **one continuous 3–5 minute scene**, evolving scenery and
-occasional character actions. Reuse subtle motions without repeating the whole
-clip. Reuse the existing ComfyUI video API and controlled-motion work; do not
-redraw finished artwork as a prerequisite. The approved steam and five-second
-checkpoint remain preserved, with charcoal/stone v6 the latest selected artistic
-reference for externally authored TABI assets. No new visual approval is inferred.
-
-Execution policy, revised by the user on 2026-09-16, starts with Terra High and
-two retries, then escalates to Sol High with two retries. Each model gets one
-initial attempt plus its two retries. Fresh Sol High review and one commit per
-validated task remain required under TASKS. The coordinator starts the next
-eligible task immediately after verifying the previous commit; periodic heartbeats
-serve as recovery wakeups. This scope/planning update does not
-restart the paused scheduler, download models or launch new inference. Image
-creation, audio synchronization and public publishing stay outside Melotrail.
-
-## 1. Product decision
-
-Make a small, local Kotlin/Compose MIDI arranger that helps a musician turn an
-existing melody into a coherent song, then finish its sound in Logic Pro.
-Prioritize melody-compatible piano, deliberate song development, and a compact
-musical workspace. More generated notes and more options are not success metrics.
-
-The user's 2026-09-06 feedback is the current product baseline:
-
-- Average generated-track quality: **5/10**.
-- MIDI timing is consistently good.
-- Creating a clean full song remains difficult.
-- Piano accompaniment sometimes feels wrong against the melody despite timing alignment.
-
-This is useful qualitative feedback, not a completed controlled listening test.
-No offending project, bar range, candidate identity, or individual role scores
-were supplied in this request. Do not invent them or translate 5/10 into a pass
-on the old 1–5 rubric. Capture reproducible examples while improving the system.
-
-The former five-participant and ten-project gates no longer block development
-or legacy removal. Replace them with automated comparison preparation and final manual listening,
-visual and Logic release checks in [Validation](docs/VALIDATION.md). Human listening
-still determines musical acceptance; passing tests cannot award that acceptance.
-
-TABI video is an independent creative workspace inside the same Kotlin/Compose
-application. It needs no MIDI project, export, song or soundtrack. Its assets,
-generation jobs and outputs stay separate from MIDI data. The core function is
-**externally finished pictures + a motion prompt → generated video**. The app
-does not generate or restyle picture assets in this delivery. TABI riding a
-train through Tokyo and drinking coffee was an example, not a required scenario,
-preset, action list or acceptance gate. Content comes from each user request.
-
-## 2. What exists and what needs improvement
-
-Repository inspected at `1c37de2`, with pre-existing modifications to the root
-and desktop Gradle files. They select Kotlin 2.2.21 and JDK 21; the committed
-configuration selected JDK 25. Preserve these edits. Resolve the supported
-build/toolchain choice from actual native build evidence in F01.
-
-The baseline `make test` passed on 2026-09-06, including fresh root/desktop test
-execution. Generated wide and compact workflow captures were inspected along
-with all nine UI references, the TABI character sheet and train scene.
-
-| Area | Observed implementation | Consequence / next work |
-| --- | --- | --- |
-| Import and storage | `midi/domain`, MIDI adapters, `project`, and `MidiCoreSourceImport` preserve source identity and validate MIDI | Reuse; improve explanations and musical preparation, without a new importer |
-| Draft workflow | `MidiCoreArrangementDraft` generates all roles, records immutable candidates, supports retry, batch use and guarded undo | Preserve; introduce a deliberate song plan before role generation |
-| Section intent | `MidiCoreArrangementStyleCatalog` creates role policies with no purpose; the draft service passes the same policy to every occurrence | Intro/chorus/bridge-specific generator branches are not meaningfully driven by the primary style path; wire explicit per-occurrence intent |
-| Piano voicing | `MidiCoreChordGenerator.selectVoicing` filters exact protected-anchor collisions, scores local voice movement and selects among three ranked choices | Add melody-aware interval/duration scoring and bounded phrase lookahead; local correctness is insufficient |
-| Musical findings | `MidiCoreRoleValidator` reports close pitches/register pressure mostly as advisories | Findings need to influence candidate ranking and offer focused repair, while deliberate tension remains valid |
-| Rhythm | Chord rhythm restarts from each chord-window start; catalog steps are sixteenth-based | Keep metrical phase across sub-bar harmony; author and test 3/4 and 6/8 instead of truncating 4/4 intent |
-| Continuity | Chord previous-voicing state starts empty per occurrence; dependency context is occurrence-scoped | Add explicit boundary summaries, repeated-section relationships and phrase development |
-| Harmony entry | `MidiCoreAuthorityDrafting` distributes progression symbols into equal slots, preserving unchanged exact windows | Add visible chord durations; a correct chord at the wrong beat can still sound wrong |
-| UI | Theme, primitives and shell are implemented through the old UI-004 commit; visual projection code also exists | Verify and finish those owners; do not rebuild them because the old log header says “not started” |
-| Layout | Fresh test captures show tall pill controls, stacked forms, a roughly 200-pixel player and duplicate context | Put aligned note lanes and the next action in the first viewport; consolidate inspectors |
-| Visual tests | `MidiCoreVisualRegressionTest` writes images and checks size/presence | Add approved target-image comparisons that actually fail on regressions |
-| Boundaries | Architecture test checks a `desktop/target/` path while active pages live directly under `desktop/` | Fix coverage before removal; check actual production paths and imports |
-| Legacy | Default entrypoint uses MIDI Core, but `DesktopMain.kt` still contains worker/mastering composition; old services, tests and media remain | Delete by consumer/dependency analysis, never retain old-project compatibility |
-
-These code observations suggest causes of mediocre arrangements; they do not
-prove the cause of a particular unheard passage. M01 freezes comparable outputs
-and M02–M09 test the hypotheses with both semantic evidence and listening.
-
-### Size baseline
-
-Tracked files before this documentation change: 236 production Kotlin files /
-73,677 lines; 187 Kotlin test files / 34,912 lines; 33 Python files / 4,782 lines;
-33 Markdown files / 9,720 lines. Local disk also contains approximately 10 GB
-under `sounds`, 303 MB under `data/audio`, and 521 MB under `.venv-worker`.
-These are measured inventories, not claims that every file can be deleted.
-
-The source and documentation counts exclude generated/ignored files. Disk usage
-includes ignored material. Keep those measures separate from Git history size
-and packaged application size.
-
-## 3. Product boundaries
-
-Preserve these invariants through every task:
-
-1. Source MIDI bytes and the protected melody's note timing, pitch and velocity
-   are immutable. Supported expression follows the MIDI contract.
-2. Confirmed tempo, meter, key, structure and chord durations are authoritative.
-   Chromatic chords are valid; key compatibility remains advisory.
-3. Suggestions remain drafts until confirmed. Generation never edits harmony
-   or the source to improve its own score.
-4. Candidates and export snapshots are immutable. Acceptance changes references
-   atomically; targeted regeneration keeps previous work recoverable.
-5. Same authority, settings, engine versions and seed produce identical semantic
-   MIDI and validation. AI is unnecessary for the musical workflow.
-6. Logic Pro owns instruments, rendering, mixing and mastering. GarageBand is
-   outside the supported destination claim.
-7. Kotlin/JVM owns the app, including video orchestration and Compose controls.
-   Video may invoke configured local inference and video-only media tools, or
-   an explicitly selected hosted API. These stay outside the MIDI graph. Do not
-   build another Melotrail Swift app, audio renderer, mixer or uploader.
-8. No maintenance or migration of obsolete audio projects. Current MIDI project
-   safety must survive schema changes; unsupported versions fail before writing.
-
-Optional melody edits, unrestricted AI music, extra generated roles, multiple
-source files, tempo/meter maps and a general piano-roll editor remain outside
-this delivery. Finish the four-lane Melody/Chords/Bass/Drums workflow first.
-
-## 4. Target musician journey
+Melotrail helps a musician arrange an existing melody with Chords, Bass and Drums.
+The musician confirms the musical authority, hears a full draft, repairs specific
+passages and exports accepted MIDI. **Logic Pro owns instruments, audio rendering,
+mixing, mastering and the finished soundtrack.** Audio import/transcription and
+in-app audio production are not part of this delivery.
 
 ```text
-Create/open project
-  -> Import and hear the protected melody
-  -> Confirm source extent, musical settings, sections and chord durations
-  -> Inspect melody/harmony tension and accept a suggested song arrangement plan
-  -> Preview a style with the melody
-  -> Create and hear a complete draft
-  -> Mark a problem section/role and choose a musical repair
-  -> Use the draft, with undo available
-  -> Export verified complete-song and role MIDI files
-  -> Finish instruments and sound in Logic Pro
-  -> Separately generate silent TABI visuals in the Video tab
-  -> Combine visuals and finished music in the user's external editor
+Create/open → import melody → confirm settings, structure and chord durations
+→ confirm arrangement plan → generate/listen → repair → Use → export MIDI
+→ finish the sound in Logic Pro
 ```
 
-Six MIDI destinations remain: Project, MIDI, Structure & Harmony, Arrange,
-Review, Export. A common song map, selected occurrence and persistent player
-connect them. Draft playback does not require per-role acceptance. Export uses
-only current accepted work.
+### Video generation: finished artwork and motion prompt to silent video
 
-An application-level **MIDI / Video** tab switch makes video reachable from an
-empty launch. Video owns its project selection and silent preview; it adds no
-step to the six-destination MIDI arrangement/export pipeline.
+An independent Video workspace accepts externally finished scene artwork and
+optional ready layers. It generates supported motion and delivers one continuous
+**180–300 second video, default 240 seconds**, as **1920×1080 H.264 MP4, 30 fps,
+square pixels and zero audio streams**. Music is added in the user's external
+Apple editor; no MIDI project, soundtrack or export is required.
 
-The principal product improvement is **plan the song once, listen to the whole
-song, repair specific musical problems**. A batch of unrelated section patterns
-is not yet a coherent song proposal.
+```text
+Create/open Video project → import finished artwork → enter motion prompt
+→ check capabilities/setup → preview → refine → render full scene → review/export
+→ add finished music in an external editor
+```
 
-## 5. Better MIDI preparation and authority
+Neither workstream waits for the other's artistic acceptance. They share one
+Kotlin/Compose application, not projects, musical timing or generation state.
 
-### Import and source extent
+## 2. Current implementation baseline
 
-Keep the single SMF 0/1, single note-bearing track/channel contract. Display
-actual notes, pitch range, expression, fixed tempo/meter suggestions and source
-length. Distinguish blocking corruption from supported unusual music. Show
-exact corrective instructions for extra tracks, changing maps and unsafe note
-pairing. Do not quantize, transpose or clean the protected source silently.
+The repository was inspected at `32cc13746`, including the existing uncommitted
+video work. These are code observations, not new release or artistic approvals.
 
-Report last note end separately from file end-of-track. Offer an explicit
-**pad arrangement with silence to the next bar** when the source has a partial
-final bar; store the confirmed arrangement end separately from the source end.
-Preserve the original and every event. Do not add leading time or infer a pickup
-offset silently. Extending/repeating melody material is outside this change.
-The existing strict whole-bar rule remains until M03 changes all dependent
-contracts and tests together.
-
-### Structure and chord durations
-
-Provide a compact table with section name, musical purpose, bar count, derived
-bar range and repeat family. Duplicate, move, split and remove operate on the
-structure draft and show affected accepted work before save. Reordering sections
-changes accompaniment boundaries over the fixed source timeline; it does not
-reorder the source melody. Label that behavior clearly.
-
-Use one chord row per selected section: symbol + duration in beats/bars + a
-visual span over the melody. Preserve supported exact sub-bar windows. Example:
-Cmaj7 for 3 beats, Am7 for 1 beat, Dm7 for 2 beats, G7 for 2 beats. The old
-progression shorthand can seed rows, but duration is explicit after conversion.
-No raw tick or internal ID fields in the normal editor. Persist the canonical
-windows once, with gap/overlap and total checks.
-
-Detect possible phrases/repetitions from melody rests, duration, accents and
-contour. Present bar-boundary suggestions with reasons and allow correction;
-never save inferred structure or chords automatically. The full-song source
-contract means Melotrail is arranging an existing melody timeline, not creating
-missing melody sections.
-
-## 6. Musical engine improvements
-
-### 6.1 Melody context and explainable harmony tension
-
-Derive a read-only context per beat, bar, phrase and chord window containing
-active/sustained notes, accents, register, note activity, rests, repeated motifs
-and protected anchors. Account for supported sustain when assessing sounding
-overlap; flag unknown pitch-bend interpretation instead of asserting exact
-acoustic consonance. Keep raw protected events unchanged.
-
-Score melody/chord relationships over actual overlap duration and metrical
-weight. Distinguish sustained accented tension from a short passing or neighbor
-note. Consider compound intervals and octave placement, not only exact pitch
-matches. A major seventh or suspension is not automatically an error.
-
-Show “Piano crowds the sustained melody at bar 12, beat 3” with a highlighted
-span and audition target. If the conflict is in authoritative harmony itself,
-explain it and link to its editor; offer suggestions only for explicit review.
-Do not call a single numeric heuristic a musical-quality verdict.
-
-### 6.2 Piano that supports the melody
-
-Retain the chord parser, range constraints and proven voicing enumeration.
-Generate a bounded candidate pool with inversions, open spacing, guide tones,
-optional root omission when bass supplies it, and deliberate rests. Preserve
-required chord identity/slash bass semantics. Reduced voicings are legitimate
-choices, not only a last-resort collision fallback.
-
-Rank with versioned, explainable costs for melody tension, register crowding,
-voice crossing, voice movement, spacing, unnecessary doubling and low-end
-separation. Use dynamic programming or a small beam across a phrase, then carry
-an explicit boundary summary to the next section. Stable ordering resolves ties;
-a seed varies similarly useful choices without selecting an avoidably bad one.
-Bound search width/time and expose a typed failure if no legal proposal exists.
-
-Comping rhythm follows the song's metrical grid and melody phrase: sustain under
-busy passages, answer rests, leave breathing room at phrase ends, and maintain
-phase when harmony changes mid-bar. One shared timing policy handles clipping,
-articulation, swing and rounding. Humanization must be bounded MIDI intent and
-must never move protected source events or cross harmony/section limits.
-
-### 6.3 One explicit arrangement plan for the song
-
-Add a versioned arrangement plan above the scoped generators. It references
-confirmed occurrences and stores per-occurrence purpose, energy, role activity,
-density, register preference, phrase grouping, repeat-family variation and
-entry/exit intent. It also defines shared rhythmic intent for bass and drums.
-This is arrangement authority with explicit confirmation, separate from analysis
-suggestions and from immutable generated-note candidates.
-
-A style proposes a plan; the user can hear and adjust it before committing to a
-new draft. Musical section purpose is an explicit value, never guessed from a
-label such as “B”. Suggested behavior for a typical source:
-
-| Purpose | Accompaniment intent |
-| --- | --- |
-| Intro | Establish motif and space; bass/drums may enter later |
-| Verse | Lower piano activity under the melody; steady restrained groove |
-| Pre-chorus | Controlled increase and a phrase-end lead-in |
-| Chorus | Fuller register/voicing and groove; melody still leads |
-| Repeated chorus | Preserve recognizable rhythm, vary one dimension deliberately |
-| Bridge | Contrast through texture/register or half-time feel, respecting meter |
-| Outro | Reduce layers and create an intentional ending without cutting the source |
-
-These are editable style defaults, not compulsory rules for every composition.
-Every required role scope has either a candidate or an explicit planned rest.
-A silent intro is complete work; a failed generator returning no notes is not.
-Do not confuse playback mute/solo with an arrangement rest or export omission.
-
-### 6.4 Deterministic coordination and alternatives
-
-Resolve the arrangement plan first, then retain the Chords → Bass → Drums
-publication dependency order. Shared groove intent exists before either bass
-or drums generates notes; final drums can additionally use the generated bass.
-Avoid a circular “accepted bass requires accepted drums” dependency.
-
-Carry only bounded previous/next-section musical summaries and repeat-family
-references. Include every used input in the scoped fingerprint. An edit may
-invalidate the selected scope plus explicitly dependent neighboring scopes;
-show that affected set. It must not silently invalidate the entire song or
-pretend a boundary-dependent neighbor is unchanged.
-
-Generate at most three meaningfully different options for comparison (for
-example sparse/open, held/connected, or rhythmic/answering). Do not fill a
-candidate list with velocity-only duplicates. A/B audition uses the same melody,
-bar position, role balance and instrument mapping.
-
-### 6.5 Musical repair controls
-
-Expose bounded intents: **leave more melody space**, **simplify piano**,
-**lower piano register**, **smooth the transition**, **reduce bass movement**,
-and **calmer drums**. Each maps to documented settings, a scope and deterministic
-candidate generation. Explain what changes; retain the source, harmony and
-accepted references. Show a before/after loop and only apply after the musician
-chooses it. If no valid result exists, return a precise reason rather than
-retrying seeds indefinitely.
-
-Keep profile IDs, patterns, seed and scoring details available in an inspector.
-Normal repair starts from the audible problem, not a technical dropdown.
-
-## 7. UI/UX delivery
-
-[UI guideline](docs/UI_GUIDELINE.md) consolidates the previous visual guideline,
-measured reference targets and page mapping. Preserve all supplied images as
-design inputs. Reuse the implemented theme, shell and primitives where sound.
-
-The reference's main value is composition: compact header and navigation,
-bordered panels, colored section blocks, aligned musical lanes, restrained
-violet actions, a contextual inspector and a compact transport. Finish that
-composition instead of applying another dark theme to long forms.
-
-Use verified MIDI projections in Project/MIDI/Arrange/Review. One shared tick-to-x
-geometry aligns bars, chords, notes, roles, loop and the real playback position.
-No random note decorations, audio waveforms or fake video frames. Lanes are
-read-only; selection, zoom, fit and loop controls do not edit melody notes.
-
-The first Arrange viewport at 1280 × 900 must contain the song map, four role
-lanes, style choice and main draft action. The collapsed player targets 80 dp
-wide / at most 112 dp compact, with expandable advanced options. Only one
-selected-section inspector owns the decision; avoid today's repeated context.
-
-Use an explicit state vocabulary: not generated, planned rest, preparing, draft,
-accepted, stale, needs attention. Give each text/icon treatment. Show useful
-empty/error/progress states, keyboard focus and next actions. Keep scrolling,
-selection and valid playback stable between Arrange and Review.
-
-Visual acceptance requires 1536 × 1024, 1280 × 900 and 720 × 900 fixtures,
-reference-side review, pinned target goldens, geometry/accessibility checks and
-real image differences. Baseline regeneration cannot automatically approve a
-new design. The user assesses fidelity and clarity after seeing the six pages.
-
-## 8. Legacy removal and repository budget
-
-Start after the existing MIDI workflow and retained dependencies are mapped;
-do not wait for musical release acceptance. Do not rewrite proven MIDI code
-for cleanup or make a bulk `*Midi*` keep/delete decision.
-
-| Scope | Action |
-| --- | --- |
-| `WorkspaceApp`, `WorkspaceViewModel`, `WorkspacePageRouter`, old page/support branches | Remove after target UI consumers and shared primitives are separated |
-| Legacy composition in `DesktopMain.kt` | Keep the real MIDI entrypoint; remove worker/mastering/release factories and adapters |
-| Old application stage graph, schema-v4 model, compatibility constructors/typealiases | Remove consumers, then models; retain no migration mode |
-| Old AI planners, critics, enhancement/cohesion passes, source mutation, Pad/Strings/extra roles | Keep only proven helpers already required by current Chords/Bass/Drums; remove old owners/tests |
-| `audio`, `dsp`, rendering/mixing/mastering, sound-library/licensing, commercial/release runtime | Delete code, exclusive tests/resources/config and unused dependencies |
-| `worker`, Kotlin worker HTTP adapters, Python tools/environments | Remove after no MIDI path uses them; target build/test needs JVM only |
-| `sounds`, `data/audio`, old bundled media and caches | Resolve exact repository-owned targets, check consumers and protected inputs, record bytes, then delete |
-| UI mockups, TABI/train references, owned MIDI fixtures, Logic captures | Retain; these are design/testing assets, not obsolete runtime |
-
-Never delete an external project, unresolved path, workspace root, selected MIDI
-input, accepted candidate or export snapshot. Ignored legacy data is not
-recoverable from Git: verify ownership and exclusions explicitly. Do not run
-`git clean -fdx`, rewrite Git history, or install old Python dependencies to
-make their obsolete tests pass.
-
-Finish with one source of truth per behavior, no dead adapters or legacy test
-exceptions, a minimal Makefile and reviewed Gradle dependencies. Target zero
-Python source/runtime and zero legacy audio sample/project bytes in the repo.
-Use a **40% reduction in production Kotlin lines** as an investigation target
-from the baseline, not permission to delete useful functionality. Report actual
-file/line/disk/dependency/package deltas and explain retained exceptions.
-
-Keep nine active root/docs Markdown files at this planning handoff; worker-local
-setup documentation disappears with its owner. PLAN and TASKS may be detailed;
-other references should stay short and non-overlapping. Runtime-generated
-reports and benchmark artifacts belong in ignored build output or user storage,
-not an expanding checked-in execution diary.
-
-## 9. Video generation from assets and a prompt
-
-### 9.1 Outcome and mismatch
-
-The Swift package opens a prepared `SceneCompositionRequest`, reads a finished
-soundtrack and approved layers, previews their composition and offers a separate
-CLI encode. It lacks the requested upload → prompt → AI video journey. Do not
-port that product workflow to Kotlin. An encoder or synthetic demo does not
-establish that generation from assets and a prompt works.
-
-Deliver a complete **180–300 second silent video**, default **240 seconds**,
-for adding music in an external Apple editor and later publishing on YouTube.
-No soundtrack selection, MIDI timing, beat detection, lip sync, music generation,
-mixing or public upload. The only delivered creative application is Melotrail.
-
-### 9.2 Visible workflow
-
-1. Open **Video** and create/open an independent video project.
-2. Upload a finished PNG/JPEG scene. Optionally add externally prepared transparent
-   character layers, clean background/scenery, foreground/occlusion masks and
-   expression/pose images. These are ready artwork, not inspiration to synthesize.
-   Preserve originals and display exactly which images the current video consumes.
-3. Write a motion prompt and choose 3–5 minutes. Optional controls refine camera,
-   character motion, scenery direction/speed and source-attached effects. A visual
-   setup panel can place supplied layers and anchors; no hand-authored JSON,
-   source-code coordinates or node graph is required.
-4. Click **Generate video**, or request a short preview first. Preserve the uploaded
-   look. Use the measured ComfyUI image-to-video path for supported action takes
-   and the controlled compositor for supported continuous motion. Do not create
-   a new image/wardrobe/background first. Explain missing motion inputs before
-   launch; a flat picture does not automatically provide independent layers.
-5. Play the moving draft, adjust motion and regenerate only affected takes/chunks.
-   Keep previous versions, actual progress/cancellation/recovery and full-duration
-   scenery coverage visible. Changing artwork means importing another finished
-   picture or layer; the app does not redesign it from a prompt.
-6. Export a new silent MP4. Music and synchronization happen in the external editor.
-
-A single finished scene is a valid input for the measured image-to-video path;
-it does not guarantee independently controllable blinking, scenery or a coherent
-five-minute result. Additional prepared layers/poses may be needed for the
-controlled-motion target. A camera pan over a still cannot be presented as
-successful character animation. Report capability gaps with the missing input or
-supported alternative, never silently downgrade the requested motion.
-
-Reuse the existing theme, broad preview and keyboard-accessible controls at
-1536×1024, 1280×900 and 720×900. Technical workflow/model details stay in setup.
-Normal video creation requires no terminal or operation of ComfyUI's node editor.
-
-### 9.3 General reference and prompt contract
-
-Finished artwork defines appearance, clothing, composition and visual style.
-The prompt describes movement, camera behavior, pace and effects. Preserve it
-exactly and distinguish executable controls from advisory free-form text. If it
-asks for new clothing, a new city or a visual redesign, explain that the user
-must provide replacement artwork. Do not silently blend inspiration references.
-
-| Input | Current purpose | Motion implications |
+| Area | Present in the current tree | Remaining gap |
 | --- | --- | --- |
-| Finished scene | Primary composed artwork; one selected base image | Available to the measured image-to-video workflow; independent regions are not assumed |
-| Character / expression / pose layers | Ready character images with the intended outfit already drawn | Validate alpha, alignment and usable poses before enabling controlled subject motion |
-| Background / scenery | Ready clean environment or extended panorama | Validate coverage for the full camera path; ask for more external artwork when insufficient |
-| Foreground, masks and effect support | Optional externally prepared occlusion or effect artwork | Validate coordinate space and attach effects through visible anchors |
+| MIDI intake and authority | Protected SMF import, explicit chord windows, source-end padding, section/plan confirmation and confined storage | Revalidate the current build and fix only reproduced failures |
+| Arrangement | Melody/harmony analysis, bounded piano voicing/comping, authored 4/4, 3/4 and 6/8 patterns, coordinated roles, plan/rest/boundary fingerprints | Real full-song musical improvement remains unscored |
+| MIDI workspace | Six pages, verified note lanes, style preview, full-draft playback, targeted repair, atomic Use/Undo and one player | Current foreground capture, usability and listening decisions |
+| MIDI export | Immutable accepted-only complete/role files, semantic re-import and evaluation/Logic preparation commands | Current human Logic import/play/save/reopen and release decision |
+| Video assets/runtime | Independent project/asset/prepared-scene/job stores, ready-artwork admission, owned ComfyUI API/runtime and pinned media supervision | Application integration and current end-to-end proof |
+| Controlled motion | `VideoMotionRenderer.kt` and `tools/video-motion/` render bounded absolute-frame ranges; trajectories support up to 9,000 frames, invocations up to 300 | Durable preview orchestration, encoding/publication and restartable full output |
+| Preview work in progress | Local changes include `VideoClipGeneration.kt`, `VideoResultImport.kt`, media facts/store changes and tests | Preserve and review these changes; passing focused tests alone does not complete the production path |
+| Video UI and full output | No `desktop/video` workspace, continuous assembly/export service or in-app moving preview | Implement these features; `make video` passes an unsupported `--video` option today |
+| Removed runtime | No active audio-production/worker or Swift companion application | Do not rebuild them; preserve external evidence and unrelated local data |
 
-The earlier Character/Outfit/City inspiration synthesis is deferred. Existing
-V14/V15/V18a/V18a2 storage, import, role and fingerprint contracts remain useful;
-completed rows do not need replay. Do not advertise an Outfit transfer or Generate
-look action in the current UI. Style inspiration may be retained as project
-context but cannot be counted as a consumed generative input when unused.
+Important planning corrections:
 
-The user-designated source collection for current video work is
-`docs/pictures/video/` and all subfolders. Select appropriate finished scenes or
-ready layers from that tree and preserve original bytes. File presence does not
-establish motion readiness, production rights or visual approval; existing
-inspiration-only labels still apply. Use fresh evidence from these current inputs
-and small owned technical fixtures. Missing historical archives, old candidate
-hash reconciliation and reviews requiring unavailable evidence are retired
-admission requirements, not successful checks. Current-code integrity, technical
-review and V24/V33 decisions remain required.
+- MIDI needs verification and acceptance, not another importer, generator rewrite
+  or six-page redesign. The reported **5/10** remains the qualitative baseline.
+- ComfyUI accepts one composed image for the measured I2V route. It does not prove
+  independently controllable layers, complex actions or four-minute coherence.
+- `VideoShotPlanner` still models short unique/repeated shots. Replace its primary
+  flow with a continuous-scene plan; do not expose whole-clip repeat-to-fill.
+- ComfyUI and the controlled compositor are different execution stages. The
+  existing local backend rejects controlled-motion requests; the durable media
+  bridge must be completed rather than merely advertising a capability.
+- Asset presence is not proof of alpha, pose alignment, scenery coverage, rights
+  or approval. Inspect selected inputs from `docs/pictures/video/` recursively.
+- Old build receipts do not certify the current dirty tree. Recheck the selected
+  candidate without deleting environments, media, caches or user projects.
 
-Keep immutable originals and accepted versions. Replacement images invalidate
-only dependent motion/prepared-scene/chunk work. Bound inputs by measured capacity;
-never discard extra images silently or pass filenames as conditioning. Separate
-ready-layer composition from AI synthesis: placing supplied artwork is allowed,
-while inventing backgrounds, inpainting holes, restyling and asset generation are
-outside this delivery. Missing clean plates, poses or scenery remain visible gaps.
+## 3. Product and safety rules
 
-No fixed character, location, outfit, prop or action is required. For the TABI
-example, preserve externally authored v6 colors/style and only animate coffee or
-train motion when requested. Complex actions still need measured support; a
-coffee picture alone does not prove a natural sipping action.
+1. Preserve original MIDI bytes and protected melody events. Confirmed tempo,
+   meter, key, structure and exact chord durations remain authoritative.
+   Chromatic harmony is valid; analysis and suggestions never auto-confirm.
+2. Generate deterministically from the same inputs, settings, versions and seed.
+   Fingerprint every consumed plan, upstream, neighboring and repeated-section
+   dependency. Invalidate only the declared affected scopes.
+3. Draft playback is allowed before acceptance; MIDI export is accepted-only.
+   Missing/failed work is not a planned rest. Candidates, source files and export
+   snapshots are immutable; Use/Undo are atomic reference changes.
+4. Keep Project, MIDI, Structure & Harmony, Arrange, Review and Export, with one
+   persistent MIDI player. A top-level MIDI/Video switch is not a seventh MIDI page.
+5. Video domain/application/adapters stay under `app.melotrail.video`; presentation
+   stays under `desktop.video`. Construct optional runtimes lazily. Missing tools,
+   models, credentials or network must not prevent MIDI startup, audition/export.
+6. Video projects and job/output storage are outside MIDI roots, including symlink
+   aliases. Preserve imported artwork and prior takes/exports; reject unsupported
+   schemas before writes. No old-project migration or compatibility pipeline.
+7. Try the selected local ComfyUI and controlled-motion path first. No automatic
+   downloads, new models, cloud fallback, uploads or paid jobs. Hosted use needs
+   explicit provider selection, disclosed inputs and a bounded authorized budget.
+8. Persist job intent before execution; reconcile uncertain submissions, bound
+   retries/resources/concurrency and cancel only owned work. Unknown progress,
+   cost and capability stay unknown. AI seeds do not guarantee identical footage.
+9. Tests establish integrity, not musical quality, artistic approval, rights or
+   production readiness. Human decisions must identify the reviewed artifact/build.
 
-### 9.4 ComfyUI preparation and controlled motion
+Detailed ownership: [Architecture](docs/ARCHITECTURE.md),
+[MIDI contract](docs/MIDI_CONTRACT.md), [UI guideline](docs/UI_GUIDELINE.md),
+[Validation](docs/VALIDATION.md) and [TABI video](docs/TABI_VIDEO.md).
 
-The existing five-second checkpoint uses ComfyUI-derived artwork with a separate
-Node Canvas compositor for blinking, breathing, head motion, steam and moving
-scenery. It has manually prepared masks/poses/anchors. Preserve that evidence;
-this revision permits externally prepared picture assets and visible setup of
-animation geometry, rather than making automatic artwork generation/extraction
-an entry requirement. Generic input handling and actual motion quality still
-require proof across different finished scenes.
+## 4. Shared foundation
 
-Kotlin owns the Video tab, immutable assets, jobs, validation and orchestration.
-Reuse the existing owned ComfyUI/LTX video API for supported image-to-video takes;
-use the versioned external controlled compositor for continuous motion and
-assembly. These stages share one project/job contract. Do not build another
-Swift app, general timeline editor, image generator or model marketplace.
-Image-to-video naturally produces new video frames; it does not publish a new
-picture-asset library or silently replace the supplied base artwork.
+### Feature CORE — Reproducible development baseline
 
-V18b1 and automatic generative preparation V18b are **OPTIONAL and unselected**.
-Their failed proof stays recorded, with no further inference/download implied.
-V18b2 instead validates externally supplied animation assets against the existing
-V18a descriptor; V18 imports/selects their look and compiles usable motion
-capabilities. No new extractor/model is required to admit these tasks. Do not
-claim semantic eye/head data exist for a flattened image: use supplied layers or
-visible anchors where adequate, otherwise report the unsupported operation.
+1. Select the exact working candidate, preserving existing tracked and untracked
+   changes. Separate task-owned video WIP from unrelated local environments/media.
+2. Verify Kotlin 2.2.21/JDK 21, current architecture/documentation tests, focused
+   feature tests, `make test`, `make build` and motion-tool tests.
+3. Record actual current failures and their owners. Use an inventoried isolated
+   checkout when necessary; never weaken a guard or delete data to obtain a pass.
 
-Keep the proven dedicated app-owned loopback runtime, pinned workflows and
-models, one inference at a time, durable attempt identity, uncertain-submission
-reconciliation and owned cancellation. Missing optional video setup cannot block
-MIDI. No changes to the approved LTX profile or new model downloads are selected
-by this scope change. Installed image-model files and earlier trials stay intact;
-exclude image-generation probes from the active product path.
+**Exit:** an identified, reproducible baseline and a bounded next task. No new
+scheduler, inference run, commit, installation or cleanup is authorized by this plan.
 
-Measure action-generation, input/setup, composition and encoding cost separately.
-Use real host measurements for full-video estimates; a short I2V clip is not
-proof of 3–5 minute temporal coherence. Local-first remains selected. A hosted
-fallback still needs explicit provider choice, disclosed uploads and a bounded
-budget. This plan authorizes none.
+## 5. Audio composition features
 
-### 9.5 Producing 3–5 minutes
+### Feature AC1 — Protected melody and musical authority
 
-The user selected a **continuous scene with evolving scenery and occasional
-character actions**. Reusing small motion patterns is explicitly allowed; replaying
-the whole five-second video to fill the duration is not. Separate motion-pattern
-reuse from whole-footage reuse in storage and UI. Do not label composed frames as
-fresh diffusion footage or add overlapping layer durations into a false total.
+**Reuse:** MIDI import, project lifecycle, extent, structure and harmony services.
 
-Import the finished look and ready reusable elements once, then render a continuous world and
-character timeline. Use seeded, varied intervals for supported blinks and subtle
-gestures; retain breathing and the approved steam behavior where requested.
-More complex actions such as drinking or page-turning require suitable guided
-poses/action takes and their own evidence. They are not automatically covered by
-the successful calm-motion test. Preserve free-form prompts without inventing a
-story/action parser or silently ignoring actions the workflow cannot perform.
+1. Verify supported SMF 0/1, one note-bearing track/channel and fixed tempo/meter;
+   explain unsupported files without mutation.
+2. Verify source note end versus file end, explicitly confirmed trailing padding,
+   exact section totals and unequal/sub-bar chord durations at source PPQ.
+3. Verify draft edits, affected-scope previews, confirmation, locks and reopening.
+   Reordering accompaniment sections must not reorder the melody.
 
-For moving scenery, derive rigid near/middle/far layer movement from one camera
-trajectory and depth relationships, respecting perspective, occlusion and shutter
-blur. Import enough externally prepared coherent scenery for the whole travel distance,
-in bounded sections; join sections outside the visible region. No house morphing, visible
-texture wrapping, repeated short-city reset or unrequested direction reversal.
-Numerical speed alone is not proof of realistic train motion. The Tokyo example
-tests this requirement; other environments use their requested motion instead.
+**Exit:** the musician can establish exact authority safely. Unsupported meters
+remain valid authority, but generation outside authored 4/4, 3/4 and 6/8 is rejected
+explicitly. This feature is implemented; the queue verifies it and scopes defects.
 
-Render in bounded chunks using absolute frame numbers, shared motion state and
-seeds. Resuming a chunk cannot reset a blink, particle age, scenery position or
-random sequence. Include any required boundary frames for blur/temporal effects,
-then trim to exact output frame ranges. Do not retain all 5,400–9,000 1080p frames
-in RAM. Detect inadequate scenery coverage before rendering; request more external artwork
-and report the gap rather than stretch, freeze, reverse or silently loop material.
+### Feature AC2 — Coherent whole-song arrangement
 
-Use a measured ladder: preserve the approved **5-second baseline**, produce a
-**20–30 second** reusable-scene test, then a **60-second** sustained-motion and
-chunk-seam check, finally the actual **180–300 second** app export. The 60-second
-run updates the full-render estimate; it does not establish full-length success.
-A multi-scene editor and longer compilations are deferred, not alternate modes
-that must be built before this continuous-scene workflow works.
+**Reuse:** melody context, arrangement-plan proposals and Chords → Bass → Drums.
 
-### 9.6 Architecture and data
+1. Verify read-only overlap/sustain/register evidence and advisory harmony tension.
+2. Confirm purpose, energy, role activity, groove, phrase/repeat and boundary intent.
+3. Generate complete drafts with bounded melody-aware piano, metrical comping,
+   coordinated bass/drums, intentional rests and endings.
+4. Recheck deterministic replay, neighboring dependency invalidation and exact retry.
 
-Add an app-level tab boundary above `MidiCoreWorkspaceShell`; retain its six
-MIDI destinations. Construct video services lazily in a separate composition.
-Missing models/credentials/media tools cannot prevent MIDI startup or export.
-Video works without a MIDI project. Entering Video pauses MIDI audition without
-losing its position; silent video preview creates no MIDI player.
+**Exit:** every required scope has a valid candidate or explicit rest, with source
+and harmony unchanged. Full-song quality is assessed in AC5, not inferred here.
 
-New domain/application/adapters live under `app.melotrail.video`, and presentation
-under `app.melotrail.desktop.video`. MIDI project/application code must not import
-video; only the app composition root coordinates both workspaces. A new video
-project schema owns finished assets, imported scene looks, immutable takes, selection/assembly,
-job attempts and export snapshots. Store it in a chosen video directory outside
-MIDI project/export paths. No Swift session/ledger or old-project migration.
+### Feature AC3 — Listen, repair and accept
 
-Add a versioned prepared-scene descriptor with immutable layer/pose/mask pins,
-validated coordinate spaces, depth/occlusion relationships, effect anchors and
-the workflow's supported motions. Persist the continuous motion plan, component
-reuse choice and chunk frame ranges. The existing V15 short-shot proposal is
-superseded in the primary flow by V26's continuous plan; preserve its useful
-prompt/fingerprint behavior while removing exclusive retired planner consumers.
+**Reuse:** style preview, persistent transport, repair alternatives and batch Use.
 
-Import copies selected media, checks decoded content/geometry/limits and pins
-digests. Resize or remove metadata only in derived upload copies. Fingerprints
-include all consumed assets, prompt versions, models/workflows and settings.
-They identify requests; AI output is not guaranteed deterministic even with seeds.
+1. Audition the melody, style and complete draft through the same player, before Use.
+2. Compare scoped repairs at the same bar position with the protected melody:
+   more melody space, simpler/lower piano, smoother transitions, less bass movement
+   and calmer drums.
+3. Keep at most three meaningful alternatives or one coherent dependency-spanning
+   repair set. Cancel/retry without losing accepted work; apply settings only once.
+4. Use the chosen draft/repair atomically, Undo safely and reopen unchanged artifacts.
 
-Persist attempts before local launch or hosted submission. Recover across tab
-switches and app restart. Interrupted local inference is recoverable work, not
-a completed take. Ambiguous hosted submissions require reconciliation; never
-blindly retry a possibly charged request. Bound attempts, disk/memory/time and
-concurrency. Cancel only the app's own jobs/processes, not another app's shared
-queue. Unknown progress/cost stays unknown. New takes never overwrite selections.
+**Exit:** the existing first-draft path takes at most three primary actions after
+musical authority is ready; targeted repair never becomes a hidden whole-song edit.
 
-Use one pinned **FFmpeg/ffprobe** distribution for video-only decode/assembly/
-validation, invoked from Kotlin. V12 proves macOS support, packaging and exact
-codec/preview behavior using owned fixtures. Use argument arrays, bounded pipes
-and job-local temporary directories; reap owned processes on cancellation.
-Record distribution/build options/notices and model terms. No new Swift host,
-audio pipeline or port of the old soundtrack compositor.
-[FFmpeg documentation](https://ffmpeg.org/ffmpeg.html),
-[distribution considerations](https://ffmpeg.org/legal.html).
+### Feature AC4 — Accepted MIDI export and Logic handoff
 
-### 9.7 Delivery and real acceptance
+1. Revalidate current accepted-only complete-song and aligned role MIDI exports,
+   deliberate role omissions, common origin/end, expression and manifest hashes.
+2. Prepare fresh current-build Logic packages using the existing matrix command.
+3. Have the user import complete/separate files at song start, assign instruments,
+   play, save, close and reopen in the recorded Logic/macOS versions.
 
-Output: landscape **1920×1080 H.264 MP4, 30 fps**, square pixels, **zero audio
-streams**, and the selected 180–300 second duration. The latest controlled tests
-already use this cadence; render motion at that cadence rather than relabeling
-lower-rate frames. Record native asset/action resolution, cadence and explicit
-conversions; upscaling is not native 1080p generation. MP4/H.264 and preserving
-the produced frame rate follow the platform's published recommendations.
-[YouTube encoding guidance](https://support.google.com/youtube/answer/1722171?hl=en).
+**Exit:** technical checks and the applicable real Logic matrix pass. No render,
+mixer, sound-library, soundtrack or video handoff enters the MIDI export page.
 
-Validate the full export's decodability, stream count, dimensions, frame cadence
-and duration before publishing to a new filename. Preserve accepted takes;
-keep failed partials out of the results gallery. Export provenance contains no
-credentials. Test actual import/playback in the user's chosen Apple editor;
-music placement, synchronization and public upload remain outside scope.
+### Feature AC5 — Musical usefulness and MIDI release
 
-**V24 early visual checkpoint:** import one finished scene and its optional ready
-layers, then generate three real 20–30 second clips: the base motion request, a
-contrasting motion prompt using the same artwork, and a replaced finished scene
-or layer with other selections/settings held fixed where compatible. Check source
-appearance, visible requested motion, coherent objects and temporal stability.
-Outfit transfer and image generation are not acceptance criteria. Externally
-prepared source assets are explicitly allowed; app use needs no hand-edited JSON.
-Check derived masks/poses, effect anchoring, depth and absence of obvious repeat
-resets at normal speed, not only selected still frames. TABI identity is checked
-when TABI references are supplied. No location, prop,
-action or camera mode is mandatory. Obtain actual user feedback before claiming
-this approach works. Unpaid storage/UI/assembly
-work can proceed while a human decision is pending; synthetic media never counts
-as that decision. Local failure triggers a reviewable hosted comparison proposal.
+1. Obtain five owned/licensed full-song projects, at least three unseen; freeze
+   inputs/settings before final generation using the existing evaluation harness.
+2. Compare piano+melody and complete arrangements with identical instrument mapping;
+   record real scores, bad bars, repair count/time and failed results.
+3. Refresh six-page visual/performance evidence and actual foreground captures;
+   obtain usability approval rather than treating technical goldens as sign-off.
+4. Prove clean native install/startup, then reconcile evidence with final versions
+   and obtain a separate MIDI release decision.
 
-**V33 final checkpoint:** start with user-created finished artwork, optional ready
-layers and a motion prompt in Melotrail, then generate, review, compose and export one
-real 3–5 minute video matching that request. The user reviews the full cut,
-reference fidelity, prompt adherence, repetition and joins at normal speed.
-Technical tests prove integrity; visual quality and channel suitability require
-actual review. A contrasting prompt must work through the same primary flow.
+**Targets:** median overall and piano/melody-fit ≥8/10; each song ≥7/10 on both;
+no core-role/interaction/structure score below 6/10; no severe unresolved fault;
+zero protected melody changes; median draft-to-Use review ≤10 minutes. Use the
+full procedure and performance/visual targets in Validation. Failed cases create
+small corrective tasks, not lowered thresholds. Listening, Logic and visual
+review remain end-of-engineering human gates; preparation can proceed now.
 
-For the current TABI example, preserve the banner's requested palette/style,
-the controlled-motion checkpoint and the specifically approved coffee steam.
-These approvals are scoped to those components. The latest train test is a
-starting point; it does not close V24 or V33. Retained sources and receipts are
-under `~/.codex/melotrail-video-sequential/evidence/V17/` (controlled-motion,
-controlled-motion-v2 and train-depth-v3 experiments dated 2026-09-14) and
-`~/Library/Application Support/MelotrailVideo/checkpoints/2026-09-14-controlled-motion-v1`.
+## 6. Video generation features
 
-Commercial model permission and YouTube monetization are separate questions.
-Keep exact model/node/license receipts and recheck changed components during
-setup. Episode concepts, scenery and creative development should materially vary;
-reusing small self-created motions is not a guarantee of eligibility, and no
-arbitrary percentage of unique frames establishes it. The platform evaluates
-originality and repetitive/mass-produced content across the channel. Music rights,
-final editing, disclosure and publication are handled outside Melotrail.
-[YouTube monetization policy](https://support.google.com/youtube/answer/1311392?hl=en).
+### Feature VG1 — Finished artwork and explicit local setup
 
-### 9.8 Removal and boundaries
+**Reuse:** independent project/asset stores, scene looks, ready-asset validation,
+prompt compilation and pinned local runtime/media setup.
 
-V30–V31 remove `companion/`, exclusive tests/scripts/resources and the MIDI Export
-companion handoff after an integrated owned-fixture path works. Preserve original
-TABI/UI/train references, Logic evidence, MIDI projects/exports and external
-user media/saved outputs. Do not delete installed applications or external
-sessions as repository cleanup. No retained Swift bridge or compatibility mode.
-Replace the temporary Swift Makefile target with `make video` opening the same
-Melotrail Video tab, without a JSON argument.
+1. Import one finished PNG/JPEG scene; optionally add transparent character/pose
+   layers, clean backgrounds, extended scenery, foregrounds, masks and anchors.
+2. Validate actual decoded content, alpha, geometry, occlusion, pose alignment and
+   motion capabilities. Preserve originals and show exactly what a job consumes.
+3. Keep motion prompts exact; distinguish implemented controls from advisory text.
+   Changed appearance requires replacement artwork, not in-app restyling.
+4. Inspect explicit ComfyUI, Node/Canvas and FFmpeg paths/versions/terms. Missing
+   setup and missing artwork are separate actionable states, not download triggers.
 
-V10–V33 are the new queue. V24/V33 need human evidence. V25 is an optional hosted
-adapter activated only if the user chooses it after local evaluation. Missing
-model setup, credentials, paid budget or visual decisions block their exact
-gate, not independent engineering. Long compilations, vertical formats, general
-timelines, LoRA training and multiple simultaneously supported providers are
-outside this first delivery.
+**Exit:** requests either have usable, pinned motion inputs or explain exactly what
+is missing. A flat scene can enter I2V without falsely claiming regional control.
 
-## 10. Delivery order and acceptance
+### Feature VG2 — Recoverable preview generation and immutable takes
 
-| Wave | Delivery | Exit evidence |
+1. Review and finish the existing preview WIP. Bridge the controlled compositor
+   into the single durable job system; keep ComfyUI I2V as its separate local stage.
+2. Bind scene/control/runtime pins and absolute frame ranges to attempts. Handle
+   duplicate clicks, cancellation, late results and restart without duplicate work.
+3. Render/probe actual output, strip incidental audio and import a new immutable
+   take with measured native/output geometry and cadence. Never auto-select it.
+4. Produce five-second and 20–30-second previews through the production use cases.
+   Review/selection is optional refinement; unreviewed does not mean approved.
+
+**Exit:** real moving previews can be generated, reopened, rejected and replaced
+without scripts or a second job ledger. Do not call a camera pan character action.
+
+### Feature VG3 — Independent Video workspace
+
+1. Confirm design scope/process and approve a feature-level flow mockup before
+   production UI. Reuse the existing theme/primitives and reference 08; no MIDI
+   redesign. Cover setup, create/open, inputs, jobs, review and export together.
+2. Add the top-level switch and `--video` route. Video works from an empty launch;
+   entering it pauses MIDI with position retained, without creating another player.
+3. Expose finished-artwork import, visible layer/anchor setup, motion prompt,
+   duration and missing-capability guidance. No JSON, code coordinates or node editor.
+4. Wire Generate/Cancel/Retry/recovery and take selection to production services.
+5. Decode actual frames off the UI thread with bounded buffering; support
+   play/pause/seek/frame-step, one silent preview session and predictable teardown.
+
+**Exit:** a keyboard-accessible app flow at 1536×1024, 1280×900 and 720×900; no
+synthetic preview, fictional progress, soundtrack prerequisite or image-generation UI.
+
+### Feature VG4 — One continuous scene, exact duration
+
+1. Replace the primary short-shot planner with a versioned continuous motion plan:
+   exact frames, shared clock/seed, component reuse, supported occasional actions
+   and bounded chunks. Retain useful prompt/fingerprint/estimate behavior once.
+2. Validate externally prepared scenery against the complete camera trajectory;
+   derive rigid depth-layer movement and occlusion from that trajectory.
+3. Join scenery outside the visible region and carry subject/effect/scenery state
+   across chunks. Preserve blink phase, particle age and random sequence on resume.
+4. Recompute only dependent work when inputs change. Report fresh action footage,
+   procedural motion and reused components without double-counting layered time.
+
+**Exit:** exact 5,400/7,200/9,000-frame plans for 180/240/300 seconds at 30 fps,
+with no hidden gaps, morphing buildings, visible wraps, reverse-to-fill, freezes
+or whole-clip loops. Missing coverage requests more external artwork.
+
+### Feature VG5 — Full-length rendering, review and silent export
+
+1. Render/encode bounded chunks from the resolved plan, with durable checkpoints,
+   temporal support frames where needed and exact trimming/continuous timestamps.
+2. Validate the full silent H.264 output: decode, stream count, codec, square pixels,
+   dimensions, cadence, duration and first/last/chunk/scenery-join frames.
+3. Measure a 60-second continuity/resource run before a complete 180–300-second
+   owned-fixture export. Estimate setup, action generation, composition and encoding
+   separately; never hold all 1080p frames in RAM or extrapolate artistic quality.
+4. Expose the same full-cut plan in the existing preview, highlight joins and export
+   atomically to a new filename with credential-free provenance and Finder reveal.
+
+**Exit:** the app reviews and exports a complete validated file. Changing the plan
+invalidates readiness, not previous outputs. Native versus upscaled resolution
+and any action-cadence conversion are disclosed; duplicated frames are not native motion.
+
+### Feature VG6 — Installed delivery and real-video acceptance
+
+1. Early check: produce three real 20–30-second app clips—base motion, changed motion
+   with the same artwork, and replacement artwork with other compatible inputs fixed.
+   Obtain actual user feedback on appearance, requested motion and temporal quality.
+2. Independently finish fixture-based assembly, packaging, accessibility and UI
+   regressions while that decision is pending. Prove MIDI works without any optional
+   video runtime; prove configured Video works in a private installed application.
+3. After the early approach is accepted, produce one real 3–5-minute result through
+   the app with current selected artwork and a bounded authorized local run.
+4. Have the user watch the whole cut and joins at normal speed, assess continuity,
+   fidelity, prompt adherence and repetition, then import/play it in the chosen
+   Apple editor. Record a separate video release decision and remaining limitations.
+
+**Exit:** actual end-to-end product evidence, not just an API wrapper or synthetic
+encode. The retained five-second/steam approvals and charcoal/stone v6 reference
+remain narrowly scoped; they do not approve new clips. TABI, Tokyo, trains and
+coffee are examples, never mandatory content or presets.
+
+## 7. Step-by-step delivery order
+
+| Step | Feature delivery | What unlocks next |
 | --- | --- | --- |
-| Foundation | F01, M01, then F02–F06 | Baseline MIDI regression pack; actual dependency map; small JVM-only build with no legacy runtime |
-| Visible workspace | U01–U03 and U02 transport work | Real aligned MIDI lanes and compact persistent controls; input workflow intact |
-| Musical preparation | M02–M03, U04 | Explainable melody/harmony context, explicit chord durations and safe song extent |
-| Song arrangement | M04–M09, U05–U06 | Melody-compatible piano, deliberate section plan, coordinated roles and targeted repairs |
-| Validation | U07, Q01–Q03 | Visual approval, improvement on frozen music cases, fresh Logic checks and clean build/install |
-| Video replacement | V10–V33, excluding unselected optional rows | Finished artwork + motion prompt → complete silent video; measured motion and full export; Swift removal |
+| 1 | CORE baseline | An identified current candidate for both workstreams |
+| 2 | VG1 → VG2; request VG3 design decisions independently | Finish preserved preview WIP first; backend work need not wait for UI approval |
+| 3 | AC1 → AC2 → AC3 → AC4 technical verification | Current usable MIDI workflow and fresh Logic packet; useful independent work during video/design waits, not a rebuild |
+| 4 | AC5 evidence preparation | Frozen songs when supplied, current UI/performance/install evidence; human gates stay separate |
+| 5 | VG3 application flow and early VG6 review | Real asset-and-prompt app clips; expose failures early |
+| 6 | VG4 → VG5 | Exact continuous plans and complete silent app exports; independent of early artistic waiting |
+| 7 | VG6 installed/UI proof and full real-video review | Accepted video workflow and editor handoff |
+| 8 | AC5 MIDI release / VG6 video release | Independent decisions tied to the tested final versions |
 
-The user chose on 2026-09-11 to perform manual listening, scores, Logic tests
-and visual/video review only after all unpaid engineering. TASKS parks these
-MIDI gates as WAITING_USER and excludes them from automatic attempts. Q03a and
-Q03b retain completed MIDI evidence. The new video request replaces the old V
-gates and adds an early visual checkpoint at V24. Release and production
-authorizations stay pending. Never claim the musical 5/10 result has improved
-before comparison.
+This is a dependency order, not permission for parallel agents. Video backend
+work can start after CORE while MIDI inputs/reviews or UI decisions are pending.
+The unfinished preview work is the first video implementation priority. TASKS
+owns exact admission order and all blocking dependencies; no calendar estimates
+are invented before current rendering and review costs are measured.
 
-Proposed release targets: median overall and piano/melody-fit scores at least
-8/10 across five varied songs, every song at least 7/10, zero melody mutation,
-zero severe unresolved arrangement/timing faults, and median first-draft-to-use
-review time at most ten minutes. These are new targets, not achieved results.
-First-draft playback should need at most three actions after authority is ready.
-See Validation for sample selection, failures, timings and Logic evidence.
+## 8. Explicitly outside this delivery
 
-## 11. Automatic delivery workflow
+- In-app image creation, outfit/style transfer, automatic semantic extraction,
+  invented scenery and generative asset libraries.
+- Whole-clip repeat-to-fill, multi-scene/general timeline editing, vertical output,
+  longer compilations, LoRA training or a provider marketplace.
+- Audio import/transcription, generated melody edits, unrestricted AI music,
+  extra musical roles, multiple MIDI sources, tempo/meter maps or a piano-roll editor.
+- Audio rendering/mixing/mastering, soundtrack synchronization and public upload.
+- A second Swift application, legacy project migration, broad filesystem cleanup,
+  recovery of unavailable historical experiments or rewriting Git history.
 
-The bottlenecks found on 2026-09-08 were concrete: broad tasks consumed their
-budget before review; a budget stop looked like a code failure and replayed
-implementation; completed commits advanced a branch while the normal checkout
-kept older files. Success means tested code visible in the runnable project,
-not merely more agent activity.
+A hosted video fallback is **optional and unselected**. Only a new explicit choice
+after local evidence may activate it, with current terms, capabilities, disclosures
+and a capped budget. No abandoned image-generation trial is a delivery prerequisite.
 
-**Delivery unit:** one TASKS row is a bounded slice, normally one user behavior
-or one domain boundary with a few production owners. The 29 new suffixed rows
-split the remaining large features. Each unsuffixed row finishes its remaining
-slice and checks the combined parent acceptance criteria. Dependencies remain
-explicit; completed children are reused. No extra task or execution-log documents.
+## 9. Completion policy
 
-**MIDI engineering complete; video replacement pending:** reuse integrated MIDI
-and UI behavior. Q03b remains the MIDI review entry point. V10–V33 replace the
-Swift workstream; old V completion does not satisfy them. This planning update
-does not start/reconfigure the existing heartbeat. A later implementation run
-must select the new queue and exact allowed paths. Automated tests, builds,
-frame/semantic checks and independent code review remain per-task.
+Each feature closes through bounded tasks in TASKS. Reuse existing consumers and
+tests; add regression tests for every fixed bug. Run focused checks, `make test`,
+`make build` and `git diff --check`; video changes also run motion-tool checks and
+applicable explicitly admitted native/media probes. Keep artifacts in ignored build
+output or selected external evidence storage, not new planning/history documents.
 
-**Execution:** the existing 20-minute heartbeat runs the tested local runner's
-`advance` command. One Astra Extra High writer implements; the host coordinator runs
-focused checks, test/build and diff checks; a fresh Astra Extra High reviewer inspects
-the exact tested tree. A failed attempt gets one Astra retry, then Sol High
-receives the original task, current diff and concrete terminal/test/review errors
-for one repair. If the final review leaves up to three concrete code findings,
-recover them as ordered, exact-file subtasks on the preserved candidate. Each
-gets a fresh Astra session and a bounded budget; fresh review must verify its
-acceptance condition. Stop on no progress or exhausted recovery, retain human
-gates, and never grow a recursive repair chain. Integrate only when the whole
-parent passes. TASKS defines numeric bounds, paths, control commands and the
-reusable worker prompt.
-
-**Resume correctly:** budget/deadline stops preserve the candidate and its
-stage. A completed implementation continues at validation/review in the next
-bounded batch, with prior token usage retained in history. It does not consume
-a code-repair attempt just because time or quota ran out. Continuations are
-bounded; exhausted failures become BLOCKED with evidence while independent
-ready slices continue. Locks, explicit pause, quota and scope are enforced;
-no reset loop or unbounded promise to finish everything in one run.
-
-**Make improvements visible:** integrate into the un-checked-out
-`codex/terra-batched-implementation` branch, then fast-forward the normal
-`codex/terra-live` checkout only if its tracked files are clean and it has not
-diverged. Preserve existing edits and report a skipped sync. Never move a
-checked-out branch ref without updating its files/index. Restart `make desktop`
-to run the latest integrated app. Remove successful dedicated worker worktrees;
-keep unresolved work recoverable.
-
-**Finish engineering without faking acceptance:** Q01a/Q02a/U07a–b/Q03a/Q03b prepare
-musical, Logic, visual and clean-install evidence independently of the final user
-decisions. New video plumbing uses owned fixtures and fake backends in ordinary
-tests; real local inference is a separate bounded host check. V24/V33 retain
-actual visual decisions and a hosted pilot retains its spending authorization.
-Local model quality, user listening and TABI identity cannot be approved by tests.
-
-The scheduler notifies on integrated changes, new failures or required input and
-stays quiet during unchanged activity. Local scheduled runs require the computer
-and app to be running. See the [official automation documentation](https://learn.chatgpt.com/docs/automations?surface=app).
+The reset authorizes documentation only. It starts no automation, agent run,
+model setup, inference, spending or implementation commit. Future runs select
+current task IDs explicitly; old scheduler state cannot choose or complete them.
