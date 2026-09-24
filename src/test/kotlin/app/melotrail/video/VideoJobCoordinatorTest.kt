@@ -26,6 +26,8 @@ import app.melotrail.video.application.VideoSetupRequirement
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoControlledMotionGenerationInput
 import app.melotrail.video.domain.VideoControlledMotionRequest
+import app.melotrail.video.domain.VideoControlledMotionDescriptor
+import app.melotrail.video.domain.VideoControlledMotionRuntimeBinding
 import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoGenerationJobRequest
 import app.melotrail.video.domain.VideoComfyInputSlot
@@ -55,9 +57,28 @@ import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+
+internal fun motionRuntime(pin: VideoGenerationDependencyPin): VideoControlledMotionRuntimeBinding {
+    fun sibling(id: String) = pin.copy(id = id, ownedPath = "/runtime/$id")
+    return VideoControlledMotionRuntimeBinding(sibling("node"), pin.copy(id = "compositor"), sibling("scenery"),
+        sibling("canvas-manifest"), listOf(sibling("canvas-artifact-core")), sibling("ffmpeg"),
+        sibling("ffprobe"), "0.1.80")
+}
+
+internal fun motionDescriptor(
+    runtime: List<VideoGenerationDependencyPin>, start: Long, end: Long, seed: Long,
+    project: String = "video-project",
+): VideoControlledMotionDescriptor = VideoControlledMotionDescriptor(
+    projectId = project,
+    sourceIdentity = "1".repeat(64),
+    requestJson = """{"schema":"melotrail-controlled-motion-request-v1","preparedScene":{"schemaVersion":2,"id":{"id":"scene","version":1},"source":{"references":[{"id":{"id":"reference","version":1},"descriptorArtifact":{"relativePath":"references/reference.json","sha256":"${"1".repeat(64)}"},"original":{"artifact":{"relativePath":"references/original.png","sha256":"${"2".repeat(64)}"},"format":"PNG","mediaType":"image/png","width":320,"height":180,"encodedBytes":100,"hasAlphaChannel":false,"hasTransparentPixels":false}}]},"coordinateSpaces":[{"id":"space","width":320,"height":180}],"layers":[{"id":"finished","kind":"FINISHED_SCENE","image":{"artifact":{"relativePath":"references/original.png","sha256":"${"2".repeat(64)}"},"format":"PNG","mediaType":"image/png","width":320,"height":180,"encodedBytes":100,"hasAlphaChannel":false,"hasTransparentPixels":false},"bounds":{"coordinateSpaceId":"space","x":0,"y":0,"width":320,"height":180}},{"id":"background","kind":"ENVIRONMENT","image":{"artifact":{"relativePath":"references/background.png","sha256":"${"3".repeat(64)}"},"format":"PNG","mediaType":"image/png","width":320,"height":180,"encodedBytes":100,"hasAlphaChannel":false,"hasTransparentPixels":false},"bounds":{"coordinateSpaceId":"space","x":0,"y":0,"width":320,"height":180}},{"id":"subject","kind":"SUBJECT","image":{"artifact":{"relativePath":"references/subject.png","sha256":"${"4".repeat(64)}"},"format":"PNG","mediaType":"image/png","width":40,"height":40,"encodedBytes":100,"hasAlphaChannel":true,"hasTransparentPixels":true},"bounds":{"coordinateSpaceId":"space","x":10,"y":10,"width":40,"height":40}}],"poses":[{"id":"pose","subjectLayerId":"subject","image":{"artifact":{"relativePath":"references/pose.png","sha256":"${"5".repeat(64)}"},"format":"PNG","mediaType":"image/png","width":40,"height":40,"encodedBytes":100,"hasAlphaChannel":true,"hasTransparentPixels":true},"bounds":{"coordinateSpaceId":"space","x":10,"y":10,"width":40,"height":40}}],"motionCapabilities":[{"id":"blink-capability","targetType":"POSE","targetId":"pose","control":"POSE_BLEND","unit":"RATIO","minimum":0,"maximum":1,"defaultValue":0.25}],"dependencies":[{"id":"scene-input","version":"1","sha256":"${"6".repeat(64)}"}],"createdAt":"2026-09-24T00:00:00Z"},"seed":$seed,"fps":30,"canvas":{"width":320,"height":180,"coordinateSpaceId":"space"},"frameRange":{"startFrame":$start,"frameCount":${end - start}},"controls":[{"id":"blink","kind":"blink","capabilityId":"blink-capability","amount":0.25}]}""",
+    runtime = motionRuntime(runtime.single()),
+)
 
 class VideoJobCoordinatorTest {
     @Test
@@ -485,6 +506,207 @@ class VideoJobCoordinatorTest {
     }
 
     @Test
+    fun `executable descriptor round trips and rejects changed bindings unsafe numbers and unsupported ledger`() {
+        val scene = VideoGenerationDependencyPin("scene", HASH_1, "/owned/scene.json")
+        val runtime = VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs")
+        val descriptor = motionDescriptor(listOf(runtime), 120, 420, 17)
+        val motion = VideoControlledMotionRequest(listOf(scene), 120, 420, 17, descriptor)
+        val input = VideoControlledMotionGenerationInput("prompt", listOf(scene) + descriptor.runtime.allPins, motion)
+        val base = localRequest("controlled-binding", 'a').copy(input = input)
+        val request = base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
+        val fixture = fixture()
+        val backend = ControlledBackend().apply {
+            availabilityValue = availabilityValue.copy(supportedInputs = availabilityValue.supportedInputs + VideoGenerationInputKind.CONTROLLED_MOTION)
+            submitBehavior = { VideoBackendSubmission.Rejected("fixture", true) }
+        }
+        accepted(fixture.coordinator(backend).submit(request))
+        val reopened = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot)).snapshot()
+        assertEquals(descriptor, (reopened.jobs.single().request.input as VideoControlledMotionGenerationInput).motion.descriptor)
+        for (count in listOf(150L, 600L, 900L)) {
+            val first = 120L
+            val full = motionDescriptor(listOf(runtime), first, first + count, 17)
+            val chunks = full.invocationDescriptors().map { kotlinx.serialization.json.Json.parseToJsonElement(it).jsonObject }.toList()
+            val ranges = chunks.map { it.getValue("frameRange").jsonObject }
+            assertEquals((count + 299) / 300, ranges.size.toLong())
+            var next = first
+            ranges.forEach { range ->
+                assertEquals(next, range.getValue("startFrame").jsonPrimitive.content.toLong())
+                val size = range.getValue("frameCount").jsonPrimitive.content.toLong()
+                assertTrue(size in 1..300)
+                next += size
+            }
+            assertEquals(first + count, next)
+            assertTrue(chunks.all { it.getValue("preparedScene") ==
+                kotlinx.serialization.json.Json.parseToJsonElement(full.requestJson).jsonObject.getValue("preparedScene") })
+        }
+        val upper = app.melotrail.video.domain.MAX_JAVASCRIPT_SAFE_INTEGER
+        val edge = motionDescriptor(listOf(runtime), upper - 900, upper, 17)
+        assertEquals(3, edge.invocationDescriptors().count())
+        fun identity(other: VideoControlledMotionDescriptor) = controlledMotionRequestFingerprint(base.backendId,
+            input.copy(dependencyPins = listOf(scene) + other.runtime.allPins, motion = motion.copy(descriptor = other)), base.modelRequirements)
+        assertNotEquals(request.requestFingerprint, identity(descriptor.copy(projectId = "other-project")))
+        assertNotEquals(request.requestFingerprint, identity(descriptor.copy(sourceIdentity = HASH_2)))
+        assertNotEquals(request.requestFingerprint, identity(descriptor.copy(requestJson = descriptor.requestJson.replace("0.25", "0.26"))))
+        assertNotEquals(request.requestFingerprint, identity(descriptor.copy(runtime = descriptor.runtime.copy(compositor = descriptor.runtime.compositor.copy(sha256 = HASH_1)))))
+        assertNotEquals(request.requestFingerprint, identity(descriptor.copy(runtime = descriptor.runtime.copy(expectedCanvasVersion = "0.1.81"))))
+        val binding = descriptor.runtime
+        assertEquals(setOf("node", "compositor", "scenery", "canvas-manifest", "canvas-artifact-core", "ffmpeg", "ffprobe"),
+            (reopened.jobs.single().request.input as VideoControlledMotionGenerationInput).motion.descriptor.runtime.allPins.map { it.id }.toSet())
+        assertFailsWith<IllegalArgumentException> { binding.copy(canvasArtifacts = emptyList()) }
+        assertFailsWith<IllegalArgumentException> { binding.copy(ffprobe = binding.ffprobe.copy(id = "probe-missing")) }
+        assertFailsWith<IllegalArgumentException> { binding.copy(scenery = binding.scenery.copy(ownedPath = null)) }
+        assertFailsWith<IllegalArgumentException> { binding.copy(canvasArtifacts = listOf(binding.node)) }
+        assertFailsWith<IllegalArgumentException> { input.copy(dependencyPins = input.dependencyPins - binding.ffprobe) }
+        assertFailsWith<IllegalArgumentException> { motion.copy(seed = app.melotrail.video.domain.MAX_JAVASCRIPT_SAFE_INTEGER + 1) }
+        assertFailsWith<IllegalArgumentException> { motion.copy(endFrameExclusive = Long.MAX_VALUE) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("\"width\":320,\"height\":180,\"coordinateSpaceId\"", "\"width\":321,\"height\":180,\"coordinateSpaceId\"")) }
+        // Old acceptance validated only the viewport's layer shape. Node rejects these
+        // incomplete or mismatched controls before rendering a single frame.
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace(
+            "\"createdAt\":\"2026-09-24T00:00:00Z\"", "\"createdAtMissing\":\"2026-09-24T00:00:00Z\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace(
+            "\"references\":[{\"id\":{\"id\":\"reference\",\"version\":1},", "\"references\":[{\"id\":{\"id\":\"bad id\",\"version\":1},")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace(
+            "\"dependencies\":[{\"id\":\"scene-input\",\"version\":\"1\",\"sha256\":\"${"6".repeat(64)}\"}]", "\"dependencies\":[]")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace(
+            "\"id\":\"blink\"", "\"id\":\"bad id\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace(
+            "\"capabilityId\":\"blink-capability\"", "\"capabilityId\":\"missing-capability\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace(
+            "\"kind\":\"SUBJECT\"", "\"kind\":\"FOREGROUND\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("0.25", "1e999")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("0.25", "1.5")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("0.25", "\"0.25\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("\"fps\":30", "\"fps\":\"30\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("\"width\":320,\"height\":180,\"coordinateSpaceId\"", "\"width\":320.5,\"height\":180,\"coordinateSpaceId\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("\"frameCount\":300", "\"frameCount\":9001")) }
+        val sceneryOnly = descriptor.requestJson.replace(
+            "\"controls\":[{\"id\":\"blink\",\"kind\":\"blink\",\"capabilityId\":\"blink-capability\",\"amount\":0.25}]",
+            "\"controls\":[],\"scenery\":{}",
+        )
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = sceneryOnly) }
+        // A present null is not absence: scenery.cjs rejects it even if a valid
+        // control would otherwise make the descriptor executable.
+        val controlledWithNullScenery = descriptor.requestJson.replace(
+            "\"amount\":0.25}]}", "\"amount\":0.25}],\"scenery\":null}",
+        )
+        assertNotEquals(descriptor.requestJson, controlledWithNullScenery)
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = controlledWithNullScenery) }
+        val malformedScenery = descriptor.requestJson.replace(
+            "\"controls\":[{\"id\":\"blink\",\"kind\":\"blink\",\"capabilityId\":\"blink-capability\",\"amount\":0.25}]",
+            "\"controls\":[],\"scenery\":{\"schema\":\"melotrail-rigid-scenery-v1\",\"viewport\":{},\"mode\":\"static\",\"camera\":{},\"planes\":[]}",
+        )
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = malformedScenery) }
+        val sceneryWithInvalidSection = descriptor.requestJson.replace(
+            "\"controls\":[{\"id\":\"blink\",\"kind\":\"blink\",\"capabilityId\":\"blink-capability\",\"amount\":0.25}]",
+            "\"controls\":[],\"scenery\":{\"schema\":\"melotrail-rigid-scenery-v1\",\"viewport\":{\"coordinateSpaceId\":\"space\",\"x\":0,\"y\":0,\"width\":320,\"height\":180},\"mode\":\"static\",\"camera\":{\"startFrame\":0,\"durationFrames\":1,\"travelXPixels\":0,\"travelYPixels\":0},\"planes\":[{\"id\":\"plane\",\"sections\":[{\"worldX\":0,\"worldY\":0,\"startFrame\":0,\"endFrameExclusive\":1}]}]}",
+        )
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = sceneryWithInvalidSection) }
+        // A structurally valid section still has to obey Node's prepared coverage
+        // review, source bounds, placement and trajectory rules.
+        val sceneryScene = descriptor.requestJson.replace(
+            "\"motionCapabilities\":[", "\"sceneryCoverage\":[{\"id\":\"coverage\",\"layerId\":\"background\",\"bounds\":{\"coordinateSpaceId\":\"space\",\"x\":0,\"y\":0,\"width\":320,\"height\":180}}],\"motionCapabilities\":[",
+        )
+        val validScenery = sceneryScene.replace(
+            "\"controls\":[{\"id\":\"blink\",\"kind\":\"blink\",\"capabilityId\":\"blink-capability\",\"amount\":0.25}]",
+            "\"controls\":[],\"scenery\":{\"schema\":\"melotrail-rigid-scenery-v1\",\"viewport\":{\"coordinateSpaceId\":\"space\",\"x\":0,\"y\":0,\"width\":320,\"height\":180},\"mode\":\"static\",\"camera\":{\"startFrame\":0,\"durationFrames\":1,\"travelXPixels\":0,\"travelYPixels\":0},\"planes\":[{\"id\":\"plane\",\"sections\":[{\"coverageId\":\"coverage\",\"worldX\":0,\"worldY\":0,\"startFrame\":120,\"endFrameExclusive\":420}]}]}",
+        )
+        descriptor.copy(requestJson = validScenery)
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = validScenery.replace(
+            "\"worldX\":0", "\"worldX\":1")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = validScenery.replace(
+            "\"id\":\"coverage\",\"layerId\"", "\"id\":\"coverage\",\"reviewStatus\":\"REJECTED\",\"layerId\"")) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = validScenery.replace(
+            "\"width\":320,\"height\":180}}],\"motionCapabilities\"", "\"x\":1,\"width\":319,\"height\":180}}],\"motionCapabilities\"")) }
+        val headGesture = descriptor.requestJson
+            .replace("\"id\":\"blink-capability\",\"targetType\":\"POSE\",\"targetId\":\"pose\",\"control\":\"POSE_BLEND\",\"unit\":\"RATIO\",\"minimum\":0,\"maximum\":1,\"defaultValue\":0.25", "\"id\":\"head-capability\",\"targetType\":\"LAYER\",\"targetId\":\"subject\",\"control\":\"ROTATE\",\"unit\":\"DEGREES\",\"minimum\":-3,\"maximum\":3,\"defaultValue\":0")
+            .replace("\"kind\":\"blink\",\"capabilityId\":\"blink-capability\",\"amount\":0.25", "\"kind\":\"headGesture\",\"capabilityId\":\"head-capability\",\"amplitudeDegrees\":1")
+            .replace("\"poses\":[{\"id\":\"pose\"", "\"masks\":[" +
+                "{\"id\":\"head-ok\",\"image\":{\"artifact\":{\"relativePath\":\"assets/head.png\",\"sha256\":\"${HASH_2}\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":2,\"height\":2,\"encodedBytes\":4,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"space\",\"x\":0,\"y\":0,\"width\":40,\"height\":40},\"layerIds\":[\"subject\"],\"purpose\":\"HEAD_REGION\",\"alpha\":{\"opaquePixels\":1,\"translucentPixels\":1,\"transparentPixels\":2},\"reviewStatus\":\"ACCEPTED\"}," +
+                "{\"id\":\"head-rejected\",\"image\":{\"artifact\":{\"relativePath\":\"assets/head-rejected.png\",\"sha256\":\"${HASH_2}\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":2,\"height\":2,\"encodedBytes\":4,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"space\",\"x\":0,\"y\":0,\"width\":40,\"height\":40},\"layerIds\":[\"subject\"],\"purpose\":\"HEAD_REGION\",\"alpha\":{\"opaquePixels\":1,\"translucentPixels\":1,\"transparentPixels\":2},\"reviewStatus\":\"REJECTED\"}],\"poses\":[{\"id\":\"pose\"")
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = headGesture) }
+        // A valid prepared-scene mask without measured counts must not become executable.
+        val headMaskWithoutMeasuredAlpha = headGesture.replace(
+            "\"alpha\":{\"opaquePixels\":1,\"translucentPixels\":1,\"transparentPixels\":2}", "\"alpha\":null",
+        )
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = headMaskWithoutMeasuredAlpha) }
+        // Renderer admission validates every prepared-scene mask, not only masks
+        // selected by a headGesture control. This valid blink scene carries an
+        // unrelated, otherwise valid mask with absent measured alpha.
+        val unrelatedMaskWithoutAlpha = descriptor.requestJson.replace(
+            "\"poses\":[", "\"masks\":[{\"id\":\"unrelated-mask\",\"image\":{\"artifact\":{\"relativePath\":\"assets/unrelated.png\",\"sha256\":\"${HASH_2}\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":2,\"height\":2,\"encodedBytes\":4,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"space\",\"x\":10,\"y\":10,\"width\":40,\"height\":40},\"layerIds\":[\"subject\"],\"purpose\":\"HEAD_REGION\",\"alpha\":null,\"reviewStatus\":\"ACCEPTED\"}],\"poses\":[",
+        )
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = unrelatedMaskWithoutAlpha) }
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = descriptor.requestJson.replace("\"seed\":17", "\"seed\":9007199254740992")) }
+        assertFailsWith<IllegalArgumentException> { request.copy(projectId = "other-project") }
+        val path = fixture.root.resolve("jobs").resolve(VideoJobStore.DOCUMENT)
+        val validBytes = Files.readAllBytes(path)
+        val changedBinding = validBytes.toString(Charsets.UTF_8).replace(
+            "1".repeat(64), "2".repeat(64),
+        )
+        assertNotEquals(validBytes.toString(Charsets.UTF_8), changedBinding)
+        Files.writeString(path, changedBinding)
+        val tamperedBytes = Files.readAllBytes(path)
+        val reopenedStore = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot))
+        assertFailsWith<IllegalArgumentException> { reopenedStore.snapshot() }
+        assertFailsWith<IllegalArgumentException> { reopenedStore.loadOrCreate(DOMAIN, NOW) }
+        assertContentEquals(tamperedBytes, Files.readAllBytes(path))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 2", "\"version\": 999"))
+        val unsupportedBytes = Files.readAllBytes(path)
+        val unsupportedStore = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot))
+        assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
+        assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }
+        assertContentEquals(unsupportedBytes, Files.readAllBytes(path))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 2", "\"version\": 1"))
+        val oldBytes = Files.readAllBytes(path)
+        assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
+        assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }
+        assertContentEquals(oldBytes, Files.readAllBytes(path))
+    }
+
+    @Test
+    fun `controlled steam binding requires the resolved anchor in the output canvas space`() {
+        val descriptor = motionDescriptor(listOf(VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs")), 120, 420, 17)
+        val steam = descriptor.requestJson
+            .replace("\"poses\":[", "\"effectAnchors\":[{\"id\":\"steam-anchor\",\"layerId\":\"subject\",\"position\":{\"coordinateSpaceId\":\"space\",\"point\":{\"x\":20,\"y\":20}}}],\"poses\":[")
+            .replace("\"id\":\"blink-capability\",\"targetType\":\"POSE\",\"targetId\":\"pose\",\"control\":\"POSE_BLEND\",\"unit\":\"RATIO\",\"minimum\":0,\"maximum\":1,\"defaultValue\":0.25",
+                "\"id\":\"steam-capability\",\"targetType\":\"EFFECT_ANCHOR\",\"targetId\":\"steam-anchor\",\"control\":\"EFFECT_RATE\",\"unit\":\"PER_SECOND\",\"minimum\":0.01,\"maximum\":8,\"defaultValue\":1")
+            .replace("\"id\":\"blink\",\"kind\":\"blink\",\"capabilityId\":\"blink-capability\",\"amount\":0.25",
+                "\"id\":\"steam\",\"kind\":\"steam\",\"capabilityId\":\"steam-capability\",\"ratePerSecond\":1")
+        descriptor.copy(requestJson = steam)
+        val otherSpace = steam
+            .replace("\"coordinateSpaces\":[{\"id\":\"space\",\"width\":320,\"height\":180}]",
+                "\"coordinateSpaces\":[{\"id\":\"space\",\"width\":320,\"height\":180},{\"id\":\"other\",\"width\":320,\"height\":180}]")
+            .replace("\"coordinateSpaceId\":\"space\",\"x\":10,\"y\":10,\"width\":40,\"height\":40",
+                "\"coordinateSpaceId\":\"other\",\"x\":10,\"y\":10,\"width\":40,\"height\":40")
+            .replace("\"coordinateSpaceId\":\"space\",\"point\":{\"x\":20,\"y\":20}",
+                "\"coordinateSpaceId\":\"other\",\"point\":{\"x\":20,\"y\":20}")
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = otherSpace) }
+    }
+
+    @Test
+    fun `moving scenery cannot start the first invocation mid trajectory without a continuation receipt`() {
+        val descriptor = motionDescriptor(listOf(VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs")), 120, 420, 17)
+        val backgroundPin = "\"relativePath\":\"references/background.png\",\"sha256\":\"${"3".repeat(64)}\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":320"
+        val widened = descriptor.requestJson
+            .replace("\"id\":\"space\",\"width\":320,\"height\":180", "\"id\":\"space\",\"width\":321,\"height\":180")
+            .replace(backgroundPin, backgroundPin.replace("\"width\":320", "\"width\":321"))
+            .replace("\"width\":320,\"height\":180}},{\"id\":\"subject\"", "\"width\":321,\"height\":180}},{\"id\":\"subject\"")
+            .replace("\"motionCapabilities\":[", "\"sceneryCoverage\":[{\"id\":\"coverage\",\"layerId\":\"background\",\"bounds\":{\"coordinateSpaceId\":\"space\",\"x\":0,\"y\":0,\"width\":321,\"height\":180}}],\"motionCapabilities\":[{\"id\":\"scenery-capability\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-1,\"maximum\":0,\"defaultValue\":0},")
+        val moving = widened.replace(
+            "\"controls\":[{\"id\":\"blink\",\"kind\":\"blink\",\"capabilityId\":\"blink-capability\",\"amount\":0.25}]",
+            "\"controls\":[],\"scenery\":{\"schema\":\"melotrail-rigid-scenery-v1\",\"viewport\":{\"coordinateSpaceId\":\"space\",\"x\":0,\"y\":0,\"width\":320,\"height\":180},\"mode\":\"moving\",\"camera\":{\"startFrame\":120,\"durationFrames\":300,\"travelXPixels\":1,\"travelYPixels\":0,\"motionBlurSamples\":1,\"shutterFraction\":0},\"planes\":[{\"id\":\"plane\",\"sections\":[{\"coverageId\":\"coverage\",\"worldX\":0,\"worldY\":0,\"startFrame\":120,\"endFrameExclusive\":420}]}]}"
+        )
+        descriptor.copy(requestJson = moving)
+        val late = moving.replace("\"startFrame\":120,\"durationFrames\":300", "\"startFrame\":0,\"durationFrames\":420")
+            .replace("\"worldX\":0,\"worldY\":0,\"startFrame\":120,\"endFrameExclusive\":420",
+                "\"worldX\":0,\"worldY\":0,\"startFrame\":0,\"endFrameExclusive\":420")
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = late) }
+        val startsAfterTrajectory = moving.replace("\"startFrame\":120,\"durationFrames\":300", "\"startFrame\":0,\"durationFrames\":420")
+        assertFailsWith<IllegalArgumentException> { descriptor.copy(requestJson = startsAfterTrajectory) }
+    }
+
+    @Test
     fun `controlled requests are durably deduplicated by fingerprint and backend capability`() {
         val fixture = fixture()
         val backend = ControlledBackend()
@@ -496,10 +718,10 @@ class VideoJobCoordinatorTest {
         fun request(id: String, sceneHash: String = HASH_1) : VideoGenerationJobRequest {
             val actualPins = listOf(pins[0].copy(sha256 = sceneHash), pins[1])
             val input = VideoControlledMotionGenerationInput(
-                "exact prompt text", actualPins,
+                "exact prompt text", listOf(actualPins[0]) + motionRuntime(actualPins[1]).allPins,
                 VideoControlledMotionRequest(
-                    preparedPins = listOf(actualPins[0]), controls = mapOf("camera.pan" to "0.25"),
-                    startFrame = 120, endFrameExclusive = 420, seed = 17, runtimeDependencies = listOf(actualPins[1]),
+                    preparedPins = listOf(actualPins[0]), startFrame = 120, endFrameExclusive = 420, seed = 17,
+                    descriptor = motionDescriptor(listOf(actualPins[1]), 120, 420, 17),
                 ),
             )
             val request = localRequest(id, 'a').copy(input = input)
@@ -526,11 +748,11 @@ class VideoJobCoordinatorTest {
         accepted(coordinator.cancel("motion-c"))
         val changedRuntime = request("motion-d").let { changed ->
             val input = changed.input as VideoControlledMotionGenerationInput
-            val runtimePin = input.motion.runtimeDependencies.single().copy(sha256 = "e".repeat(64))
+            val runtimePin = input.motion.descriptor.runtime.compositor.copy(sha256 = "e".repeat(64))
             val pinsWithRuntimeChange = input.dependencyPins.map { if (it.id == runtimePin.id) runtimePin else it }
             val changedInput = input.copy(
                 dependencyPins = pinsWithRuntimeChange,
-                motion = input.motion.copy(runtimeDependencies = listOf(runtimePin)),
+                motion = input.motion.copy(descriptor = input.motion.descriptor.copy(runtime = input.motion.descriptor.runtime.copy(compositor = runtimePin))),
             )
             changed.copy(input = changedInput,
                 requestFingerprint = controlledMotionRequestFingerprint(changed.backendId, changedInput, changed.modelRequirements))
@@ -564,7 +786,7 @@ class VideoJobCoordinatorTest {
         val scene = VideoGenerationDependencyPin("scene", HASH_1, "/owned/scene.json")
         val runtime = VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/render.cjs")
         val extra = VideoGenerationDependencyPin("a-extra", "e".repeat(64), "/owned/extra.png")
-        val motion = VideoControlledMotionRequest(listOf(scene), emptyMap(), 0, 150, 9, listOf(runtime))
+        val motion = VideoControlledMotionRequest(listOf(scene), 0, 150, 9, motionDescriptor(listOf(runtime), 0, 150, 9))
         fun request(id: String, prompt: String, pins: List<VideoGenerationDependencyPin>): VideoGenerationJobRequest {
             val input = VideoControlledMotionGenerationInput(prompt, pins, motion)
             val base = localRequest(id, 'a').copy(input = input)
@@ -572,8 +794,8 @@ class VideoJobCoordinatorTest {
         }
         // In the old newline format, the injected line is indistinguishable from the
         // sorted extra pin record, before the shared renderer and scene records.
-        val injected = request("motion-injected", "x\npin=${extra.id}:${extra.sha256}:${extra.ownedPath}", listOf(scene, runtime))
-        val distinct = request("motion-extra", "x", listOf(extra, scene, runtime))
+        val injected = request("motion-injected", "x\npin=${extra.id}:${extra.sha256}:${extra.ownedPath}", listOf(scene) + motion.descriptor.runtime.allPins)
+        val distinct = request("motion-extra", "x", listOf(extra, scene) + motion.descriptor.runtime.allPins)
         assertNotEquals(injected.requestFingerprint, distinct.requestFingerprint)
         assertEquals("motion-injected", accepted(coordinator.submit(injected)).job.request.id)
         assertEquals("motion-extra", accepted(coordinator.submit(distinct)).job.request.id)

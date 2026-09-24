@@ -1,6 +1,7 @@
 package app.melotrail.video.adapter
 
 import app.melotrail.video.domain.VideoGenerationDependencyPin
+import app.melotrail.video.domain.controlledMotionInvocationDescriptors
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonArray
@@ -90,6 +91,7 @@ class VideoMotionRenderer(
         var start = request.startFrame
         var index = 0
         var continuationState: kotlinx.serialization.json.JsonObject? = null
+        val chunks = controlledMotionInvocationDescriptors(requestText).iterator()
         while (start < request.endFrameExclusive) {
             if (cancellation.isCancelled()) throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Controlled motion was cancelled between render chunks.")
             val end = minOf(request.endFrameExclusive, start + MAX_FRAMES)
@@ -100,12 +102,7 @@ class VideoMotionRenderer(
             Files.createDirectory(job)
             try {
                 val chunkRequest = job.resolve("request.json")
-                val chunkRange = range.toMutableMap().apply {
-                    put("startFrame", kotlinx.serialization.json.JsonPrimitive(start))
-                    put("frameCount", kotlinx.serialization.json.JsonPrimitive(end - start))
-                }
-                val chunkObject = base.toMutableMap().apply {
-                    put("frameRange", kotlinx.serialization.json.JsonObject(chunkRange))
+                val chunkObject = Json.parseToJsonElement(chunks.next()).jsonObject.toMutableMap().apply {
                     if (continuationState != null) {
                         require(get("scenery") != null) { "A scenery continuation state exists without a scenery request." }
                         put("initialState", continuationState!!)
@@ -154,6 +151,7 @@ class VideoMotionRenderer(
             start = end
             index++
         }
+        require(!chunks.hasNext()) { "Controlled descriptor contains unconsumed frame chunks." }
         checkNotCancelled(cancellation)
         verifyCanvasArtifacts(request.runtime.canvasArtifacts, artifactHashes)
         verifyRuntimePins(request.runtime, canvasManifest, ffmpeg)

@@ -2,6 +2,8 @@ package app.melotrail.video.adapter
 
 import app.melotrail.video.application.VideoJobConcurrencyException
 import app.melotrail.video.application.VideoJobPersistence
+import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.domain.VideoGenerationAttempt
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoGenerationJob
@@ -386,7 +388,7 @@ class VideoJobStoreException(
 
 private object VideoJobSchema {
     private const val SCHEMA = "melotrail-video-jobs"
-    private const val VERSION = 1
+    private const val VERSION = 2
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true
@@ -407,7 +409,14 @@ private object VideoJobSchema {
             "Unsupported video job schema '${schema ?: "missing"}' version '${version ?: "missing"}'."
         }
         return try {
-            json.decodeFromString<VideoJobDocument>(document).ledger
+            json.decodeFromString<VideoJobDocument>(document).ledger.also { ledger ->
+                ledger.jobs.forEach { job ->
+                    val input = job.request.input as? VideoControlledMotionGenerationInput ?: return@forEach
+                    require(job.request.requestFingerprint == controlledMotionRequestFingerprint(
+                        job.request.backendId, input, job.request.modelRequirements,
+                    )) { "Controlled request binding does not match its durable fingerprint" }
+                }
+            }
         } catch (error: Exception) {
             throw IllegalArgumentException("Invalid video job v$VERSION ledger", error)
         }

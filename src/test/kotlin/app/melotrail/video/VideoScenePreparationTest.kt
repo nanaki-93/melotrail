@@ -62,6 +62,7 @@ import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoJobLedger
 import app.melotrail.video.domain.VideoLocalExecutionPolicy
 import app.melotrail.video.domain.VideoPromptBackendCapabilities
+import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoRect
 import app.melotrail.video.domain.VideoReferenceRole
 import app.melotrail.video.domain.VideoVersionedId
@@ -72,6 +73,12 @@ import java.nio.file.Path
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.security.MessageDigest
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import javax.imageio.ImageIO
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -323,7 +330,7 @@ class VideoScenePreparationTest {
                 error("Unsupported motion reached durable publication")
         }, emptyList())
         val generator = VideoClipGeneration(service, coordinator, VideoResultImport(fixture.store, VideoMediaProbe()),
-            VideoMotionRenderer(), "controlled-local", VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000))
+            VideoMotionRenderer(), "controlled-local", VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000), projects = fixture.store)
         val controls = allControls(scene).controls.associateBy { it.id }
         val cases = listOf(
             listOf(controls.getValue("subject")) to "translation",
@@ -343,11 +350,189 @@ class VideoScenePreparationTest {
                 backendCapabilities = capabilities(), guidelineSet = guidelines(),
                 preparedDependencies = listOf(VideoGenerationDependencyPin("scene", "a".repeat(64))),
                 runtimeDependencies = listOf(VideoGenerationDependencyPin("runtime", "b".repeat(64))),
-                startFrame = 0, endFrameExclusive = 30, seed = 42,
+                startFrame = 0, endFrameExclusive = 30, seed = 42, expectedCanvasVersion = "0.1.80",
+                projectRoot = fixture.projectRoot,
             )))
             assertTrue(rejected.reason.contains(reason), rejected.reason)
             assertEquals(0, admissionReads)
         }
+    }
+
+    @Test
+    fun `controlled admission reopens project scene and runtime before reaching ledger`() {
+        val fixture = fixture()
+        val prepared = fixture.layeredScene()
+        val look = fixture.look(prepared.finishedId)
+        val scene = prepared.scene
+        val record = fixture.session.project.preparedSceneVersions.single { it.id == scene.id }
+        val pins = (listOf(record.artifact) + record.consumedArtifacts).distinct().mapIndexed { index, artifact ->
+            VideoGenerationDependencyPin("prepared-$index", artifact.sha256,
+                fixture.store.resolveArtifact(fixture.projectRoot, artifact).toString())
+        }
+        val runtimePath = fixture.projectRoot.resolve("runtime.cjs")
+        Files.writeString(runtimePath, "pinned runtime")
+        fun digest(path: Path) = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+        val packageRoot = Files.createDirectories(fixture.projectRoot.resolve("node_modules/@napi-rs/canvas"))
+        val loaded = listOf("index.js", "js-binding.js", "geometry.js", "load-image.js")
+            .map { packageRoot.resolve(it) } + listOf(packageRoot.parent.resolve("canvas-darwin-arm64/skia.darwin-arm64.node"))
+        loaded.forEach { path -> Files.createDirectories(path.parent); Files.writeString(path, "pinned $path") }
+        val manifest = packageRoot.resolve("package.json")
+        Files.writeString(manifest, """{"name":"@napi-rs/canvas","version":"0.1.80"}""")
+        val runtimePaths = mapOf(
+            "node" to fixture.projectRoot.resolve("node.bin"), "compositor" to runtimePath,
+            "scenery" to fixture.projectRoot.resolve("scenery.cjs"), "canvas-manifest" to manifest,
+            "ffmpeg" to fixture.projectRoot.resolve("ffmpeg.bin"), "ffprobe" to fixture.projectRoot.resolve("ffprobe.bin"),
+        ) + loaded.mapIndexed { index, path -> "canvas-artifact-$index" to path }.toMap()
+        runtimePaths.values.filterNot { Files.exists(it) }.forEach { Files.writeString(it, "pinned $it") }
+        val runtimes = runtimePaths.map { (id, path) -> VideoGenerationDependencyPin(id, digest(path), path.toRealPath().toString()) }
+        var ledgerReads = 0
+        val coordinator = VideoJobCoordinator("test-domain", object : VideoJobPersistence {
+            override fun loadOrCreate(admissionDomainId: String, createdAt: String): VideoJobLedger {
+                ledgerReads++
+                error("Ledger reached")
+            }
+            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger = error("Unexpected write")
+        }, emptyList())
+        val generator = VideoClipGeneration(VideoScenePreparation(), coordinator,
+            VideoResultImport(fixture.store, VideoMediaProbe()), VideoMotionRenderer(),
+            "controlled-local", VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000), projects = fixture.store)
+        val blink = allControls(scene).controls.single { it.id == "blink" }
+        val request = VideoClipGenerationRequest(
+            fixture.session.project, fixture.session.project.revision, look, scene,
+            VideoSceneMotionRequest("Move gently.", listOf(blink)), capabilities(), guidelines(),
+            pins, runtimes, 0, 30, 42, projectRoot = fixture.projectRoot, expectedCanvasVersion = "0.1.80",
+        )
+        fun rejected(input: VideoClipGenerationRequest) =
+            assertIs<VideoClipGenerationResult.Rejected>(generator.generate(input)).reason
+        assertTrue(rejected(request.copy(preparedDependencies = pins.drop(1))).contains("dependency"))
+        assertTrue(rejected(request.copy(scene = scene.copy(createdAt = "2026-09-24T00:00:01Z"))).contains("scene", true))
+        assertTrue(rejected(request.copy(project = fixture.session.project.copy(name = "Forged"))).contains("Project"))
+        Files.writeString(runtimePath, "replaced runtime")
+        val changedRuntime = rejected(request)
+        assertTrue(changedRuntime.contains("Runtime bytes"), changedRuntime)
+        assertEquals(0, ledgerReads)
+        Files.writeString(runtimePath, "pinned runtime")
+        listOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe").forEach { missing ->
+            assertTrue(rejected(request.copy(runtimeDependencies = runtimes.filterNot { it.id == missing })).contains(missing), missing)
+        }
+        assertTrue(rejected(request.copy(runtimeDependencies = runtimes.filterNot { it.id == "canvas-artifact-0" })).contains("Canvas"))
+        runtimes.forEach { pin ->
+            val changed = pin.copy(sha256 = "f".repeat(64))
+            assertTrue(rejected(request.copy(runtimeDependencies = runtimes.map { if (it.id == pin.id) changed else it }))
+                .contains("Runtime bytes"), pin.id)
+        }
+        assertTrue(rejected(request.copy(expectedCanvasVersion = "0.1.81")).contains("Canvas"))
+        val unrelated = fixture.projectRoot.resolve("unrelated-canvas.bin")
+        Files.writeString(unrelated, "pinned unrelated")
+        val fakeArtifacts = runtimes.map { pin ->
+            if (pin.id.startsWith("canvas-artifact-")) pin.copy(ownedPath = unrelated.toRealPath().toString(), sha256 = digest(unrelated)) else pin
+        }
+        assertTrue(rejected(request.copy(runtimeDependencies = fakeArtifacts)).contains("Canvas loaded artifacts"))
+        val shadow = fixture.projectRoot.resolve("node_modules/@napi-rs/canvas/package.json")
+        val originalManifest = Files.readAllBytes(shadow)
+        try {
+            Files.writeString(shadow, """{"name":"@napi-rs/canvas","version":"0.1.81"}""")
+            assertTrue(rejected(request).contains("Runtime bytes"))
+        } finally { Files.write(shadow, originalManifest) }
+        // The legitimate binding reaches the coordinator; no native backend is configured here.
+        val admitted = runCatching { generator.generate(request) }
+        assertEquals(1, ledgerReads, admitted.toString())
+        ledgerReads = 0
+        // Persisted descriptors currently contain no review record. Exercise the valid
+        // rejected-asset authority at the selector boundary; caller metadata cannot forge it.
+        assertTrue(rejected(request.copy(look = look.copy(identityReview =
+            VideoAssetIdentityReview.APPROVED))).contains("metadata"))
+        val rejectedAsset = VideoImageFiles().load(fixture.projectRoot, fixture.session.project.referenceVersions.single { it.id == look.id })
+            .copy(identityReview = VideoAssetIdentityReview.REJECTED)
+        val rejectedSelection = VideoSceneLooks().select(fixture.session.project, listOf(rejectedAsset), look.id)
+        assertIs<VideoSceneLookSelectionResult.Rejected>(rejectedSelection)
+        assertEquals(0, ledgerReads)
+        val descriptorPath = fixture.store.resolveArtifact(fixture.projectRoot, record.artifact)
+        val originalDescriptor = Files.readAllBytes(descriptorPath)
+        try {
+            Files.writeString(descriptorPath, "changed descriptor")
+            assertTrue(rejected(request).isNotBlank())
+            assertEquals(0, ledgerReads)
+        } finally {
+            Files.write(descriptorPath, originalDescriptor)
+        }
+    }
+
+    @Test
+    fun `persisted rejected reference cannot be admitted by a forged approved look`() {
+        val fixture = fixture()
+        val prepared = fixture.layeredScene()
+        val record = fixture.session.project.referenceVersions.single { it.id == prepared.finishedId }
+        val descriptorPath = fixture.store.resolveArtifact(fixture.projectRoot, record.artifact)
+        val json = Json { encodeDefaults = true; explicitNulls = true }
+        val persisted = json.decodeFromString<app.melotrail.video.domain.VideoAsset>(Files.readString(descriptorPath))
+        val rejectedBytes = json.encodeToString(persisted.copy(identityReview = VideoAssetIdentityReview.REJECTED))
+        Files.writeString(descriptorPath, rejectedBytes)
+        val hash = MessageDigest.getInstance("SHA-256").digest(rejectedBytes.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        // Construct a self-consistent persisted rejected fixture: the scene still consumes
+        // the very same original pixels, but its descriptor pin now points to the rejected
+        // review. A forged caller-approved look would previously pass preparation.
+        val changedReference = record.copy(artifact = record.artifact.copy(sha256 = hash))
+        val updatedScene = prepared.scene.copy(source = prepared.scene.source.copy(
+            references = prepared.scene.source.references.map { pin ->
+                if (pin.id == record.id) pin.copy(descriptorArtifact = changedReference.artifact) else pin
+            },
+        ))
+        val sceneRecord = fixture.session.project.preparedSceneVersions.single { it.id == prepared.scene.id }
+        val scenePath = fixture.store.resolveArtifact(fixture.projectRoot, sceneRecord.artifact)
+        val sceneBytes = Json { encodeDefaults = true; explicitNulls = false; prettyPrint = true }
+            .encodeToString(updatedScene)
+        Files.writeString(scenePath, sceneBytes)
+        val sceneHash = MessageDigest.getInstance("SHA-256").digest(sceneBytes.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        val changed = fixture.session.project.copy(
+            referenceVersions = fixture.session.project.referenceVersions.map {
+                if (it.id == record.id) changedReference else it
+            },
+            preparedSceneVersions = fixture.session.project.preparedSceneVersions.map {
+                if (it.id == sceneRecord.id) it.copy(artifact = it.artifact.copy(sha256 = sceneHash),
+                    consumedArtifacts = updatedScene.consumedArtifacts()) else it
+            },
+        )
+        val projectPath = fixture.projectRoot.resolve("video-project.json")
+        val document = Json.parseToJsonElement(Files.readString(projectPath)).jsonObject
+        Files.writeString(projectPath, JsonObject(document.toMutableMap().apply {
+            put("project", Json.encodeToJsonElement(VideoProject.serializer(), changed))
+        }).toString())
+        val current = fixture.store.open(fixture.projectRoot)
+        val library = assertIs<VideoAssetLibraryResult.Loaded>(fixture.assetImporter("unused").open(fixture.projectRoot))
+        assertEquals(VideoAssetIdentityReview.REJECTED, library.assets.single { it.id == record.id }.identityReview)
+        assertEquals(updatedScene, fixture.scenes.load(fixture.projectRoot, updatedScene.id))
+        var ledgerReads = 0
+        val coordinator = VideoJobCoordinator("test-domain", object : VideoJobPersistence {
+            override fun loadOrCreate(admissionDomainId: String, createdAt: String): VideoJobLedger {
+                ledgerReads++
+                error("Rejected reference reached admission")
+            }
+            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger =
+                error("Rejected reference reached publication")
+        }, emptyList())
+        val generator = VideoClipGeneration(VideoScenePreparation(), coordinator,
+            VideoResultImport(fixture.store, VideoMediaProbe()), VideoMotionRenderer(),
+            "controlled-local", VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000), projects = fixture.store)
+        val forgedLook = app.melotrail.video.application.VideoSceneLook(
+            record.id, changedReference.artifact, persisted.original, VideoAssetIdentityReview.APPROVED,
+            app.melotrail.video.application.VideoSceneAppearancePolicy.PRESERVE_AS_DRAWN,
+        )
+        val blink = allControls(updatedScene).controls.single { it.id == "blink" }
+        val result = assertIs<VideoClipGenerationResult.Rejected>(generator.generate(VideoClipGenerationRequest(
+            project = current, expectedRevision = current.revision, look = forgedLook, scene = updatedScene,
+            motionRequest = VideoSceneMotionRequest("Blink gently.", listOf(blink)),
+            backendCapabilities = capabilities(), guidelineSet = guidelines(),
+            preparedDependencies = emptyList(), runtimeDependencies = emptyList(),
+            startFrame = 0, endFrameExclusive = 30, seed = 42,
+            projectRoot = fixture.projectRoot, expectedCanvasVersion = "0.1.80",
+        )))
+        assertTrue(result.reason.contains("rejected identity/appearance"), result.reason)
+        assertEquals(0, ledgerReads)
+        assertEquals(current, fixture.store.open(fixture.projectRoot))
     }
 
     @Test

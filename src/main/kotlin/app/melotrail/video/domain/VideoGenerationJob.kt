@@ -5,6 +5,14 @@ import java.security.MessageDigest
 import java.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Durable, provider-neutral state for one admission domain. */
 @Serializable
@@ -83,6 +91,9 @@ data class VideoGenerationJobRequest(
             "Video model requirement IDs must be unique"
         }
         requireVideoJobSha256(requestFingerprint, "Video request fingerprint")
+        (input as? VideoControlledMotionGenerationInput)?.let { controlled ->
+            require(controlled.motion.descriptor.projectId == projectId) { "Controlled descriptor belongs to another project" }
+        }
         require(maximumAttempts in 1..MAX_VIDEO_GENERATION_ATTEMPTS) {
             "Video generation must use 1..$MAX_VIDEO_GENERATION_ATTEMPTS attempts"
         }
@@ -151,7 +162,8 @@ data class VideoControlledMotionGenerationInput(
     init {
         requireVideoPrompt(prompt)
         requireVideoDependencyPins(dependencyPins)
-        require((motion.preparedPins + motion.runtimeDependencies).all { pin -> dependencyPins.any { it == pin } }) {
+        require(motion.descriptor.projectId.isNotBlank())
+        require((motion.preparedPins + motion.descriptor.runtime.allPins).all { pin -> dependencyPins.any { it == pin } }) {
             "Every prepared and runtime motion pin must be included in the durable input pins"
         }
     }
@@ -182,17 +194,19 @@ fun controlledMotionRequestFingerprint(
             pin.ownedPath?.let(::field)
         }
     }
-    field("melotrail-controlled-motion-v2")
+    field("melotrail-controlled-motion-v3")
     field(backendId)
     field(input.prompt)
     pins(input.dependencyPins)
     number(input.motion.startFrame)
     number(input.motion.endFrameExclusive)
     number(input.motion.seed)
-    count(input.motion.controls.size)
-    input.motion.controls.toSortedMap().forEach { (key, value) -> field(key); field(value) }
+    field(input.motion.descriptor.projectId)
+    field(input.motion.descriptor.sourceIdentity)
+    field(input.motion.descriptor.requestJson)
     pins(input.motion.preparedPins)
-    pins(input.motion.runtimeDependencies)
+    pins(input.motion.descriptor.runtime.allPins)
+    field(input.motion.descriptor.runtime.expectedCanvasVersion)
     count(models.size)
     models.sortedBy { it.id }.forEach { model ->
         field(model.id)
@@ -203,28 +217,522 @@ fun controlledMotionRequestFingerprint(
     return digest.digest().joinToString("") { "%02x".format(it) }
 }
 
-/** Executable compositor controls are persisted separately from advisory prompt text. */
+/** Pinned full-range template. Each Node invocation consumes a derived <=300-frame
+ * descriptor; scenery continuation is added from the preceding verified receipt. */
+@Serializable
+data class VideoControlledMotionDescriptor(
+    val projectId: String,
+    val sourceIdentity: String,
+    val requestJson: String,
+    val runtime: VideoControlledMotionRuntimeBinding,
+) {
+    init {
+        requireVideoJobId(projectId, "Controlled project")
+        requireVideoJobSha256(sourceIdentity, "Controlled source identity")
+        require(requestJson.length in 2..4_000_000) { "Controlled renderer descriptor size is invalid" }
+        val json = Json.parseToJsonElement(requestJson).jsonObject
+        require(json.keys == setOf("schema", "preparedScene", "seed", "fps", "canvas", "frameRange", "controls", "scenery") ||
+            json.keys == setOf("schema", "preparedScene", "seed", "fps", "canvas", "frameRange", "controls")) {
+            "Controlled descriptor must contain only the executable renderer request fields"
+        }
+        require(json["schema"]?.jsonPrimitive?.content == CONTROLLED_MOTION_DESCRIPTOR_SCHEMA)
+        val sceneElement = json["preparedScene"] ?: throw IllegalArgumentException("Controlled prepared scene is missing")
+        val sceneObject = sceneElement as? JsonObject ?: throw IllegalArgumentException("Controlled prepared scene must be an object")
+        require(sceneObject["schemaVersion"]?.jsonPrimitive?.content == "2") { "Renderer requires prepared-scene schema version 2" }
+        val scene = Json.decodeFromJsonElement<VideoPreparedScene>(sceneElement)
+        val safeId = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+        require(safeId.matches(scene.id.id) && scene.id.version > 0) { "Renderer requires a versioned prepared-scene ID" }
+        require(scene.masks.all { mask ->
+            val alpha = mask.alpha ?: return@all false
+            val pixels = mask.image.width.toLong() * mask.image.height.toLong()
+            val measured = runCatching {
+                Math.addExact(Math.addExact(alpha.opaquePixels, alpha.translucentPixels), alpha.transparentPixels)
+            }.getOrNull()
+            alpha.opaquePixels >= 0 && alpha.translucentPixels >= 0 && alpha.transparentPixels >= 0 &&
+                pixels in 1..MAX_JAVASCRIPT_SAFE_INTEGER && measured == pixels
+        }) { "Every prepared-scene mask requires valid measured source-alpha counts for rendering" }
+        require(runCatching { java.time.Instant.parse(scene.createdAt) }.isSuccess) { "Renderer requires prepared-scene createdAt" }
+        val source = sceneObject["source"]?.jsonObject ?: throw IllegalArgumentException("Renderer prepared-scene source is missing")
+        fun artifactPin(value: kotlinx.serialization.json.JsonElement?) {
+            val pin = value?.jsonObject ?: throw IllegalArgumentException("Renderer source artifact pin is missing")
+            require(pin["relativePath"]?.jsonPrimitive?.isString == true &&
+                Regex("[0-9a-f]{64}").matches(pin["sha256"]?.jsonPrimitive?.content ?: "")) {
+                "Renderer source artifact pin is invalid"
+            }
+        }
+        val look = source["look"]
+        val references = source["references"] as? JsonArray ?: JsonArray(emptyList())
+        require(look != null || references.isNotEmpty()) { "Renderer needs a pinned source look or reference" }
+        if (look != null && look !is JsonPrimitive) {
+            val lookObject = look.jsonObject
+            require(lookObject["id"]?.jsonObject?.let { id -> safeId.matches(id["id"]?.jsonPrimitive?.content ?: "") &&
+                (id["version"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0) > 0 } == true) { "Renderer source look ID is invalid" }
+            artifactPin(lookObject["artifact"])
+        }
+        references.forEach { reference ->
+            val ref = reference.jsonObject
+            require(ref["id"]?.jsonObject?.let { id -> safeId.matches(id["id"]?.jsonPrimitive?.content ?: "") &&
+                (id["version"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0) > 0 } == true) { "Renderer source reference ID is invalid" }
+            artifactPin(ref["descriptorArtifact"])
+            artifactPin(ref["original"]?.jsonObject?.get("artifact"))
+        }
+        val dependencies = sceneObject["dependencies"] as? JsonArray
+            ?: throw IllegalArgumentException("Renderer prepared-scene dependencies are missing")
+        require(dependencies.isNotEmpty() && dependencies.map { it.jsonObject["id"]?.jsonPrimitive?.content }.distinct().size == dependencies.size &&
+            dependencies.all { dependency -> dependency.jsonObject.let { pin ->
+                safeId.matches(pin["id"]?.jsonPrimitive?.content ?: "") &&
+                    !pin["version"]?.jsonPrimitive?.content.isNullOrBlank() &&
+                    Regex("[0-9a-f]{64}").matches(pin["sha256"]?.jsonPrimitive?.content ?: "")
+            } }) { "Renderer prepared-scene dependency pins are invalid" }
+        fun integer(element: kotlinx.serialization.json.JsonElement): Long {
+            val primitive = element.jsonPrimitive
+            require(!primitive.isString && primitive.content.matches(Regex("(0|[1-9][0-9]*)"))) { "Renderer integer is not exact" }
+            return primitive.content.toLong()
+        }
+        val controls = json["controls"] as? JsonArray ?: throw IllegalArgumentException("Controlled controls must be structured")
+        val scenery = json["scenery"]
+        require("scenery" !in json || scenery is JsonObject) {
+            "Present controlled scenery must be an executable object"
+        }
+        require(controls.size <= 16 && (controls.isNotEmpty() || scenery is JsonObject))
+        if (scenery is JsonObject) {
+            require(scenery["schema"]?.jsonPrimitive?.content == "melotrail-rigid-scenery-v1") {
+                "Controlled scenery schema is invalid"
+            }
+            val viewport = scenery["viewport"] as? JsonObject
+                ?: throw IllegalArgumentException("Controlled scenery viewport is missing")
+            val canvas = json.getValue("canvas").jsonObject
+            require(viewport["coordinateSpaceId"]?.jsonPrimitive?.content == canvas.getValue("coordinateSpaceId").jsonPrimitive.content &&
+                parsedLong(viewport.getValue("x")) == 0L && parsedLong(viewport.getValue("y")) == 0L &&
+                parsedLong(viewport.getValue("width")) == parsedLong(canvas.getValue("width")) &&
+                parsedLong(viewport.getValue("height")) == parsedLong(canvas.getValue("height"))) {
+                "Controlled scenery viewport must match the output canvas"
+            }
+            require(scenery["mode"]?.jsonPrimitive?.content in setOf("static", "moving") &&
+                scenery["planes"] is JsonArray && (scenery["planes"] as JsonArray).isNotEmpty()) {
+                "Controlled scenery requires a supported mode and at least one plane"
+            }
+            val camera = scenery["camera"] as? JsonObject
+                ?: throw IllegalArgumentException("Controlled scenery camera is missing")
+            val mode = scenery.getValue("mode").jsonPrimitive.content
+            val travelX = camera["travelXPixels"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
+            val travelY = camera["travelYPixels"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
+            val duration = camera["durationFrames"]?.let(::parsedLong) ?: 1L
+            require(travelX.isFinite() && travelY.isFinite() && duration in 1..9000 &&
+                (mode != "moving" || duration >= 2 && (travelX != 0.0 || travelY != 0.0)) &&
+                (mode != "static" || duration == 1L && travelX == 0.0 && travelY == 0.0)) {
+                "Controlled scenery camera request is not executable"
+            }
+            val planes = scenery["planes"] as JsonArray
+            val coverageIds = (sceneObject["sceneryCoverage"] as? JsonArray)?.mapNotNull { item ->
+                (item as? JsonObject)?.get("id")?.jsonPrimitive?.content
+            }?.toSet().orEmpty()
+            val layers = (sceneObject["layers"] as? JsonArray)?.associateBy { layer ->
+                (layer as? JsonObject)?.get("id")?.jsonPrimitive?.content
+            }.orEmpty()
+            val usedCoverage = mutableSetOf<String>()
+            val usedLayers = mutableSetOf<String>()
+            require(planes.all { plane ->
+                if (plane !is JsonObject) return@all false
+                val planeId = plane["id"]?.jsonPrimitive?.content
+                val sections = plane["sections"] as? JsonArray ?: return@all false
+                if (!safeId.matches(planeId.orEmpty()) || sections.isEmpty()) return@all false
+                val executable = sections.mapNotNull { section ->
+                    if (section !is JsonObject) return@mapNotNull null
+                    val coverageId = section["coverageId"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    val start = section["startFrame"]?.let(::integer) ?: return@mapNotNull null
+                    val end = section["endFrameExclusive"]?.let(::integer) ?: return@mapNotNull null
+                    val layerId = coverageId.let { id ->
+                        (sceneObject["sceneryCoverage"] as? JsonArray)?.firstOrNull { c ->
+                            (c as? JsonObject)?.get("id")?.jsonPrimitive?.content == id
+                        }?.let { c -> (c as JsonObject)["layerId"]?.jsonPrimitive?.content }
+                    } ?: return@mapNotNull null
+                    if (!safeId.matches(coverageId) || coverageId !in coverageIds || !usedCoverage.add(coverageId) ||
+                        !usedLayers.add(layerId) || layerId !in layers || start < 0 || end <= start ||
+                        start > MAX_JAVASCRIPT_SAFE_INTEGER || end > MAX_JAVASCRIPT_SAFE_INTEGER) return@mapNotNull null
+                    if (listOf("worldX", "worldY").any { key ->
+                        val value = section[key]?.jsonPrimitive?.content?.toDoubleOrNull()
+                        value == null || !value.isFinite() || kotlin.math.abs(value) > 16384
+                    }) return@mapNotNull null
+                    start to end
+                }
+                executable.size == sections.size && executable.size <= 32 && executable.isNotEmpty() &&
+                    executable.sortedBy { it.first }.let { ordered ->
+                        val requiredStart = if (mode == "moving") parsedLong(camera.getValue("startFrame")) else parsedLong(json.getValue("frameRange").jsonObject.getValue("startFrame"))
+                        val requiredEnd = if (mode == "moving") Math.addExact(requiredStart, duration) else {
+                            val range = json.getValue("frameRange").jsonObject
+                            Math.addExact(parsedLong(range.getValue("startFrame")), parsedLong(range.getValue("frameCount")))
+                        }
+                        ordered.first().first <= requiredStart && ordered.last().second >= requiredEnd &&
+                            ordered.zipWithNext().all { (a, b) -> a.second == b.first }
+                    }
+            }) { "Controlled scenery requires complete executable source sections with coverage IDs and absolute frame bounds" }
+            validateExecutableScenery(scene, scenery, json.getValue("frameRange").jsonObject, width, height)
+        }
+        val subjectKinds = mutableSetOf<String>()
+        var controlledSubject: String? = null
+        require(controls.all { control ->
+            if (control !is JsonObject || control["id"] !is JsonPrimitive || control["capabilityId"] !is JsonPrimitive ||
+                control["id"]?.jsonPrimitive?.isString != true || control["capabilityId"]?.jsonPrimitive?.isString != true) return@all false
+            val numeric = when (control["kind"]?.jsonPrimitive?.content) {
+                "blink" -> Triple("amount", 0.0, 1.0)
+                "breathing" -> Triple("amplitudePixels", 0.0, 4.0)
+                "headGesture" -> Triple("amplitudeDegrees", 0.0, 3.0)
+                "steam" -> Triple("ratePerSecond", 0.01, 8.0)
+                else -> return@all false
+            }
+            val id = control.getValue("id").jsonPrimitive.content
+            val capabilityId = control.getValue("capabilityId").jsonPrimitive.content
+            if (!safeId.matches(id) || !safeId.matches(capabilityId)) return@all false
+            val kind = control.getValue("kind").jsonPrimitive.content
+            val capability = scene.motionCapabilities.singleOrNull { it.id == capabilityId }
+                ?: return@all false
+            if (capability.reviewStatus == VideoComponentReviewStatus.REJECTED) return@all false
+            if (kind in setOf("blink", "breathing", "headGesture") && !subjectKinds.add(kind)) return@all false
+            val subject = when (kind) {
+                "blink" -> {
+                    val pose = scene.poses.singleOrNull { it.id == capability.targetId } ?: return@all false
+                    val layer = scene.layers.singleOrNull { it.id == pose.subjectLayerId } ?: return@all false
+                    if (capability.targetType != VideoMotionTargetType.POSE || capability.control != VideoMotionControl.POSE_BLEND ||
+                        layer.kind != VideoLayerKind.SUBJECT || pose.bounds != layer.bounds ||
+                        pose.reviewStatus == VideoComponentReviewStatus.REJECTED) return@all false
+                    layer
+                }
+                "breathing", "headGesture" -> {
+                    val layer = scene.layers.singleOrNull { it.id == capability.targetId } ?: return@all false
+                    if (layer.kind != VideoLayerKind.SUBJECT || capability.targetType != VideoMotionTargetType.LAYER ||
+                        capability.control != if (kind == "breathing") VideoMotionControl.TRANSLATE_Y else VideoMotionControl.ROTATE) return@all false
+                    if (kind == "headGesture") {
+                        val matchingMasks = scene.masks.filter {
+                            it.purpose == VideoMaskPurpose.HEAD_REGION && it.layerIds == listOf(layer.id)
+                        }
+                        if (matchingMasks.size != 1) return@all false
+                        val mask = matchingMasks.single()
+                        if (mask.reviewStatus == VideoComponentReviewStatus.REJECTED || mask.alpha == null ||
+                            mask.alpha.opaquePixels < 0 || mask.alpha.translucentPixels < 0 || mask.alpha.transparentPixels < 0 ||
+                            mask.image.width.toLong() * mask.image.height != mask.alpha.let { it.opaquePixels + it.translucentPixels + it.transparentPixels } ||
+                            mask.alpha.opaquePixels + mask.alpha.translucentPixels + mask.alpha.transparentPixels <= 0L) return@all false
+                    }
+                    layer
+                }
+                else -> {
+                    val anchor = scene.effectAnchors.singleOrNull { it.id == capability.targetId } ?: return@all false
+                    val position = anchor.position ?: scene.subjectLandmarks.singleOrNull { it.id == anchor.landmarkId }?.position
+                    if (capability.targetType != VideoMotionTargetType.EFFECT_ANCHOR || capability.control != VideoMotionControl.EFFECT_RATE ||
+                        anchor.reviewStatus == VideoComponentReviewStatus.REJECTED || position == null ||
+                        position.coordinateSpaceId != json.getValue("canvas").jsonObject.getValue("coordinateSpaceId").jsonPrimitive.content) return@all false
+                    null
+                }
+            }
+            if (subject != null) {
+                if (subject.reviewStatus == VideoComponentReviewStatus.REJECTED ||
+                    subject.bounds.coordinateSpaceId != json.getValue("canvas").jsonObject.getValue("coordinateSpaceId").jsonPrimitive.content ||
+                    (controlledSubject != null && controlledSubject != subject.id)) return@all false
+                controlledSubject = subject.id
+            }
+            val allowed = setOf("id", "capabilityId", "kind", numeric.first) +
+                if (numeric.first == "ratePerSecond") setOf("risePixelsPerSecond") else emptySet()
+            val value = control[numeric.first]?.jsonPrimitive?.content?.toDoubleOrNull()
+            val compatible = when (kind) {
+                "blink" -> value != null && value * capability.maximum in capability.minimum..capability.maximum
+                "breathing" -> value != null && 0.0 in capability.minimum..capability.maximum &&
+                    value in capability.minimum..capability.maximum
+                "headGesture" -> value != null && value in capability.minimum..capability.maximum &&
+                    -value in capability.minimum..capability.maximum
+                else -> value != null && value in capability.minimum..capability.maximum
+            }
+            compatible && control.keys.all { it in allowed } &&
+                (control[numeric.first] as? JsonPrimitive)?.let { !it.isString && it.content.toDoubleOrNull()?.let { n -> n.isFinite() && n in numeric.second..numeric.third } == true } == true &&
+                (numeric.first != "ratePerSecond" || control["risePixelsPerSecond"] == null ||
+                    (control["risePixelsPerSecond"] as? JsonPrimitive)?.let { !it.isString && it.content.toDoubleOrNull()?.let { n -> n.isFinite() && n in 0.01..28.0 } == true } == true)
+        } && controls.map { it.jsonObject.getValue("id").jsonPrimitive.content }.distinct().size == controls.size &&
+            (controlledSubject == null || scene.layers.count {
+                it.kind == VideoLayerKind.ENVIRONMENT && it.bounds.coordinateSpaceId ==
+                    json.getValue("canvas").jsonObject.getValue("coordinateSpaceId").jsonPrimitive.content &&
+                    it.bounds.x == 0.0 && it.bounds.y == 0.0 && it.bounds.width == width.toDouble() &&
+                    it.bounds.height == height.toDouble()
+            } == 1)) {
+            "Controlled renderer controls must be supported, finite and bounded"
+        }
+        fun finite(element: kotlinx.serialization.json.JsonElement) {
+            when (element) {
+                is JsonObject -> element.values.forEach(::finite)
+                is JsonArray -> element.forEach(::finite)
+                is JsonPrimitive -> if (!element.isString && element.content != "null" && element.content != "true" && element.content != "false") {
+                    require(element.content.toDoubleOrNull()?.isFinite() == true) { "Non-finite renderer number" }
+                }
+            }
+        }
+        finite(json)
+        require(parsedLong(json.getValue("seed")) in 0..MAX_JAVASCRIPT_SAFE_INTEGER)
+        require(parsedLong(json.getValue("frameRange").jsonObject.getValue("startFrame")) in 0..MAX_JAVASCRIPT_SAFE_INTEGER)
+        require(parsedLong(json.getValue("frameRange").jsonObject.getValue("frameCount")) in 1..9_000L)
+        // Long durable ranges are templates: executionDescriptors() deterministically splits them
+        // into renderer requests, each satisfying render.cjs's 1..300 invocation bound.
+        require(integer(json.getValue("fps")) in 1..120 && integer(json.getValue("canvas").jsonObject.getValue("width")) in 1..3840 &&
+            integer(json.getValue("canvas").jsonObject.getValue("height")) in 1..2160) { "Renderer geometry and cadence must be exact integers" }
+        require(startFrame in 0..MAX_JAVASCRIPT_SAFE_INTEGER && frameCount in 1..MAX_JAVASCRIPT_SAFE_INTEGER &&
+            Math.addExact(startFrame, frameCount) <= MAX_JAVASCRIPT_SAFE_INTEGER)
+        require(width.toLong() * height <= 12_000_000)
+        val space = json.getValue("canvas").jsonObject.getValue("coordinateSpaceId").jsonPrimitive.content
+        require(scene.coordinateSpaces.count { it.id == space && it.width >= width && it.height >= height } == 1)
+        require(scene.layers.count { layer ->
+            layer.kind == VideoLayerKind.FINISHED_SCENE && layer.bounds.coordinateSpaceId == space &&
+                layer.bounds.x == 0.0 && layer.bounds.y == 0.0 &&
+                layer.bounds.width == width.toDouble() && layer.bounds.height == height.toDouble()
+        } == 1) { "Controlled viewport must match the prepared finished scene" }
+    }
+
+    private fun parsedLong(element: kotlinx.serialization.json.JsonElement): Long {
+        val primitive = element.jsonPrimitive
+        require(!primitive.isString && primitive.content.matches(Regex("(0|[1-9][0-9]*)"))) { "Renderer integer is not exact" }
+        return primitive.content.toLong()
+    }
+    private val parsed get() = Json.parseToJsonElement(requestJson).jsonObject
+    val seed get() = parsedLong(parsed.getValue("seed"))
+    val fps get() = parsed.getValue("fps").jsonPrimitive.content.toInt()
+    val width get() = parsed.getValue("canvas").jsonObject.getValue("width").jsonPrimitive.content.toInt()
+    val height get() = parsed.getValue("canvas").jsonObject.getValue("height").jsonPrimitive.content.toInt()
+    val startFrame get() = parsedLong(parsed.getValue("frameRange").jsonObject.getValue("startFrame"))
+    val frameCount get() = parsedLong(parsed.getValue("frameRange").jsonObject.getValue("frameCount"))
+
+    /** Deterministic, lazy absolute-frame chunks of this pinned full-range template. */
+    fun invocationDescriptors(): Sequence<String> = controlledMotionInvocationDescriptors(requestJson)
+
+}
+
+/** The renderer consumes these derived Node requests, not the full-range template directly.
+ * Continuation state is attached only after verifying the preceding chunk receipt. */
+fun controlledMotionInvocationDescriptors(requestJson: String): Sequence<String> = sequence {
+    val original = Json.parseToJsonElement(requestJson).jsonObject
+    val range = original.getValue("frameRange").jsonObject
+    fun exact(key: String): Long {
+        val value = range.getValue(key).jsonPrimitive
+        require(!value.isString && value.content.matches(Regex("(0|[1-9][0-9]*)")))
+        return value.content.toLong()
+    }
+    val begin = exact("startFrame")
+    val count = exact("frameCount")
+    require(begin in 0..MAX_JAVASCRIPT_SAFE_INTEGER && count in 1..9_000 &&
+        Math.addExact(begin, count) <= MAX_JAVASCRIPT_SAFE_INTEGER)
+    val end = begin + count
+    var start = begin
+    while (start < end) {
+        val size = minOf(300L, end - start)
+        yield(JsonObject(original.toMutableMap().apply {
+            put("frameRange", JsonObject(range.toMutableMap().apply {
+                put("startFrame", JsonPrimitive(start))
+                put("frameCount", JsonPrimitive(size))
+            }))
+        }).toString())
+        start = Math.addExact(start, size)
+    }
+}
+
+/** Each executable dependency has one role; loaded Canvas files are an explicit nonempty set. */
+@Serializable
+data class VideoControlledMotionRuntimeBinding(
+    val node: VideoGenerationDependencyPin,
+    val compositor: VideoGenerationDependencyPin,
+    val scenery: VideoGenerationDependencyPin,
+    val canvasManifest: VideoGenerationDependencyPin,
+    val canvasArtifacts: List<VideoGenerationDependencyPin>,
+    val ffmpeg: VideoGenerationDependencyPin,
+    val ffprobe: VideoGenerationDependencyPin,
+    val expectedCanvasVersion: String,
+) {
+    val allPins: List<VideoGenerationDependencyPin>
+        get() = listOf(node, compositor, scenery, canvasManifest) + canvasArtifacts + listOf(ffmpeg, ffprobe)
+
+    init {
+        require(canvasArtifacts.isNotEmpty()) { "Canvas loaded artifacts must be pinned" }
+        require(expectedCanvasVersion.matches(Regex("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?"))) {
+            "Canvas runtime version must be explicit"
+        }
+        requireVideoDependencyPins(allPins)
+        require(allPins.all { it.ownedPath != null }) { "Every controlled runtime role needs an owned path" }
+        require(node.id == "node" && compositor.id == "compositor" && scenery.id == "scenery" &&
+            canvasManifest.id == "canvas-manifest" && ffmpeg.id == "ffmpeg" && ffprobe.id == "ffprobe" &&
+            canvasArtifacts.all { it.id.startsWith("canvas-artifact-") }) { "Controlled runtime pin roles are incomplete or mislabelled" }
+    }
+}
+
+/* Admission mirrors scenery.cjs validation, including full-trajectory shutter coverage.
+ * Do not equate a well-shaped section list with executable scenery. */
+private fun validateExecutableScenery(
+    scene: VideoPreparedScene, raw: JsonObject, range: JsonObject, width: Int, height: Int,
+) {
+    fun long(value: kotlinx.serialization.json.JsonElement?): Long {
+        val p = requireNotNull(value).jsonPrimitive
+        require(!p.isString && p.content.matches(Regex("(0|[1-9][0-9]*)")))
+        return p.content.toLong().also { require(it in 0..MAX_JAVASCRIPT_SAFE_INTEGER) }
+    }
+    fun numeric(value: kotlinx.serialization.json.JsonElement?, default: Double): Double =
+        value?.jsonPrimitive?.let { p ->
+            require(!p.isString)
+            p.content.toDouble().also { require(it.isFinite()) }
+        } ?: default
+    val mode = raw.getValue("mode").jsonPrimitive.content
+    val camera = raw.getValue("camera").jsonObject
+    val first = camera["startFrame"]?.let(::long) ?: 0L
+    val duration = camera["durationFrames"]?.let(::long) ?: 1L
+    val last = Math.addExact(first, duration)
+    require(last <= MAX_JAVASCRIPT_SAFE_INTEGER)
+    val renderStart = long(range.getValue("startFrame"))
+    val renderEnd = Math.addExact(renderStart, long(range.getValue("frameCount")))
+    // The first renderer invocation has no verified prior finalState. Node accepts
+    // a moving range beginning later only when that continuation receipt exists.
+    require(mode != "moving" || renderStart == first && renderEnd <= last) {
+        "Moving scenery must begin at the camera trajectory start without verified continuation state"
+    }
+    val travelX = numeric(camera["travelXPixels"], 0.0)
+    val travelY = numeric(camera["travelYPixels"], 0.0)
+    require(kotlin.math.abs(travelX) <= 16384 && kotlin.math.abs(travelY) <= 16384)
+    val blur = camera["motionBlurSamples"]?.let(::long) ?: if (mode == "moving") 3L else 1L
+    val shutter = numeric(camera["shutterFraction"], if (mode == "moving") 0.5 else 0.0)
+    require(blur in 1..8 && shutter in 0.0..1.0)
+    val aperture = VideoRect(raw.getValue("viewport").jsonObject.getValue("coordinateSpaceId").jsonPrimitive.content,
+        0.0, 0.0, width.toDouble(), height.toDouble())
+    data class Section(val coverage: VideoSceneryCoverage, val layer: VideoPreparedLayer,
+        val x: Double, val y: Double, val start: Long, val end: Long)
+    data class Plane(val id: String, val sections: List<Section>, var depth: Int = 1)
+    val planes = (raw.getValue("planes") as JsonArray).map { element ->
+        val plane = element.jsonObject
+        Plane(plane.getValue("id").jsonPrimitive.content, (plane.getValue("sections") as JsonArray).map { item ->
+            val section = item.jsonObject
+            val coverage = scene.sceneryCoverage.single { it.id == section.getValue("coverageId").jsonPrimitive.content }
+            val layer = scene.layers.single { it.id == coverage.layerId }
+            require(coverage.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+                layer.reviewStatus != VideoComponentReviewStatus.REJECTED && layer.bounds.containsScenery(coverage.bounds)) {
+                "Selected scenery coverage must be reviewed and inside its placed layer"
+            }
+            Section(coverage, layer, numeric(section["worldX"], Double.NaN), numeric(section["worldY"], Double.NaN),
+                long(section["startFrame"]), long(section["endFrameExclusive"]))
+        }.sortedWith(compareBy({ it.start }, { it.coverage.id })))
+    }
+    require(planes.size in 1..16 && planes.map { it.id }.distinct().size == planes.size &&
+        planes.sumOf { it.sections.size } <= 32)
+    val selected = planes.flatMap { it.sections }.map { it.layer.id }.toSet()
+    val byLayer = planes.flatMap { plane -> plane.sections.map { it.layer.id to plane.id } }.toMap()
+    val relations = scene.depthRelations.filter { it.nearerLayerId in selected && it.fartherLayerId in selected }
+    require(scene.depthRelations.none { it.reviewStatus == VideoComponentReviewStatus.REJECTED &&
+        (it.nearerLayerId in selected || it.fartherLayerId in selected) })
+    require(relations.none { byLayer[it.nearerLayerId] == byLayer[it.fartherLayerId] })
+    if (mode == "moving" && planes.size > 1) {
+        require(relations.isNotEmpty()) { "Moving depth planes need prepared depth relations" }
+        val connected = mutableSetOf(planes.first().id)
+        var changed: Boolean
+        do {
+            val before = connected.size
+            relations.forEach { r ->
+                val near = byLayer.getValue(r.nearerLayerId)
+                val far = byLayer.getValue(r.fartherLayerId)
+                if (near in connected || far in connected) { connected += near; connected += far }
+            }
+            changed = connected.size != before
+        } while (changed)
+        require(connected.size == planes.size)
+        fun rank(id: String): Int = relations.filter { byLayer[it.nearerLayerId] == id }
+            .maxOfOrNull { rank(byLayer.getValue(it.fartherLayerId)) + 1 } ?: 0
+        planes.forEach { it.depth = 1 + rank(it.id) }
+    }
+    scene.occlusionRelations.filter { it.occluderLayerId in selected || it.occludedLayerId in selected }.forEach { relation ->
+        require(relation.reviewStatus != VideoComponentReviewStatus.REJECTED && relation.occluderLayerId !in selected)
+        val occluder = scene.layers.single { it.id == relation.occluderLayerId }
+        val mask = scene.masks.single { it.id == relation.maskId }
+        require(occluder.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+            mask.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+            relation.occluderLayerId in mask.layerIds && relation.occludedLayerId in mask.layerIds)
+    }
+    fun samples(): List<Double> = if (blur == 1L) listOf(0.0) else (0 until blur.toInt()).map {
+        ((it + 0.5) / blur - 0.5) * shutter
+    }
+    fun rectangle(plane: Plane, section: Section, frame: Double): VideoRect {
+        val progress = if (mode == "static") 0.0 else
+            ((frame - first) / (duration - 1)).coerceIn(0.0, 1.0)
+        return section.coverage.bounds.copy(x = section.x - travelX * progress * plane.depth,
+            y = section.y - travelY * progress * plane.depth)
+    }
+    fun covers(rectangles: List<VideoRect>): Boolean {
+        val xEdges = (listOf(0.0, width.toDouble()) + rectangles.flatMap { listOf(
+            it.x.coerceIn(0.0, width.toDouble()), (it.x + it.width).coerceIn(0.0, width.toDouble())) }).distinct().sorted()
+        return xEdges.zipWithNext().all { (left, right) ->
+            if (left == right) true else {
+                val intervals = rectangles.filter { it.x <= left && it.x + it.width >= right }
+                    .map { it.y to it.y + it.height }.sortedBy { it.first }
+                var bottom = 0.0
+                intervals.forEach { (top, end) -> if (top <= bottom) bottom = maxOf(bottom, end) }
+                bottom >= height
+            }
+        }
+    }
+    planes.forEach { plane ->
+        plane.sections.forEach { section ->
+            if (mode == "static") require(section.x == section.coverage.bounds.x && section.y == section.coverage.bounds.y) {
+                "Static scenery must retain prepared placement"
+            } else listOf(Triple("X", travelX, section.x), Triple("Y", travelY, section.y)).forEach { (axis, travel, world) ->
+                val prepared = if (axis == "X") section.coverage.bounds.x else section.coverage.bounds.y
+                if (travel == 0.0) require(world == prepared) { "Scenery cannot move on an unconfigured axis" }
+                else {
+                    val capabilities = scene.motionCapabilities.filter { it.targetType == VideoMotionTargetType.SCENERY_COVERAGE &&
+                        it.targetId == section.coverage.id && it.control == (if (axis == "X") VideoMotionControl.TRANSLATE_X else VideoMotionControl.TRANSLATE_Y) &&
+                        it.unit == VideoMotionUnit.PIXELS }
+                    require(capabilities.size == 1 && capabilities.single().reviewStatus != VideoComponentReviewStatus.REJECTED) {
+                        "Moving scenery needs a reviewed translation capability"
+                    }
+                    val capability = capabilities.single()
+                    listOf(section.start.toDouble(), section.end - 1e-6).forEach { frame ->
+                        val rect = rectangle(plane, section, frame)
+                        val offset = (if (axis == "X") rect.x else rect.y) - prepared
+                        require(offset in capability.minimum..capability.maximum) { "Scenery travel exceeds its capability" }
+                    }
+                }
+            }
+        }
+        plane.sections.zipWithNext().forEach { (outgoing, incoming) ->
+            val boundary = incoming.start.toDouble()
+            val frames = listOf(boundary, boundary - 1e-6) + samples().flatMap { listOf(boundary - 1 + it, boundary + it) }
+            require(frames.all { frame -> rectangle(plane, outgoing, frame).containsScenery(aperture) &&
+                rectangle(plane, incoming, frame).containsScenery(aperture) }) { "Scenery join is visible" }
+        }
+    }
+    val evaluationStart = if (mode == "moving") first else renderStart
+    val evaluationEnd = if (mode == "moving") last else renderEnd
+    for (frame in evaluationStart until evaluationEnd) for (offset in samples()) {
+        val sample = frame + offset
+        val visible = planes.map { plane ->
+            val section = plane.sections.firstOrNull { sample >= it.start && sample < it.end }
+                ?: if (sample < plane.sections.first().start) plane.sections.first() else plane.sections.last()
+            rectangle(plane, section, sample)
+        }
+        require(covers(visible)) { "Scenery coverage leaves a visible hole at frame $frame" }
+    }
+}
+
+private fun VideoRect.containsScenery(inner: VideoRect): Boolean =
+    coordinateSpaceId == inner.coordinateSpaceId && inner.x >= x && inner.y >= y &&
+        inner.x + inner.width <= x + width && inner.y + inner.height <= y + height
+
+const val CONTROLLED_MOTION_DESCRIPTOR_SCHEMA = "melotrail-controlled-motion-request-v1"
+const val MAX_JAVASCRIPT_SAFE_INTEGER = 9_007_199_254_740_991L
+
 @Serializable
 data class VideoControlledMotionRequest(
     val preparedPins: List<VideoGenerationDependencyPin>,
-    val controls: Map<String, String>,
     val startFrame: Long,
     val endFrameExclusive: Long,
     val seed: Long,
-    val runtimeDependencies: List<VideoGenerationDependencyPin>,
+    val descriptor: VideoControlledMotionDescriptor,
 ) {
     init {
         requireVideoDependencyPins(preparedPins)
-        requireVideoDependencyPins(runtimeDependencies)
-        require(preparedPins.isNotEmpty()) { "Controlled motion requires prepared scene pins" }
-        require(controls.size <= 128 && controls.all { (key, value) ->
-            key.matches(Regex("[A-Za-z][A-Za-z0-9_.-]{0,127}")) && value.length <= 4_096 && value.none(Char::isISOControl)
-        }) { "Controlled motion controls are invalid" }
-        require(startFrame >= 0L && endFrameExclusive > startFrame) { "Controlled motion frame range must be non-empty and absolute" }
-        require(runtimeDependencies.isNotEmpty()) { "Controlled motion runtime dependencies are required" }
-        require((preparedPins + runtimeDependencies).map(VideoGenerationDependencyPin::id).distinct().size == preparedPins.size + runtimeDependencies.size) {
-            "Controlled motion pin identifiers must be unique across prepared and runtime inputs"
-        }
+        require(preparedPins.isNotEmpty() && preparedPins.all { it.ownedPath != null })
+        require(startFrame in 0..MAX_JAVASCRIPT_SAFE_INTEGER && endFrameExclusive in 1..MAX_JAVASCRIPT_SAFE_INTEGER &&
+            endFrameExclusive > startFrame && Math.subtractExact(endFrameExclusive, startFrame) <= MAX_JAVASCRIPT_SAFE_INTEGER)
+        require(seed in 0..MAX_JAVASCRIPT_SAFE_INTEGER && descriptor.seed == seed &&
+            descriptor.startFrame == startFrame && Math.addExact(descriptor.startFrame, descriptor.frameCount) == endFrameExclusive)
+        require((preparedPins + descriptor.runtime.allPins).map(VideoGenerationDependencyPin::id).distinct().size ==
+            preparedPins.size + descriptor.runtime.allPins.size)
     }
 }
 
@@ -535,6 +1043,6 @@ internal object VideoJobControlPaths {
 }
 
 const val MAX_VIDEO_GENERATION_ATTEMPTS = 3
-private val VIDEO_JOB_SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")
+private val VIDEO_JOB_SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 private val VIDEO_JOB_SHA_256 = Regex("[0-9a-f]{64}")
 private val CURRENCY = Regex("[A-Z]{3}")

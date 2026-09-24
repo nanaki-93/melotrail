@@ -29,10 +29,10 @@ class VideoClipGenerationTest {
         val store = VideoProjectStore(listOf(Files.createTempDirectory("midi-protected-")))
         val project = VideoProject("project", "Project", "2026-09-24T00:00:00Z")
         store.create(root, project)
-        val pin = VideoGenerationDependencyPin("scene", "a".repeat(64))
-        val runtime = VideoGenerationDependencyPin("runtime", "b".repeat(64))
-        val input = VideoControlledMotionGenerationInput("move", listOf(pin, runtime),
-            VideoControlledMotionRequest(listOf(pin), emptyMap(), 0, 150, 42, listOf(runtime)))
+        val pin = VideoGenerationDependencyPin("scene", "a".repeat(64), "/owned/scene.json")
+        val runtime = VideoGenerationDependencyPin("runtime", "b".repeat(64), "/runtime/renderer.cjs")
+        val input = VideoControlledMotionGenerationInput("move", listOf(pin) + motionRuntime(runtime).allPins,
+            VideoControlledMotionRequest(listOf(pin), 0, 150, 42, motionDescriptor(listOf(runtime), 0, 150, 42, project.id)))
         val backendId = "controlled-local"
         val request = VideoGenerationJobRequest("request", project.id, backendId, emptyList(), input,
             controlledMotionRequestFingerprint(backendId, input, emptyList()), 1, Instant.now().toString(),
