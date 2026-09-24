@@ -32,6 +32,8 @@ data class VideoMediaProcessRequest(
     val maxStdoutBytes: Int = 1_048_576,
     val maxStderrBytes: Int = 1_048_576,
     val environment: Map<String, String> = emptyMap(),
+    /** Optional aggregate RSS ceiling for this owned process group, including children. */
+    val memoryLimitBytes: Long? = null,
 )
 
 data class VideoMediaProcessResult(
@@ -123,6 +125,8 @@ class VideoMediaProcess internal constructor(private val testHooks: VideoMediaPr
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
     ): VideoMediaProcessResult {
         requireSupportedHost()
+        if (request.memoryLimitBytes != null && request.memoryLimitBytes <= 0) throw VideoMediaProcessException(
+            VideoMediaProcessFailure.INVALID_REQUEST, "Owned memory limit must be positive.")
         if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) {
             throw VideoMediaProcessException(
                 VideoMediaProcessFailure.CANCELLED,
@@ -180,6 +184,10 @@ class VideoMediaProcess internal constructor(private val testHooks: VideoMediaPr
                 }
                 group.pollOutput()
                 group.pollLeader()
+                request.memoryLimitBytes?.let { ceiling ->
+                    val resident = group.ownedResidentBytes()
+                    if (resident > ceiling) stopReason.compareAndSet(null, StopReason.Memory(resident, ceiling))
+                }
                 if (group.leaderFinished() && group.hasLiveGroupMembers()) {
                     stopReason.compareAndSet(null, StopReason.UnexpectedDescendants)
                 }
@@ -217,6 +225,13 @@ class VideoMediaProcess internal constructor(private val testHooks: VideoMediaPr
             StopReason.Cancelled -> throw withCleanup(failure(
                 VideoMediaProcessFailure.CANCELLED,
                 "Video media process cancellation requested.$cleanupDiagnostic",
+                group,
+                stdout,
+                stderr,
+            ))
+            is StopReason.Memory -> throw withCleanup(failure(
+                VideoMediaProcessFailure.OUTPUT_LIMIT,
+                "Owned process group exceeded memory limit: ${reason.residentBytes} > ${reason.limitBytes} bytes.$cleanupDiagnostic",
                 group,
                 stdout,
                 stderr,
@@ -425,6 +440,7 @@ class VideoMediaProcess internal constructor(private val testHooks: VideoMediaPr
         data object Cancelled : StopReason
         data object TimedOut : StopReason
         data class Output(val stream: String) : StopReason
+        data class Memory(val residentBytes: Long, val limitBytes: Long) : StopReason
         data class Supervision(val error: VideoMediaProcessException) : StopReason
         data object UnexpectedDescendants : StopReason
     }
@@ -559,6 +575,35 @@ private class OwnedDarwinProcess private constructor(
     fun leaderFinished(): Boolean = leaderExited
 
     fun hasLiveGroupMembers(): Boolean = groupExists()
+
+    /** Read RSS only for PIDs in the group created atomically by our spawn. Fail closed
+     * when a live member cannot be measured; never scan or signal unrelated processes. */
+    fun ownedResidentBytes(): Long {
+        if (groupGone || signalingClosed) return 0
+        Memory(4L * MAX_GROUP_MEMBERS).use { members ->
+            val count = LibProc.instance.proc_listpids(PROC_PGRP_ONLY, pid, members, members.size().toInt())
+            if (count < 0 || count % 4 != 0 || count >= members.size()) throw supervision("Cannot enumerate owned process group for memory enforcement.")
+            var total = 0L
+            for (index in 0 until count / 4) {
+                val member = members.getInt(index * 4L)
+                if (member <= 0 || member == pid && leaderExited) continue
+                Memory(PROC_TASKINFO_BYTES.toLong()).use { info ->
+                    val size = try {
+                        LibProc.instance.proc_pidinfo(member, PROC_PIDTASKINFO, 0, info, PROC_TASKINFO_BYTES)
+                    } catch (error: LastErrorException) {
+                        if (error.errorCode == ESRCH) continue // member exited during enumeration
+                        throw supervision("Cannot measure owned process $member for memory enforcement.", error)
+                    }
+                    if (size == 0 && Native.getLastError() == ESRCH) continue // member exited during enumeration
+                    if (size < 16) throw supervision("Cannot measure owned process $member for memory enforcement.")
+                    val resident = info.getLong(8)
+                    if (resident < 0) throw supervision("Invalid owned process memory measurement.")
+                    total = Math.addExact(total, resident)
+                }
+            }
+            return total
+        }
+    }
 
     /** One fixed cleanup budget, including unsuccessful observations and interrupted sleeps. */
     fun finish(): VideoMediaProcessException? {
@@ -1017,6 +1062,8 @@ private interface LibC : Library {
 private interface LibProc : Library {
     @Throws(LastErrorException::class)
     fun proc_listpids(type: Int, typeInfo: Int, buffer: Pointer, bufferSize: Int): Int
+    @Throws(LastErrorException::class)
+    fun proc_pidinfo(pid: Int, flavor: Int, arg: Long, buffer: Pointer, bufferSize: Int): Int
 
     companion object {
         val instance: LibProc by lazy { Native.load("proc", LibProc::class.java) }
@@ -1059,4 +1106,6 @@ private const val WEXITED = 4
 private const val WNOWAIT = 32
 private const val P_PID = 1
 private const val PROC_PGRP_ONLY = 2
+private const val PROC_PIDTASKINFO = 4
+private const val PROC_TASKINFO_BYTES = 96
 private const val MAX_GROUP_MEMBERS = 4_096

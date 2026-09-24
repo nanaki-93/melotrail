@@ -86,6 +86,18 @@ class VideoMediaProcessTest {
     }
 
     @Test
+    fun `owned process memory growth terminates the native group instead of exceeding its persisted ceiling`() {
+        val ready = root.resolve("memory-growth-ready")
+        val exceeded = assertFailsWith<VideoMediaProcessException> {
+            VideoMediaProcess().run(request(nextJob(), "allocate-memory", listOf(ready.toString())).copy(
+                memoryLimitBytes = 192L * 1024 * 1024, timeout = Duration.ofSeconds(8)))
+        }
+        assertEquals(VideoMediaProcessFailure.OUTPUT_LIMIT, exceeded.failure)
+        assertTrue(Files.exists(ready), "The child must have started allocating; prelaunch rejection is not a memory-growth regression")
+        assertTrue(exceeded.message.orEmpty().contains("memory limit"), exceeded.message)
+    }
+
+    @Test
     fun `launches pinned executable with literal Unicode and spaced arguments in private cwd`() {
         val input = Files.writeString(root.resolve("référence input.txt"), "immutable café bytes")
         val before = Files.readAllBytes(input)
@@ -832,6 +844,16 @@ object VideoMediaProcessFixture {
                 Thread.sleep(30_000)
             }
             "sleep" -> Thread.sleep(arguments[1].toLong())
+            "allocate-memory" -> {
+                publishFixturePid(Path.of(arguments[1]))
+                val blocks = ArrayList<ByteArray>()
+                repeat(32) {
+                    blocks += ByteArray(16 * 1024 * 1024) { 1 }
+                    Thread.sleep(35)
+                }
+                check(blocks.size == 32)
+                Thread.sleep(30_000)
+            }
             "ready-and-sleep" -> {
                 publishFixturePid(Path.of(arguments[1]))
                 Thread.sleep(arguments[2].toLong())

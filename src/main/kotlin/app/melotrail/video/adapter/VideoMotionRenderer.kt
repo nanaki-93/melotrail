@@ -34,6 +34,9 @@ data class VideoMotionRenderRequest(
     val startFrame: Long,
     val endFrameExclusive: Long,
     val timeoutPerInvocation: Duration,
+    val remainingTime: (() -> Duration)? = null,
+    val checkBudget: () -> Unit = {},
+    val memoryLimitBytes: Long? = null,
 )
 
 data class VideoMotionInvocationResult(val startFrame: Long, val endFrameExclusive: Long, val outputDirectory: Path, val receipt: Path)
@@ -48,6 +51,19 @@ class VideoMotionRenderer(
 
     fun render(request: VideoMotionRenderRequest, cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): VideoMotionRenderResult {
         require(request.timeoutPerInvocation > Duration.ZERO)
+        fun check() {
+            checkNotCancelled(cancellation)
+            request.checkBudget()
+            if (request.remainingTime?.invoke()?.let { it <= Duration.ZERO } == true)
+                throw VideoMediaProcessException(VideoMediaProcessFailure.TIMED_OUT, "Controlled motion attempt deadline expired.")
+        }
+        fun run(process: VideoMediaProcessRequest): VideoMediaProcessResult {
+            check()
+            val timeout = request.remainingTime?.invoke()?.let { minOf(process.timeout, it) } ?: process.timeout
+            if (timeout <= Duration.ZERO) throw VideoMediaProcessException(VideoMediaProcessFailure.TIMED_OUT, "Controlled motion attempt deadline expired.")
+            return runProcess(process.copy(timeout = timeout, memoryLimitBytes = request.memoryLimitBytes), cancellation).also { check() }
+        }
+        check()
         require(request.startFrame >= 0 && request.endFrameExclusive > request.startFrame)
         val node = pinnedFile(request.runtime.node, true)
         val script = pinnedFile(request.runtime.compositor, false)
@@ -67,7 +83,7 @@ class VideoMotionRenderer(
         val parent = request.outputParent.toAbsolutePath().normalize()
         require(Files.isDirectory(parent, NOFOLLOW_LINKS) && !Files.isSymbolicLink(parent) && parent.toRealPath() == parent) { "Output parent must be an existing real directory." }
         val runtimeProbe = "const fs=require('node:fs'),{createRequire}=require('node:module');const r=createRequire(process.argv[1]);const p=fs.realpathSync(r.resolve('@napi-rs/canvas'));const manifest=fs.realpathSync(r.resolve('@napi-rs/canvas/package.json'));const m=r('@napi-rs/canvas/package.json');r('@napi-rs/canvas');const artifacts=Object.keys(require.cache).map(x=>fs.realpathSync(x)).filter(x=>x!==manifest&&(x.startsWith(require('node:path').dirname(manifest)+'/')||x.includes('/@napi-rs/canvas-darwin-arm64/')));process.stdout.write(JSON.stringify({path:p,manifest,version:m.version,artifacts}));"
-        runProcess(VideoMediaProcessRequest(node, request.runtime.node.sha256, listOf("-e", runtimeProbe, script.toString()), parent.resolve(".motion-node-probe-${java.util.UUID.randomUUID()}"), request.timeoutPerInvocation, environment = mapOf("NODE_PATH" to canvasManifest.parent.parent.parent.toString())), cancellation).also { probe ->
+        run(VideoMediaProcessRequest(node, request.runtime.node.sha256, listOf("-e", runtimeProbe, script.toString()), parent.resolve(".motion-node-probe-${java.util.UUID.randomUUID()}"), request.timeoutPerInvocation, environment = mapOf("NODE_PATH" to canvasManifest.parent.parent.parent.toString()))).also { probe ->
             val loaded = Json.parseToJsonElement(probe.stdout.text).jsonObject
             require(Path.of(loaded["manifest"]!!.jsonPrimitive.content) == canvasManifest.toRealPath() &&
                 Path.of(loaded["path"]!!.jsonPrimitive.content).startsWith(canvasManifest.parent.toRealPath())) { "Node loaded a different Canvas package than the configured pin." }
@@ -75,8 +91,8 @@ class VideoMotionRenderer(
             val loadedArtifacts = loaded["artifacts"]!!.jsonArray.map { Path.of(it.jsonPrimitive.content).toRealPath() }.toSet()
             require(loadedArtifacts == artifactHashes.keys && loadedArtifacts.all { artifactHashes[it] == sha256(it) }) { "Node consumed Canvas artifacts outside the verified package pin." }
         }
-        runProcess(VideoMediaProcessRequest(ffmpeg, request.runtime.ffmpeg.sha256, listOf("-version"), parent.resolve(".motion-ffmpeg-probe-${java.util.UUID.randomUUID()}"), request.timeoutPerInvocation), cancellation)
-        checkNotCancelled(cancellation)
+        run(VideoMediaProcessRequest(ffmpeg, request.runtime.ffmpeg.sha256, listOf("-version"), parent.resolve(".motion-ffmpeg-probe-${java.util.UUID.randomUUID()}"), request.timeoutPerInvocation))
+        check()
         val root = request.projectRoot.toAbsolutePath().normalize()
         require(Files.isDirectory(root, NOFOLLOW_LINKS) && !Files.isSymbolicLink(root) && root.toRealPath() == root) { "Motion project root must be a real, non-symlink directory." }
         val descriptor = request.requestJson.toAbsolutePath().normalize()
@@ -93,7 +109,7 @@ class VideoMotionRenderer(
         var continuationState: kotlinx.serialization.json.JsonObject? = null
         val chunks = controlledMotionInvocationDescriptors(requestText).iterator()
         while (start < request.endFrameExclusive) {
-            if (cancellation.isCancelled()) throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Controlled motion was cancelled between render chunks.")
+            check()
             val end = minOf(request.endFrameExclusive, start + MAX_FRAMES)
             val output = parent.resolve("motion-${request.startFrame}-$index")
             require(!Files.exists(output, NOFOLLOW_LINKS)) { "Controlled-motion output collision: $output" }
@@ -110,14 +126,14 @@ class VideoMotionRenderer(
                 }
                 val chunkText = kotlinx.serialization.json.JsonObject(chunkObject).toString()
                 Files.writeString(chunkRequest, chunkText)
-                runProcess(VideoMediaProcessRequest(
+                run(VideoMediaProcessRequest(
                     executable = node,
                     executableSha256 = request.runtime.node.sha256,
                     arguments = listOf(script.toString(), "--request", chunkRequest.toString(), "--project-root", root.toString(), "--output", output.toString()),
                     workingDirectory = job.resolve("work"),
                     timeout = request.timeoutPerInvocation,
                     environment = mapOf("NODE_PATH" to canvasManifest.parent.parent.parent.toString(), "MELOTRAIL_FFMPEG_PATH" to ffmpeg.toString()),
-                ), cancellation)
+                ))
                 // The sibling module is loaded by Node, not by the pinned executable.
                 // Recheck immediately after execution and again at receipt acceptance so
                 // mutation during rendering or receipt validation cannot be published.
@@ -132,12 +148,12 @@ class VideoMotionRenderer(
                 // Node's JSON.stringify canonicalizes numeric literals (e.g. 0.0 -> 0).
                 // Use the pinned interpreter on the exact written chunk, not a Kotlin JSON re-encoding.
                 val canonicalProbe = "const fs=require('node:fs'),crypto=require('node:crypto');const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));const {schema,preparedScene,seed,fps,canvas,frameRange,controls,scenery,initialState}=r;process.stdout.write(crypto.createHash('sha256').update(JSON.stringify({schema,preparedScene,seed,fps,canvas,frameRange,controls,scenery,initialState})).digest('hex'));"
-                val canonicalHash = runProcess(VideoMediaProcessRequest(node, request.runtime.node.sha256,
-                    listOf("-e", canonicalProbe, chunkRequest.toString()), job.resolve("canonical-work"), request.timeoutPerInvocation), cancellation).stdout.text
-                validateReceipt(receipt, request.runtime, chunkText, canonicalHash, root, start, end, output, cancellation)
+                val canonicalHash = run(VideoMediaProcessRequest(node, request.runtime.node.sha256,
+                    listOf("-e", canonicalProbe, chunkRequest.toString()), job.resolve("canonical-work"), request.timeoutPerInvocation)).stdout.text
+                validateReceipt(receipt, request.runtime, chunkText, canonicalHash, root, start, end, output, ::check)
                 verifyCanvasArtifacts(request.runtime.canvasArtifacts, artifactHashes)
                 verifyRuntimePins(request.runtime, canvasManifest, ffmpeg)
-                checkNotCancelled(cancellation)
+                check()
                 val receiptJson = Json.parseToJsonElement(Files.readString(receipt)).jsonObject
                 val sceneryReceipt = receiptJson["scenery"]?.jsonObject
                 if (end < request.endFrameExclusive && base["scenery"] != null) {
@@ -152,15 +168,15 @@ class VideoMotionRenderer(
             index++
         }
         require(!chunks.hasNext()) { "Controlled descriptor contains unconsumed frame chunks." }
-        checkNotCancelled(cancellation)
+        check()
         verifyCanvasArtifacts(request.runtime.canvasArtifacts, artifactHashes)
         verifyRuntimePins(request.runtime, canvasManifest, ffmpeg)
-        checkNotCancelled(cancellation)
+        check()
         return VideoMotionRenderResult(results)
     }
 
-    private fun validateReceipt(path: Path, runtime: VideoMotionRuntime, request: String, canonicalHash: String, root: Path, start: Long, end: Long, output: Path, cancellation: VideoMediaProcessCancellation) {
-        checkNotCancelled(cancellation)
+    private fun validateReceipt(path: Path, runtime: VideoMotionRuntime, request: String, canonicalHash: String, root: Path, start: Long, end: Long, output: Path, check: () -> Unit) {
+        check()
         val obj = Json.parseToJsonElement(Files.readString(path)).jsonObject
         require(obj["schema"]?.jsonPrimitive?.content == "melotrail-controlled-motion-receipt-v1")
         require(obj["tool"]?.jsonObject?.get("version")?.jsonPrimitive?.content == "1.1.0")
@@ -177,10 +193,10 @@ class VideoMotionRenderer(
         require(runtime.compositor.ownedPath == null || sha256(Path.of(runtime.compositor.ownedPath)) == runtime.compositor.sha256)
         require(root.toRealPath() == root)
         val frames = obj["frames"] as? kotlinx.serialization.json.JsonArray ?: error("Receipt has no frame list")
-        checkNotCancelled(cancellation)
+        check()
         require(frames.size.toLong() == end - start) { "Receipt frame count does not cover the requested range." }
         frames.forEachIndexed { offset, element ->
-            checkNotCancelled(cancellation)
+            check()
             val frame = element.jsonObject
             require(frame["frame"]!!.jsonPrimitive.content.toLong() == start + offset) { "Receipt frame sequence is not contiguous and absolute." }
             val name = frame["file"]!!.jsonPrimitive.content
@@ -189,9 +205,9 @@ class VideoMotionRenderer(
             require(artifact.parent == output && Files.isRegularFile(artifact, NOFOLLOW_LINKS) && !Files.isSymbolicLink(artifact)) { "Receipt references a missing or unsafe frame artifact." }
             require(sha256(artifact) == frame["sha256"]!!.jsonPrimitive.content) { "Receipt frame digest mismatch at frame ${start + offset}." }
             onValidatedFrame(start + offset)
-            checkNotCancelled(cancellation)
+            check()
         }
-        checkNotCancelled(cancellation)
+        check()
     }
 
     private fun checkNotCancelled(cancellation: VideoMediaProcessCancellation) {
