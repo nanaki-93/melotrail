@@ -2,6 +2,12 @@ package app.melotrail.video
 
 import app.melotrail.video.adapter.VideoControlledMediaStage
 import app.melotrail.video.adapter.VideoJobStore
+import app.melotrail.video.adapter.VideoMotionRenderResult
+import app.melotrail.video.adapter.VideoMotionInvocationResult
+import app.melotrail.video.adapter.VideoMediaProcessRequest
+import app.melotrail.video.adapter.VideoMediaProcessResult
+import app.melotrail.video.adapter.VideoMediaProcessOutput
+import app.melotrail.video.adapter.VideoMediaProcessCancellation
 import app.melotrail.video.application.*
 import app.melotrail.video.domain.*
 import java.nio.file.Files
@@ -299,7 +305,9 @@ class VideoControlledMediaStageTest {
                 assertEquals(json, Files.readString(evidence.resolve("request.json")))
                 continue
             }
-            assertTrue(finished.detail.contains("Verified frames retained"), "range $start/$count: ${finished.detail}")
+            assertTrue(finished.detail.contains("Selected pinned FFmpeg build lacks") ||
+                finished.detail.contains("disk admission"), "range $start/$count: ${finished.detail}")
+            assertFalse(Files.exists(evidence.resolve("preview.mp4")))
             assertEquals(json, Files.readString(evidence.resolve("request.json")))
             var next = start
             val sizes = if (count == 150) listOf(150) else List(count / 300) { 300 }
@@ -324,6 +332,146 @@ class VideoControlledMediaStageTest {
             }
             assertEquals(start + count, next)
             assertEquals(sizes.size, Files.list(evidence).use { entries -> entries.filter { it.fileName.toString().startsWith("motion-") }.count().toInt() })
+        }
+    }
+
+    @Test fun `image2 consumption rejects changed missing reordered and duplicated receipts before publication`() {
+        for (fault in listOf("none", "reordered", "duplicated", "missing", "mutated", "late-reordered", "during-encode", "transient-mutation", "during-decode", "capability", "codec", "decode", "disk", "deadline", "output-limit", "collision", "cancel-at-publication", "cancel-before-commit", "cancel-inside-publication", "cancel-during-hash")) {
+            val root = Files.createTempDirectory("controlled-encode-$fault-").toRealPath()
+            val chunk = Files.createDirectory(root.resolve("motion-0-0"))
+            val frames = (0..1).map { n ->
+                val image = java.awt.image.BufferedImage(2, 2, java.awt.image.BufferedImage.TYPE_INT_RGB)
+                image.setRGB(0, 0, if (n == 0) 0xff0000 else 0x00ff00)
+                chunk.resolve("frame-${n.toString().padStart(8, '0')}.png").also {
+                    javax.imageio.ImageIO.write(image, "png", it.toFile())
+                }
+            }
+            val receipt = chunk.resolve("render-receipt.json")
+            fun record(n: Int) = buildJsonObject {
+                put("frame", n); put("file", frames[n].fileName.toString()); put("sha256", digest(frames[n]))
+            }
+            val records = when (fault) {
+                "reordered" -> listOf(record(1), record(0))
+                "duplicated" -> listOf(record(0), record(0))
+                "missing" -> listOf(record(0))
+                else -> listOf(record(0), record(1))
+            }
+            Files.writeString(receipt, buildJsonObject {
+                put("frameRange", buildJsonObject { put("startFrame", 0); put("frameCount", 2) })
+                put("frames", JsonArray(records))
+            }.toString())
+            if (fault == "mutated") Files.write(frames[1], byteArrayOf(99))
+            if (fault == "collision") Files.writeString(root.resolve("preview.mp4"), "previous")
+            val original = input()
+            val motion = original.motion.copy(startFrame = 0, endFrameExclusive = 2,
+                descriptor = motionDescriptor(listOf(VideoGenerationDependencyPin("compositor", "a".repeat(64), "/runtime/compositor")), 0, 2, 12))
+            val controlled = original.copy(motion = motion, media = if (fault == "output-limit")
+                original.media.copy(maximumOutputBytes = 2) else original.media)
+            val request = VideoGenerationJobRequest("request", "video-project", VideoControlledMediaStage.BACKEND_ID,
+                emptyList(), controlled, controlledMotionRequestFingerprint(VideoControlledMediaStage.BACKEND_ID, controlled, emptyList(), 2),
+                2, Instant.now(clock).toString(), controlled.media.execution)
+            val result = VideoMotionRenderResult(listOf(VideoMotionInvocationResult(0, 2, chunk, receipt)))
+            var encodeCalls = 0
+            var transientDenied = false
+            val cancellation = VideoMediaProcessCancellation()
+            var cancelThread: Thread? = null
+            val cancelEntered = CountDownLatch(1)
+            val cancelFinished = CountDownLatch(1)
+            val fake: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult = { process, _ ->
+                Files.createDirectory(process.workingDirectory)
+                val stdout = when (process.workingDirectory.fileName.toString()) {
+                    "encode-version" -> "ffmpeg version 9.0.1\nconfiguration: " + listOf("--enable-demuxer='mov,image2'", "--enable-decoder='h264,png'",
+                        "--enable-encoder='h264_videotoolbox,png'", "--enable-muxer='mp4,image2,null'", "--enable-protocol='file,pipe'").joinToString(" ")
+                    "encode-demuxers" -> if (fault == "capability") " D  mov only\n" else " D  image2 image sequence\n"
+                    "encode-encoders" -> " V  h264_videotoolbox encoder\n"
+                    "encode-muxers" -> " E  mp4 container\n"
+                    "encode-probe" -> """{"streams":[{"codec_type":"video","codec_name":"${if (fault == "codec") "mpeg4" else "h264"}","width":320,"height":180,"sample_aspect_ratio":"1:1","avg_frame_rate":"30/1","nb_read_frames":"2"}]}"""
+                    else -> ""
+                }
+                if (fault == "late-reordered" && process.workingDirectory.fileName.toString() == "encode-muxers") {
+                    Files.writeString(receipt, buildJsonObject {
+                        put("frameRange", buildJsonObject { put("startFrame", 0); put("frameCount", 2) })
+                        put("frames", JsonArray(listOf(record(1), record(0))))
+                    }.toString())
+                }
+                if (process.workingDirectory.fileName.toString() == "encode-video") {
+                    encodeCalls++
+                    if (fault == "during-encode") Files.write(frames[1], byteArrayOf(4, 5, 6))
+                    if (fault == "transient-mutation") {
+                        val staged = root.resolve("encode-frames/frame-00000001.png")
+                        val originalBytes = Files.readAllBytes(staged)
+                        val image = javax.imageio.ImageIO.read(staged.toFile())
+                        image.setRGB(0, 0, 0x0000ff)
+                        val changed = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(image, "png", it) }.toByteArray()
+                        try {
+                            Files.write(staged, changed)
+                            Files.write(staged, originalBytes)
+                        } catch (_: java.nio.file.AccessDeniedException) { transientDenied = true }
+                        catch (_: java.nio.file.FileSystemException) { transientDenied = true }
+                        assertTrue(transientDenied, "image2 input must not accept even temporary valid PNG writes")
+                        assertContentEquals(originalBytes, Files.readAllBytes(staged))
+                    }
+                    Files.write(process.workingDirectory.resolve("encoded.mp4"), byteArrayOf(1, 2, 3))
+                }
+                if (fault == "during-decode" && process.workingDirectory.fileName.toString() == "encode-full-decode") {
+                    Files.write(frames[1], byteArrayOf(9, 8, 7))
+                }
+                if (fault == "decode" && process.workingDirectory.fileName.toString() == "encode-full-decode") error("Corrupt MP4")
+                VideoMediaProcessResult(0, VideoMediaProcessOutput(stdout, stdout.length.toLong(), false),
+                    VideoMediaProcessOutput("", 0, false), Duration.ofMillis(1), process.workingDirectory)
+            }
+            var checks = 0
+            val task = {
+                VideoControlledMediaStage.encodePreview(result, request, root,
+                    VideoGenerationDependencyPin("ffmpeg", "a".repeat(64), root.resolve("ffmpeg").toString()),
+                    VideoGenerationDependencyPin("ffprobe", "b".repeat(64), root.resolve("ffprobe").toString()),
+                    { path ->
+                        val value = digest(path)
+                        if (fault == "cancel-during-hash" && path.fileName.toString() == "encoded.mp4") cancellation.cancel()
+                        value
+                    }, { if (fault == "disk" && encodeCalls > 0) error("disk admission") },
+                    { if (fault == "deadline" && ++checks > 12) error("deadline")
+                        if (cancellation.isCancelled()) error("cancelled") }, { Duration.ofSeconds(10) },
+                    cancellation, fake, beforePublication = {
+                        if (fault == "cancel-at-publication") cancellation.cancel()
+                    }, publishLink = { destination, source ->
+                        if (fault == "cancel-inside-publication") {
+                            cancelThread = Thread {
+                                cancelEntered.countDown()
+                                cancellation.cancel()
+                                cancelFinished.countDown()
+                            }.also { it.start() }
+                            assertTrue(cancelEntered.await(5, TimeUnit.SECONDS))
+                            assertFalse(cancelFinished.await(50, TimeUnit.MILLISECONDS), "cancellation cannot win inside publication")
+                        }
+                        Files.createLink(destination, source)
+                    }, beforeCommit = {
+                        if (fault == "cancel-before-commit") cancellation.cancel()
+                    })
+            }
+            if (fault == "none" || fault == "transient-mutation" || fault == "cancel-inside-publication") {
+                val preview = task()
+                assertEquals(root.resolve("preview.mp4"), preview.path)
+                assertEquals(digest(preview.path), preview.sha256)
+                assertEquals(Files.size(preview.path), preview.bytes)
+                if (fault == "transient-mutation") assertTrue(transientDenied)
+                assertFalse(Files.isSameFile(root.resolve("encode-video/encoded.mp4"), preview.path))
+                Files.write(root.resolve("encode-video/encoded.mp4"), byteArrayOf(7, 8, 9))
+                assertEquals(preview.sha256, digest(preview.path), "retained writable encode cannot change published preview")
+                assertFalse(Files.exists(root.resolve("publication-source.mp4")), "published preview must have no retained alias")
+                assertFails { Files.write(preview.path, byteArrayOf(7)) }
+                if (fault == "cancel-inside-publication") {
+                    assertTrue(cancelFinished.await(5, TimeUnit.SECONDS))
+                    cancelThread!!.join()
+                    assertTrue(cancellation.isCancelled(), "late cancellation follows committed publication")
+                }
+            } else assertFails(fault) { task() }
+            if (fault in listOf("reordered", "duplicated", "missing", "mutated", "late-reordered", "capability")) assertEquals(0, encodeCalls, fault)
+            if (fault in listOf("during-encode", "during-decode", "cancel-at-publication", "cancel-before-commit", "cancel-during-hash"))
+                assertEquals(1, encodeCalls, "$fault must reach the native encode before rejection")
+            if (fault in listOf("cancel-at-publication", "cancel-before-commit", "cancel-during-hash")) assertTrue(cancellation.isCancelled())
+            if (fault == "collision") assertEquals("previous", Files.readString(root.resolve("preview.mp4")))
+            else if (fault !in listOf("none", "transient-mutation", "cancel-inside-publication")) assertFalse(Files.exists(root.resolve("preview.mp4")), fault)
         }
     }
 

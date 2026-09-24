@@ -93,6 +93,13 @@ class VideoMediaProcessCancellation {
 
     fun isCancelled(): Boolean = synchronized(lock) { cancelled }
 
+    /** A short irreversible publication may win over cancellation, or cancellation may
+     * win first. The caller must complete all validation before entering this boundary. */
+    internal fun <T> publishIfActive(publish: () -> T): T = synchronized(lock) {
+        if (cancelled) throw cancelledFailure()
+        publish()
+    }
+
     internal fun <T> launch(spawn: () -> Pair<T, () -> Unit>): T = synchronized(lock) {
         if (cancelled) throw cancelledFailure()
         val (value, action) = spawn()
