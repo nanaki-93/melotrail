@@ -19,18 +19,14 @@ import java.security.MessageDigest
 import app.melotrail.video.adapter.VideoMediaProbeRequest
 import app.melotrail.video.adapter.VideoResultImport
 import app.melotrail.video.adapter.VideoTakeMediaFacts
-import app.melotrail.video.adapter.VideoMotionRuntime
 import app.melotrail.video.adapter.VideoMotionRenderer
-import app.melotrail.video.adapter.VideoMotionRenderRequest
 import app.melotrail.video.adapter.VideoMediaProcessCancellation
 import java.nio.file.Path
-import java.time.Duration
 import java.time.Clock
 import java.time.Instant
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -157,7 +153,8 @@ class VideoClipGeneration(
                 }
                 require(digest.digest().joinToString("") { "%02x".format(it) } == pin.sha256) { "Runtime bytes changed: ${pin.id}" }
             }
-            val source = "${current.id}:${current.revision}:${reference.original.artifact.sha256}:${record.artifact.sha256}"
+            val source = "${current.id}:${current.revision}:${reference.id.id}:${reference.id.version}:${reference.descriptorArtifact.sha256}:${reference.original.artifact.sha256}:${record.id.id}:${record.id.version}:${record.artifact.sha256}:" +
+                scene.consumedArtifacts().sortedBy { it.relativePath }.joinToString("|") { "${it.relativePath}:${it.sha256}" }
             val sourceIdentity = MessageDigest.getInstance("SHA-256").digest(source.toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
             Triple(scene, pins, sourceIdentity)
@@ -194,17 +191,9 @@ class VideoClipGeneration(
         if (pinById.size != preparedPins.size + runtime.size) return VideoClipGenerationResult.Rejected("Prepared/runtime dependency IDs must be unique.")
         val input = try {
             val viewport = verifiedScene.layers.single { it.kind == app.melotrail.video.domain.VideoLayerKind.FINISHED_SCENE }.bounds
-            // Full control compilation and authoritative source reopening belong to the next slice.
-            // Never persist a partial executable binding in their absence.
-            val controls = preparedResult.input.controls.map { control ->
-                require(control.intent == VideoSceneMotionIntent.BLINK) { "Only compiled blink controls can be submitted before motion compilation is available." }
-                buildJsonObject {
-                    put("id", control.id)
-                    put("kind", "blink")
-                    put("capabilityId", control.capability.id)
-                    put("amount", control.requestedDefaultValue)
-                }
-            }
+            val controls = preparation.compileControlledControls(preparedResult.input)
+            val scenery = preparation.compileControlledScenery(preparedResult.input, request.startFrame,
+                request.endFrameExclusive, viewport.width.toInt(), viewport.height.toInt())
             val descriptorJson = buildJsonObject {
                 put("schema", app.melotrail.video.domain.CONTROLLED_MOTION_DESCRIPTOR_SCHEMA)
                 put("preparedScene", Json.parseToJsonElement(CONTROLLED_SCENE_JSON.encodeToString(verifiedScene)))
@@ -220,6 +209,7 @@ class VideoClipGeneration(
                     put("frameCount", Math.subtractExact(request.endFrameExclusive, request.startFrame))
                 })
                 put("controls", JsonArray(controls))
+                if (scenery != null) put("scenery", scenery)
             }.toString()
             VideoControlledMotionGenerationInput(
                 prompt = preparedResult.input.backendMotionPrompt,
@@ -236,6 +226,7 @@ class VideoClipGeneration(
                         runtime = runtimeBinding,
                     ),
                 ),
+                primaryPrompt = preparedResult.input.primaryMotionPrompt,
             )
         } catch (error: IllegalArgumentException) {
             return VideoClipGenerationResult.Rejected(error.message ?: "Controlled motion inputs are invalid.")
@@ -256,11 +247,6 @@ class VideoClipGeneration(
         }
         return VideoClipGenerationResult.Admitted(admitted.job.request, admitted)
     }
-
-    /** Called by the controlled-motion media stage only after the coordinator has persisted and claimed the attempt. */
-    fun renderControlled(request: VideoControlledRenderRequest, cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()) =
-        motionRenderer.render(VideoMotionRenderRequest(request.runtime, request.projectRoot, request.descriptor, request.outputParent,
-            request.startFrame, request.endFrameExclusive, request.timeoutPerInvocation), cancellation)
 
     /** A result is importable only after its newest durable attempt succeeded. */
     fun importCompleted(request: VideoCompletedTakeImport): VideoClipGenerationResult {
@@ -313,16 +299,6 @@ data class VideoClipGenerationRequest(
         require(requestId == null || requestId.matches(Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")))
     }
 }
-
-data class VideoControlledRenderRequest(
-    val runtime: VideoMotionRuntime,
-    val projectRoot: Path,
-    val descriptor: Path,
-    val outputParent: Path,
-    val startFrame: Long,
-    val endFrameExclusive: Long,
-    val timeoutPerInvocation: Duration,
-)
 
 data class VideoCompletedTakeImport(
     val session: VideoProjectSession,

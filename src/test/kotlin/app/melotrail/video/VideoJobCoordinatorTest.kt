@@ -511,7 +511,7 @@ class VideoJobCoordinatorTest {
         val runtime = VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs")
         val descriptor = motionDescriptor(listOf(runtime), 120, 420, 17)
         val motion = VideoControlledMotionRequest(listOf(scene), 120, 420, 17, descriptor)
-        val input = VideoControlledMotionGenerationInput("prompt", listOf(scene) + descriptor.runtime.allPins, motion)
+        val input = VideoControlledMotionGenerationInput("prompt with guidance", listOf(scene) + descriptor.runtime.allPins, motion, "prompt")
         val base = localRequest("controlled-binding", 'a').copy(input = input)
         val request = base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
         val fixture = fixture()
@@ -522,6 +522,7 @@ class VideoJobCoordinatorTest {
         accepted(fixture.coordinator(backend).submit(request))
         val reopened = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot)).snapshot()
         assertEquals(descriptor, (reopened.jobs.single().request.input as VideoControlledMotionGenerationInput).motion.descriptor)
+        assertEquals("prompt", (reopened.jobs.single().request.input as VideoControlledMotionGenerationInput).primaryPrompt)
         for (count in listOf(150L, 600L, 900L)) {
             val first = 120L
             val full = motionDescriptor(listOf(runtime), first, first + count, 17)
@@ -651,13 +652,13 @@ class VideoJobCoordinatorTest {
         assertFailsWith<IllegalArgumentException> { reopenedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { reopenedStore.loadOrCreate(DOMAIN, NOW) }
         assertContentEquals(tamperedBytes, Files.readAllBytes(path))
-        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 2", "\"version\": 999"))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 3", "\"version\": 999"))
         val unsupportedBytes = Files.readAllBytes(path)
         val unsupportedStore = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot))
         assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }
         assertContentEquals(unsupportedBytes, Files.readAllBytes(path))
-        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 2", "\"version\": 1"))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 3", "\"version\": 2"))
         val oldBytes = Files.readAllBytes(path)
         assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }
@@ -707,6 +708,60 @@ class VideoJobCoordinatorTest {
     }
 
     @Test
+    fun `deduplication never returns another project's job and conflicting IDs never reach backend`() {
+        val fixture = fixture()
+        val backend = ControlledBackend().apply {
+            submitBehavior = { VideoBackendSubmission.Rejected("fixture finished without work", false) }
+        }
+        val first = localRequest("first", 'a')
+        val coordinator = fixture.coordinator(backend)
+        assertEquals("first", accepted(coordinator.submit(first)).job.request.id)
+        val duplicate = accepted(coordinator.submit(first.copy(id = "same-project")))
+        assertEquals("first", duplicate.job.request.id)
+        assertTrue(!duplicate.launchedByCaller)
+
+        val wrongProject = first.copy(id = "other", projectId = "other-project")
+        assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(wrongProject)).problem.code)
+        val conflictingId = first.copy(projectId = "other-project")
+        assertEquals(VideoJobProblemCode.REQUEST_ID_CONFLICT,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(conflictingId)).problem.code)
+        val conflictingInputs = first.copy(id = "different-input", input = (first.input as VideoKeyframeGenerationInput).copy(prompt = "changed"))
+        assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(conflictingInputs)).problem.code)
+        assertEquals(1, backend.submissions.size)
+        assertEquals(listOf("first"), fixture.store.snapshot().jobs.map { it.request.id })
+    }
+
+    @Test
+    fun `identical controlled scenes from different projects receive distinct durable attempts`() {
+        val fixture = fixture()
+        val backend = ControlledBackend().apply {
+            availabilityValue = availabilityValue.copy(supportedInputs = availabilityValue.supportedInputs + VideoGenerationInputKind.CONTROLLED_MOTION)
+            submitBehavior = { VideoBackendSubmission.Rejected("fixture finished without work", false) }
+        }
+        val coordinator = fixture.coordinator(backend)
+        val scene = VideoGenerationDependencyPin("scene", HASH_1, "/owned/scene.json")
+        val runtime = VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs")
+        fun request(project: String, id: String): VideoGenerationJobRequest {
+            val descriptor = motionDescriptor(listOf(runtime), 0, 150, 19, project)
+            val input = VideoControlledMotionGenerationInput("same prompt", listOf(scene) + descriptor.runtime.allPins,
+                VideoControlledMotionRequest(listOf(scene), 0, 150, 19, descriptor), "same prompt")
+            val base = localRequest(id, 'a').copy(projectId = project, input = input)
+            return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
+        }
+        val first = request("video-project", "first")
+        val second = request("second-project", "second")
+        assertNotEquals(first.requestFingerprint, second.requestFingerprint)
+        assertEquals("first", accepted(coordinator.submit(first)).job.request.id)
+        assertEquals("second", accepted(coordinator.submit(second)).job.request.id)
+        assertEquals(2, fixture.store.snapshot().jobs.size)
+        assertEquals(2, backend.submissions.size)
+        assertEquals("first", accepted(coordinator.submit(request("video-project", "third"))).job.request.id)
+        assertEquals(2, backend.submissions.size)
+    }
+
+    @Test
     fun `controlled requests are durably deduplicated by fingerprint and backend capability`() {
         val fixture = fixture()
         val backend = ControlledBackend()
@@ -723,6 +778,7 @@ class VideoJobCoordinatorTest {
                     preparedPins = listOf(actualPins[0]), startFrame = 120, endFrameExclusive = 420, seed = 17,
                     descriptor = motionDescriptor(listOf(actualPins[1]), 120, 420, 17),
                 ),
+                "exact prompt text",
             )
             val request = localRequest(id, 'a').copy(input = input)
             return request.copy(requestFingerprint = controlledMotionRequestFingerprint(request.backendId, input, request.modelRequirements))
@@ -737,6 +793,17 @@ class VideoJobCoordinatorTest {
         assertEquals(original.id, duplicate.job.request.id)
         assertTrue(!duplicate.launchedByCaller)
         assertEquals(1, backend.submissions.size)
+        val otherProject = request("motion-other").let { originalRequest ->
+            val originalInput = originalRequest.input as VideoControlledMotionGenerationInput
+            val otherInput = originalInput.copy(motion = originalInput.motion.copy(descriptor =
+                motionDescriptor(listOf(pins[1]), 120, 420, 17, "other-project")))
+            originalRequest.copy(projectId = "other-project", input = otherInput,
+                requestFingerprint = controlledMotionRequestFingerprint(originalRequest.backendId, otherInput, originalRequest.modelRequirements))
+        }
+        assertNotEquals(original.requestFingerprint, otherProject.requestFingerprint)
+        // The local slot still belongs to the first project; no cross-project reuse.
+        assertEquals(VideoJobProblemCode.LOCAL_SLOT_BUSY,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(otherProject)).problem.code)
         backend.submitBehavior = { VideoBackendSubmission.Accepted("provider-${it.ownedAttempt.attemptId}") }
         accepted(coordinator.cancel("motion-a"))
         backend.cancelBehavior = { VideoBackendCancellation.ConfirmedStopped }
@@ -788,7 +855,7 @@ class VideoJobCoordinatorTest {
         val extra = VideoGenerationDependencyPin("a-extra", "e".repeat(64), "/owned/extra.png")
         val motion = VideoControlledMotionRequest(listOf(scene), 0, 150, 9, motionDescriptor(listOf(runtime), 0, 150, 9))
         fun request(id: String, prompt: String, pins: List<VideoGenerationDependencyPin>): VideoGenerationJobRequest {
-            val input = VideoControlledMotionGenerationInput(prompt, pins, motion)
+            val input = VideoControlledMotionGenerationInput(prompt, pins, motion, "exact primary prompt")
             val base = localRequest(id, 'a').copy(input = input)
             return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
         }

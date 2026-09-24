@@ -127,7 +127,7 @@ internal object ComfyVideoHostProbe {
                 backendId = LocalVideoBackend.BACKEND_ID,
                 modelRequirements = modelRequirements,
                 input = input,
-                requestFingerprint = comfyRequestFingerprint(LocalVideoBackend.BACKEND_ID, input, modelRequirements),
+                requestFingerprint = comfyRequestFingerprint("host-probe-project", LocalVideoBackend.BACKEND_ID, input, modelRequirements),
                 maximumAttempts = 1,
                 createdAt = Instant.now().toString(),
                 execution = VideoLocalExecutionPolicy(
@@ -204,7 +204,7 @@ internal object ComfyVideoHostProbe {
             val cancellationRequest = request.copy(
                 id = "host-probe-active-cancel",
                 input = cancellationInput,
-                requestFingerprint = comfyRequestFingerprint(LocalVideoBackend.BACKEND_ID, cancellationInput, modelRequirements),
+                requestFingerprint = comfyRequestFingerprint(request.projectId, LocalVideoBackend.BACKEND_ID, cancellationInput, modelRequirements),
                 createdAt = Instant.now().toString(),
             )
             val cancellationStarted = System.nanoTime()
@@ -975,7 +975,7 @@ class ComfyVideoHostCheckTest {
             val request = VideoGenerationJobRequest(
                 id = "host-request", projectId = "host-project", backendId = LocalVideoBackend.BACKEND_ID,
                 input = input, modelRequirements = emptyList(),
-                requestFingerprint = comfyRequestFingerprint(LocalVideoBackend.BACKEND_ID, input, emptyList()),
+                requestFingerprint = comfyRequestFingerprint("host-project", LocalVideoBackend.BACKEND_ID, input, emptyList()),
                 maximumAttempts = 1, createdAt = "2026-09-15T00:00:00Z",
                 execution = VideoLocalExecutionPolicy(60_000, 1_000_000_000, 1_000_000),
             )

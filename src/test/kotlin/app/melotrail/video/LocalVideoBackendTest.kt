@@ -36,6 +36,7 @@ import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoGenerationJobRequest
+import app.melotrail.video.domain.VideoKeyframeGenerationInput
 import app.melotrail.video.domain.VideoLocalExecutionPolicy
 import app.melotrail.video.domain.VideoSubmissionPhase
 import java.net.URI
@@ -200,11 +201,137 @@ class LocalVideoBackendTest {
         val changedOutput = input.copy(comfyWorkflow = binding.copy(
             output = binding.output.copy(allowedExtensions = setOf("webm")),
         ))
-        assertTrue(comfyRequestFingerprint(LocalVideoBackend.BACKEND_ID, changedOutput, emptyList()) != request.requestFingerprint)
+        assertTrue(comfyRequestFingerprint(request.projectId, LocalVideoBackend.BACKEND_ID, changedOutput, emptyList()) != request.requestFingerprint)
         val changedPin = input.copy(dependencyPins = input.dependencyPins.map {
             if (it.id == "subject") it.copy(sha256 = "e".repeat(64)) else it
         })
-        assertTrue(comfyRequestFingerprint(LocalVideoBackend.BACKEND_ID, changedPin, emptyList()) != request.requestFingerprint)
+        assertTrue(comfyRequestFingerprint(request.projectId, LocalVideoBackend.BACKEND_ID, changedPin, emptyList()) != request.requestFingerprint)
+    }
+
+    @Test
+    fun `same Comfy image in two projects gets two durable jobs and separate backend submissions`() {
+        val fixture = fixture()
+        val first = fixture.request()
+        val second = first.copy(id = "second-request", projectId = "second-project",
+            requestFingerprint = comfyRequestFingerprint("second-project", first.backendId, first.input, first.modelRequirements))
+        val midi = fixture.root.resolve("midi-protected").createDirectories()
+        val store = VideoJobStore(fixture.root.resolve("jobs"), "comfy-test", listOf(midi))
+        val api = FakeApi().apply { submitResult = ComfyClientSubmissionResult.Rejected("owned fixture rejection") }
+        val requests = mapOf(first.id to first, second.id to second)
+        val backend = LocalVideoBackend(fixture.session, api, { true }, {}, { requests[it] },
+            listOf(fixture.root), fixture.publication, emptyList(), { true },
+            Clock.fixed(Instant.parse(NOW), ZoneOffset.UTC))
+        val coordinator = coordinator(store, backend)
+        assertIs<VideoJobResult.Accepted>(coordinator.submit(first))
+        assertIs<VideoJobResult.Accepted>(coordinator.submit(second))
+        assertEquals(2, api.submitCalls)
+        assertEquals(setOf(first.id, second.id), store.snapshot().jobs.map { it.request.id }.toSet())
+        assertEquals(2, store.snapshot().jobs.map { it.request.requestFingerprint }.toSet().size)
+        assertEquals(first.id, assertIs<VideoJobResult.Accepted>(coordinator.submit(first.copy(id = "duplicate"))).job.request.id)
+        assertEquals(2, api.submitCalls)
+        assertEquals(VideoJobProblemCode.REQUEST_ID_CONFLICT,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(first.copy(projectId = "second-project", requestFingerprint = second.requestFingerprint))).problem.code)
+        assertEquals(2, api.submitCalls)
+    }
+
+    @Test
+    fun `coordinator rejects forged Comfy fingerprints before deduplication or backend invocation`() {
+        val fixture = fixture()
+        val first = fixture.request()
+        val midi = fixture.root.resolve("midi-protected").createDirectories()
+        val store = VideoJobStore(fixture.root.resolve("jobs"), "comfy-test", listOf(midi))
+        val api = FakeApi().apply { submitResult = ComfyClientSubmissionResult.Rejected("owned fixture rejection") }
+        val backend = fixture.backend(api, first)
+        val coordinator = coordinator(store, backend)
+        val forged = first.copy(requestFingerprint = "f".repeat(64))
+        val emptyLedger = coordinator.snapshot()
+        assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(forged)).problem.code)
+        assertEquals(emptyLedger, store.snapshot())
+        assertEquals(0, api.submitCalls)
+
+        assertIs<VideoJobResult.Accepted>(coordinator.submit(first))
+        val original = store.snapshot()
+        // Neither a new request ID nor the persisted ID may bypass canonical identity validation.
+        for (candidate in listOf(forged.copy(id = "different-id"), forged,
+            first.copy(id = "other-project-id", projectId = "other-project"))) {
+            assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+                assertIs<VideoJobResult.Rejected>(coordinator.submit(candidate)).problem.code)
+            assertEquals(original, store.snapshot())
+            assertEquals(1, api.submitCalls)
+        }
+        assertEquals(first.id, assertIs<VideoJobResult.Accepted>(coordinator.submit(first.copy(id = "duplicate"))).job.request.id)
+        assertEquals(1, api.submitCalls)
+    }
+
+    @Test
+    fun `image free keyframe identity binds project workflow and geometry without requiring a reference`() {
+        val fixture = fixture()
+        val clip = fixture.request()
+        val workflow = requireNotNull(clip.input.comfyWorkflow).copy(
+            referenceInputs = emptyList(), frameCountInput = null, framesPerSecondInput = null,
+        )
+        val input = VideoKeyframeGenerationInput(
+            "Draw a still", listOf(clip.input.dependencyPins.single { it.id == "workflow" }),
+            512, 320, workflow,
+        )
+        fun fingerprint(project: String, keyframe: VideoKeyframeGenerationInput) =
+            comfyRequestFingerprint(project, clip.backendId, keyframe, emptyList())
+        val request = clip.copy(input = input, requestFingerprint = fingerprint(clip.projectId, input))
+        assertEquals(request.requestFingerprint, fingerprint(clip.projectId, input.copy()))
+        assertTrue(request.requestFingerprint != fingerprint("another-project", input))
+        assertTrue(request.requestFingerprint != fingerprint(clip.projectId, input.copy(width = 640)))
+        assertTrue(request.requestFingerprint != fingerprint(clip.projectId, input.copy(
+            dependencyPins = listOf(input.dependencyPins.single().copy(sha256 = "a".repeat(64))),
+        )))
+        assertFailsWith<IllegalArgumentException> {
+            val flat = assertIs<VideoClipGenerationInput>(clip.input)
+            comfyRequestFingerprint(clip.projectId, clip.backendId, flat.copy(
+                comfyWorkflow = workflow, dependencyPins = input.dependencyPins,
+            ), emptyList())
+        }
+        val api = FakeApi()
+        val result = assertIs<VideoBackendSubmission.Accepted>(fixture.backend(api, request).submit(fixture.command(request)))
+        assertEquals(result.providerWorkId, api.submission?.promptId)
+        assertTrue(requireNotNull(api.submission).uploads.isEmpty())
+        val midi = fixture.root.resolve("midi-protected").createDirectories()
+        val store = VideoJobStore(fixture.root.resolve("jobs"), "comfy-test", listOf(midi))
+        val coordinator = coordinator(store, fixture.backend(FakeApi().apply {
+            submitResult = ComfyClientSubmissionResult.Rejected("owned fixture rejection")
+        }, request))
+        assertIs<VideoJobResult.Accepted>(coordinator.submit(request))
+        assertEquals(request.id, assertIs<VideoJobResult.Accepted>(coordinator.submit(request.copy(id = "duplicate"))).job.request.id)
+        assertEquals(1, store.snapshot().jobs.size)
+    }
+
+    @Test
+    fun `Comfy identity scopes the exact consumed image to its project without changing graph slots`() {
+        val fixture = fixture()
+        val request = fixture.request()
+        val input = assertIs<VideoClipGenerationInput>(request.input)
+        val otherProject = comfyRequestFingerprint("other-project", request.backendId, input, request.modelRequirements)
+        assertTrue(otherProject != request.requestFingerprint)
+        val changedImage = input.copy(dependencyPins = input.dependencyPins.map {
+            if (it.id == "subject") it.copy(sha256 = "f".repeat(64)) else it
+        })
+        assertTrue(request.requestFingerprint != comfyRequestFingerprint(request.projectId, request.backendId, changedImage, request.modelRequirements))
+        val injected = input.copy(prompt = "scene\nsubject:${"f".repeat(64)}:${fixture.reference}")
+        assertTrue(comfyRequestFingerprint(request.projectId, request.backendId, injected, request.modelRequirements) !=
+            comfyRequestFingerprint(request.projectId, request.backendId, changedImage, request.modelRequirements))
+        assertFailsWith<IllegalArgumentException> {
+            val unpinnedImage = input.copy(dependencyPins = input.dependencyPins.map {
+                if (it.id == "subject") it.copy(ownedPath = null) else it
+            })
+            comfyRequestFingerprint(request.projectId, request.backendId, unpinnedImage, request.modelRequirements)
+        }
+        val slots = AtomicInteger()
+        val api = FakeApi()
+        val backend = fixture.backend(api, request, acquire = { slots.incrementAndGet(); true })
+        val forged = fixture.command(request).copy(ownedAttempt = fixture.owned().copy(requestFingerprint = otherProject))
+        assertIs<VideoBackendSubmission.Rejected>(backend.submit(forged))
+        assertEquals(0, slots.get())
+        assertEquals(0, api.submitCalls)
+        assertEquals(VideoComfyInputSlot("2", "image"), input.comfyWorkflow!!.referenceInputs.single().slot)
     }
 
     @Test
@@ -216,23 +343,25 @@ class LocalVideoBackendTest {
         val input = VideoControlledMotionGenerationInput(
             "exact prompt", listOf(scene) + motionRuntime(renderer).allPins,
             VideoControlledMotionRequest(listOf(scene), 10, 20, 42, motionDescriptor(listOf(renderer), 10, 20, 42, ordinary.projectId)),
+            "exact prompt",
         )
-        val fingerprint = videoRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements)
+        val fingerprint = videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input, ordinary.modelRequirements)
         assertEquals(controlledMotionRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements), fingerprint)
-        assertEquals(fingerprint, videoRequestFingerprint(ordinary.backendId, input.copy(), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId, input.copy(prompt = "changed"), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId,
+        assertEquals(fingerprint, videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input.copy(), ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input.copy(prompt = "changed"), ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input.copy(primaryPrompt = "changed"), ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId,
             input.copy(motion = input.motion.copy(descriptor = input.motion.descriptor.copy(
                 requestJson = input.motion.descriptor.requestJson.replace("0.25", "0.2")))), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId,
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId,
             input.copy(motion = input.motion.copy(startFrame = 11, descriptor = motionDescriptor(listOf(renderer), 11, 20, 42, ordinary.projectId))), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId,
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId,
             input.copy(motion = input.motion.copy(seed = 43, descriptor = motionDescriptor(listOf(renderer), 10, 20, 43, ordinary.projectId))), ordinary.modelRequirements))
         val changedRuntime = renderer.copy(sha256 = "f".repeat(64))
         val changedRuntimeBinding = input.motion.descriptor.runtime.copy(compositor = changedRuntime.copy(id = "compositor"))
         val changedPins = input.copy(dependencyPins = listOf(scene) + changedRuntimeBinding.allPins,
             motion = input.motion.copy(descriptor = input.motion.descriptor.copy(runtime = changedRuntimeBinding)))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.backendId, changedPins, ordinary.modelRequirements))
+        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId, changedPins, ordinary.modelRequirements))
     }
 
     @Test
@@ -247,8 +376,9 @@ class LocalVideoBackendTest {
             VideoControlledMotionRequest(
                 listOf(scene), 300, 600, 99, motionDescriptor(listOf(renderer), 300, 600, 99, ordinary.projectId),
             ),
+            "keep this exact prompt",
         )
-        val request = ordinary.copy(input = input, requestFingerprint = videoRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements))
+        val request = ordinary.copy(input = input, requestFingerprint = videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input, ordinary.modelRequirements))
         val api = FakeApi()
         val slotClaims = AtomicInteger()
         val backend = fixture.backend(api, request, acquire = { slotClaims.incrementAndGet(); true })
@@ -292,7 +422,7 @@ class LocalVideoBackendTest {
             val second = coordinator(store, backendB)
             val competingInput = assertIs<VideoClipGenerationInput>(request.input).copy(prompt = "Another scene")
             val competing = request.copy(id = "request-2", input = competingInput,
-                requestFingerprint = comfyRequestFingerprint(request.backendId, competingInput, emptyList()))
+                requestFingerprint = comfyRequestFingerprint(request.projectId, request.backendId, competingInput, emptyList()))
             assertEquals(VideoJobProblemCode.LOCAL_SLOT_BUSY, assertIs<VideoJobResult.Rejected>(second.submit(competing)).problem.code)
             assertEquals(VideoJobProblemCode.RETRY_NOT_ALLOWED, assertIs<VideoJobResult.Rejected>(second.retry(request.id)).problem.code)
             val running = assertIs<VideoJobResult.Accepted>(second.recover().single()).attempt!!
@@ -363,7 +493,7 @@ class LocalVideoBackendTest {
                 assertFailsWith<ComfyVideoRuntimeException> { runtime.acquireInferenceSlot(fixture.session, "competing") }.failure)
             val competingInput = assertIs<VideoClipGenerationInput>(request.input).copy(prompt = "Another scene")
             val competing = request.copy(id = "request-2", input = competingInput,
-                requestFingerprint = comfyRequestFingerprint(request.backendId, competingInput, emptyList()))
+                requestFingerprint = comfyRequestFingerprint(request.projectId, request.backendId, competingInput, emptyList()))
             assertEquals(VideoJobProblemCode.LOCAL_SLOT_BUSY, assertIs<VideoJobResult.Rejected>(first.submit(competing)).problem.code)
 
             val recoveredStore = VideoJobStore(jobs, "comfy-test", protectedRoots)
@@ -529,7 +659,7 @@ class LocalVideoBackendTest {
                 backendId = LocalVideoBackend.BACKEND_ID,
                 modelRequirements = emptyList(),
                 input = input,
-                requestFingerprint = comfyRequestFingerprint(LocalVideoBackend.BACKEND_ID, input, emptyList()),
+                requestFingerprint = comfyRequestFingerprint("project-1", LocalVideoBackend.BACKEND_ID, input, emptyList()),
                 maximumAttempts = 2,
                 createdAt = NOW,
                 execution = VideoLocalExecutionPolicy(60_000, 1_000_000_000, 1_000_000),
@@ -561,7 +691,7 @@ class LocalVideoBackendTest {
             acquire: (String) -> Boolean = { true },
             release: (String) -> Unit = { closed.incrementAndGet(); Unit },
         ) = LocalVideoBackend(
-            session, api, acquire, release, { if (it == "request-1") request else null }, listOf(root), publication, emptyList(), ready,
+            session, api, acquire, release, { id -> request?.takeIf { it.id == id } }, listOf(root), publication, emptyList(), ready,
             Clock.fixed(Instant.parse(NOW), ZoneOffset.UTC),
         )
     }

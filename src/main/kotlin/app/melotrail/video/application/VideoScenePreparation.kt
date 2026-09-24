@@ -11,6 +11,12 @@ import app.melotrail.video.domain.VideoPreparedLayer
 import app.melotrail.video.domain.VideoPreparedMask
 import app.melotrail.video.domain.VideoPreparedPose
 import app.melotrail.video.domain.VideoPreparedScene
+import app.melotrail.video.domain.VideoMotionUnit
+import app.melotrail.video.domain.VideoMaskPurpose
+import app.melotrail.video.domain.MAX_JAVASCRIPT_SAFE_INTEGER
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import app.melotrail.video.domain.VideoPromptBackendCapabilities
 import app.melotrail.video.domain.VideoVersionedId
 import app.melotrail.video.domain.requireFreeFormText
@@ -181,13 +187,148 @@ class VideoScenePreparation(
         )
     }
 
+    /** Compile only compositor semantics with an exact, auditable mapping to renderer operations. */
+    fun compileControlledControls(input: VideoPreparedSceneMotion): List<kotlinx.serialization.json.JsonObject> {
+        val compiled = input.controls.mapNotNull { control ->
+            val capability = control.capability
+            val (kind, field, value) = when (control.intent) {
+                VideoSceneMotionIntent.BLINK -> {
+                    require(capability.targetType == VideoMotionTargetType.POSE && capability.control == VideoMotionControl.POSE_BLEND)
+                    require(control.requestedDefaultValue > 0 && control.requestedDefaultValue <= 1 && capability.maximum >= control.requestedDefaultValue) {
+                        "${control.id}: blink needs a positive amount within the pose blend's 0..1 range."
+                    }
+                    Triple("blink", "amount", control.requestedDefaultValue)
+                }
+                VideoSceneMotionIntent.BREATHING, VideoSceneMotionIntent.HEAD_GESTURE -> when (capability.control) {
+                    VideoMotionControl.TRANSLATE_Y -> {
+                        require(control.intent == VideoSceneMotionIntent.BREATHING && capability.targetType == VideoMotionTargetType.LAYER && capability.unit == VideoMotionUnit.PIXELS) {
+                            "${control.id}: generic translation is unsupported; explicitly select bounded breathing."
+                        }
+                        require(control.requestedMinimum == -control.requestedMaximum && control.requestedDefaultValue == 0.0) {
+                            "${control.id}: breathing needs a symmetric requested range centered at zero; choose equal negative/positive bounds and a zero default."
+                        }
+                        val amplitude = control.requestedMaximum
+                        require(amplitude in 0.0..4.0 && capability.minimum <= -amplitude && capability.maximum >= amplitude) {
+                            "${control.id}: breathing needs symmetric subject motion within 4 px and the prepared capability bounds."
+                        }
+                        Triple("breathing", "amplitudePixels", amplitude)
+                    }
+                    VideoMotionControl.ROTATE -> {
+                        require(control.intent == VideoSceneMotionIntent.HEAD_GESTURE && capability.targetType == VideoMotionTargetType.LAYER &&
+                            input.scene.masks.count { it.purpose == VideoMaskPurpose.HEAD_REGION && it.layerIds == listOf(capability.targetId) &&
+                                it.reviewStatus != VideoComponentReviewStatus.REJECTED && it.alpha?.isUsableCutout == true } == 1) {
+                            "${control.id}: generic rotation is unsupported; explicitly select head gesture with one usable, reviewed HEAD_REGION mask."
+                        }
+                        require(control.requestedMinimum == -control.requestedMaximum && control.requestedDefaultValue == 0.0) {
+                            "${control.id}: head gesture needs a symmetric requested range centered at zero; choose equal negative/positive bounds and a zero default."
+                        }
+                        val amplitude = control.requestedMaximum
+                        require(amplitude in 0.0..3.0 && capability.minimum <= -amplitude && capability.maximum >= amplitude) {
+                            "${control.id}: head gesture needs symmetric motion within 3° and the prepared capability bounds."
+                        }
+                        Triple("headGesture", "amplitudeDegrees", amplitude)
+                    }
+                    else -> throw IllegalArgumentException("${control.id}: generic character motion is unsupported; use bounded breathing or a masked head gesture.")
+                }
+                VideoSceneMotionIntent.CHARACTER_ACTION -> throw IllegalArgumentException("${control.id}: generic character motion is unsupported; select bounded breathing or masked head gesture explicitly.")
+                VideoSceneMotionIntent.EFFECT -> throw IllegalArgumentException("${control.id}: generic effects are unsupported; explicitly select anchored steam.")
+                VideoSceneMotionIntent.STEAM -> {
+                    require(capability.targetType == VideoMotionTargetType.EFFECT_ANCHOR && capability.control == VideoMotionControl.EFFECT_RATE)
+                    require(control.requestedDefaultValue > 0 && control.requestedDefaultValue <= 8) {
+                        "${control.id}: anchored steam needs a positive rate no greater than 8/s."
+                    }
+                    Triple("steam", "ratePerSecond", control.requestedDefaultValue)
+                }
+                VideoSceneMotionIntent.SCENERY_TRAVEL -> return@mapNotNull null
+                VideoSceneMotionIntent.CAMERA_OR_AMBIENT -> throw IllegalArgumentException("${control.id}: whole-image motion is I2V, not a controlled compositor operation.")
+            }
+            require(value.isFinite()) { "${control.id}: compiled motion value must be finite." }
+            kotlinx.serialization.json.buildJsonObject {
+                put("id", kotlinx.serialization.json.JsonPrimitive(control.id))
+                put("capabilityId", kotlinx.serialization.json.JsonPrimitive(capability.id))
+                put("kind", kotlinx.serialization.json.JsonPrimitive(kind))
+                put(field, kotlinx.serialization.json.JsonPrimitive(value))
+            }
+        }
+        require(compiled.size <= 16) { "At most 16 controlled operations are supported." }
+        val kinds = compiled.map { it.getValue("kind").toString() }
+        require(listOf("blink", "breathing", "headGesture").all { kind -> kinds.count { it == "\"$kind\"" } <= 1 }) {
+            "Only one blink, breathing and head gesture control per subject can be composed; remove ambiguous duplicates."
+        }
+        return compiled
+    }
+
+    /** One explicit rigid camera over one prepared coverage. The durable descriptor validates
+     * every frame, source capability and shutter sample before admission. Never infer sections. */
+    fun compileControlledScenery(input: VideoPreparedSceneMotion, start: Long, end: Long, width: Int, height: Int): JsonObject? {
+        val travel = input.controls.filter { it.intent == VideoSceneMotionIntent.SCENERY_TRAVEL }
+        if (travel.isEmpty()) return null
+        require(travel.size == 1) { "Select one scenery trajectory; multiple independent camera controls are ambiguous." }
+        val selected = travel.single()
+        val capability = selected.capability
+        require(capability.targetType == VideoMotionTargetType.SCENERY_COVERAGE && capability.unit == VideoMotionUnit.PIXELS &&
+            capability.control in setOf(VideoMotionControl.TRANSLATE_X, VideoMotionControl.TRANSLATE_Y)) {
+            "${selected.id}: scenery needs a prepared pixel-translation coverage capability."
+        }
+        val amount = selected.requestedDefaultValue
+        require(amount.isFinite() && amount != 0.0 && kotlin.math.abs(amount) <= 16384) {
+            "${selected.id}: select an explicit nonzero scenery travel of at most 16,384 px."
+        }
+        val duration = Math.subtractExact(end, start)
+        require(start in 0..MAX_JAVASCRIPT_SAFE_INTEGER && end in 1..MAX_JAVASCRIPT_SAFE_INTEGER && duration in 2..9000) {
+            "${selected.id}: moving scenery needs 2..9000 frames with JavaScript-safe absolute bounds."
+        }
+        val coverage = input.scene.sceneryCoverage.single { it.id == capability.targetId }
+        val layer = input.scene.layers.single { it.id == coverage.layerId }
+        require(coverage.reviewStatus != VideoComponentReviewStatus.REJECTED && layer.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+            layer.kind in setOf(VideoLayerKind.ENVIRONMENT, VideoLayerKind.SCENERY)) {
+            "${selected.id}: supply non-rejected, prepared scenery artwork and coverage."
+        }
+        val viewport = input.scene.layers.single { it.kind == VideoLayerKind.FINISHED_SCENE }.bounds
+        require(viewport.x == 0.0 && viewport.y == 0.0 && viewport.width == width.toDouble() && viewport.height == height.toDouble() &&
+            coverage.bounds.coordinateSpaceId == viewport.coordinateSpaceId) {
+            "${selected.id}: scenery coverage must share the prepared output viewport."
+        }
+        // Camera travel opposes the selected layer displacement. Start at prepared placement;
+        // the descriptor validator rejects insufficient artwork or capability at any sample.
+        val x = if (capability.control == VideoMotionControl.TRANSLATE_X) -amount else 0.0
+        val y = if (capability.control == VideoMotionControl.TRANSLATE_Y) -amount else 0.0
+        return buildJsonObject {
+            put("schema", "melotrail-rigid-scenery-v1")
+            put("mode", "moving")
+            put("viewport", buildJsonObject {
+                put("coordinateSpaceId", viewport.coordinateSpaceId)
+                put("x", 0); put("y", 0); put("width", width); put("height", height)
+            })
+            put("camera", buildJsonObject {
+                put("startFrame", start); put("durationFrames", duration)
+                put("travelXPixels", x); put("travelYPixels", y)
+                put("motionBlurSamples", 3); put("shutterFraction", 0.5)
+            })
+            put("planes", kotlinx.serialization.json.buildJsonArray {
+                add(buildJsonObject {
+                    put("id", coverage.id)
+                    put("sections", kotlinx.serialization.json.buildJsonArray {
+                        add(buildJsonObject {
+                            put("coverageId", coverage.id)
+                            put("worldX", coverage.bounds.x); put("worldY", coverage.bounds.y)
+                            put("startFrame", start); put("endFrameExclusive", end)
+                        })
+                    })
+                })
+            })
+        }
+    }
+
     /** Asset eligibility is separate from the selected compositor's limited semantic controls. */
     private fun rendererLimitation(input: VideoPreparedMotionInput): VideoPromptIssue? {
         val detail = rendererUnsupportedReason(input) ?: when (input.intent) {
             VideoSceneMotionIntent.CAMERA_OR_AMBIENT, VideoSceneMotionIntent.BLINK -> return null
-            VideoSceneMotionIntent.CHARACTER_ACTION -> error("Character actions must have an unsupported renderer reason")
-            VideoSceneMotionIntent.SCENERY_TRAVEL -> "Scenery needs a supported rigid-camera trajectory and full-trajectory coverage validation."
-            VideoSceneMotionIntent.EFFECT -> "Only anchored steam (≤8/s, rise ≤28 px/s) is implemented, not arbitrary effects."
+            VideoSceneMotionIntent.CHARACTER_ACTION -> "Generic character actions are not executable; select bounded breathing or a masked head gesture explicitly."
+            VideoSceneMotionIntent.BREATHING, VideoSceneMotionIntent.HEAD_GESTURE -> return null
+            VideoSceneMotionIntent.SCENERY_TRAVEL -> "Scenery requires an explicit nonzero rigid-camera travel and full-trajectory coverage validation at descriptor compilation."
+            VideoSceneMotionIntent.EFFECT -> "Generic effects are unsupported; explicitly select anchored steam (≤8/s, rise ≤28 px/s)."
+            VideoSceneMotionIntent.STEAM -> return null
         }
         return VideoPromptIssue(
             VideoPromptIssueCode.INFORMATIONAL_LIMITATION,
@@ -203,13 +344,15 @@ class VideoScenePreparation(
             "Blink exceeds the compositor's 0..1 amount." else null
         VideoSceneMotionIntent.CHARACTER_ACTION -> when (input.capability.control) {
             VideoMotionControl.TRANSLATE_Y -> "Generic subject translation is not a compositor control; only bounded breathing (≤4 px) is implemented."
-            VideoMotionControl.ROTATE -> "Generic subject rotation is not a compositor control; only a head gesture (≤3°) with a HEAD_REGION mask is implemented."
+            VideoMotionControl.ROTATE -> "Generic subject rotation is not a compositor control; explicitly select a head gesture (≤3°) with a HEAD_REGION mask."
             VideoMotionControl.TRANSLATE_X -> "Independent subject translation is not implemented by the compositor."
             else -> "Independent subject ${input.capability.control} is not implemented by the compositor."
         }
+        VideoSceneMotionIntent.BREATHING, VideoSceneMotionIntent.HEAD_GESTURE -> null
         VideoSceneMotionIntent.SCENERY_TRAVEL -> if (input.requestedMinimum < -16384 || input.requestedMaximum > 16384)
-            "Travel exceeds the compositor's 16,384 px limit; full-trajectory coverage is not established by preparation." else null
-        VideoSceneMotionIntent.EFFECT -> if (input.requestedMinimum < 0 || input.requestedMaximum > 8)
+            "Travel exceeds the compositor's 16,384 px limit." else null
+        VideoSceneMotionIntent.EFFECT -> "Generic effects are unsupported; explicitly select anchored steam."
+        VideoSceneMotionIntent.STEAM -> if (input.requestedMinimum < 0 || input.requestedMaximum > 8)
             "Effect rate exceeds the compositor's steam limit of 8/s (rise ≤28 px/s); arbitrary effects are not implemented." else null
     }
 
@@ -469,10 +612,13 @@ enum class VideoSceneMotionIntent(val label: String, val nextAction: String) {
         "independent character action",
         "Supply a separated character, clean background and any required external pose/pivot assets.",
     ),
+    BREATHING("bounded breathing", "Select a subject TRANSLATE_Y capability with a clean plate and motion within 4 px."),
+    HEAD_GESTURE("masked head gesture", "Supply one usable HEAD_REGION mask and select a subject ROTATE capability within 3 degrees."),
     SCENERY_TRAVEL(
         "moving scenery",
         "Supply extended coherent external scenery with enough declared coverage for the requested travel.",
     ),
+    STEAM("anchored steam", "Place and review an explicit steam anchor on a supplied layer."),
     EFFECT(
         "an anchored effect",
         "Place and review an explicit effect anchor on a supplied layer.",
@@ -487,9 +633,13 @@ enum class VideoSceneMotionIntent(val label: String, val nextAction: String) {
                 capability.control in CHARACTER_LAYER_CONTROLS
             else -> false
         }
+        BREATHING -> capability.targetType == VideoMotionTargetType.LAYER && capability.control == VideoMotionControl.TRANSLATE_Y &&
+            scene.layers.singleOrNull { it.id == capability.targetId }?.kind == VideoLayerKind.SUBJECT
+        HEAD_GESTURE -> capability.targetType == VideoMotionTargetType.LAYER && capability.control == VideoMotionControl.ROTATE &&
+            scene.layers.singleOrNull { it.id == capability.targetId }?.kind == VideoLayerKind.SUBJECT
         SCENERY_TRAVEL -> capability.targetType == VideoMotionTargetType.SCENERY_COVERAGE &&
             capability.control in setOf(VideoMotionControl.TRANSLATE_X, VideoMotionControl.TRANSLATE_Y)
-        EFFECT -> capability.targetType == VideoMotionTargetType.EFFECT_ANCHOR && capability.control == VideoMotionControl.EFFECT_RATE
+        EFFECT, STEAM -> capability.targetType == VideoMotionTargetType.EFFECT_ANCHOR && capability.control == VideoMotionControl.EFFECT_RATE
     }
 }
 

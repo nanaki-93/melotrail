@@ -53,6 +53,11 @@ import app.melotrail.video.domain.VideoPoint
 import app.melotrail.video.domain.VideoPreparedLayer
 import app.melotrail.video.domain.VideoPreparedMask
 import app.melotrail.video.domain.VideoPreparedScene
+import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.int
 import app.melotrail.video.domain.VideoSubjectLandmark
 import app.melotrail.video.domain.VideoComponentReviewStatus
 import app.melotrail.video.domain.VideoDependencyPin
@@ -281,6 +286,133 @@ class VideoScenePreparationTest {
     }
 
     @Test
+    fun `controlled semantic compiler preserves compositor operation types and rejects ambiguous motion`() {
+        val fixture = fixture()
+        val prepared = fixture.layeredScene()
+        val base = prepared.scene
+        val subject = base.layers.single { it.id == "subject" }
+        val headMask = VideoPreparedMask(
+            "head-mask", base.poses.single().image, subject.bounds, listOf(subject.id),
+            purpose = app.melotrail.video.domain.VideoMaskPurpose.HEAD_REGION, alpha = subject.alpha,
+        )
+        val point = VideoPlacedPoint("scene", VideoPoint(15.0, 15.0))
+        val withControls = base.copy(
+            masks = base.masks + headMask,
+            effectAnchors = listOf(VideoEffectAnchor("steam", subject.id, position = point)),
+            motionCapabilities = base.motionCapabilities.map {
+                if (it.targetType == VideoMotionTargetType.POSE) it.copy(id = "blink-blend") else it
+            } + listOf(
+                VideoMotionCapability("breath", VideoMotionTargetType.LAYER, subject.id, VideoMotionControl.TRANSLATE_Y,
+                    VideoMotionUnit.PIXELS, -4.0, 4.0, 0.0),
+                VideoMotionCapability("head", VideoMotionTargetType.LAYER, subject.id, VideoMotionControl.ROTATE,
+                    VideoMotionUnit.DEGREES, -3.0, 3.0, 0.0),
+                VideoMotionCapability("steam-rate", VideoMotionTargetType.EFFECT_ANCHOR, "steam", VideoMotionControl.EFFECT_RATE,
+                    VideoMotionUnit.PER_SECOND, 0.0, 8.0, 0.0),
+            ),
+        )
+        val look = fixture.look(prepared.finishedId)
+        val service = VideoScenePreparation()
+        val requests = VideoSceneMotionRequest("Blink and breathe gently.", listOf(
+            control("blink", VideoSceneMotionIntent.BLINK, "blink-blend", 0.0, 1.0, 0.5),
+            control("breathing", VideoSceneMotionIntent.BREATHING, "breath", -2.0, 2.0, 0.0),
+            control("gesture", VideoSceneMotionIntent.HEAD_GESTURE, "head", -2.0, 2.0, 0.0),
+            control("steam", VideoSceneMotionIntent.STEAM, "steam-rate", 0.0, 8.0, 2.0),
+        ))
+        val prepResult = service.prepare(look, withControls, requests, capabilities(), guidelines())
+        assertTrue(prepResult !is VideoScenePreparationResult.Rejected, (prepResult as? VideoScenePreparationResult.Rejected)?.problems.toString())
+        val preparedMotion = (prepResult as VideoScenePreparationResult.Prepared).input
+        val compiled = service.compileControlledControls(preparedMotion)
+        assertEquals(listOf("blink", "breathing", "headGesture", "steam"), compiled.map { it["kind"]?.toString()?.trim('"') })
+        assertEquals("0.5", compiled.first()["amount"].toString())
+        assertEquals("2.0", compiled[1]["amplitudePixels"].toString())
+        assertEquals("2.0", compiled[2]["amplitudeDegrees"].toString())
+        // A sine oscillates in both directions: a one-sided or asymmetric request must
+        // not render negative motion beyond the range the user explicitly selected.
+        val invalidOscillations = listOf(
+            control("asymmetric", VideoSceneMotionIntent.BREATHING, "breath", 1.0, 2.0, 1.0),
+            control("asymmetric", VideoSceneMotionIntent.BREATHING, "breath", -1.0, 2.0, 0.0),
+            control("asymmetric", VideoSceneMotionIntent.BREATHING, "breath", -2.0, 2.0, 1.0),
+            control("asymmetric", VideoSceneMotionIntent.HEAD_GESTURE, "head", 1.0, 2.0, 1.0),
+            control("asymmetric", VideoSceneMotionIntent.HEAD_GESTURE, "head", -1.0, 2.0, 0.0),
+            control("asymmetric", VideoSceneMotionIntent.HEAD_GESTURE, "head", -2.0, 2.0, 1.0),
+        )
+        for (invalid in invalidOscillations) {
+            val motion = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+                look, withControls, VideoSceneMotionRequest("Move gently.", listOf(invalid)),
+                capabilities(), guidelines(),
+            )).input
+            val error = kotlin.test.assertFailsWith<IllegalArgumentException> {
+                service.compileControlledControls(motion)
+            }
+            assertTrue(error.message.orEmpty().contains("symmetric requested range"), error.message.orEmpty())
+        }
+        val overBounded = requests.copy(controls = requests.controls.map {
+            if (it.id == "breathing") it.copy(minimum = -4.1, maximum = 4.1) else it
+        })
+        val overBoundedScene = withControls.copy(motionCapabilities = withControls.motionCapabilities.map {
+            if (it.id == "breath") it.copy(minimum = -5.0, maximum = 5.0) else it
+        })
+        val overBoundedMotion = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, overBoundedScene, overBounded, capabilities(), guidelines(),
+        )).input
+        val boundError = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            service.compileControlledControls(overBoundedMotion)
+        }
+        assertTrue(boundError.message.orEmpty().contains("4 px"))
+        val duplicate = requests.copy(controls = requests.controls + control(
+            "second-blink", VideoSceneMotionIntent.BLINK, "blink-blend", 0.0, 1.0, 0.5,
+        ))
+        val duplicateMotion = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, withControls, duplicate, capabilities(), guidelines(),
+        )).input
+        assertTrue(kotlin.test.assertFailsWith<IllegalArgumentException> {
+            service.compileControlledControls(duplicateMotion)
+        }.message.orEmpty().contains("ambiguous duplicates"))
+        assertEquals("2.0", compiled.last()["ratePerSecond"].toString())
+        val genericEffect = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, withControls, requests.copy(controls = listOf(
+                control("effect", VideoSceneMotionIntent.EFFECT, "steam-rate", 0.0, 8.0, 2.0),
+            )), capabilities(), guidelines(),
+        )).input
+        assertTrue(kotlin.test.assertFailsWith<IllegalArgumentException> {
+            service.compileControlledControls(genericEffect)
+        }.message.orEmpty().contains("generic effects"))
+
+        val generic = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, withControls, VideoSceneMotionRequest("Turn the whole character.", listOf(
+                control("rotation", VideoSceneMotionIntent.CHARACTER_ACTION,
+                    withControls.motionCapabilities.single { it.control == VideoMotionControl.ROTATE }.id, -3.0, 3.0, 0.0),
+            )), capabilities(), guidelines(),
+        )).input
+        assertTrue(kotlin.test.assertFailsWith<IllegalArgumentException> {
+            service.compileControlledControls(generic)
+        }.message.orEmpty().contains("generic character"))
+        val explicit = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, withControls, VideoSceneMotionRequest("Nod the masked head.", listOf(
+                control("head-motion", VideoSceneMotionIntent.HEAD_GESTURE, "head", -2.0, 2.0, 0.0),
+            )), capabilities(), guidelines(),
+        )).input
+        assertEquals("headGesture", service.compileControlledControls(explicit).single()["kind"]?.jsonPrimitive?.content)
+        val noMask = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, withControls.copy(masks = base.masks), VideoSceneMotionRequest("Nod.", listOf(
+                control("head-motion", VideoSceneMotionIntent.HEAD_GESTURE, "head", -2.0, 2.0, 0.0),
+            )), capabilities(), guidelines(),
+        )).input
+        assertTrue(kotlin.test.assertFailsWith<IllegalArgumentException> {
+            service.compileControlledControls(noMask)
+        }.message.orEmpty().contains("HEAD_REGION"))
+        val ambiguous = withControls.copy(masks = withControls.masks + headMask.copy(id = "second-head-mask"))
+        val ambiguousPrepared = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, ambiguous, VideoSceneMotionRequest("Turn the whole character.", listOf(
+                control("rotation", VideoSceneMotionIntent.HEAD_GESTURE,
+                    ambiguous.motionCapabilities.single { it.control == VideoMotionControl.ROTATE }.id, -3.0, 3.0, 0.0),
+            )), capabilities(), guidelines(),
+        )).input
+        val error = kotlin.test.assertFailsWith<IllegalArgumentException> { service.compileControlledControls(ambiguousPrepared) }
+        assertTrue(error.message.orEmpty().contains("HEAD_REGION mask"))
+    }
+
+    @Test
     fun `asset controls disclose compositor gaps without claiming execution readiness`() {
         val fixture = fixture()
         val prepared = fixture.layeredScene()
@@ -302,7 +434,7 @@ class VideoScenePreparationTest {
         )).input
         assertTrue(flat.promptIssues.none { it.code == VideoPromptIssueCode.INFORMATIONAL_LIMITATION })
         val wideEffect = requests.copy(controls = requests.controls.filter { it.id == "effect" }.map {
-            it.copy(maximum = 20.0)
+            it.copy(intent = VideoSceneMotionIntent.STEAM, maximum = 20.0)
         })
         val bounded = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
             look, scene, wideEffect, capabilities(), guidelines(),
@@ -334,7 +466,8 @@ class VideoScenePreparationTest {
         val controls = allControls(scene).controls.associateBy { it.id }
         val cases = listOf(
             listOf(controls.getValue("subject")) to "translation",
-            listOf(controls.getValue("effect").copy(maximum = 20.0)) to "8/s",
+            listOf(controls.getValue("effect").copy(maximum = 20.0)) to "Generic effects",
+            listOf(controls.getValue("effect")) to "Generic effects",
             listOf(controls.getValue("ambient")) to "I2V",
             listOf(controls.getValue("blink"), controls.getValue("subject")) to "translation",
         )
@@ -387,17 +520,30 @@ class VideoScenePreparationTest {
         runtimePaths.values.filterNot { Files.exists(it) }.forEach { Files.writeString(it, "pinned $it") }
         val runtimes = runtimePaths.map { (id, path) -> VideoGenerationDependencyPin(id, digest(path), path.toRealPath().toString()) }
         var ledgerReads = 0
+        var admittedLedger: VideoJobLedger? = null
         val coordinator = VideoJobCoordinator("test-domain", object : VideoJobPersistence {
             override fun loadOrCreate(admissionDomainId: String, createdAt: String): VideoJobLedger {
                 ledgerReads++
-                error("Ledger reached")
+                return admittedLedger ?: VideoJobLedger(admissionDomainId, createdAt, emptyList())
             }
-            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger = error("Unexpected write")
-        }, emptyList())
+            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger {
+                admittedLedger = replacement
+                return replacement
+            }
+        }, listOf(object : app.melotrail.video.application.VideoGenerationBackendPort {
+            override val backendId = "controlled-local"
+            override fun availability() = app.melotrail.video.application.VideoBackendAvailability(
+                backendId, app.melotrail.video.application.VideoBackendAvailabilityStatus.AVAILABLE,
+                Instant.now().toString(), setOf(app.melotrail.video.application.VideoGenerationInputKind.CONTROLLED_MOTION), emptyList(), "test",
+            )
+            override fun submit(command: app.melotrail.video.application.VideoBackendSubmissionCommand): app.melotrail.video.application.VideoBackendSubmission = error("Unexpected backend launch")
+            override fun observe(ownedAttempt: app.melotrail.video.application.VideoOwnedBackendAttempt): app.melotrail.video.application.VideoBackendObservation = error("Unexpected backend observation")
+            override fun requestCancellation(ownedAttempt: app.melotrail.video.application.VideoOwnedBackendAttempt): app.melotrail.video.application.VideoBackendCancellation = error("Unexpected cancellation")
+        }))
         val generator = VideoClipGeneration(VideoScenePreparation(), coordinator,
             VideoResultImport(fixture.store, VideoMediaProbe()), VideoMotionRenderer(),
             "controlled-local", VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000), projects = fixture.store)
-        val blink = allControls(scene).controls.single { it.id == "blink" }
+        val blink = allControls(scene).controls.single { it.id == "blink" }.copy(defaultValue = 0.5)
         val request = VideoClipGenerationRequest(
             fixture.session.project, fixture.session.project.revision, look, scene,
             VideoSceneMotionRequest("Move gently.", listOf(blink)), capabilities(), guidelines(),
@@ -413,6 +559,18 @@ class VideoScenePreparationTest {
         assertTrue(changedRuntime.contains("Runtime bytes"), changedRuntime)
         assertEquals(0, ledgerReads)
         Files.writeString(runtimePath, "pinned runtime")
+        // All consumed source artifacts are reopened and content-verified before admission.
+        val consumed = (listOf(record.artifact) + record.consumedArtifacts).distinct()
+        consumed.forEach { artifact ->
+            val consumedPath = fixture.store.resolveArtifact(fixture.projectRoot, artifact)
+            val original = Files.readAllBytes(consumedPath)
+            try {
+                Files.write(consumedPath, original + byteArrayOf(0x55))
+                val changed = rejected(request)
+                assertTrue(changed.contains("digest", true) || changed.contains("changed", true), changed)
+                assertEquals(0, ledgerReads)
+            } finally { Files.write(consumedPath, original) }
+        }
         listOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe").forEach { missing ->
             assertTrue(rejected(request.copy(runtimeDependencies = runtimes.filterNot { it.id == missing })).contains(missing), missing)
         }
@@ -435,9 +593,66 @@ class VideoScenePreparationTest {
             Files.writeString(shadow, """{"name":"@napi-rs/canvas","version":"0.1.81"}""")
             assertTrue(rejected(request).contains("Runtime bytes"))
         } finally { Files.write(shadow, originalManifest) }
-        // The legitimate binding reaches the coordinator; no native backend is configured here.
-        val admitted = runCatching { generator.generate(request) }
-        assertEquals(1, ledgerReads, admitted.toString())
+        // Production generation must persist the exact compiled executable descriptor.
+        val generation = generator.generate(request)
+        assertTrue(generation is VideoClipGenerationResult.Admitted, (generation as? VideoClipGenerationResult.Rejected)?.reason.orEmpty())
+        val admitted = generation as VideoClipGenerationResult.Admitted
+        assertTrue(ledgerReads >= 1)
+        assertEquals(1, admittedLedger!!.jobs.size)
+        val persisted = admittedLedger!!.jobs.single().request.input as VideoControlledMotionGenerationInput
+        assertEquals("Move gently.", persisted.primaryPrompt)
+        assertTrue(persisted.prompt.startsWith("Move gently."))
+        assertTrue(persisted.prompt.contains("finished-artwork-preservation"))
+        assertTrue(persisted.prompt.contains("reference-fidelity"))
+        assertEquals(request.seed, persisted.motion.seed)
+        assertEquals(request.startFrame, persisted.motion.startFrame)
+        assertEquals(request.endFrameExclusive, persisted.motion.endFrameExclusive)
+        assertEquals(request.project.id, persisted.motion.descriptor.projectId)
+        val executable = Json.parseToJsonElement(persisted.motion.descriptor.requestJson).jsonObject
+        val operations = executable.getValue("controls").jsonArray.map { it.jsonObject }
+        assertEquals(1, operations.size)
+        assertEquals("blink", operations.single().getValue("kind").jsonPrimitive.content)
+        assertEquals("blink", operations.single().getValue("id").jsonPrimitive.content)
+        assertEquals(30, executable.getValue("fps").jsonPrimitive.int)
+        assertEquals(30, executable.getValue("frameRange").jsonObject.getValue("frameCount").jsonPrimitive.int)
+        assertTrue(persisted.motion.descriptor.sourceIdentity.matches(Regex("[0-9a-f]{64}")))
+        assertEquals(pins.map { it.sha256 }.toSet(), persisted.motion.preparedPins.map { it.sha256 }.toSet())
+        // Isolate the scenery fixture ledger; the previous controlled job legitimately owns its local slot.
+        admittedLedger = null
+        val travelCapability = scene.motionCapabilities.single { it.targetId == "travel-coverage" && it.control == VideoMotionControl.TRANSLATE_X }
+        val travelRequest = request.copy(requestId = "rigid-scenery", motionRequest = VideoSceneMotionRequest(
+            "Move the supplied scenery behind the subject.", listOf(control("scenery", VideoSceneMotionIntent.SCENERY_TRAVEL,
+                travelCapability.id, -100.0, 0.0, -40.0)),
+        ))
+        val rigid = generator.generate(travelRequest)
+        assertTrue(rigid is VideoClipGenerationResult.Admitted, (rigid as? VideoClipGenerationResult.Rejected)?.reason.orEmpty())
+        val rigidInput = admittedLedger!!.jobs.single { it.request.id == "rigid-scenery" }.request.input as VideoControlledMotionGenerationInput
+        val rigidJson = Json.parseToJsonElement(rigidInput.motion.descriptor.requestJson).jsonObject
+        assertEquals(0, rigidJson.getValue("controls").jsonArray.size)
+        assertEquals("moving", rigidJson.getValue("scenery").jsonObject.getValue("mode").jsonPrimitive.content)
+        assertEquals("travel-coverage", rigidJson.getValue("scenery").jsonObject.getValue("planes").jsonArray.single()
+            .jsonObject.getValue("sections").jsonArray.single().jsonObject.getValue("coverageId").jsonPrimitive.content)
+        val insufficient = scene.copy(sceneryCoverage = scene.sceneryCoverage.map {
+            if (it.id == "travel-coverage") it.copy(bounds = it.bounds.copy(width = 100.0)) else it
+        })
+        val insufficientJson = JsonObject(rigidJson.toMutableMap().apply {
+            put("preparedScene", Json { encodeDefaults = true }.encodeToJsonElement(VideoPreparedScene.serializer(), insufficient))
+        })
+        val coverageError = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            rigidInput.motion.descriptor.copy(requestJson = insufficientJson.toString())
+        }
+        assertTrue(coverageError.message.orEmpty().contains("visible hole"), coverageError.message.orEmpty())
+        assertEquals("Move the supplied scenery behind the subject.",
+            VideoScenePreparation().prepare(look, scene, travelRequest.motionRequest, capabilities(), guidelines())
+                .let { (it as VideoScenePreparationResult.Prepared).input.primaryMotionPrompt })
+        val badTravel = rejected(travelRequest.copy(requestId = "bad-rigid", motionRequest = travelRequest.motionRequest.copy(
+            controls = listOf(control("scenery", VideoSceneMotionIntent.SCENERY_TRAVEL, travelCapability.id, -100.0, 0.0, 0.0)),
+        )))
+        assertTrue(badTravel.contains("scenery", ignoreCase = true), badTravel)
+        val duplicateTravel = rejected(travelRequest.copy(requestId = "duplicate-rigid", motionRequest =
+            travelRequest.motionRequest.copy(controls = travelRequest.motionRequest.controls +
+                travelRequest.motionRequest.controls.single().copy(id = "other-travel"))))
+        assertTrue(duplicateTravel.contains("ambiguous"), duplicateTravel)
         ledgerReads = 0
         // Persisted descriptors currently contain no review record. Exercise the valid
         // rejected-asset authority at the selector boundary; caller metadata cannot forge it.

@@ -155,12 +155,15 @@ data class VideoControlledMotionGenerationInput(
     override val prompt: String,
     override val dependencyPins: List<VideoGenerationDependencyPin>,
     val motion: VideoControlledMotionRequest,
+    /** Exact user-authored motion text; [prompt] contains the distinct backend guidance. */
+    val primaryPrompt: String,
 ) : VideoGenerationInput {
     override val comfyWorkflow: VideoComfyWorkflowRequest? = null
     override val controlledMotion: VideoControlledMotionRequest get() = motion
 
     init {
         requireVideoPrompt(prompt)
+        requireVideoPrompt(primaryPrompt)
         requireVideoDependencyPins(dependencyPins)
         require(motion.descriptor.projectId.isNotBlank())
         require((motion.preparedPins + motion.descriptor.runtime.allPins).all { pin -> dependencyPins.any { it == pin } }) {
@@ -194,9 +197,10 @@ fun controlledMotionRequestFingerprint(
             pin.ownedPath?.let(::field)
         }
     }
-    field("melotrail-controlled-motion-v3")
+    field("melotrail-controlled-motion-v4")
     field(backendId)
     field(input.prompt)
+    field(input.primaryPrompt)
     pins(input.dependencyPins)
     number(input.motion.startFrame)
     number(input.motion.endFrameExclusive)

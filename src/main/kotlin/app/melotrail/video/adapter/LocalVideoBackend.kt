@@ -185,8 +185,15 @@ class LocalVideoBackend private constructor(
         if (command.input is VideoControlledMotionGenerationInput) return "Controlled compositor requests are not supported by ComfyUI; use the dedicated media stage."
         if (command.execution !is VideoLocalExecutionPolicy) return "ComfyUI local backend requires a local execution policy."
         val binding = command.input.comfyWorkflow ?: return "A persisted typed ComfyUI workflow binding is required."
-        val expected = videoRequestFingerprint(backendId, command.input, command.modelRequirements)
-        if (expected != command.ownedAttempt.requestFingerprint) return "Request fingerprint does not include the exact executable bindings and dependency pins."
+        val persisted = requestLookup(command.ownedAttempt.requestId)
+            ?: return "Persisted request bindings are unavailable."
+        if (persisted.id != command.ownedAttempt.requestId || persisted.backendId != backendId ||
+            persisted.requestFingerprint != command.ownedAttempt.requestFingerprint ||
+            persisted.input != command.input || persisted.modelRequirements != command.modelRequirements ||
+            persisted.execution != command.execution
+        ) return "Attempt fingerprint or executable bindings do not match the persisted request."
+        val expected = videoRequestFingerprint(persisted.projectId, backendId, command.input, command.modelRequirements)
+        if (expected != command.ownedAttempt.requestFingerprint) return "Request fingerprint does not include the project and exact executable bindings and dependency pins."
         val pins = command.input.dependencyPins.associateBy { it.id }
         val consumed = listOf(binding.workflowDependencyId) + binding.referenceInputs.map { it.dependencyId }
         if (consumed.any { pins[it]?.ownedPath == null }) return "Every consumed ComfyUI input must have a persisted owned path and digest."
@@ -367,53 +374,83 @@ class LocalVideoBackend private constructor(
 
 /** Canonical request identity binds all executable slots, pins, dimensions, prompt, and models. */
 fun comfyRequestFingerprint(
+    projectId: String,
     backendId: String,
     input: VideoGenerationInput,
     models: List<app.melotrail.video.domain.VideoModelRequirement>,
 ): String {
     require(input.comfyWorkflow != null) { "ComfyUI workflow binding is required" }
-    return videoRequestFingerprint(backendId, input, models)
+    return videoRequestFingerprint(projectId, backendId, input, models)
 }
 
 /** Canonical identity for either ComfyUI or controlled compositor requests. */
 fun videoRequestFingerprint(
+    projectId: String,
     backendId: String,
     input: VideoGenerationInput,
     models: List<app.melotrail.video.domain.VideoModelRequirement>,
 ): String {
     val workflow = input.comfyWorkflow
     if (input is VideoControlledMotionGenerationInput) {
+        require(projectId == input.motion.descriptor.projectId) { "Controlled fingerprint project does not match the descriptor" }
         return controlledMotionRequestFingerprint(backendId, input, models)
     }
+    require(projectId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}"))) { "Video fingerprint project ID is invalid" }
     val binding = requireNotNull(workflow) { "ComfyUI workflow binding is required" }
-    val text = buildString {
-        append("melotrail-comfy-request-v1\n").append(backendId).append('\n').append(input.prompt).append('\n')
-        input.dependencyPins.sortedBy { it.id }.forEach { append(it.id).append(':').append(it.sha256).append(':').append(it.ownedPath).append('\n') }
-        models.sortedBy { it.id }.forEach { append(it.id).append(':').append(it.version).append(':').append(it.sha256).append('\n') }
-        append("workflow=").append(workflow.workflowDependencyId).append('\n')
-        append("prompt=").append(workflow.promptInput.nodeId).append('.').append(workflow.promptInput.inputName).append('\n')
-        workflow.referenceInputs.forEach { reference ->
-            append("reference=").append(reference.dependencyId).append(':')
-                .append(reference.slot.nodeId).append('.').append(reference.slot.inputName).append(':')
-                .append(reference.uploadFileName).append('\n')
-        }
-        listOf(
-            "width" to workflow.widthInput,
-            "height" to workflow.heightInput,
-            "frames" to workflow.frameCountInput,
-            "fps" to workflow.framesPerSecondInput,
-        ).forEach { (name, slot) ->
-            append(name).append('=').append(slot?.nodeId).append('.').append(slot?.inputName).append('\n')
-        }
-        append("output=").append(workflow.output.nodeId).append(':')
-            .append(workflow.output.allowedExtensions.sorted().joinToString(",")).append('\n')
-        when (input) {
-            is VideoKeyframeGenerationInput -> append("keyframe:${input.width}:${input.height}")
-            is VideoClipGenerationInput -> append("video:${input.durationMillis}:${input.width}:${input.height}:${input.framesPerSecond}")
-            is VideoControlledMotionGenerationInput -> error("Controlled motion uses its domain identity")
-        }
+    if (input is VideoClipGenerationInput) {
+        require(binding.referenceInputs.isNotEmpty()) { "Flat-I2V identity requires a consumed image" }
     }
-    return sha256(text.toByteArray(Charsets.UTF_8))
+    require(binding.referenceInputs.all { reference -> input.dependencyPins.any { it.id == reference.dependencyId && it.ownedPath != null } }) {
+        "ComfyUI identity requires pinned owned reference images"
+    }
+    val digest = MessageDigest.getInstance("SHA-256")
+    fun field(value: String) {
+        val bytes = value.toByteArray(Charsets.UTF_8)
+        digest.update(java.nio.ByteBuffer.allocate(Int.SIZE_BYTES).putInt(bytes.size).array())
+        digest.update(bytes)
+    }
+    fun optional(value: String?) {
+        field(if (value == null) "absent" else "present")
+        value?.let(::field)
+    }
+    fun slot(value: app.melotrail.video.domain.VideoComfyInputSlot?) {
+        field(if (value == null) "absent" else "present")
+        value?.let { field(it.nodeId); field(it.inputName) }
+    }
+    field("melotrail-comfy-request-v2")
+    field(projectId)
+    field(backendId)
+    field(input.prompt)
+    field(input.dependencyPins.size.toString())
+    input.dependencyPins.sortedBy { it.id }.forEach { pin ->
+        field(pin.id); field(pin.sha256); optional(pin.ownedPath)
+    }
+    field(models.size.toString())
+    models.sortedBy { it.id }.forEach { model ->
+        field(model.id); field(model.version); optional(model.sha256)
+    }
+    field(binding.workflowDependencyId)
+    slot(binding.promptInput)
+    field(binding.referenceInputs.size.toString())
+    binding.referenceInputs.forEach { reference ->
+        field(reference.dependencyId); slot(reference.slot); field(reference.uploadFileName)
+    }
+    slot(binding.widthInput); slot(binding.heightInput)
+    slot(binding.frameCountInput); slot(binding.framesPerSecondInput)
+    field(binding.output.nodeId)
+    field(binding.output.allowedExtensions.size.toString())
+    binding.output.allowedExtensions.sorted().forEach(::field)
+    when (input) {
+        is VideoKeyframeGenerationInput -> {
+            field("keyframe"); field(input.width.toString()); field(input.height.toString())
+        }
+        is VideoClipGenerationInput -> {
+            field("video"); field(input.durationMillis.toString()); field(input.width.toString())
+            field(input.height.toString()); field(input.framesPerSecond.toString())
+        }
+        is VideoControlledMotionGenerationInput -> error("Controlled motion uses its domain identity")
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
 }
 
 private fun sha256(path: Path): String = Files.newInputStream(path).use { stream ->

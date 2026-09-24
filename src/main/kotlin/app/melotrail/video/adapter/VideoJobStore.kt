@@ -388,7 +388,7 @@ class VideoJobStoreException(
 
 private object VideoJobSchema {
     private const val SCHEMA = "melotrail-video-jobs"
-    private const val VERSION = 2
+    private const val VERSION = 3
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true

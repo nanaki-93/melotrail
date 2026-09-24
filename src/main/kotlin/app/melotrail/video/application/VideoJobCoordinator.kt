@@ -1,5 +1,7 @@
 package app.melotrail.video.application
 
+import app.melotrail.video.adapter.LocalVideoBackend
+import app.melotrail.video.adapter.comfyRequestFingerprint
 import app.melotrail.video.domain.VideoExecutionPolicy
 import app.melotrail.video.domain.VideoGenerationAttempt
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
@@ -180,13 +182,20 @@ class VideoJobCoordinator(
     fun setup(backendId: String): VideoBackendSetup? = setupById[backendId]?.describeSetup()
 
     fun submit(request: VideoGenerationJobRequest): VideoJobResult {
-        validateControlledFingerprint(request)?.let { return VideoJobResult.Rejected(it) }
+        validateExecutableFingerprint(request)?.let { return VideoJobResult.Rejected(it) }
         val persisted = try { snapshot() } catch (error: Exception) { return persistenceRejected(error) }
         persisted.jobs.singleOrNull { it.request.id == request.id }?.let { existing ->
             return if (existing.request == request) VideoJobResult.Accepted(existing, existing.attempts.lastOrNull(), false)
             else rejected(VideoJobProblemCode.REQUEST_ID_CONFLICT, "Video request '${request.id}' already has different immutable inputs.")
         }
         persisted.jobs.singleOrNull { it.request.requestFingerprint == request.requestFingerprint }?.let { existing ->
+            if (existing.request.projectId != request.projectId) return rejected(
+                VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+                "Video request fingerprint is already owned by another project; bind the project to the executable identity.",
+            )
+            if (!sameDeduplicatedRequest(existing.request, request)) return rejected(
+                VideoJobProblemCode.INPUT_NOT_SUPPORTED, "Video request fingerprint conflicts with different immutable inputs.",
+            )
             return VideoJobResult.Accepted(existing, existing.attempts.lastOrNull(), false)
         }
         val backend = backendById[request.backendId]
@@ -346,16 +355,19 @@ class VideoJobCoordinator(
         return VideoJobResult.Accepted(finalJob, finalJob.attempts.single { it.id == attemptId }, true)
     }
 
-    private fun validateControlledFingerprint(request: VideoGenerationJobRequest): VideoJobProblem? {
-        val input = request.input as? VideoControlledMotionGenerationInput ?: return null
+    private fun validateExecutableFingerprint(request: VideoGenerationJobRequest): VideoJobProblem? {
+        val controlled = request.input as? VideoControlledMotionGenerationInput
+        if (controlled == null && request.backendId != LocalVideoBackend.BACKEND_ID) return null
         val expected = try {
-            controlledMotionRequestFingerprint(request.backendId, input, request.modelRequirements)
+            if (controlled != null) controlledMotionRequestFingerprint(request.backendId, controlled, request.modelRequirements)
+            else comfyRequestFingerprint(request.projectId, request.backendId, request.input, request.modelRequirements)
         } catch (error: IllegalArgumentException) {
-            return VideoJobProblem(VideoJobProblemCode.INPUT_NOT_SUPPORTED, error.message ?: "Controlled-motion fingerprint inputs are invalid.")
+            return VideoJobProblem(VideoJobProblemCode.INPUT_NOT_SUPPORTED, error.message ?: "Video fingerprint inputs are invalid.")
         }
         return if (request.requestFingerprint == expected) null else VideoJobProblem(
             VideoJobProblemCode.INPUT_NOT_SUPPORTED,
-            "Controlled-motion request fingerprint does not match its executable inputs and dependency pins.",
+            if (controlled != null) "Controlled-motion request fingerprint does not match its executable inputs and dependency pins."
+            else "ComfyUI request fingerprint does not match its project and executable inputs and dependency pins.",
         )
     }
 
@@ -395,6 +407,13 @@ class VideoJobCoordinator(
             return Mutation(ledger, Admission(existing, false))
         }
         ledger.jobs.singleOrNull { it.request.requestFingerprint == request.requestFingerprint }?.let { existing ->
+            if (existing.request.projectId != request.projectId) rule(
+                VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+                "Video request fingerprint is already owned by another project; bind the project to the executable identity.",
+            )
+            if (!sameDeduplicatedRequest(existing.request, request)) rule(
+                VideoJobProblemCode.INPUT_NOT_SUPPORTED, "Video request fingerprint conflicts with different immutable inputs.",
+            )
             return Mutation(ledger, Admission(existing, false))
         }
         requireAdmission(ledger, request)
@@ -402,6 +421,9 @@ class VideoJobCoordinator(
         val job = VideoGenerationJob(request, attempts = listOf(attempt))
         return Mutation(ledger.copy(jobs = ledger.jobs + job, revision = nextRevision(ledger)), Admission(job, true))
     }
+
+    private fun sameDeduplicatedRequest(existing: VideoGenerationJobRequest, incoming: VideoGenerationJobRequest): Boolean =
+        existing == incoming.copy(id = existing.id, createdAt = existing.createdAt)
 
     private fun admitRetry(ledger: VideoJobLedger, requestId: String): Mutation<Admission> {
         val index = ledger.jobs.indexOfFirst { it.request.id == requestId }
