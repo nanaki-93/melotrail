@@ -389,11 +389,13 @@ fun videoRequestFingerprint(
     backendId: String,
     input: VideoGenerationInput,
     models: List<app.melotrail.video.domain.VideoModelRequirement>,
+    controlledMaximumAttempts: Int? = null,
 ): String {
     val workflow = input.comfyWorkflow
     if (input is VideoControlledMotionGenerationInput) {
         require(projectId == input.motion.descriptor.projectId) { "Controlled fingerprint project does not match the descriptor" }
-        return controlledMotionRequestFingerprint(backendId, input, models)
+        return controlledMotionRequestFingerprint(backendId, input, models,
+            requireNotNull(controlledMaximumAttempts) { "Controlled fingerprint requires the durable attempt limit" })
     }
     require(projectId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}"))) { "Video fingerprint project ID is invalid" }
     val binding = requireNotNull(workflow) { "ComfyUI workflow binding is required" }

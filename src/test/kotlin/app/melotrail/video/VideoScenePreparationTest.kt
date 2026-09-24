@@ -515,7 +515,8 @@ class VideoScenePreparationTest {
         val runtimePaths = mapOf(
             "node" to fixture.projectRoot.resolve("node.bin"), "compositor" to runtimePath,
             "scenery" to fixture.projectRoot.resolve("scenery.cjs"), "canvas-manifest" to manifest,
-            "ffmpeg" to fixture.projectRoot.resolve("ffmpeg.bin"), "ffprobe" to fixture.projectRoot.resolve("ffprobe.bin"),
+            "ffmpeg" to fixture.projectRoot.resolve("ffmpeg"), "ffprobe" to fixture.projectRoot.resolve("ffprobe"),
+            "media-manifest" to fixture.projectRoot.resolve("melotrail-video-tools.json"),
         ) + loaded.mapIndexed { index, path -> "canvas-artifact-$index" to path }.toMap()
         runtimePaths.values.filterNot { Files.exists(it) }.forEach { Files.writeString(it, "pinned $it") }
         val runtimes = runtimePaths.map { (id, path) -> VideoGenerationDependencyPin(id, digest(path), path.toRealPath().toString()) }
@@ -571,7 +572,7 @@ class VideoScenePreparationTest {
                 assertEquals(0, ledgerReads)
             } finally { Files.write(consumedPath, original) }
         }
-        listOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe").forEach { missing ->
+        listOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe", "media-manifest").forEach { missing ->
             assertTrue(rejected(request.copy(runtimeDependencies = runtimes.filterNot { it.id == missing })).contains(missing), missing)
         }
         assertTrue(rejected(request.copy(runtimeDependencies = runtimes.filterNot { it.id == "canvas-artifact-0" })).contains("Canvas"))
@@ -593,6 +594,15 @@ class VideoScenePreparationTest {
             Files.writeString(shadow, """{"name":"@napi-rs/canvas","version":"0.1.81"}""")
             assertTrue(rejected(request).contains("Runtime bytes"))
         } finally { Files.write(shadow, originalManifest) }
+        // The installed media configuration is a consumed dependency, not merely
+        // the two binaries: changed manifest bytes fail before ledger admission.
+        val mediaFile = runtimePaths.getValue("media-manifest")
+        val originalMedia = Files.readAllBytes(mediaFile)
+        try {
+            Files.writeString(mediaFile, "changed media options")
+            assertTrue(rejected(request).contains("Runtime bytes"))
+            assertEquals(0, ledgerReads)
+        } finally { Files.write(mediaFile, originalMedia) }
         // Production generation must persist the exact compiled executable descriptor.
         val generation = generator.generate(request)
         assertTrue(generation is VideoClipGenerationResult.Admitted, (generation as? VideoClipGenerationResult.Rejected)?.reason.orEmpty())
@@ -604,6 +614,8 @@ class VideoScenePreparationTest {
         assertTrue(persisted.prompt.startsWith("Move gently."))
         assertTrue(persisted.prompt.contains("finished-artwork-preservation"))
         assertTrue(persisted.prompt.contains("reference-fidelity"))
+        assertEquals(runtimes.single { it.id == "media-manifest" }, persisted.motion.descriptor.runtime.mediaManifest)
+        assertEquals(runtimes.single { it.id == "media-manifest" }, persisted.dependencyPins.single { it.id == "media-manifest" })
         assertEquals(request.seed, persisted.motion.seed)
         assertEquals(request.startFrame, persisted.motion.startFrame)
         assertEquals(request.endFrameExclusive, persisted.motion.endFrameExclusive)

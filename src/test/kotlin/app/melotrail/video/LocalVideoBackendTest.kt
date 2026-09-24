@@ -343,25 +343,26 @@ class LocalVideoBackendTest {
         val input = VideoControlledMotionGenerationInput(
             "exact prompt", listOf(scene) + motionRuntime(renderer).allPins,
             VideoControlledMotionRequest(listOf(scene), 10, 20, 42, motionDescriptor(listOf(renderer), 10, 20, 42, ordinary.projectId)),
-            "exact prompt",
+            "exact prompt", motionMedia(ordinary.execution as VideoLocalExecutionPolicy),
         )
-        val fingerprint = videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input, ordinary.modelRequirements)
-        assertEquals(controlledMotionRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements), fingerprint)
-        assertEquals(fingerprint, videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input.copy(), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input.copy(prompt = "changed"), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input.copy(primaryPrompt = "changed"), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId,
-            input.copy(motion = input.motion.copy(descriptor = input.motion.descriptor.copy(
-                requestJson = input.motion.descriptor.requestJson.replace("0.25", "0.2")))), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId,
-            input.copy(motion = input.motion.copy(startFrame = 11, descriptor = motionDescriptor(listOf(renderer), 11, 20, 42, ordinary.projectId))), ordinary.modelRequirements))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId,
-            input.copy(motion = input.motion.copy(seed = 43, descriptor = motionDescriptor(listOf(renderer), 10, 20, 43, ordinary.projectId))), ordinary.modelRequirements))
+        fun fingerprintOf(bound: VideoControlledMotionGenerationInput) =
+            videoRequestFingerprint(ordinary.projectId, ordinary.backendId, bound, ordinary.modelRequirements, ordinary.maximumAttempts)
+        val fingerprint = fingerprintOf(input)
+        assertEquals(controlledMotionRequestFingerprint(ordinary.backendId, input, ordinary.modelRequirements, ordinary.maximumAttempts), fingerprint)
+        assertEquals(fingerprint, fingerprintOf(input.copy()))
+        assertTrue(fingerprint != fingerprintOf(input.copy(prompt = "changed")))
+        assertTrue(fingerprint != fingerprintOf(input.copy(primaryPrompt = "changed")))
+        assertTrue(fingerprint != fingerprintOf(input.copy(motion = input.motion.copy(descriptor = input.motion.descriptor.copy(
+            requestJson = input.motion.descriptor.requestJson.replace("0.25", "0.2"))))))
+        assertTrue(fingerprint != fingerprintOf(input.copy(motion = input.motion.copy(startFrame = 11,
+            descriptor = motionDescriptor(listOf(renderer), 11, 20, 42, ordinary.projectId)))))
+        assertTrue(fingerprint != fingerprintOf(input.copy(motion = input.motion.copy(seed = 43,
+            descriptor = motionDescriptor(listOf(renderer), 10, 20, 43, ordinary.projectId)))))
         val changedRuntime = renderer.copy(sha256 = "f".repeat(64))
         val changedRuntimeBinding = input.motion.descriptor.runtime.copy(compositor = changedRuntime.copy(id = "compositor"))
         val changedPins = input.copy(dependencyPins = listOf(scene) + changedRuntimeBinding.allPins,
             motion = input.motion.copy(descriptor = input.motion.descriptor.copy(runtime = changedRuntimeBinding)))
-        assertTrue(fingerprint != videoRequestFingerprint(ordinary.projectId, ordinary.backendId, changedPins, ordinary.modelRequirements))
+        assertTrue(fingerprint != fingerprintOf(changedPins))
     }
 
     @Test
@@ -376,9 +377,9 @@ class LocalVideoBackendTest {
             VideoControlledMotionRequest(
                 listOf(scene), 300, 600, 99, motionDescriptor(listOf(renderer), 300, 600, 99, ordinary.projectId),
             ),
-            "keep this exact prompt",
+            "keep this exact prompt", motionMedia(ordinary.execution as VideoLocalExecutionPolicy),
         )
-        val request = ordinary.copy(input = input, requestFingerprint = videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input, ordinary.modelRequirements))
+        val request = ordinary.copy(input = input, requestFingerprint = videoRequestFingerprint(ordinary.projectId, ordinary.backendId, input, ordinary.modelRequirements, ordinary.maximumAttempts))
         val api = FakeApi()
         val slotClaims = AtomicInteger()
         val backend = fixture.backend(api, request, acquire = { slotClaims.incrementAndGet(); true })

@@ -359,7 +359,7 @@ class VideoJobCoordinator(
         val controlled = request.input as? VideoControlledMotionGenerationInput
         if (controlled == null && request.backendId != LocalVideoBackend.BACKEND_ID) return null
         val expected = try {
-            if (controlled != null) controlledMotionRequestFingerprint(request.backendId, controlled, request.modelRequirements)
+            if (controlled != null) controlledMotionRequestFingerprint(request.backendId, controlled, request.modelRequirements, request.maximumAttempts)
             else comfyRequestFingerprint(request.projectId, request.backendId, request.input, request.modelRequirements)
         } catch (error: IllegalArgumentException) {
             return VideoJobProblem(VideoJobProblemCode.INPUT_NOT_SUPPORTED, error.message ?: "Video fingerprint inputs are invalid.")
