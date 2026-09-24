@@ -75,6 +75,33 @@ class VideoAnimationAssetsTest {
     }
 
     @Test
+    fun `stale revision import rejects without publishing a scene`() {
+        val fixture = fixture()
+        val finished = fixture.import("stale-scene", rgbImage(root.resolve("outside/stale-scene.png"), 40, 30, Color(45, 55, 65)), VideoReferenceRole.COMPLETE_SCENE)
+        val expectedRevision = finished.session.project.revision
+        val projectDocument = fixture.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val before = Files.readAllBytes(projectDocument)
+
+        val result = fixture.importer.import(
+            fixture.projectRoot,
+            expectedRevision - 1L,
+            PrepareVideoAnimationAssets(
+                sceneId = VideoVersionedId("stale-scene-motion", 1),
+                finishedSceneReferenceId = finished.asset.id,
+            ),
+        )
+
+        val rejected = assertIs<VideoPreparedSceneImportResult.Rejected>(result)
+        val deficiency = rejected.deficiencies.single()
+        assertEquals(VideoAnimationAssetDeficiencyCode.PROJECT_CHANGED, deficiency.code)
+        assertTrue(deficiency.nextAction.isNotBlank())
+        assertContentEquals(before, Files.readAllBytes(projectDocument))
+        assertTrue(runCatching {
+            fixture.scenes.load(fixture.projectRoot, VideoVersionedId("stale-scene-motion", 1))
+        }.isFailure)
+    }
+
+    @Test
     fun `ready layers persist measured alpha placement pivots occlusion and coverage capabilities`() {
         val fixture = fixture()
         val finished = fixture.import("cabin", rgbImage(root.resolve("outside/cabin.png"), 100, 60, Color(40, 50, 70)), VideoReferenceRole.COMPLETE_SCENE)
@@ -148,6 +175,30 @@ class VideoAnimationAssetsTest {
     }
 
     @Test
+    fun `misaligned poses duplicate IDs and invalid relationships reject without project mutation`() {
+        val fixture = fixture()
+        val finished = fixture.import("room", rgbImage(root.resolve("outside/room.png"), 80, 50, Color.GRAY), VideoReferenceRole.COMPLETE_SCENE)
+        val subject = fixture.import("actor", cutout(root.resolve("outside/actor.png"), 20, 20, Color.PINK), VideoReferenceRole.SUBJECT)
+        val pose = fixture.import("pose", cutout(root.resolve("outside/pose.png"), 20, 20, Color.RED), VideoReferenceRole.SUBJECT)
+        val revision = pose.session.project.revision
+        val actor = VideoPlacedAnimationAsset("actor", subject.asset.id, VideoRect("scene", 10.0, 10.0, 20.0, 20.0), VideoPlacedPoint("scene", VideoPoint(20.0, 20.0)))
+        val projectFile = fixture.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val before = Files.readAllBytes(projectFile)
+        val malformed = listOf(
+            PrepareVideoAnimationAssets(VideoVersionedId("misaligned", 1), finished.asset.id, subjectLayers = listOf(actor), poses = listOf(VideoPoseAnimationAsset(VideoPlacedAnimationAsset("blink", pose.asset.id, VideoRect("scene", 11.0, 10.0, 20.0, 20.0), actor.pivot), "actor"))) to "not aligned",
+            PrepareVideoAnimationAssets(VideoVersionedId("duplicate", 1), finished.asset.id, subjectLayers = listOf(actor, actor.copy(referenceId = pose.asset.id))) to "IDs must be unique",
+            PrepareVideoAnimationAssets(VideoVersionedId("bad-relations", 1), finished.asset.id, depthRelations = listOf(VideoDepthRelation("absent-a", "absent-b"))) to "depth relation",
+        )
+        malformed.forEach { (request, expectedMessage) ->
+            val rejected = assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.importer.import(fixture.projectRoot, revision, request))
+            assertTrue(rejected.deficiencies.any { it.code == VideoAnimationAssetDeficiencyCode.MALFORMED_GEOMETRY && it.message.contains(expectedMessage, ignoreCase = true) })
+            assertTrue(rejected.deficiencies.all { it.nextAction.isNotBlank() })
+            assertContentEquals(before, Files.readAllBytes(projectFile))
+        }
+        assertTrue(fixture.store.open(fixture.projectRoot).preparedSceneVersions.isEmpty())
+    }
+
+    @Test
     fun `opaque rgba and fully transparent subject files do not count as separated layers`() {
         val fixture = fixture()
         val finished = fixture.import("scene", rgbImage(root.resolve("outside/scene.png"), 80, 50, Color.DARK_GRAY), VideoReferenceRole.COMPLETE_SCENE)
@@ -171,6 +222,34 @@ class VideoAnimationAssetsTest {
             assertTrue(rejected.deficiencies.any { it.code == VideoAnimationAssetDeficiencyCode.UNUSABLE_ALPHA })
         }
         assertEquals(revision, fixture.store.open(fixture.projectRoot).revision)
+    }
+
+    @Test
+    fun `painted checkerboard cutouts and unusable masks reject through import without publishing`() {
+        val fixture = fixture()
+        val finished = fixture.import("room", rgbImage(root.resolve("outside/room.png"), 80, 50, Color.GRAY), VideoReferenceRole.COMPLETE_SCENE)
+        val checker = fixture.import("checker", checkerboardCutout(root.resolve("outside/checker.png"), 20, 20), VideoReferenceRole.SUBJECT)
+        val flatMask = fixture.import("flat-mask", rgbImage(root.resolve("outside/flat-mask.png"), 80, 50, Color.WHITE), VideoReferenceRole.ENVIRONMENT)
+        val revision = flatMask.session.project.revision
+        val projectFile = fixture.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val before = Files.readAllBytes(projectFile)
+        val checkerResult = assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.importer.import(
+            fixture.projectRoot, revision,
+            PrepareVideoAnimationAssets(VideoVersionedId("painted-checker", 1), finished.asset.id,
+                subjectLayers = listOf(VideoPlacedAnimationAsset("subject", checker.asset.id, VideoRect("scene", 0.0, 0.0, 20.0, 20.0)))),
+        ))
+        assertTrue(checkerResult.deficiencies.any { it.code == VideoAnimationAssetDeficiencyCode.UNUSABLE_ALPHA })
+        val maskResult = assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.importer.import(
+            fixture.projectRoot, revision,
+            PrepareVideoAnimationAssets(VideoVersionedId("flat-mask-scene", 1), finished.asset.id,
+                masks = listOf(VideoMaskAnimationAsset(VideoPlacedAnimationAsset("mask", flatMask.asset.id, VideoRect("scene", 0.0, 0.0, 80.0, 50.0)), listOf("finished-scene")))),
+        ))
+        assertTrue(maskResult.deficiencies.any { it.code == VideoAnimationAssetDeficiencyCode.UNUSABLE_MASK })
+        listOf(checkerResult, maskResult).forEach { rejected ->
+            assertTrue(rejected.deficiencies.all { it.nextAction.isNotBlank() })
+            assertContentEquals(before, Files.readAllBytes(projectFile))
+        }
+        assertTrue(fixture.store.open(fixture.projectRoot).preparedSceneVersions.isEmpty())
     }
 
     @Test
@@ -264,6 +343,38 @@ class VideoAnimationAssetsTest {
         assertTrue(rejected.deficiencies.single().message.contains("pivot must lie inside its placed bounds"))
         assertEquals(revision, fixture.store.open(fixture.projectRoot).revision)
         assertTrue(fixture.store.open(fixture.projectRoot).preparedSceneVersions.isEmpty())
+    }
+
+    @Test
+    fun `undersized opaque plates reject through import and indexed alpha is measured on reopen`() {
+        val fixture = fixture()
+        val finished = fixture.import("room", rgbImage(root.resolve("outside/room.png"), 80, 50, Color.GRAY), VideoReferenceRole.COMPLETE_SCENE)
+        val small = fixture.import("small-plate", rgbImage(root.resolve("outside/small.png"), 40, 25, Color.BLUE), VideoReferenceRole.ENVIRONMENT)
+        val indexedPath = indexedAlphaImage(root.resolve("outside/indexed.png"))
+        val indexed = fixture.import("indexed-subject", indexedPath, VideoReferenceRole.SUBJECT)
+        val revision = indexed.session.project.revision
+        val projectFile = fixture.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val before = Files.readAllBytes(projectFile)
+        val base = PrepareVideoAnimationAssets(VideoVersionedId("undersized", 1), finished.asset.id)
+        val bg = assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.importer.import(
+            fixture.projectRoot, revision, base.copy(cleanBackground = VideoPlacedAnimationAsset("plate", small.asset.id, VideoRect("scene", 0.0, 0.0, 80.0, 50.0))),
+        ))
+        val scenery = assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.importer.import(
+            fixture.projectRoot, revision, base.copy(scenery = listOf(VideoSceneryAnimationAsset(VideoPlacedAnimationAsset("wide", small.asset.id, VideoRect("scene", 0.0, 0.0, 80.0, 50.0)), VideoRect("scene", 0.0, 0.0, 80.0, 50.0)))),
+        ))
+        assertTrue(bg.deficiencies.any { it.code == VideoAnimationAssetDeficiencyCode.INCOMPLETE_CLEAN_BACKGROUND })
+        assertTrue(scenery.deficiencies.any { it.code == VideoAnimationAssetDeficiencyCode.INSUFFICIENT_SCENERY_COVERAGE })
+        listOf(bg, scenery).forEach { rejected ->
+            assertTrue(rejected.deficiencies.all { it.nextAction.isNotBlank() })
+            assertContentEquals(before, Files.readAllBytes(projectFile))
+        }
+        val saved = assertIs<VideoPreparedSceneImportResult.Saved>(fixture.importer.import(
+            fixture.projectRoot, revision,
+            PrepareVideoAnimationAssets(VideoVersionedId("indexed-alpha", 1), finished.asset.id,
+                subjectLayers = listOf(VideoPlacedAnimationAsset("indexed-subject", indexed.asset.id, VideoRect("scene", 0.0, 0.0, 20.0, 20.0)))),
+        ))
+        assertTrue(saved.scene.layers.single { it.id == "indexed-subject" }.alpha!!.isUsableCutout)
+        assertEquals(saved.scene, fixture.scenes.load(fixture.projectRoot, saved.scene.id))
     }
 
     @Test
@@ -471,6 +582,28 @@ class VideoAnimationAssetsTest {
             graphics.dispose()
         }
         assertTrue(ImageIO.write(image, "png", path.toFile()))
+        return path
+    }
+
+    private fun checkerboardCutout(path: Path, width: Int, height: Int): Path {
+        Files.createDirectories(requireNotNull(path.parent))
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until height) for (x in 0 until width) {
+            val channel = if ((x / 4 + y / 4) % 2 == 0) 0xff else 0x00
+            image.setRGB(x, y, (0xff shl 24) or (channel shl 16) or (channel shl 8) or channel)
+        }
+        assertTrue(ImageIO.write(image, "png", path.toFile()))
+        return path
+    }
+
+    private fun indexedAlphaImage(path: Path): Path {
+        Files.createDirectories(requireNotNull(path.parent))
+        val model = java.awt.image.IndexColorModel(
+            8, 2, byteArrayOf(0, 0xff.toByte()), byteArrayOf(0, 0x22), byteArrayOf(0, 0x66), byteArrayOf(0, 0xff.toByte()),
+        )
+        val raster = model.createCompatibleWritableRaster(20, 20)
+        for (y in 0 until 20) for (x in 0 until 20) raster.setSample(x, y, 0, if (x in 4..15 && y in 4..15) 1 else 0)
+        assertTrue(ImageIO.write(BufferedImage(model, raster, false, null), "png", path.toFile()))
         return path
     }
 
