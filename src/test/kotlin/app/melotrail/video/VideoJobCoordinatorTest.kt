@@ -63,11 +63,16 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+internal fun motionMedia(execution: VideoLocalExecutionPolicy = VideoLocalExecutionPolicy(60_000L, 8_000_000_000L, 4_000_000_000L)) =
+    app.melotrail.video.domain.VideoControlledMediaBinding(execution, execution.diskLimitBytes / 2,
+        execution.diskLimitBytes - execution.diskLimitBytes / 2, (execution.diskLimitBytes / 8).coerceAtLeast(1),
+        1, 1, "image2-h264-yuv420p-silent-square-v1")
+
 internal fun motionRuntime(pin: VideoGenerationDependencyPin): VideoControlledMotionRuntimeBinding {
     fun sibling(id: String) = pin.copy(id = id, ownedPath = "/runtime/$id")
     return VideoControlledMotionRuntimeBinding(sibling("node"), pin.copy(id = "compositor"), sibling("scenery"),
         sibling("canvas-manifest"), listOf(sibling("canvas-artifact-core")), sibling("ffmpeg"),
-        sibling("ffprobe"), "0.1.80")
+        sibling("ffprobe"), sibling("media-manifest").copy(ownedPath = "/runtime/melotrail-video-tools.json"), "0.1.80")
 }
 
 internal fun motionDescriptor(
@@ -511,9 +516,9 @@ class VideoJobCoordinatorTest {
         val runtime = VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs")
         val descriptor = motionDescriptor(listOf(runtime), 120, 420, 17)
         val motion = VideoControlledMotionRequest(listOf(scene), 120, 420, 17, descriptor)
-        val input = VideoControlledMotionGenerationInput("prompt with guidance", listOf(scene) + descriptor.runtime.allPins, motion, "prompt")
+        val input = VideoControlledMotionGenerationInput("prompt with guidance", listOf(scene) + descriptor.runtime.allPins, motion, "prompt", motionMedia())
         val base = localRequest("controlled-binding", 'a').copy(input = input)
-        val request = base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
+        val request = base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements, base.maximumAttempts))
         val fixture = fixture()
         val backend = ControlledBackend().apply {
             availabilityValue = availabilityValue.copy(supportedInputs = availabilityValue.supportedInputs + VideoGenerationInputKind.CONTROLLED_MOTION)
@@ -544,14 +549,14 @@ class VideoJobCoordinatorTest {
         val edge = motionDescriptor(listOf(runtime), upper - 900, upper, 17)
         assertEquals(3, edge.invocationDescriptors().count())
         fun identity(other: VideoControlledMotionDescriptor) = controlledMotionRequestFingerprint(base.backendId,
-            input.copy(dependencyPins = listOf(scene) + other.runtime.allPins, motion = motion.copy(descriptor = other)), base.modelRequirements)
+            input.copy(dependencyPins = listOf(scene) + other.runtime.allPins, motion = motion.copy(descriptor = other)), base.modelRequirements, base.maximumAttempts)
         assertNotEquals(request.requestFingerprint, identity(descriptor.copy(projectId = "other-project")))
         assertNotEquals(request.requestFingerprint, identity(descriptor.copy(sourceIdentity = HASH_2)))
         assertNotEquals(request.requestFingerprint, identity(descriptor.copy(requestJson = descriptor.requestJson.replace("0.25", "0.26"))))
         assertNotEquals(request.requestFingerprint, identity(descriptor.copy(runtime = descriptor.runtime.copy(compositor = descriptor.runtime.compositor.copy(sha256 = HASH_1)))))
         assertNotEquals(request.requestFingerprint, identity(descriptor.copy(runtime = descriptor.runtime.copy(expectedCanvasVersion = "0.1.81"))))
         val binding = descriptor.runtime
-        assertEquals(setOf("node", "compositor", "scenery", "canvas-manifest", "canvas-artifact-core", "ffmpeg", "ffprobe"),
+        assertEquals(setOf("node", "compositor", "scenery", "canvas-manifest", "canvas-artifact-core", "ffmpeg", "ffprobe", "media-manifest"),
             (reopened.jobs.single().request.input as VideoControlledMotionGenerationInput).motion.descriptor.runtime.allPins.map { it.id }.toSet())
         assertFailsWith<IllegalArgumentException> { binding.copy(canvasArtifacts = emptyList()) }
         assertFailsWith<IllegalArgumentException> { binding.copy(ffprobe = binding.ffprobe.copy(id = "probe-missing")) }
@@ -652,13 +657,13 @@ class VideoJobCoordinatorTest {
         assertFailsWith<IllegalArgumentException> { reopenedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { reopenedStore.loadOrCreate(DOMAIN, NOW) }
         assertContentEquals(tamperedBytes, Files.readAllBytes(path))
-        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 3", "\"version\": 999"))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 5", "\"version\": 999"))
         val unsupportedBytes = Files.readAllBytes(path)
         val unsupportedStore = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot))
         assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }
         assertContentEquals(unsupportedBytes, Files.readAllBytes(path))
-        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 3", "\"version\": 2"))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 5", "\"version\": 4"))
         val oldBytes = Files.readAllBytes(path)
         assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }
@@ -746,9 +751,9 @@ class VideoJobCoordinatorTest {
         fun request(project: String, id: String): VideoGenerationJobRequest {
             val descriptor = motionDescriptor(listOf(runtime), 0, 150, 19, project)
             val input = VideoControlledMotionGenerationInput("same prompt", listOf(scene) + descriptor.runtime.allPins,
-                VideoControlledMotionRequest(listOf(scene), 0, 150, 19, descriptor), "same prompt")
+                VideoControlledMotionRequest(listOf(scene), 0, 150, 19, descriptor), "same prompt", motionMedia())
             val base = localRequest(id, 'a').copy(projectId = project, input = input)
-            return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
+            return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements, base.maximumAttempts))
         }
         val first = request("video-project", "first")
         val second = request("second-project", "second")
@@ -759,6 +764,88 @@ class VideoJobCoordinatorTest {
         assertEquals(2, backend.submissions.size)
         assertEquals("first", accepted(coordinator.submit(request("video-project", "third"))).job.request.id)
         assertEquals(2, backend.submissions.size)
+    }
+
+    @Test
+    fun `controlled media policy is immutable fingerprinted and required on reopen`() {
+        val fixture = fixture()
+        val backend = ControlledBackend().apply {
+            availabilityValue = availabilityValue.copy(supportedInputs = availabilityValue.supportedInputs + VideoGenerationInputKind.CONTROLLED_MOTION)
+            submitBehavior = { VideoBackendSubmission.Rejected("fixture terminal", false) }
+        }
+        val scene = VideoGenerationDependencyPin("scene", HASH_1, "/owned/scene.json")
+        val runtime = VideoGenerationDependencyPin("renderer", HASH_2, "/runtime/renderer.cjs")
+        val motion = VideoControlledMotionRequest(listOf(scene), 0, 150, 1,
+            motionDescriptor(listOf(runtime), 0, 150, 1))
+        val input = VideoControlledMotionGenerationInput("backend guidance", listOf(scene) + motion.descriptor.runtime.allPins,
+            motion, "exact authored prompt", motionMedia())
+        fun request(id: String, bound: VideoControlledMotionGenerationInput): VideoGenerationJobRequest {
+            val base = localRequest(id, 'a').copy(input = bound, execution = bound.media.execution)
+            return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, bound, base.modelRequirements, base.maximumAttempts))
+        }
+        val coordinator = fixture.coordinator(backend)
+        val original = request("original", input)
+        accepted(coordinator.submit(original))
+        assertEquals("original", accepted(coordinator.submit(request("duplicate", input))).job.request.id)
+        assertEquals(1, backend.submissions.size)
+        val policyVariants = listOf(
+            input.copy(media = input.media.copy(execution = input.media.execution.copy(wallClockLimitMillis = 61_000))),
+            input.copy(media = input.media.copy(execution = input.media.execution.copy(memoryLimitBytes = 9_000_000_000L))),
+            input.copy(media = input.media.copy(execution = input.media.execution.copy(diskLimitBytes = 5_000_000_000L))),
+            input.copy(media = input.media.copy(maximumStagingBytes = 1_900_000_000L)),
+            input.copy(media = input.media.copy(maximumOutputBytes = 1_900_000_000L)),
+            input.copy(media = input.media.copy(minimumFreeDiskBytes = 600_000_000L)),
+        )
+        policyVariants.forEachIndexed { index, changed ->
+            val alternate = request("changed-$index", changed)
+            assertNotEquals(original.requestFingerprint, alternate.requestFingerprint)
+            assertEquals(VideoJobProblemCode.REQUEST_ID_CONFLICT,
+                assertIs<VideoJobResult.Rejected>(coordinator.submit(alternate.copy(id = original.id))).problem.code)
+            assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+                assertIs<VideoJobResult.Rejected>(coordinator.submit(alternate.copy(requestFingerprint = original.requestFingerprint))).problem.code)
+            accepted(coordinator.submit(alternate))
+        }
+        val fewerRetries = request("fewer-retries", input).copy(maximumAttempts = 2,
+            requestFingerprint = controlledMotionRequestFingerprint(original.backendId, input, original.modelRequirements, 2))
+        assertNotEquals(original.requestFingerprint, fewerRetries.requestFingerprint)
+        assertEquals(VideoJobProblemCode.REQUEST_ID_CONFLICT,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(fewerRetries.copy(id = original.id))).problem.code)
+        assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(fewerRetries.copy(requestFingerprint = original.requestFingerprint))).problem.code)
+        accepted(coordinator.submit(fewerRetries))
+        val changedManifest = motion.descriptor.runtime.mediaManifest.copy(sha256 = HASH_1)
+        val changedRuntime = motion.descriptor.runtime.copy(mediaManifest = changedManifest)
+        val changedInput = input.copy(
+            dependencyPins = listOf(scene) + changedRuntime.allPins,
+            motion = motion.copy(descriptor = motion.descriptor.copy(runtime = changedRuntime)),
+        )
+        val changedRequest = request("changed-media-manifest", changedInput)
+        assertNotEquals(original.requestFingerprint, changedRequest.requestFingerprint)
+        assertEquals(VideoJobProblemCode.REQUEST_ID_CONFLICT,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(changedRequest.copy(id = original.id))).problem.code)
+        assertEquals(VideoJobProblemCode.INPUT_NOT_SUPPORTED,
+            assertIs<VideoJobResult.Rejected>(coordinator.submit(changedRequest.copy(requestFingerprint = original.requestFingerprint))).problem.code)
+        accepted(coordinator.submit(changedRequest))
+        assertEquals(3 + policyVariants.size, backend.submissions.size)
+        assertEquals(changedManifest, (fixture.store.snapshot().jobs.last().request.input as VideoControlledMotionGenerationInput).motion.descriptor.runtime.mediaManifest)
+        assertFailsWith<IllegalArgumentException> { original.copy(execution = (original.execution as VideoLocalExecutionPolicy).copy(diskLimitBytes = 5_000_000_000L)) }
+        assertFailsWith<IllegalArgumentException> { input.media.copy(maximumOutputBytes = input.media.execution.diskLimitBytes) }
+        assertFailsWith<IllegalArgumentException> { input.media.copy(maximumConcurrentNativeProcesses = 2) }
+        assertFailsWith<IllegalArgumentException> { input.media.copy(maximumBufferedFrames = 2) }
+        assertFailsWith<IllegalArgumentException> { input.media.copy(encodingProfile = "unverified") }
+        val ledgerPath = fixture.root.resolve("jobs").resolve(VideoJobStore.DOCUMENT)
+        val originalBytes = Files.readString(ledgerPath)
+        val changedCap = originalBytes.replaceFirst("\"maximumAttempts\": 3", "\"maximumAttempts\": 2")
+        assertNotEquals(originalBytes, changedCap)
+        Files.writeString(ledgerPath, changedCap)
+        assertFailsWith<IllegalArgumentException> { fixture.store.snapshot() }
+        assertEquals(changedCap, Files.readString(ledgerPath))
+        val missingMedia = originalBytes.replaceFirst("\"media\": {", "\"missingMedia\": {")
+        // A missing policy cannot be silently supplied by a default reader.
+        assertNotEquals(originalBytes, missingMedia)
+        Files.writeString(ledgerPath, missingMedia)
+        assertFailsWith<IllegalArgumentException> { fixture.store.snapshot() }
+        assertEquals(missingMedia, Files.readString(ledgerPath))
     }
 
     @Test
@@ -778,10 +865,10 @@ class VideoJobCoordinatorTest {
                     preparedPins = listOf(actualPins[0]), startFrame = 120, endFrameExclusive = 420, seed = 17,
                     descriptor = motionDescriptor(listOf(actualPins[1]), 120, 420, 17),
                 ),
-                "exact prompt text",
+                "exact prompt text", motionMedia(),
             )
             val request = localRequest(id, 'a').copy(input = input)
-            return request.copy(requestFingerprint = controlledMotionRequestFingerprint(request.backendId, input, request.modelRequirements))
+            return request.copy(requestFingerprint = controlledMotionRequestFingerprint(request.backendId, input, request.modelRequirements, request.maximumAttempts))
         }
         val original = request("motion-a")
         backend.availabilityValue = backend.availabilityValue.copy(
@@ -798,7 +885,7 @@ class VideoJobCoordinatorTest {
             val otherInput = originalInput.copy(motion = originalInput.motion.copy(descriptor =
                 motionDescriptor(listOf(pins[1]), 120, 420, 17, "other-project")))
             originalRequest.copy(projectId = "other-project", input = otherInput,
-                requestFingerprint = controlledMotionRequestFingerprint(originalRequest.backendId, otherInput, originalRequest.modelRequirements))
+                requestFingerprint = controlledMotionRequestFingerprint(originalRequest.backendId, otherInput, originalRequest.modelRequirements, originalRequest.maximumAttempts))
         }
         assertNotEquals(original.requestFingerprint, otherProject.requestFingerprint)
         // The local slot still belongs to the first project; no cross-project reuse.
@@ -822,7 +909,7 @@ class VideoJobCoordinatorTest {
                 motion = input.motion.copy(descriptor = input.motion.descriptor.copy(runtime = input.motion.descriptor.runtime.copy(compositor = runtimePin))),
             )
             changed.copy(input = changedInput,
-                requestFingerprint = controlledMotionRequestFingerprint(changed.backendId, changedInput, changed.modelRequirements))
+                requestFingerprint = controlledMotionRequestFingerprint(changed.backendId, changedInput, changed.modelRequirements, changed.maximumAttempts))
         }
         val staleRuntime = changedRuntime.copy(id = "motion-stale", requestFingerprint = request("motion-stale").requestFingerprint)
         val staleResult = assertIs<VideoJobResult.Rejected>(coordinator.submit(staleRuntime))
@@ -855,9 +942,9 @@ class VideoJobCoordinatorTest {
         val extra = VideoGenerationDependencyPin("a-extra", "e".repeat(64), "/owned/extra.png")
         val motion = VideoControlledMotionRequest(listOf(scene), 0, 150, 9, motionDescriptor(listOf(runtime), 0, 150, 9))
         fun request(id: String, prompt: String, pins: List<VideoGenerationDependencyPin>): VideoGenerationJobRequest {
-            val input = VideoControlledMotionGenerationInput(prompt, pins, motion, "exact primary prompt")
+            val input = VideoControlledMotionGenerationInput(prompt, pins, motion, "exact primary prompt", motionMedia())
             val base = localRequest(id, 'a').copy(input = input)
-            return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements))
+            return base.copy(requestFingerprint = controlledMotionRequestFingerprint(base.backendId, input, base.modelRequirements, base.maximumAttempts))
         }
         // In the old newline format, the injected line is indistinguishable from the
         // sorted extra pin record, before the shared renderer and scene records.

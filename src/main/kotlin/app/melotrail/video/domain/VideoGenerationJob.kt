@@ -93,6 +93,9 @@ data class VideoGenerationJobRequest(
         requireVideoJobSha256(requestFingerprint, "Video request fingerprint")
         (input as? VideoControlledMotionGenerationInput)?.let { controlled ->
             require(controlled.motion.descriptor.projectId == projectId) { "Controlled descriptor belongs to another project" }
+            require(execution is VideoLocalExecutionPolicy && controlled.media.execution == execution) {
+                "Controlled media limits must match the durable local execution policy"
+            }
         }
         require(maximumAttempts in 1..MAX_VIDEO_GENERATION_ATTEMPTS) {
             "Video generation must use 1..$MAX_VIDEO_GENERATION_ATTEMPTS attempts"
@@ -157,6 +160,7 @@ data class VideoControlledMotionGenerationInput(
     val motion: VideoControlledMotionRequest,
     /** Exact user-authored motion text; [prompt] contains the distinct backend guidance. */
     val primaryPrompt: String,
+    val media: VideoControlledMediaBinding,
 ) : VideoGenerationInput {
     override val comfyWorkflow: VideoComfyWorkflowRequest? = null
     override val controlledMotion: VideoControlledMotionRequest get() = motion
@@ -166,6 +170,14 @@ data class VideoControlledMotionGenerationInput(
         requireVideoPrompt(primaryPrompt)
         requireVideoDependencyPins(dependencyPins)
         require(motion.descriptor.projectId.isNotBlank())
+        require(motion.descriptor.fps == 30) { "Controlled preview encoding requires a 30 fps descriptor" }
+        require(media.execution.memoryLimitBytes >= motion.descriptor.width.toLong() * motion.descriptor.height * 4L) {
+            "Controlled memory admission cannot hold even one decoded frame"
+        }
+        require(media.maximumStagingBytes >= motion.endFrameExclusive - motion.startFrame &&
+            media.maximumOutputBytes >= motion.endFrameExclusive - motion.startFrame) {
+            "Controlled media limits cannot hold the requested frames"
+        }
         require((motion.preparedPins + motion.descriptor.runtime.allPins).all { pin -> dependencyPins.any { it == pin } }) {
             "Every prepared and runtime motion pin must be included in the durable input pins"
         }
@@ -178,7 +190,9 @@ fun controlledMotionRequestFingerprint(
     backendId: String,
     input: VideoControlledMotionGenerationInput,
     models: List<VideoModelRequirement>,
+    maximumAttempts: Int,
 ): String {
+    require(maximumAttempts in 1..MAX_VIDEO_GENERATION_ATTEMPTS) { "Controlled attempt limit is invalid" }
     val digest = MessageDigest.getInstance("SHA-256")
     fun number(value: Long) { digest.update(ByteBuffer.allocate(Long.SIZE_BYTES).putLong(value).array()) }
     fun count(value: Int) { digest.update(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(value).array()) }
@@ -197,10 +211,20 @@ fun controlledMotionRequestFingerprint(
             pin.ownedPath?.let(::field)
         }
     }
-    field("melotrail-controlled-motion-v4")
+    field("melotrail-controlled-motion-v6")
     field(backendId)
+    count(maximumAttempts)
     field(input.prompt)
     field(input.primaryPrompt)
+    field(input.media.encodingProfile)
+    number(input.media.execution.wallClockLimitMillis)
+    number(input.media.execution.memoryLimitBytes)
+    number(input.media.execution.diskLimitBytes)
+    number(input.media.maximumStagingBytes)
+    number(input.media.maximumOutputBytes)
+    number(input.media.minimumFreeDiskBytes)
+    count(input.media.maximumConcurrentNativeProcesses)
+    count(input.media.maximumBufferedFrames)
     pins(input.dependencyPins)
     number(input.motion.startFrame)
     number(input.motion.endFrameExclusive)
@@ -219,6 +243,32 @@ fun controlledMotionRequestFingerprint(
         model.sha256?.let(::field)
     }
     return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+/** Immutable admission ceilings, not measured usage. The claimed media stage (VG2-01's
+ * next slice) must enforce remaining whole-attempt time, disk/byte and resource bounds.
+ * Free-space reserve is additional to the per-attempt disk usage limit.
+ */
+@Serializable
+data class VideoControlledMediaBinding(
+    val execution: VideoLocalExecutionPolicy,
+    val maximumStagingBytes: Long,
+    val maximumOutputBytes: Long,
+    val minimumFreeDiskBytes: Long,
+    val maximumConcurrentNativeProcesses: Int,
+    val maximumBufferedFrames: Int,
+    val encodingProfile: String,
+) {
+    init {
+        require(encodingProfile == "image2-h264-yuv420p-silent-square-v1") { "Unsupported controlled media encoding profile" }
+        require(maximumConcurrentNativeProcesses == 1 && maximumBufferedFrames == 1) {
+            "Controlled media execution must be sequential and frame-bounded"
+        }
+        require(maximumStagingBytes > 0 && maximumOutputBytes > 0 && minimumFreeDiskBytes > 0 &&
+            Math.addExact(maximumStagingBytes, maximumOutputBytes) <= execution.diskLimitBytes) {
+            "Controlled staging and output must fit the local disk budget"
+        }
+    }
 }
 
 /** Pinned full-range template. Each Node invocation consumes a derived <=300-frame
@@ -543,10 +593,11 @@ data class VideoControlledMotionRuntimeBinding(
     val canvasArtifacts: List<VideoGenerationDependencyPin>,
     val ffmpeg: VideoGenerationDependencyPin,
     val ffprobe: VideoGenerationDependencyPin,
+    val mediaManifest: VideoGenerationDependencyPin,
     val expectedCanvasVersion: String,
 ) {
     val allPins: List<VideoGenerationDependencyPin>
-        get() = listOf(node, compositor, scenery, canvasManifest) + canvasArtifacts + listOf(ffmpeg, ffprobe)
+        get() = listOf(node, compositor, scenery, canvasManifest) + canvasArtifacts + listOf(ffmpeg, ffprobe, mediaManifest)
 
     init {
         require(canvasArtifacts.isNotEmpty()) { "Canvas loaded artifacts must be pinned" }
@@ -557,7 +608,7 @@ data class VideoControlledMotionRuntimeBinding(
         require(allPins.all { it.ownedPath != null }) { "Every controlled runtime role needs an owned path" }
         require(node.id == "node" && compositor.id == "compositor" && scenery.id == "scenery" &&
             canvasManifest.id == "canvas-manifest" && ffmpeg.id == "ffmpeg" && ffprobe.id == "ffprobe" &&
-            canvasArtifacts.all { it.id.startsWith("canvas-artifact-") }) { "Controlled runtime pin roles are incomplete or mislabelled" }
+            mediaManifest.id == "media-manifest" && canvasArtifacts.all { it.id.startsWith("canvas-artifact-") }) { "Controlled runtime pin roles are incomplete or mislabelled" }
     }
 }
 
@@ -732,7 +783,7 @@ data class VideoControlledMotionRequest(
         requireVideoDependencyPins(preparedPins)
         require(preparedPins.isNotEmpty() && preparedPins.all { it.ownedPath != null })
         require(startFrame in 0..MAX_JAVASCRIPT_SAFE_INTEGER && endFrameExclusive in 1..MAX_JAVASCRIPT_SAFE_INTEGER &&
-            endFrameExclusive > startFrame && Math.subtractExact(endFrameExclusive, startFrame) <= MAX_JAVASCRIPT_SAFE_INTEGER)
+            endFrameExclusive > startFrame && Math.subtractExact(endFrameExclusive, startFrame) in 1..9_000L)
         require(seed in 0..MAX_JAVASCRIPT_SAFE_INTEGER && descriptor.seed == seed &&
             descriptor.startFrame == startFrame && Math.addExact(descriptor.startFrame, descriptor.frameCount) == endFrameExclusive)
         require((preparedPins + descriptor.runtime.allPins).map(VideoGenerationDependencyPin::id).distinct().size ==

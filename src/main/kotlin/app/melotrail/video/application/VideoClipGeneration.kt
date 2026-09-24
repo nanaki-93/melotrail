@@ -1,6 +1,8 @@
 package app.melotrail.video.application
 
 import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import app.melotrail.video.domain.VideoControlledMediaBinding
+import app.melotrail.video.domain.MAX_JAVASCRIPT_SAFE_INTEGER
 import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.domain.VideoExecutionPolicy
 import app.melotrail.video.domain.VideoLocalExecutionPolicy
@@ -168,7 +170,7 @@ class VideoClipGeneration(
             require(byId.size == runtime.size) { "Controlled runtime roles must be unique." }
             fun pin(id: String) = requireNotNull(byId[id]) { "Controlled runtime requires $id." }
             val artifacts = runtime.filter { it.id.startsWith("canvas-artifact-") }.sortedBy { it.id }
-            val required = setOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe")
+            val required = setOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe", "media-manifest")
             require(artifacts.isNotEmpty()) { "Canvas loaded artifacts must be pinned." }
             require(byId.keys.all { it in required || it.startsWith("canvas-artifact-") }) {
                 "Controlled runtime contains an unsupported role."
@@ -176,8 +178,14 @@ class VideoClipGeneration(
             required.forEach(::pin)
             val binding = app.melotrail.video.domain.VideoControlledMotionRuntimeBinding(
                 pin("node"), pin("compositor"), pin("scenery"), pin("canvas-manifest"), artifacts,
-                pin("ffmpeg"), pin("ffprobe"), request.expectedCanvasVersion,
+                pin("ffmpeg"), pin("ffprobe"), pin("media-manifest"), request.expectedCanvasVersion,
             )
+            val mediaPath = Path.of(requireNotNull(binding.mediaManifest.ownedPath))
+            require(mediaPath.fileName.toString() == "melotrail-video-tools.json" &&
+                Path.of(requireNotNull(binding.ffmpeg.ownedPath)).parent == mediaPath.parent &&
+                Path.of(requireNotNull(binding.ffprobe.ownedPath)).parent == mediaPath.parent) {
+                "Pinned media manifest must accompany the selected FFmpeg and ffprobe binaries."
+            }
             val script = Path.of(requireNotNull(binding.compositor.ownedPath))
             require(Path.of(requireNotNull(binding.scenery.ownedPath)) == script.parent.resolve("scenery.cjs")) {
                 "Scenery must be the compositor's pinned sibling module."
@@ -227,11 +235,20 @@ class VideoClipGeneration(
                     ),
                 ),
                 primaryPrompt = preparedResult.input.primaryMotionPrompt,
+                media = VideoControlledMediaBinding(
+                    execution = execution,
+                    maximumStagingBytes = execution.diskLimitBytes / 2,
+                    maximumOutputBytes = execution.diskLimitBytes - execution.diskLimitBytes / 2,
+                    minimumFreeDiskBytes = (execution.diskLimitBytes / 8).coerceAtLeast(1),
+                    maximumConcurrentNativeProcesses = 1,
+                    maximumBufferedFrames = 1,
+                    encodingProfile = "image2-h264-yuv420p-silent-square-v1",
+                ),
             )
         } catch (error: IllegalArgumentException) {
             return VideoClipGenerationResult.Rejected(error.message ?: "Controlled motion inputs are invalid.")
         }
-        val fingerprint = app.melotrail.video.domain.controlledMotionRequestFingerprint(backendId, input, modelRequirements)
+        val fingerprint = controlledMotionRequestFingerprint(backendId, input, modelRequirements, request.maximumAttempts)
         val jobRequest = try {
             VideoGenerationJobRequest(request.requestId ?: requestIdFactory(), request.project.id, backendId, modelRequirements, input,
                 fingerprint, request.maximumAttempts, Instant.now(clock).toString(), execution)
@@ -257,7 +274,7 @@ class VideoClipGeneration(
             ?: return VideoClipGenerationResult.Rejected("The completed job is not a controlled-motion request.")
         if (job.request.projectId != request.project.id || request.session.project.id != request.project.id ||
             request.session.project.revision != request.expectedRevision || job.request.backendId != backendId ||
-            job.request.requestFingerprint != controlledMotionRequestFingerprint(backendId, input, job.request.modelRequirements) ||
+            job.request.requestFingerprint != controlledMotionRequestFingerprint(backendId, input, job.request.modelRequirements, job.request.maximumAttempts) ||
             job.request.execution !is VideoLocalExecutionPolicy ||
             input.motion.endFrameExclusive - input.motion.startFrame != request.facts.frameCount) {
             return VideoClipGenerationResult.Rejected("Completed motion identity, execution or measured frame count does not match this project.")
@@ -295,7 +312,12 @@ data class VideoClipGenerationRequest(
     val expectedCanvasVersion: String,
 ) {
     init {
-        require(expectedRevision >= 0 && startFrame >= 0 && endFrameExclusive > startFrame && maximumAttempts in 1..3)
+        require(expectedRevision >= 0 && startFrame in 0..MAX_JAVASCRIPT_SAFE_INTEGER &&
+            endFrameExclusive in 1..MAX_JAVASCRIPT_SAFE_INTEGER && endFrameExclusive > startFrame &&
+            Math.subtractExact(endFrameExclusive, startFrame) in 1..9_000L &&
+            seed in 0..MAX_JAVASCRIPT_SAFE_INTEGER && maximumAttempts in 1..3) {
+            "Controlled frame range, seed or attempt bound is invalid"
+        }
         require(requestId == null || requestId.matches(Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")))
     }
 }

@@ -30,6 +30,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -388,7 +389,7 @@ class VideoJobStoreException(
 
 private object VideoJobSchema {
     private const val SCHEMA = "melotrail-video-jobs"
-    private const val VERSION = 3
+    private const val VERSION = 5
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true
@@ -408,12 +409,20 @@ private object VideoJobSchema {
         require(schema == SCHEMA && version == VERSION) {
             "Unsupported video job schema '${schema ?: "missing"}' version '${version ?: "missing"}'."
         }
+        // A controlled policy is never inferred from serializer defaults or a caller's
+        // current settings when reopening a claimed attempt.
+        root.getValue("ledger").jsonObject.getValue("jobs").jsonArray.forEach { job ->
+            val input = job.jsonObject.getValue("request").jsonObject.getValue("input").jsonObject
+            if (input["type"]?.jsonPrimitive?.content == "controlled-motion") {
+                require("media" in input) { "Controlled execution policy is missing from the durable ledger" }
+            }
+        }
         return try {
             json.decodeFromString<VideoJobDocument>(document).ledger.also { ledger ->
                 ledger.jobs.forEach { job ->
                     val input = job.request.input as? VideoControlledMotionGenerationInput ?: return@forEach
                     require(job.request.requestFingerprint == controlledMotionRequestFingerprint(
-                        job.request.backendId, input, job.request.modelRequirements,
+                        job.request.backendId, input, job.request.modelRequirements, job.request.maximumAttempts,
                     )) { "Controlled request binding does not match its durable fingerprint" }
                 }
             }

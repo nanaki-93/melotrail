@@ -22,8 +22,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class VideoClipGenerationTest {
+    @Test fun `invalid or JavaScript unsafe controlled ranges cannot form a durable request`() {
+        val project = VideoProject("project", "Project", "2026-09-24T00:00:00Z")
+        // Domain validation also protects direct ledger callers, without filesystem I/O.
+        val pin = VideoGenerationDependencyPin("scene", "a".repeat(64), "/owned/scene")
+        val runtime = VideoGenerationDependencyPin("renderer", "b".repeat(64), "/runtime/renderer")
+        val descriptor = motionDescriptor(listOf(runtime), 0, 150, 1, project.id)
+        val motion = VideoControlledMotionRequest(listOf(pin), 0, 150, 1, descriptor)
+        assertFailsWith<IllegalArgumentException> { motion.copy(endFrameExclusive = Long.MAX_VALUE) }
+        assertFailsWith<IllegalArgumentException> { motion.copy(endFrameExclusive = MAX_JAVASCRIPT_SAFE_INTEGER + 1) }
+        assertFailsWith<IllegalArgumentException> { motion.copy(endFrameExclusive = 0) }
+        assertFailsWith<IllegalArgumentException> { motion.copy(endFrameExclusive = 9_001) }
+        assertFailsWith<IllegalArgumentException> { motion.copy(startFrame = MAX_JAVASCRIPT_SAFE_INTEGER) }
+    }
     @Test fun `import rejects a mismatched project or frame count before touching media`() {
         val root = Files.createTempDirectory("video-completed-guard-")
         val store = VideoProjectStore(listOf(Files.createTempDirectory("midi-protected-")))
@@ -32,10 +46,11 @@ class VideoClipGenerationTest {
         val pin = VideoGenerationDependencyPin("scene", "a".repeat(64), "/owned/scene.json")
         val runtime = VideoGenerationDependencyPin("runtime", "b".repeat(64), "/runtime/renderer.cjs")
         val input = VideoControlledMotionGenerationInput("move", listOf(pin) + motionRuntime(runtime).allPins,
-            VideoControlledMotionRequest(listOf(pin), 0, 150, 42, motionDescriptor(listOf(runtime), 0, 150, 42, project.id)), "move")
+            VideoControlledMotionRequest(listOf(pin), 0, 150, 42, motionDescriptor(listOf(runtime), 0, 150, 42, project.id)), "move",
+            motionMedia(VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000)))
         val backendId = "controlled-local"
         val request = VideoGenerationJobRequest("request", project.id, backendId, emptyList(), input,
-            controlledMotionRequestFingerprint(backendId, input, emptyList()), 1, Instant.now().toString(),
+            controlledMotionRequestFingerprint(backendId, input, emptyList(), 1), 1, Instant.now().toString(),
             VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000))
         val ledger = VideoJobLedger("domain", Instant.now().toString(), listOf(VideoGenerationJob(request)))
         val persistence = object : VideoJobPersistence {
