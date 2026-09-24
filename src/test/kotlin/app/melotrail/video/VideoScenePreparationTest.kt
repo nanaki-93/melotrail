@@ -5,6 +5,9 @@ import app.melotrail.video.adapter.VideoPreparedSceneImport
 import app.melotrail.video.adapter.VideoPreparedSceneImportResult
 import app.melotrail.video.adapter.VideoPreparedSceneStore
 import app.melotrail.video.adapter.VideoProjectStore
+import app.melotrail.video.adapter.VideoMediaProbe
+import app.melotrail.video.adapter.VideoMotionRenderer
+import app.melotrail.video.adapter.VideoResultImport
 import app.melotrail.video.application.CreateVideoProject
 import app.melotrail.video.application.ImportVideoAsset
 import app.melotrail.video.application.PrepareVideoAnimationAssets
@@ -16,6 +19,7 @@ import app.melotrail.video.application.VideoPoseAnimationAsset
 import app.melotrail.video.application.VideoProjectLifecycle
 import app.melotrail.video.application.VideoProjectLifecycleResult
 import app.melotrail.video.application.VideoPromptCompiler
+import app.melotrail.video.application.VideoPromptIssueCode
 import app.melotrail.video.application.VideoSceneryAnimationAsset
 import app.melotrail.video.application.VideoSceneLookSelectionResult
 import app.melotrail.video.application.VideoSceneLooks
@@ -29,8 +33,14 @@ import app.melotrail.video.application.VideoScenePreparation
 import app.melotrail.video.application.VideoScenePreparationProblemCode
 import app.melotrail.video.application.VideoScenePreparationResult
 import app.melotrail.video.application.VideoScenePreparationStatus
+import app.melotrail.video.application.VideoClipGeneration
+import app.melotrail.video.application.VideoClipGenerationRequest
+import app.melotrail.video.application.VideoClipGenerationResult
+import app.melotrail.video.application.VideoJobCoordinator
+import app.melotrail.video.application.VideoJobPersistence
 import app.melotrail.video.domain.VideoAssetImage
 import app.melotrail.video.domain.VideoAssetIdentityReview
+import app.melotrail.video.domain.VideoAssetUsageIntent
 import app.melotrail.video.domain.VideoDepthRelation
 import app.melotrail.video.domain.VideoEffectAnchor
 import app.melotrail.video.domain.VideoLayerKind
@@ -48,6 +58,9 @@ import app.melotrail.video.domain.VideoComponentReviewStatus
 import app.melotrail.video.domain.VideoDependencyPin
 import app.melotrail.video.domain.VideoGuidanceKind
 import app.melotrail.video.domain.VideoMotionControl
+import app.melotrail.video.domain.VideoGenerationDependencyPin
+import app.melotrail.video.domain.VideoJobLedger
+import app.melotrail.video.domain.VideoLocalExecutionPolicy
 import app.melotrail.video.domain.VideoPromptBackendCapabilities
 import app.melotrail.video.domain.VideoRect
 import app.melotrail.video.domain.VideoReferenceRole
@@ -150,6 +163,36 @@ class VideoScenePreparationTest {
     }
 
     @Test
+    fun `inspiration and wrong-role imports cannot become finished scenes on reopen`() {
+        val fixture = fixture()
+        val source = rgb(root.resolve("outside/inspiration.png"), 100, 60, Color(70, 80, 90))
+        val inspiration = assertIs<VideoAssetImportResult.Imported>(fixture.assetImporter("inspiration").import(
+            fixture.session, ImportVideoAsset(source, VideoReferenceRole.COMPLETE_SCENE,
+                usageIntent = VideoAssetUsageIntent.INSPIRATION_ONLY),
+        ))
+        fixture.session = inspiration.session
+        val before = fixture.store.open(fixture.projectRoot)
+        val request = PrepareVideoAnimationAssets(VideoVersionedId("forbidden", 1), inspiration.asset.id)
+        val denied = assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.sceneImporter.import(
+            fixture.projectRoot, before.revision, request,
+        ))
+        assertTrue(denied.deficiencies.any { it.message.contains("inspiration-only") && it.nextAction.contains("production") })
+        assertEquals(before, fixture.store.open(fixture.projectRoot))
+        val library = assertIs<VideoAssetLibraryResult.Loaded>(fixture.assetImporter("unused").open(fixture.projectRoot))
+        assertIs<VideoSceneLookSelectionResult.Rejected>(VideoSceneLooks().select(
+            library.session.project, library.assets, inspiration.asset.id,
+        ))
+        val wrong = fixture.import("wrong-role", rgb(root.resolve("outside/wrong.png"), 100, 60, Color(10, 30, 50)),
+            VideoReferenceRole.SUBJECT)
+        val deniedRole = assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.sceneImporter.import(
+            fixture.projectRoot, wrong.session.project.revision, request.copy(
+                sceneId = VideoVersionedId("wrong-scene", 1), finishedSceneReferenceId = wrong.asset.id),
+        ))
+        assertTrue(deniedRole.deficiencies.any { it.message.contains("not the finished-scene role") })
+        assertTrue(fixture.store.open(fixture.projectRoot).preparedSceneVersions.isEmpty())
+    }
+
+    @Test
     fun `flat image cannot satisfy blink and redesign requests replacement before dispatch`() {
         val fixture = fixture()
         val finished = fixture.import(
@@ -228,6 +271,83 @@ class VideoScenePreparationTest {
         ))
         assertTrue(rejectedCapability.problems.any { it.code == VideoScenePreparationProblemCode.REJECTED_COMPONENT })
         assertTrue(fixture.store.open(fixture.projectRoot).preparedSceneVersions.size == 1)
+    }
+
+    @Test
+    fun `asset controls disclose compositor gaps without claiming execution readiness`() {
+        val fixture = fixture()
+        val prepared = fixture.layeredScene()
+        val look = fixture.look(prepared.finishedId)
+        val service = VideoScenePreparation()
+        val scene = compositionScene(prepared.scene)
+        val requests = allControls(scene)
+        val result = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, scene, requests, capabilities(), guidelines(),
+        )).input
+        val limitations = result.promptIssues.filter { it.code == VideoPromptIssueCode.INFORMATIONAL_LIMITATION }
+        assertTrue(limitations.any { it.message.contains("subject") && it.message.contains("translation") })
+        assertTrue(limitations.any { it.message.contains("effect") && it.message.contains("steam") })
+        assertTrue(limitations.any { it.message.contains("travel") && it.message.contains("coverage") })
+        assertTrue(limitations.all { !it.blocksInference && it.message.contains("VG2") })
+        assertTrue(result.canDispatch) // preparation, not a production renderer or ComfyUI controlled-motion claim
+        val flat = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, prepared.scene, requests.copy(controls = requests.controls.take(1)), capabilities(), guidelines(),
+        )).input
+        assertTrue(flat.promptIssues.none { it.code == VideoPromptIssueCode.INFORMATIONAL_LIMITATION })
+        val wideEffect = requests.copy(controls = requests.controls.filter { it.id == "effect" }.map {
+            it.copy(maximum = 20.0)
+        })
+        val bounded = assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+            look, scene, wideEffect, capabilities(), guidelines(),
+        )).input
+        assertTrue(bounded.promptIssues.any {
+            it.code == VideoPromptIssueCode.INFORMATIONAL_LIMITATION &&
+                it.message.contains("8/s") && it.message.contains("28 px/s")
+        })
+    }
+
+    @Test
+    fun `unsupported prepared controls never reach controlled job admission`() {
+        val fixture = fixture()
+        val prepared = fixture.layeredScene()
+        val scene = compositionScene(prepared.scene)
+        val look = fixture.look(prepared.finishedId)
+        val service = VideoScenePreparation()
+        var admissionReads = 0
+        val coordinator = VideoJobCoordinator("test-domain", object : VideoJobPersistence {
+            override fun loadOrCreate(admissionDomainId: String, createdAt: String): VideoJobLedger {
+                admissionReads++
+                error("Unsupported motion reached the durable job ledger")
+            }
+            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger =
+                error("Unsupported motion reached durable publication")
+        }, emptyList())
+        val generator = VideoClipGeneration(service, coordinator, VideoResultImport(fixture.store, VideoMediaProbe()),
+            VideoMotionRenderer(), "controlled-local", VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000))
+        val controls = allControls(scene).controls.associateBy { it.id }
+        val cases = listOf(
+            listOf(controls.getValue("subject")) to "translation",
+            listOf(controls.getValue("effect").copy(maximum = 20.0)) to "8/s",
+            listOf(controls.getValue("ambient")) to "I2V",
+            listOf(controls.getValue("blink"), controls.getValue("subject")) to "translation",
+        )
+        for ((selected, reason) in cases) {
+            // These assets remain preparation-eligible; unsupported renderer controls must
+            // still be stopped before an intent is persisted or submitted.
+            assertIs<VideoScenePreparationResult.Prepared>(service.prepare(
+                look, scene, VideoSceneMotionRequest("Move gently.", selected), capabilities(), guidelines(),
+            ))
+            val rejected = assertIs<VideoClipGenerationResult.Rejected>(generator.generate(VideoClipGenerationRequest(
+                project = fixture.session.project, expectedRevision = fixture.session.project.revision,
+                look = look, scene = scene, motionRequest = VideoSceneMotionRequest("Move gently.", selected),
+                backendCapabilities = capabilities(), guidelineSet = guidelines(),
+                preparedDependencies = listOf(VideoGenerationDependencyPin("scene", "a".repeat(64))),
+                runtimeDependencies = listOf(VideoGenerationDependencyPin("runtime", "b".repeat(64))),
+                startFrame = 0, endFrameExclusive = 30, seed = 42,
+            )))
+            assertTrue(rejected.reason.contains(reason), rejected.reason)
+            assertEquals(0, admissionReads)
+        }
     }
 
     @Test
@@ -532,8 +652,14 @@ class VideoScenePreparationTest {
             listOf(VideoSceneComponentReview(expectedId, kind, VideoComponentReviewStatus.UNREVIEWED)),
             unreviewed.componentReviews.filter { it.status != VideoComponentReviewStatus.APPROVED },
         )
-        if (kind != VideoSceneComponentKind.FINISHED_LOOK) {
-            assertNotEquals(original.requestFingerprint, unreviewed.requestFingerprint)
+        assertNotEquals(original.requestFingerprint, unreviewed.requestFingerprint)
+        if (kind == VideoSceneComponentKind.FINISHED_LOOK) {
+            val completed = listOf(VideoVersionedId("completed-take", 1))
+            val invalidation = service.invalidatePending(original, unreviewed,
+                request.controls.map { it.id }.toSet(), completed)
+            assertEquals(request.controls.map { it.id }.sorted(), invalidation.invalidatedPendingMotionInputIds)
+            assertEquals(completed, invalidation.retainedCompletedResultIds)
+        } else {
             val unaffected = when (kind) {
                 VideoSceneComponentKind.POSE -> setOf("ambient", "subject", "travel", "effect")
                 VideoSceneComponentKind.SUBJECT_LANDMARK, VideoSceneComponentKind.EFFECT_ANCHOR,

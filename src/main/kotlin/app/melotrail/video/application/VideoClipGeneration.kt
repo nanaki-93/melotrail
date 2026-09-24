@@ -40,6 +40,17 @@ class VideoClipGeneration(
         val prepared = preparation.prepare(request.look, request.scene, request.motionRequest, request.backendCapabilities, request.guidelineSet)
         val preparedResult = (prepared as? VideoScenePreparationResult.Prepared)
             ?: return VideoClipGenerationResult.Rejected("Prepared scene inputs were rejected: ${(prepared as VideoScenePreparationResult.Rejected).problems.joinToString { it.message }}")
+        // Preparation describes asset eligibility, not compositor execution. Do not persist a
+        // controlled job for I2V or a control outside the selected renderer's implemented limits.
+        if (preparedResult.input.controls.any { it.intent == VideoSceneMotionIntent.CAMERA_OR_AMBIENT }) {
+            return VideoClipGenerationResult.Rejected("Composed-image I2V requires the separate local video stage; the controlled compositor cannot execute it. Select only supported compositor controls.")
+        }
+        val unsupported = preparedResult.input.controls.mapNotNull { input ->
+            preparation.rendererUnsupportedReason(input)?.let { "${input.id}: $it" }
+        }
+        if (unsupported.isNotEmpty()) {
+            return VideoClipGenerationResult.Rejected("Controlled compositor request is unsupported: ${unsupported.joinToString(" ")} Supply a supported reduced request; see motion-runtime.json.")
+        }
         if (preparedResult.input.componentReviews.any { it.status == app.melotrail.video.domain.VideoComponentReviewStatus.REJECTED }) {
             return VideoClipGenerationResult.Rejected("Prepared motion includes rejected component review state.")
         }

@@ -386,6 +386,7 @@ enum class VideoPromptIssueCode {
     USER_GUIDANCE_UNSUPPORTED,
     STANDARD_GUIDANCE_UNSUPPORTED,
     MOTION_PRESERVATION_UNSUPPORTED,
+    INFORMATIONAL_LIMITATION,
 }
 
 data class VideoPromptIssue(val code: VideoPromptIssueCode, val message: String, val blocksInference: Boolean)

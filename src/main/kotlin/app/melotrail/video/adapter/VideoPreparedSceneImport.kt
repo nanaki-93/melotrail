@@ -8,6 +8,8 @@ import app.melotrail.video.application.VideoAnimationAssets
 import app.melotrail.video.application.VideoAnimationAssetsResult
 import app.melotrail.video.application.VideoAssetFiles
 import app.melotrail.video.application.VideoProjectConcurrencyException
+import app.melotrail.video.domain.VideoAssetIdentityReview
+import app.melotrail.video.domain.VideoAssetUsageIntent
 import app.melotrail.video.domain.VideoPreparedReferencePin
 import app.melotrail.video.domain.VideoPreparedScene
 import app.melotrail.video.domain.VideoProject
@@ -66,6 +68,32 @@ class VideoPreparedSceneImport(
                 )
             }
             val asset = inspected.asset
+            if (id == request.finishedSceneReferenceId && asset.role != null &&
+                asset.role != app.melotrail.video.domain.VideoReferenceRole.COMPLETE_SCENE
+            ) {
+                return rejected(
+                    VideoAnimationAssetDeficiencyCode.MISSING_ASSET,
+                    "Finished scene ${id.id} is assigned to ${asset.role}, not the finished-scene role.",
+                    "Select a COMPLETE_SCENE or unassigned imported image for the finished scene.",
+                    id.id,
+                )
+            }
+            if (id == request.finishedSceneReferenceId && asset.usageIntent == VideoAssetUsageIntent.INSPIRATION_ONLY) {
+                return rejected(
+                    VideoAnimationAssetDeficiencyCode.MISSING_ASSET,
+                    "Finished scene ${id.id} is marked inspiration-only and cannot be prepared as generation input.",
+                    "Import externally finished production artwork as a new production-reference asset; keep the inspiration unchanged.",
+                    id.id,
+                )
+            }
+            if (id == request.finishedSceneReferenceId && asset.identityReview == VideoAssetIdentityReview.REJECTED) {
+                return rejected(
+                    VideoAnimationAssetDeficiencyCode.MISSING_ASSET,
+                    "Finished scene ${id.id} has a rejected identity/appearance review.",
+                    "Select another imported version or import replacement external artwork.",
+                    id.id,
+                )
+            }
             resolved[id] = ResolvedVideoAnimationAsset(
                 pin = VideoPreparedReferencePin(record.id, record.artifact, asset.original),
                 asset = asset,

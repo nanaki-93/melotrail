@@ -79,7 +79,7 @@ class VideoScenePreparation(
                     VideoScenePreparationProblemCode.UNSUPPORTED_MOTION_RANGE,
                     "Motion input '${control.id}' requests ${control.minimum}..${control.maximum} with default ${control.defaultValue}; " +
                         "capability '${capability.id}' supports ${capability.minimum}..${capability.maximum}.",
-                    "Keep the request inside the measured independent range. Combined timeline safety remains a V19 validation.",
+                    "Keep the request inside the measured asset range; check motion-runtime.json separately for renderer limits.",
                     control.id,
                 )
                 return@mapNotNull null
@@ -133,6 +133,7 @@ class VideoScenePreparation(
             addAll(compiledPrompt.dependencies)
             add(VideoInputDependency("look.descriptor", look.sourceDescriptor.sha256))
             add(VideoInputDependency("look.appearance-policy", digest(look.appearancePolicy.name)))
+            add(VideoInputDependency("look.identity-review", digest(look.identityReview.name)))
             scene.dependencies.forEach { dependency ->
                 add(VideoInputDependency("prepared-dependency.${dependency.id}", dependency.sha256))
             }
@@ -171,13 +172,45 @@ class VideoScenePreparation(
                 scene = scene,
                 primaryMotionPrompt = compiledPrompt.primaryPrompt,
                 backendMotionPrompt = checkNotNull(compiledPrompt.backendPrompt),
-                promptIssues = compiledPrompt.issues,
+                promptIssues = compiledPrompt.issues + inputs.mapNotNull(::rendererLimitation),
                 controls = inputs,
                 componentReviews = reviews,
                 dependencies = dependencies,
                 requestFingerprint = fingerprint(dependencies),
             ),
         )
+    }
+
+    /** Asset eligibility is separate from the selected compositor's limited semantic controls. */
+    private fun rendererLimitation(input: VideoPreparedMotionInput): VideoPromptIssue? {
+        val detail = rendererUnsupportedReason(input) ?: when (input.intent) {
+            VideoSceneMotionIntent.CAMERA_OR_AMBIENT, VideoSceneMotionIntent.BLINK -> return null
+            VideoSceneMotionIntent.CHARACTER_ACTION -> error("Character actions must have an unsupported renderer reason")
+            VideoSceneMotionIntent.SCENERY_TRAVEL -> "Scenery needs a supported rigid-camera trajectory and full-trajectory coverage validation."
+            VideoSceneMotionIntent.EFFECT -> "Only anchored steam (≤8/s, rise ≤28 px/s) is implemented, not arbitrary effects."
+        }
+        return VideoPromptIssue(
+            VideoPromptIssueCode.INFORMATIONAL_LIMITATION,
+            "Motion input '${input.id}': $detail Asset capability and canDispatch mean preparation eligibility, not renderer or VG2 execution readiness; see motion-runtime.json.",
+            blocksInference = false,
+        )
+    }
+
+    /** Definitive compositor mismatches; advisory trajectory/semantic checks remain separate. */
+    internal fun rendererUnsupportedReason(input: VideoPreparedMotionInput): String? = when (input.intent) {
+        VideoSceneMotionIntent.CAMERA_OR_AMBIENT -> null // I2V is not a compositor control; generation rejects flat mode.
+        VideoSceneMotionIntent.BLINK -> if (input.requestedMinimum < 0 || input.requestedMaximum > 1)
+            "Blink exceeds the compositor's 0..1 amount." else null
+        VideoSceneMotionIntent.CHARACTER_ACTION -> when (input.capability.control) {
+            VideoMotionControl.TRANSLATE_Y -> "Generic subject translation is not a compositor control; only bounded breathing (≤4 px) is implemented."
+            VideoMotionControl.ROTATE -> "Generic subject rotation is not a compositor control; only a head gesture (≤3°) with a HEAD_REGION mask is implemented."
+            VideoMotionControl.TRANSLATE_X -> "Independent subject translation is not implemented by the compositor."
+            else -> "Independent subject ${input.capability.control} is not implemented by the compositor."
+        }
+        VideoSceneMotionIntent.SCENERY_TRAVEL -> if (input.requestedMinimum < -16384 || input.requestedMaximum > 16384)
+            "Travel exceeds the compositor's 16,384 px limit; full-trajectory coverage is not established by preparation." else null
+        VideoSceneMotionIntent.EFFECT -> if (input.requestedMinimum < 0 || input.requestedMaximum > 8)
+            "Effect rate exceeds the compositor's steam limit of 8/s (rise ≤28 px/s); arbitrary effects are not implemented." else null
     }
 
     /** Pending inputs are invalidated independently; completed immutable results are always retained. */
@@ -476,7 +509,7 @@ data class VideoPreparedSceneMotion(
     val dependencies: List<VideoInputDependency>,
     val requestFingerprint: String,
 ) {
-    /** Only actionable blockers reject preparation; review state remains explicit for V19/V21. */
+    /** Preparation-only eligibility; does not establish VG2 execution or renderer readiness. */
     val canDispatch: Boolean get() = true
 }
 
