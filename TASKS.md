@@ -80,7 +80,11 @@ These checks use the explicitly configured Node/Canvas runtime, not model infere
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
-| CORE-01 | Identify the exact current candidate and preserved WIP; run current focused/full checks and motion tests. Record concrete blockers and distinguish installed/tooling issues from code failures. Do not replay a historical admission or delete local data. | — | TODO |
+| CORE-01 | Identify the exact current candidate and preserved WIP; run current focused/full checks and motion tests. Record concrete blockers and distinguish installed/tooling issues from code failures. Do not replay a historical admission or delete local data. | — | DONE |
+
+CORE-01 evidence (2026-09-24): candidate root `/Users/marcoandreose/DEV/lab/melotrail`, branch `codex/pi-automation`, tested HEAD `7a91f1ff76d6fc305e3459a6c6f94cfaab159832` (runner checkpoint commits included in the tested content). The content-addressed source-input manifest at `build/core-01/repair-20260924T041944Z/integration/source-manifest-after.txt` identifies the final tested candidate (including this disposition); its digest and post-gate comparison are retained in the ignored integration receipt. Preserved unrelated untracked local data: `.venv-transcription-spike/`, `.venv-worker/`, `.venv/`, and `tools/__pycache__/`; no tracked source modifications were present. JDK Temurin 21.0.11, Gradle 8.14.3, Kotlin plugins 2.2.21, `/opt/homebrew/bin/node` 25.8.2, npm 11.14.1 and Canvas 0.1.80 were verified.
+
+Focused architecture/documentation and preview suites, production fixture generation and both Node motion suites passed (Node: 22/22); fresh `./gradlew test --no-build-cache --rerun-tasks` passed root and `:desktopApp` (14 tasks executed). `make test` and `make build` passed with tasks UP-TO-DATE; `git diff --check` and `git diff --cached --check` passed. Logs/reports: ignored `build/core-01/step-1.1-20260924T035114Z-23206/`, `build/core-01/step-1.2/`, `build/core-01/architecture-step-2.1/`, `build/core-01/step-2.2-preview/`, `build/core-01/step-2.3-20260924T040537Z-30439/`, and `build/core-01/integration-20260924T041500Z/`. These technical checks do not establish integrated preview delivery, artistic/video approval, MIDI listening, Logic approval or release readiness. Next ready task: VG1-01.
 
 **Owners:** build/Makefile configuration (inspect first, no default edits),
 `TargetArchitectureRulesTest`, `DocumentationIntegrityTest`, current source/test
