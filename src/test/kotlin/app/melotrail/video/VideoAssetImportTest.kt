@@ -331,6 +331,44 @@ class VideoAssetImportTest {
     }
 
     @Test
+    fun `replacement artwork receives a new immutable identity and earlier bundle survives reopen`() {
+        val harness = harness(ids = listOf("finished-v1", "finished-v2"))
+        val firstSource = imageFile("finished-v1.png", "png", 640, 360)
+        val replacementSource = imageFile("finished-v2.png", "png", 800, 450, colorSeed = 4)
+        val firstBytes = Files.readAllBytes(firstSource)
+        val replacementBytes = Files.readAllBytes(replacementSource)
+        val first = harness.imported(
+            harness.importer.import(harness.session, ImportVideoAsset(firstSource, VideoReferenceRole.COMPLETE_SCENE)),
+        )
+        val firstArtifacts = listOf(first.asset.original.artifact, first.asset.thumbnail.artifact,
+            first.session.project.referenceVersions.single().artifact)
+        val firstBundles = firstArtifacts.associate { artifact ->
+            artifact.relativePath to Files.readAllBytes(harness.projectRoot.resolve(artifact.relativePath))
+        }
+
+        val replacement = harness.imported(
+            harness.importer.import(first.session, ImportVideoAsset(replacementSource, VideoReferenceRole.COMPLETE_SCENE)),
+        )
+
+        assertEquals("finished-v1", first.asset.id.id)
+        assertEquals("finished-v2", replacement.asset.id.id)
+        assertTrue(first.asset.id != replacement.asset.id)
+        assertEquals(2, replacement.session.project.referenceVersions.size)
+        assertContentEquals(replacementBytes, Files.readAllBytes(harness.projectRoot.resolve(replacement.asset.original.artifact.relativePath)))
+        assertContentEquals(firstBytes, Files.readAllBytes(harness.projectRoot.resolve(first.asset.original.artifact.relativePath)))
+        firstBundles.forEach { (relativePath, bytes) ->
+            assertContentEquals(bytes, Files.readAllBytes(harness.projectRoot.resolve(relativePath)))
+        }
+
+        val reopened = harness.loaded(harness.importer.open(harness.projectRoot))
+        assertEquals(listOf(first.asset, replacement.asset), reopened.assets)
+        assertEquals(replacement.session.project, reopened.session.project)
+        firstBundles.forEach { (relativePath, bytes) ->
+            assertContentEquals(bytes, Files.readAllBytes(harness.projectRoot.resolve(relativePath)))
+        }
+    }
+
+    @Test
     fun `reopen loads pinned descriptors and verifies raw and thumbnail media`() {
         val harness = harness()
         val source = imageFile("recoverable.png", "png", 700, 350)
@@ -712,8 +750,14 @@ class VideoAssetImportTest {
         )
 
         assertEquals(VideoAssetProblemCode.SAVE_FAILED, failed.code)
-        assertTrue(VideoProjectStore(listOf(root.resolve("midi-projects"))).open(harness.projectRoot).referenceVersions.isEmpty())
+        val unchangedProject = VideoProjectStore(listOf(root.resolve("midi-projects"))).open(harness.projectRoot)
+        assertTrue(unchangedProject.referenceVersions.isEmpty())
         assertContentEquals(sourceBefore, Files.readAllBytes(source))
+        val orphanBundle = harness.projectRoot.resolve("references/reference-retry/v1")
+        assertTrue(Files.isDirectory(orphanBundle), "first publication attempt should leave its immutable bundle")
+        val orphanFiles = Files.walk(orphanBundle).use { paths -> paths.filter(Files::isRegularFile).toList() }
+        assertEquals(3, orphanFiles.size, "descriptor, original and thumbnail are unreferenced, not overwritten")
+        val orphanBytes = orphanFiles.associateWith(Files::readAllBytes)
 
         rejectPublication = false
         val retried = harness.imported(
@@ -722,6 +766,10 @@ class VideoAssetImportTest {
         assertEquals("reference-retry", retried.asset.id.id)
         assertEquals(1, retried.session.project.referenceVersions.size)
         assertContentEquals(sourceBefore, Files.readAllBytes(source))
+        orphanBytes.forEach { (path, bytes) ->
+            assertContentEquals(bytes, Files.readAllBytes(path), "retry must not overwrite orphaned immutable bundle")
+        }
+        assertEquals(listOf(retried.asset), harness.loaded(harness.importer.open(harness.projectRoot)).assets)
     }
 
     @Test
