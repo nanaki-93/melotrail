@@ -164,6 +164,97 @@ class VideoTakeReviewTest {
         assertTrue(result.session.project.selectedTakeIds.isEmpty())
     }
 
+    @Test fun `explicit unreviewed selection and clearing survive reopen without approving or changing takes`() {
+        val initial = fixture()
+        val storage = store()
+        val service = reviewer(storage)
+        val takeBytes = Files.readAllBytes(projectRoot.resolve("takes/take.mp4"))
+        val selected = service.select(initial, 1, listOf(takeId))
+        assertEquals(null, selected.event)
+        assertEquals(null, selected.status)
+        assertEquals(listOf(takeId), storage.open(projectRoot).selectedTakeIds)
+        assertEquals(VideoTakeReviewStatus.UNREVIEWED, storage.open(projectRoot).reviewStatus(takeId))
+        assertTrue(selected.session.project.takeReviewEvents.isEmpty())
+        val cleared = service.select(selected.session, 2, emptyList())
+        val reopened = store().open(projectRoot)
+        assertEquals(cleared.session.project, reopened)
+        assertTrue(reopened.selectedTakeIds.isEmpty())
+        assertTrue(reopened.takeReviewEvents.isEmpty())
+        assertEquals(initial.project.takeVersions, reopened.takeVersions)
+        assertContentEquals(takeBytes, Files.readAllBytes(projectRoot.resolve("takes/take.mp4")))
+    }
+
+    @Test fun `selection rejects duplicate missing and rejected members atomically without changing prior choices`() {
+        val initial = fixture()
+        val storage = store()
+        val secondId = VideoVersionedId("second", 1)
+        val secondPath = projectRoot.resolve("takes/second.mp4")
+        Files.writeString(secondPath, "second owned fixture")
+        val digest = sha(secondPath)
+        val originalTake = initial.project.takeVersions.single()
+        val second = originalTake.copy(id = secondId, artifact = VideoArtifact("takes/second.mp4", digest),
+            sourceMeasurement = originalTake.sourceMeasurement!!.copy(sha256 = digest, bytes = Files.size(secondPath)),
+            publishedMeasurement = originalTake.publishedMeasurement!!.copy(sha256 = digest, bytes = Files.size(secondPath)),
+            provenance = originalTake.provenance!!.copy(requestId = "second-request"))
+        val withTwo = storage.save(projectRoot, 1, initial.project.copy(takeVersions = listOf(originalTake, second), revision = 2))
+        val service = reviewer(storage, { "reject-second" })
+        val withTwoSession = VideoProjectSession(projectRoot, withTwo)
+        val beforeCorruption = Files.readAllBytes(document)
+        val secondBytes = Files.readAllBytes(secondPath)
+        Files.writeString(secondPath, "corrupted second fixture")
+        assertFailsWith<InvalidVideoProjectException> {
+            service.select(withTwoSession, 2, listOf(takeId, secondId))
+        }
+        assertContentEquals(beforeCorruption, Files.readAllBytes(document))
+        Files.write(secondPath, secondBytes)
+        val both = service.select(withTwoSession, 2, listOf(takeId, secondId))
+        assertEquals(listOf(takeId, secondId), storage.open(projectRoot).selectedTakeIds)
+        val selected = service.select(both.session, 3, listOf(takeId))
+        val rejected = service.review(selected.session, 4, secondId, VideoTakeReviewDecision.REJECTED,
+            "synthetic-test-reviewer", null)
+        val before = Files.readAllBytes(document)
+        val previous = rejected.session.project
+        listOf(listOf(takeId, takeId), listOf(takeId, VideoVersionedId("missing", 1)),
+            listOf(takeId, secondId)).forEach { invalid ->
+            assertFailsWith<IllegalArgumentException> { service.select(rejected.session, 5, invalid) }
+            assertContentEquals(before, Files.readAllBytes(document))
+        }
+        assertEquals(listOf(takeId), storage.open(projectRoot).selectedTakeIds)
+        assertEquals(previous.takeReviewEvents, storage.open(projectRoot).takeReviewEvents)
+        assertEquals(previous.takeVersions, storage.open(projectRoot).takeVersions)
+        assertFailsWith<IllegalArgumentException> {
+            previous.copy(selectedTakeIds = listOf(secondId), revision = 6)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            previous.copy(selectedTakeIds = listOf(takeId, takeId), revision = 6)
+        }
+        assertContentEquals(before, Files.readAllBytes(document))
+    }
+
+    @Test fun `selection reopens and verifies artifacts and revision before publishing`() {
+        val initial = fixture()
+        val storage = store()
+        val service = reviewer(storage)
+        val before = Files.readAllBytes(document)
+        val media = projectRoot.resolve("takes/take.mp4")
+        val originalBytes = Files.readAllBytes(media)
+        Files.writeString(media, "corrupted fixture")
+        assertFailsWith<InvalidVideoProjectException> { service.select(initial, 1, listOf(takeId)) }
+        assertContentEquals(before, Files.readAllBytes(document))
+        Files.write(media, originalBytes)
+        val selected = service.select(initial, 1, listOf(takeId))
+        val after = Files.readAllBytes(document)
+        assertFailsWith<VideoProjectConcurrencyException> { service.select(initial, 1, emptyList()) }
+        assertFailsWith<IllegalArgumentException> { service.select(selected.session, 1, emptyList()) }
+        assertContentEquals(after, Files.readAllBytes(document))
+        val failing = store(VideoAtomicWriteObserver { _, _ -> error("injected selection failure") })
+        assertFailsWith<VideoProjectSaveException> {
+            reviewer(failing).select(selected.session, 2, emptyList())
+        }
+        assertContentEquals(after, Files.readAllBytes(document))
+        assertEquals(listOf(takeId), storage.open(projectRoot).selectedTakeIds)
+    }
+
     @Test fun `failed publication unsupported schema and corrupted media preserve previous state`() {
         val session = fixture()
         val before = Files.readAllBytes(document)

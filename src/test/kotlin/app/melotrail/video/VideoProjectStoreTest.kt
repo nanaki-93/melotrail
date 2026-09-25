@@ -18,6 +18,8 @@ import app.melotrail.video.domain.VideoPreparedSceneRecord
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoReferenceRecord
 import app.melotrail.video.domain.VideoTakeRecord
+import app.melotrail.video.domain.VideoTakeReviewDecision
+import app.melotrail.video.domain.VideoTakeReviewEvent
 import app.melotrail.video.domain.VideoTakeMeasurementRecord
 import app.melotrail.video.domain.VideoTakeRationalRecord
 import app.melotrail.video.domain.VideoTakeProvenanceRecord
@@ -83,6 +85,37 @@ class VideoProjectStoreTest {
         assertEquals(populated.takeVersions, reselectionResult.takeVersions.take(populated.takeVersions.size))
         assertContentEquals(firstTakeBytes, Files.readAllBytes(videoRoot.resolve("takes/take-1.mp4")))
         assertEquals(reselectionResult, store().open(videoRoot))
+    }
+
+    @Test
+    fun `direct saves cannot select rejected missing or duplicate takes or reject selected takes`() {
+        val videoRoot = root.resolve("video-project")
+        val storage = store()
+        val created = storage.create(videoRoot, emptyProject())
+        val populated = storage.save(videoRoot, 0, populatedProject(created, videoRoot))
+        val id = populated.takeVersions.single().id
+        val document = videoRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val originalBytes = Files.readAllBytes(document)
+        val takeBytes = Files.readAllBytes(videoRoot.resolve(populated.takeVersions.single().artifact.relativePath))
+        val rejection = VideoTakeReviewEvent("reject", id, VideoTakeReviewDecision.REJECTED,
+            "synthetic-test-reviewer", "2026-09-13T12:00:00Z")
+        assertFailsWith<IllegalArgumentException> {
+            storage.save(videoRoot, 1, populated.copy(selectedTakeIds = emptyList(),
+                takeReviewEvents = listOf(rejection), revision = 2))
+        }
+        assertContentEquals(originalBytes, Files.readAllBytes(document))
+        val deselected = storage.save(videoRoot, 1, populated.copy(selectedTakeIds = emptyList(), revision = 2))
+        val rejected = storage.save(videoRoot, 2, deselected.copy(takeReviewEvents = listOf(rejection), revision = 3))
+        val before = Files.readAllBytes(document)
+        listOf(listOf(id), listOf(id, id), listOf(VideoVersionedId("missing", 1))).forEach { invalid ->
+            assertFailsWith<IllegalArgumentException> {
+                storage.save(videoRoot, 3, rejected.copy(selectedTakeIds = invalid, revision = 4))
+            }
+            assertContentEquals(before, Files.readAllBytes(document))
+        }
+        assertEquals(populated.exportRecords, storage.open(videoRoot).exportRecords)
+        assertEquals(populated.takeVersions, storage.open(videoRoot).takeVersions)
+        assertContentEquals(takeBytes, Files.readAllBytes(videoRoot.resolve(populated.takeVersions.single().artifact.relativePath)))
     }
 
     @Test
