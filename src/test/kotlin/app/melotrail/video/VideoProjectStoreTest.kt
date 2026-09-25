@@ -25,6 +25,11 @@ import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoVersionedId
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.FileTime
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
@@ -158,6 +163,13 @@ class VideoProjectStoreTest {
             assertContentEquals(takeBytes, Files.readAllBytes(videoRoot.resolve(first.artifact.relativePath)))
         }
         assertEquals(saved, projectStore.open(videoRoot))
+        val duplicate = measuredTake(saved, videoRoot, VideoVersionedId("duplicate", 1),
+            artifact(videoRoot, "takes/duplicate.mp4", "duplicate"), saved.selectedLookId,
+            "2026-09-13T00:04:00Z").copy(provenance = measured.provenance)
+        assertFailsWith<IllegalArgumentException> {
+            projectStore.save(videoRoot, 1L, saved.copy(takeVersions = saved.takeVersions + duplicate, revision = 2L))
+        }
+        assertContentEquals(before, Files.readAllBytes(document))
         assertFailsWith<IllegalArgumentException> {
             measured.copy(publishedMeasurement = published.copy(decodedFrameCount = 29))
         }
@@ -303,6 +315,21 @@ class VideoProjectStoreTest {
                     provenance = take("collision").provenance!!.copy(sourceIdentity = "d".repeat(64))), stage, cancel) { }
             }
             assertEquals(saved, second.open(videoRoot))
+            val alteredSource = Files.writeString(root.resolve("altered.mp4"), "changed output")
+            val alteredDigest = sha256(alteredSource)
+            val alteredStage = second.stageTake(videoRoot, alteredSource, alteredDigest, cancel)
+            try {
+                val changed = take("different-take-id").copy(
+                    artifact = VideoArtifact("takes/import-changed/v1/preview.mp4", alteredDigest),
+                    sourceMeasurement = measurement.copy(sha256 = alteredDigest, bytes = Files.size(alteredSource)),
+                    publishedMeasurement = measurement.copy(sha256 = alteredDigest, bytes = Files.size(alteredSource)))
+                val collision = assertFailsWith<IllegalArgumentException> {
+                    second.publishImportedTake(videoRoot, saved.revision, changed, alteredStage, cancel) { }
+                }
+                assertTrue(collision.message!!.contains("collides"))
+                assertEquals(saved, second.open(videoRoot))
+                assertFalse(Files.exists(videoRoot.resolve(changed.artifact.relativePath)))
+            } finally { Files.deleteIfExists(alteredStage) }
             // Hold the independent copy. Another store must still acquire the project
             // lock and commit a revision before this publication reaches its CAS.
             val different = take("other").copy(
@@ -408,6 +435,123 @@ class VideoProjectStoreTest {
             }
             assertContentEquals(after, Files.readAllBytes(document))
         } finally { Files.deleteIfExists(stage) }
+    }
+
+    @Test
+    fun `publication refuses unreliable or unsupported change time before referencing a take`() {
+        val videoRoot = root.resolve("video-project")
+        val original = store().create(videoRoot, emptyProject())
+        val source = Files.writeString(root.resolve("source.mp4"), "output")
+        val digest = sha256(source)
+        val take = publicationTake(source, "takes/import-stamp/v1/preview.mp4")
+        val stage = store().stageTake(videoRoot, source, digest, VideoMediaProcessCancellation())
+        try {
+            for (stamp in listOf<(Path) -> FileTime>(
+                { throw UnsupportedOperationException("no unix ctime") },
+                { FileTime.fromMillis(0) },
+            )) {
+                val guarded = VideoProjectStore(listOf(root.resolve("midi-projects")), changeTime = stamp)
+                val failure = assertFailsWith<IllegalArgumentException> {
+                    guarded.publishImportedTake(videoRoot, 0, take, stage, VideoMediaProcessCancellation()) { }
+                }
+                assertTrue(failure.message!!.contains("local Unix volume"))
+                assertEquals(original, store().open(videoRoot))
+                assertFalse(Files.exists(videoRoot.resolve(take.artifact.relativePath)))
+            }
+        } finally { Files.deleteIfExists(stage) }
+    }
+
+    @Test
+    fun `replacement and restored-mtime mutations at commit cannot publish stale content`() {
+        val videoRoot = root.resolve("video-project")
+        val projectStore = store()
+        val original = projectStore.create(videoRoot, emptyProject())
+        val source = Files.writeString(root.resolve("source.mp4"), "output")
+        val digest = sha256(source)
+        val take = publicationTake(source, "takes/import-stamp/v1/preview.mp4")
+        val stage = projectStore.stageTake(videoRoot, source, digest, VideoMediaProcessCancellation())
+        try {
+            for (replaceWithDifferentBytes in listOf(false, true)) {
+                val path = source
+                val bytes = Files.readAllBytes(path)
+                val mtime = Files.getLastModifiedTime(path)
+                try {
+                    assertFailsWith<IllegalArgumentException> {
+                        projectStore.publishImportedTake(videoRoot, 0, take, stage, VideoMediaProcessCancellation(),
+                            recheckJob = {
+                                val replacement = Files.write(path.resolveSibling("replacement.tmp"),
+                                    if (replaceWithDifferentBytes) byteArrayOf(9, 9, 9, 9, 9, 9) else bytes)
+                                Files.setLastModifiedTime(replacement, mtime)
+                                Files.move(replacement, path, StandardCopyOption.REPLACE_EXISTING)
+                            }, contentPaths = listOf(source)) { }
+                    }
+                    assertEquals(original, projectStore.open(videoRoot))
+                    assertFalse(Files.exists(videoRoot.resolve(take.artifact.relativePath)))
+                } finally {
+                    Files.write(path, bytes)
+                    Files.setLastModifiedTime(path, mtime)
+                }
+            }
+        } finally { Files.deleteIfExists(stage) }
+    }
+
+    @Test
+    fun `bulk verification on fresh replay and orphan paths never owns the document lock`() {
+        val videoRoot = root.resolve("video-project")
+        val projectStore = store()
+        var state = projectStore.create(videoRoot, emptyProject())
+        val source = Files.writeString(root.resolve("source.mp4"), "output")
+        val take = publicationTake(source, "takes/import-stamp/v1/preview.mp4")
+        val stage = projectStore.stageTake(videoRoot, source, sha256(source), VideoMediaProcessCancellation())
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            for (mode in listOf("fresh", "orphan", "replay")) {
+                if (mode == "orphan") {
+                    val target = videoRoot.resolve(take.artifact.relativePath)
+                    Files.createDirectories(target.parent)
+                    Files.write(target, Files.readAllBytes(source))
+                }
+                if (mode == "replay") {
+                    val (saved, _) = projectStore.publishImportedTake(videoRoot, state.revision, take, stage,
+                        VideoMediaProcessCancellation()) { }
+                    state = saved
+                }
+                val entered = CountDownLatch(1)
+                val release = CountDownLatch(1)
+                val base = state
+                val pending = pool.submit<Throwable?> {
+                    runCatching {
+                        projectStore.publishImportedTake(videoRoot, base.revision, take, stage,
+                            VideoMediaProcessCancellation(), contentPaths = listOf(source)) {
+                            entered.countDown()
+                            check(release.await(10, TimeUnit.SECONDS))
+                        }
+                    }.exceptionOrNull()
+                }
+                try {
+                    assertTrue(entered.await(10, TimeUnit.SECONDS), "Verification did not pause: $mode")
+                    state = pool.submit<VideoProject> {
+                        store().save(videoRoot, base.revision, base.copy(name = mode, revision = base.revision + 1))
+                    }.get(5, TimeUnit.SECONDS)
+                } finally { release.countDown() }
+                assertIs<app.melotrail.video.application.VideoProjectConcurrencyException>(
+                    pending.get(10, TimeUnit.SECONDS), mode)
+                assertEquals(state, projectStore.open(videoRoot))
+            }
+            assertEquals(1, state.takeVersions.size)
+        } finally { pool.shutdownNow(); Files.deleteIfExists(stage) }
+    }
+
+    private fun publicationTake(source: Path, relative: String): VideoTakeRecord {
+        val digest = sha256(source)
+        val artifact = VideoArtifact(relative, digest)
+        val measurement = VideoTakeMeasurementRecord(digest, Files.size(source), "h264", 100, 60,
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(30, 1), 30,
+            VideoTakeRationalRecord(1, 30), 0, 30, 1, 0, 0)
+        return VideoTakeRecord(VideoVersionedId("take", 1), artifact, null, "2026-09-13T00:03:00Z",
+            measurement, measurement, "NONE", VideoTakeProvenanceRecord("video-1", "request", "attempt", "output",
+                "comfyui-local", "a".repeat(64), "b".repeat(64), null, null, null,
+                listOf(VideoGenerationDependencyPin("source", "c".repeat(64)))))
     }
 
     @Test

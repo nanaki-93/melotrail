@@ -42,6 +42,9 @@ class VideoProjectStore(
     protectedMidiRoots: Collection<Path>,
     private val atomicWriteObserver: VideoAtomicWriteObserver = VideoAtomicWriteObserver.NONE,
     private val takeCopyObserver: (Path) -> Unit = {},
+    internal val changeTime: (Path) -> FileTime = { path ->
+        Files.getAttribute(path, "unix:ctime", LinkOption.NOFOLLOW_LINKS) as FileTime
+    },
 ) : VideoProjectPersistence {
     private val protectedRoots = protectedMidiRoots.map { it.toAbsolutePath() }
 
@@ -148,6 +151,15 @@ class VideoProjectStore(
         // Expensive verification and the independent publication copy must not serialize
         // unrelated project writers. The lock below only guards the final identity/CAS.
         val inspected = open(root)
+        // The witness can only certify the filesystem it lives on. Unix file keys
+        // expose the device ID; reject other volumes and unknown key formats.
+        val device = contentStamp(projectFile(root)).device()
+        (contentPaths + listOf(stage)).forEach { path ->
+            require(contentStamp(path).device() == device) {
+                "Take input is on a different volume: $path; place consumed pins on the project volume."
+            }
+        }
+        requireChangeTimeSupport(root)
         recheck(inspected)
         require(Files.isRegularFile(stage, LinkOption.NOFOLLOW_LINKS) && stage.parent == root &&
             !Files.isSymbolicLink(stage) && Files.size(stage) == take.publishedMeasurement!!.bytes &&
@@ -215,7 +227,10 @@ class VideoProjectStore(
                     previous.conversion == take.conversion && previous.provenance == take.provenance) {
                     "Import identity collides with changed take facts."
                 }
-                if (current != inspected || !existing || previous.artifact != take.artifact) {
+                require(previous.artifact == take.artifact) {
+                    "Import identity collides with changed published bytes or destination."
+                }
+                if (current != inspected || !existing) {
                     throw VideoProjectConcurrencyException("Take appeared during publication; refresh and retry.")
                 }
                 return@withWriteLock current to previous
@@ -244,19 +259,53 @@ class VideoProjectStore(
         } finally { Files.deleteIfExists(temporary) }
     }
 
-    /** Optimistic content seal: pair a full digest taken outside the document lock with
-     * the filesystem's non-user-restorable change time and inode identity at commit.
-     * Fail closed on filesystems without unix change-time support. */
-    private data class ContentStamp(val key: Any, val size: Long, val mtime: FileTime, val ctime: FileTime)
+    /** Optimistic content seal for an owned local Unix filesystem: full digests are taken
+     * outside the document lock; at commit inode identity and kernel change time detect
+     * replacement and even same-size writes followed by an mtime reset. The project and
+     * publication paths must be on a filesystem where each such write advances ctime.
+     * This is not protection against privileged filesystem tampering or external writers
+     * racing after commit. Unsupported/coarse timestamps fail closed; use an owned local
+     * Unix volume with reliable file keys and change times for take publication. */
+    private data class ContentStamp(val key: Any, val size: Long, val mtime: FileTime, val ctime: FileTime) {
+        fun device(): String = requireNotNull(Regex("dev=([^,)]+)").find(key.toString())?.groupValues?.get(1)) {
+            "Take publication needs Unix device and inode identity; use an owned local Unix volume."
+        }
+    }
 
     private fun contentStamp(path: Path): ContentStamp {
         require(Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path)) {
             "Verified take input is missing or unsafe: $path"
         }
-        val attrs = Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
-        val key = requireNotNull(attrs.fileKey()) { "Take input has no stable file identity: $path" }
-        val ctime = Files.getAttribute(path, "unix:ctime", LinkOption.NOFOLLOW_LINKS) as FileTime
-        return ContentStamp(key, attrs.size(), attrs.lastModifiedTime(), ctime)
+        try {
+            val attrs = Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+            val key = requireNotNull(attrs.fileKey()) { "No file identity for $path" }
+            return ContentStamp(key, attrs.size(), attrs.lastModifiedTime(), changeTime(path))
+        } catch (error: UnsupportedOperationException) {
+            throw IllegalArgumentException("Take publication needs a local Unix volume with reliable inode identity and change time: $path", error)
+        } catch (error: IOException) {
+            throw IllegalArgumentException("Take input vanished or its Unix identity/change time is unavailable: $path; use an owned local Unix volume.", error)
+        } catch (error: ClassCastException) {
+            throw IllegalArgumentException("Take publication needs a local Unix volume with reliable inode identity and change time: $path", error)
+        } catch (error: IllegalArgumentException) {
+            throw IllegalArgumentException("Take publication needs a local Unix volume with reliable inode identity and change time: $path", error)
+        }
+    }
+
+    /** A same-size write followed by an mtime restore must still be observable on this volume.
+     * Calibrate outside the lock, before trusting metadata instead of bulk hashing at commit. */
+    private fun requireChangeTimeSupport(root: Path) {
+        val witness = Files.createTempFile(root, ".take-stamp-", ".tmp")
+        try {
+            Files.write(witness, byteArrayOf(1))
+            val first = contentStamp(witness)
+            Files.write(witness, byteArrayOf(2))
+            Files.setLastModifiedTime(witness, first.mtime)
+            val second = contentStamp(witness)
+            require(first.key == second.key && first.size == second.size &&
+                first.mtime == second.mtime && first.ctime != second.ctime) {
+                "Take publication needs a local Unix volume with change time that detects restored-mtime writes; choose another project volume."
+            }
+        } finally { Files.deleteIfExists(witness) }
     }
 
     private fun cancelledTake() = VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED,
