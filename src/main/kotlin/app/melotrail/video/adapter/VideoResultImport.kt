@@ -4,12 +4,14 @@ import app.melotrail.video.application.VideoProjectConcurrencyException
 import app.melotrail.video.application.VideoProjectSession
 import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoGenerationOutput
+import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoControlledMotionGenerationInput
 import java.time.Duration
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoTakeRecord
 import app.melotrail.video.domain.VideoTakeMediaFactsRecord
 import app.melotrail.video.domain.VideoVersionedId
+import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
@@ -43,6 +45,8 @@ class VideoResultImport(
     private val clock: java.time.Clock = java.time.Clock.systemUTC(),
     private val idFactory: () -> String = { "take-${UUID.randomUUID()}" },
     private val controlledOutputRoot: Path? = null,
+    private val comfyOutputRoot: Path? = null,
+    private val protectedMidiRoots: Collection<Path> = emptyList(),
 ) {
     fun import(
         session: VideoProjectSession,
@@ -55,20 +59,8 @@ class VideoResultImport(
         require(!cancellation.isCancelled()) { "Take import was cancelled." }
         require(session.project.revision == expectedRevision) { "Project revision changed before take import." }
         require(output.relativePath != null && output.sha256 != null && output.byteCount != null) { "Completed job output has no immutable file pin." }
-        val relative = VideoArtifact(output.relativePath, output.sha256).relativePath
-        val ownedRoot = requireNotNull(controlledOutputRoot) { "Controlled output publication root is not configured." }
-            .toAbsolutePath().normalize()
-        val projectRoot = session.root.toAbsolutePath().normalize()
-        require(ownedRoot.startsWith(projectRoot) && ownedRoot != projectRoot &&
-            Files.isDirectory(ownedRoot, NOFOLLOW_LINKS) && ownedRoot.toRealPath() == ownedRoot) {
-            "Controlled output root must be an owned project subtree."
-        }
-        val source = ownedRoot.resolve(relative).normalize()
-        require(source.startsWith(ownedRoot) && Files.isRegularFile(source, NOFOLLOW_LINKS) &&
-            !Files.isSymbolicLink(source) && source.toRealPath().startsWith(ownedRoot)) {
-            "Controlled output path is missing or unsafe."
-        }
-        require(Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) { "Completed output bytes no longer match the durable job pin." }
+        val source = resolvePinnedOutput(session.root, "controlled-local", output, cancellation)
+        verifyPins(input.motion.preparedPins, session.root, cancellation)
         require(!cancellation.isCancelled()) { "Take import was cancelled." }
         val runtime = input.motion.descriptor.runtime
         val tools = Path.of(requireNotNull(runtime.mediaManifest.ownedPath)).parent
@@ -89,13 +81,19 @@ class VideoResultImport(
             verified.frameRate == VideoMediaRational(descriptor.fps.toLong(), 1) &&
             validation.source.decodedFrameCount == input.motion.endFrameExclusive - input.motion.startFrame &&
             verified.decodedFrameCount == validation.source.decodedFrameCount &&
-            verified.sampleAspectRatio == VideoMediaRational(1, 1) && verified.audioStreamCount == 0) {
+            listOf(validation.source, verified).all { measured ->
+                measured.sampleAspectRatio == VideoMediaRational(1, 1) &&
+                    BigInteger.valueOf(measured.videoDurationPts) * BigInteger.valueOf(measured.videoTimeBase.numerator) *
+                    BigInteger.valueOf(descriptor.fps.toLong()) ==
+                    BigInteger.valueOf(measured.decodedFrameCount) * BigInteger.valueOf(measured.videoTimeBase.denominator)
+            } && verified.audioStreamCount == 0) {
             "Measured media facts do not match persisted controlled motion settings."
         }
         val facts = VideoTakeMediaFacts(verified.decodedFrameCount,
             verified.frameRate.numerator.toDouble() / verified.frameRate.denominator,
             validation.source.width, validation.source.height, verified.width, verified.height, validation.conversion.name)
         require(Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) { "Output changed during media validation." }
+        verifyPins(input.motion.preparedPins, session.root, cancellation)
 
         require(!cancellation.isCancelled()) { "Take import was cancelled before publication." }
         val current = projects.open(session.root)
@@ -119,6 +117,80 @@ class VideoResultImport(
             // The immutable bytes may remain as orphaned evidence, but the project and prior takes
             // remain authoritative. Never remove or overwrite an existing artifact.
             throw error
+        }
+    }
+
+    /** The backend ID and the ledger's pinned relative output select one configured publication root.
+     * This does not admit a ComfyUI take; that route remains disconnected until flat-I2V admission. */
+    internal fun resolvePinnedOutput(
+        projectRoot: Path, backendId: String, output: VideoGenerationOutput,
+        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
+    ): Path {
+        require(!cancellation.isCancelled()) { "Take import was cancelled." }
+        val relative = VideoArtifact(requireNotNull(output.relativePath), requireNotNull(output.sha256)).relativePath
+        // Opening checks the project schema, artifacts and MIDI exclusions without writing anything.
+        projects.open(projectRoot)
+        val project = projectRoot.toRealPath()
+        val configured = when (backendId) {
+            "controlled-local" -> requireNotNull(controlledOutputRoot) { "Controlled output publication root is not configured." }
+            LocalVideoBackend.BACKEND_ID -> requireNotNull(comfyOutputRoot) { "ComfyUI publication root is not configured." }
+            else -> throw IllegalArgumentException("Output backend has no configured publication root: $backendId")
+        }
+        require(configured.isAbsolute && configured.none { it.toString() in setOf(".", "..") }) {
+            "Publication root must be absolute without traversal."
+        }
+        val root = configured.normalize()
+        require(Files.isDirectory(root, NOFOLLOW_LINKS) && root.toRealPath() == root) {
+            "Output publication root is missing or unsafe."
+        }
+        when (backendId) {
+            "controlled-local" -> require(root.startsWith(project) && root != project) {
+                "Controlled output root must be an owned project subtree."
+            }
+            LocalVideoBackend.BACKEND_ID -> {
+                require(!root.startsWith(project) && !project.startsWith(root) && protectedMidiRoots.isNotEmpty()) {
+                    "ComfyUI output root must be separate from project and configured MIDI roots."
+                }
+                protectedMidiRoots.forEach { protected ->
+                    val midi = protected.toAbsolutePath().toRealPath()
+                    require(!root.startsWith(midi) && !midi.startsWith(root)) {
+                        "ComfyUI output root overlaps protected MIDI storage."
+                    }
+                }
+                // A publication root nested in an unlisted MIDI project is not safe either.
+                var ancestor: Path? = root
+                while (ancestor != null) {
+                    require(!Files.exists(ancestor.resolve(VideoProjectStore.MIDI_PROJECT_FILE), NOFOLLOW_LINKS)) {
+                        "ComfyUI output root is inside a protected MIDI project."
+                    }
+                    ancestor = ancestor.parent
+                }
+            }
+        }
+        val source = root.resolve(relative)
+        require(source.startsWith(root)) { "Output path escapes its publication root." }
+        var component = root
+        root.relativize(source).forEach { part ->
+            component = component.resolve(part)
+            require(!Files.isSymbolicLink(component)) { "Output path contains a symbolic link." }
+        }
+        require(Files.isRegularFile(source, NOFOLLOW_LINKS) && source.toRealPath() == source &&
+            Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) {
+            "Completed output is unsafe or bytes no longer match the durable job pin."
+        }
+        return source
+    }
+
+    private fun verifyPins(pins: List<VideoGenerationDependencyPin>, projectRoot: Path,
+                           cancellation: VideoMediaProcessCancellation) {
+        val root = projectRoot.toRealPath()
+        pins.forEach { pin ->
+            require(pin.id.startsWith("prepared-")) { "Only persisted prepared pins can be verified as project artifacts." }
+            val path = Path.of(requireNotNull(pin.ownedPath) { "Consumed pin has no owned path: ${pin.id}" })
+            require(path.isAbsolute && path.none { it.toString() in setOf(".", "..") } &&
+                Files.isRegularFile(path, NOFOLLOW_LINKS) && path.toRealPath() == path &&
+                sha256(path, cancellation) == pin.sha256) { "Consumed input changed or is unsafe: ${pin.id}" }
+            require(path.startsWith(root)) { "Prepared input is outside its project: ${pin.id}" }
         }
     }
 

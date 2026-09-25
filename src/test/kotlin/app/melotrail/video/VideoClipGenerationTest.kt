@@ -254,9 +254,10 @@ class VideoClipGenerationTest {
             override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger = error("Import cannot write job ledger")
         }
         var probes = 0
-        val videoStream = """{"codec_type":"video","codec_name":"h264","width":100,"height":60,
+        var durationTicks = 30
+        fun videoStream() =  """{"codec_type":"video","codec_name":"h264","width":100,"height":60,
             "sample_aspect_ratio":"1:1","avg_frame_rate":"30/1","nb_read_frames":"30",
-            "time_base":"1/30","start_pts":"0","duration_ts":"30"}"""
+            "time_base":"1/30","start_pts":"0","duration_ts":"$durationTicks"}"""
         val probe = VideoMediaProbe { job, _ ->
             probes++
             Files.createDirectory(job.workingDirectory)
@@ -265,7 +266,7 @@ class VideoClipGenerationTest {
                     VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
                 job.executable.fileName.toString() == "ffprobe" && "-show_frames" in job.arguments ->
                     """{"frames":[${(0 until 30).joinToString { "{\"best_effort_timestamp\":$it}" }}]}"""
-                job.executable.fileName.toString() == "ffprobe" -> """{"streams":[$videoStream],"format":{"duration":"1.0"}}"""
+                job.executable.fileName.toString() == "ffprobe" -> """{"streams":[${videoStream()}],"format":{"duration":"1.0"}}"""
                 else -> ""
             }
             VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
@@ -274,8 +275,19 @@ class VideoClipGenerationTest {
         val service = VideoClipGeneration(VideoScenePreparation(), VideoJobCoordinator("domain", persistence, emptyList()),
             VideoResultImport(store, probe, idFactory = { "imported" }, controlledOutputRoot = publicationRoot),
             VideoMotionRenderer(), backendId, policy, projects = store)
-        val result = service.importCompleted(
-            VideoCompletedTakeImport(session, session.project.revision, request.id, attempt.id, output.id))
+        val command = VideoCompletedTakeImport(session, session.project.revision, request.id, attempt.id, output.id)
+        val preparedPath = store.resolveArtifact(projectRoot, record.consumedArtifacts.first())
+        val originalPrepared = Files.readAllBytes(preparedPath)
+        try {
+            Files.writeString(preparedPath, "changed after admission")
+            assertIs<VideoClipGenerationResult.Rejected>(service.importCompleted(command))
+        } finally { Files.write(preparedPath, originalPrepared) }
+        assertTrue(store.open(projectRoot).takeVersions.isEmpty())
+        durationTicks = 31
+        assertIs<VideoClipGenerationResult.Rejected>(service.importCompleted(command))
+        assertTrue(store.open(projectRoot).takeVersions.isEmpty())
+        durationTicks = 30
+        val result = service.importCompleted(command)
         val imported = assertIs<VideoClipGenerationResult.Imported>(result, result.toString())
         assertTrue(probes > 0, "The persisted output must pass independent media validation")
         assertEquals(30, imported.result.facts.frameCount)
