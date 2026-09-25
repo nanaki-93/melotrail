@@ -6,6 +6,8 @@ import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoGenerationOutput
 import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import app.melotrail.video.domain.VideoClipGenerationInput
+import app.melotrail.video.domain.VideoGenerationInput
 import java.time.Duration
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoTakeRecord
@@ -17,6 +19,7 @@ import app.melotrail.video.domain.VideoGenerationJobRequest
 import app.melotrail.video.domain.VideoGenerationJob
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoPreparedScene
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
@@ -56,55 +59,63 @@ class VideoResultImport(
     private val controlledOutputRoot: Path? = null,
     private val comfyOutputRoot: Path? = null,
     private val protectedMidiRoots: Collection<Path> = emptyList(),
+    private val flatMediaToolsDirectory: Path? = null,
 ) {
     fun import(
         session: VideoProjectSession,
         expectedRevision: Long,
         output: VideoGenerationOutput,
-        input: VideoControlledMotionGenerationInput,
+        input: VideoGenerationInput,
         request: VideoGenerationJobRequest,
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
         currentJob: () -> VideoGenerationJob = { throw IllegalStateException("A durable job refresh is required for publication.") },
     ): VideoImportedTake {
         require(!cancellation.isCancelled()) { "Take import was cancelled." }
         require(session.project.revision == expectedRevision) { "Project revision changed before take import." }
+        val controlled = input as? VideoControlledMotionGenerationInput
+        val flat = input as? VideoClipGenerationInput
         require(request.projectId == session.project.id && request.input == input &&
-            request.backendId == "controlled-local" && output.attemptId.isNotBlank()) {
-            "Take provenance does not match the verified controlled request."
-        }
+            ((controlled != null && request.backendId == "controlled-local") ||
+                (flat?.primaryPrompt != null && request.backendId == LocalVideoBackend.BACKEND_ID)) &&
+            output.attemptId.isNotBlank()) { "Take provenance does not match the verified request." }
         require(output.relativePath != null && output.sha256 != null && output.byteCount != null) { "Completed job output has no immutable file pin." }
-        val source = resolvePinnedOutput(session.root, "controlled-local", output, cancellation)
-        verifyPins(input.motion.preparedPins, session.root, cancellation)
+        val source = resolvePinnedOutput(session.root, request.backendId, output, cancellation)
+        if (controlled != null) verifyPins(controlled.motion.preparedPins, session.root, cancellation)
+        else ComfyShortI2VBinding.verify(requireNotNull(flat))
         require(!cancellation.isCancelled()) { "Take import was cancelled." }
-        val runtime = input.motion.descriptor.runtime
-        val tools = Path.of(requireNotNull(runtime.mediaManifest.ownedPath)).parent
+        val tools = controlled?.motion?.descriptor?.runtime?.mediaManifest?.ownedPath?.let { Path.of(it).parent }
+            ?: requireNotNull(flatMediaToolsDirectory) { "Pinned flat media tools directory is not configured." }
         val probeRequest = VideoMediaProbeRequest(tools, source,
             session.root.resolve("take-validation-${UUID.randomUUID()}"),
-            Duration.ofMillis(minOf(30_000L, input.media.execution.wallClockLimitMillis)))
+            Duration.ofMillis(minOf(30_000L, (request.execution as app.melotrail.video.domain.VideoLocalExecutionPolicy).wallClockLimitMillis)))
         val validation = mediaProbe.validateTake(probeRequest, cancellation)
         val verified = validation.published
         val validatedOutput = validation.validatedPath
         val validatedDigest = sha256(validatedOutput, cancellation)
         val validatedSize = Files.size(validatedOutput)
         require(validatedSize > 0L) { "Validated take output is empty." }
-        val descriptor = input.motion.descriptor
+        val width = controlled?.motion?.descriptor?.width ?: requireNotNull(flat).width
+        val height = controlled?.motion?.descriptor?.height ?: requireNotNull(flat).height
+        val fps = controlled?.motion?.descriptor?.fps ?: requireNotNull(flat).framesPerSecond
+        val frames = controlled?.motion?.let { it.endFrameExclusive - it.startFrame } ?: 129L
         require(validation.source.videoCodec == "h264" && verified.videoCodec == "h264" &&
-            validation.source.width == descriptor.width && validation.source.height == descriptor.height &&
-            verified.width == descriptor.width && verified.height == descriptor.height &&
-            validation.source.frameRate == VideoMediaRational(descriptor.fps.toLong(), 1) &&
-            verified.frameRate == VideoMediaRational(descriptor.fps.toLong(), 1) &&
-            validation.source.decodedFrameCount == input.motion.endFrameExclusive - input.motion.startFrame &&
+            validation.source.width == width && validation.source.height == height &&
+            verified.width == width && verified.height == height &&
+            validation.source.frameRate == VideoMediaRational(fps.toLong(), 1) &&
+            verified.frameRate == VideoMediaRational(fps.toLong(), 1) &&
+            validation.source.decodedFrameCount == frames &&
             verified.decodedFrameCount == validation.source.decodedFrameCount &&
             listOf(validation.source, verified).all { measured ->
                 measured.sampleAspectRatio == VideoMediaRational(1, 1) &&
                     BigInteger.valueOf(measured.videoDurationPts) * BigInteger.valueOf(measured.videoTimeBase.numerator) *
-                    BigInteger.valueOf(descriptor.fps.toLong()) ==
+                    BigInteger.valueOf(fps.toLong()) ==
                     BigInteger.valueOf(measured.decodedFrameCount) * BigInteger.valueOf(measured.videoTimeBase.denominator)
             } && verified.audioStreamCount == 0) {
-            "Measured media facts do not match persisted controlled motion settings."
+            "Measured media facts do not match persisted generation settings."
         }
         require(Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) { "Output changed during media validation." }
-        verifyPins(input.motion.preparedPins, session.root, cancellation)
+        if (controlled != null) verifyPins(controlled.motion.preparedPins, session.root, cancellation)
+        else ComfyShortI2VBinding.verify(requireNotNull(flat))
 
         require(!cancellation.isCancelled()) { "Take import was cancelled before publication." }
         val current = projects.open(session.root)
@@ -120,21 +131,29 @@ class VideoResultImport(
         val id = VideoVersionedId(idFactory(), 1)
         val takePath = "takes/import-$identityHash/v1/preview.mp4"
         val artifact = VideoArtifact(takePath, validatedDigest)
-        // The finished reference is a scene-source ID, NOT the persisted look ID.
-        val scene = Json.decodeFromJsonElement<VideoPreparedScene>(
-            Json.parseToJsonElement(input.motion.descriptor.requestJson).jsonObject.getValue("preparedScene"),
-        )
-        val sceneRecord = current.preparedSceneVersions.single { it.id == scene.id }
-        val finished = scene.layers.single { it.kind == app.melotrail.video.domain.VideoLayerKind.FINISHED_SCENE }.image
-        val reference = scene.source.references.single { it.original == finished }
-        require(reference.id in sceneRecord.sourceReferenceIds && current.referenceVersions.any { it.id == reference.id } &&
-            sceneRecord.sourceLookId?.let { look -> current.lookVersions.any { it.id == look } } != false) {
-            "Take source identities are not persisted in this project."
+        // Flat inputs name their persisted image by its exact owned original path and digest;
+        // neither a prepared scene nor a persisted look is invented for this route.
+        val sceneRecord = controlled?.let { motion ->
+            val scene = Json.decodeFromJsonElement<VideoPreparedScene>(
+                Json.parseToJsonElement(motion.motion.descriptor.requestJson).jsonObject.getValue("preparedScene"))
+            current.preparedSceneVersions.single { it.id == scene.id }
         }
+        val referenceId = if (controlled != null) {
+            val scene = Json.decodeFromJsonElement<VideoPreparedScene>(
+                Json.parseToJsonElement(controlled.motion.descriptor.requestJson).jsonObject.getValue("preparedScene"))
+            val finished = scene.layers.single { it.kind == app.melotrail.video.domain.VideoLayerKind.FINISHED_SCENE }.image
+            scene.source.references.single { it.original == finished }.id.also { ref ->
+                require(ref in requireNotNull(sceneRecord).sourceReferenceIds && current.referenceVersions.any { it.id == ref } &&
+                    (sceneRecord.sourceLookId == null || current.lookVersions.any { it.id == sceneRecord.sourceLookId })) {
+                    "Take source identities are not persisted in this project."
+                }
+            }
+        } else flatReference(current, session.root, requireNotNull(flat))
+        val sourceIdentity = controlled?.motion?.descriptor?.sourceIdentity ?: flatSourceIdentity(current, referenceId)
         val provenance = VideoTakeProvenanceRecord(current.id, request.id, output.attemptId, output.id,
-            request.backendId, request.requestFingerprint, input.motion.descriptor.sourceIdentity,
-            reference.id, sceneRecord.id, sceneRecord.sourceLookId, input.dependencyPins)
-        val take = VideoTakeRecord(id, artifact, sceneRecord.sourceLookId, Instant.now(clock).toString(),
+            request.backendId, request.requestFingerprint, sourceIdentity,
+            referenceId, sceneRecord?.id, sceneRecord?.sourceLookId, input.dependencyPins)
+        val take = VideoTakeRecord(id, artifact, sceneRecord?.sourceLookId, Instant.now(clock).toString(),
             validation.source.toRecord(), verified.toRecord(), validation.conversion.name, provenance)
         val stage = projects.stageTake(session.root, validatedOutput, validatedDigest, cancellation)
         // Bulk decode, staging and its verification are already outside the lock. A
@@ -144,17 +163,20 @@ class VideoResultImport(
             val (saved, published) = projects.publishImportedTake(session.root, expectedRevision, take,
                 stage, cancellation, recheckJob = {
                     checkCurrentJob(currentJob(), request, output)
-                }, contentPaths = listOf(source) + input.motion.preparedPins.map {
-                    Path.of(requireNotNull(it.ownedPath))
-                }) { latest ->
+                }, contentPaths = listOf(source) + (controlled?.motion?.preparedPins ?: input.dependencyPins).mapNotNull { it.ownedPath?.let(Path::of) }) { latest ->
                 require(latest.id == current.id) { "Project identity changed before publication." }
                 checkCurrentJob(currentJob(), request, output)
-                require(latest.preparedSceneVersions.any { it == sceneRecord } &&
-                    latest.referenceVersions.any { it.id == reference.id } &&
-                    (sceneRecord.sourceLookId == null || latest.lookVersions.any { it.id == sceneRecord.sourceLookId })) {
+                require(latest.referenceVersions.any { it.id == referenceId } &&
+                    (sceneRecord == null || latest.preparedSceneVersions.any { it == sceneRecord } &&
+                        (sceneRecord.sourceLookId == null || latest.lookVersions.any { it.id == sceneRecord.sourceLookId }))) {
                     "Consumed project identities changed before publication."
                 }
-                verifyPins(input.motion.preparedPins, session.root, cancellation)
+                if (controlled != null) verifyPins(controlled.motion.preparedPins, session.root, cancellation)
+                else {
+                    require(flatReference(latest, session.root, requireNotNull(flat)) == referenceId &&
+                        flatSourceIdentity(latest, referenceId) == sourceIdentity) { "Finished reference changed before publication." }
+                    ComfyShortI2VBinding.verify(flat)
+                }
                 require(Files.isRegularFile(source, NOFOLLOW_LINKS) && source.toRealPath() == source &&
                     Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) {
                     "Completed output changed before publication."
@@ -167,6 +189,25 @@ class VideoResultImport(
                 published.publishedMeasurement.width, published.publishedMeasurement.height,
                 published.conversion!!))
         } finally { Files.deleteIfExists(stage) }
+    }
+
+    private fun flatReference(project: VideoProject, root: Path, input: VideoClipGenerationInput): VideoVersionedId {
+        val image = input.dependencyPins.single { it.id == ComfyShortI2VBinding.IMAGE_ID }
+        return project.referenceVersions.single { record ->
+            val descriptor = projects.resolveArtifact(root, record.artifact)
+            // The descriptor is already verified by open(); match the actual original
+            // recorded by the asset importer, not an arbitrary path with the same bytes.
+            val asset = Json.decodeFromString<app.melotrail.video.domain.VideoAsset>(Files.readString(descriptor))
+            asset.id == record.id && asset.original.artifact.sha256 == image.sha256 &&
+                VideoImageFiles().resolveOriginal(root, record).toString() == image.ownedPath
+        }.id
+    }
+
+    private fun flatSourceIdentity(project: VideoProject, id: VideoVersionedId): String {
+        val record = project.referenceVersions.single { it.id == id }
+        return MessageDigest.getInstance("SHA-256").digest(
+            listOf(project.id, id.id, id.version.toString(), record.artifact.sha256).joinToString("\u0000")
+                .toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
 
     private fun checkCurrentJob(job: VideoGenerationJob, request: VideoGenerationJobRequest,
@@ -186,8 +227,7 @@ class VideoResultImport(
         videoStartPts, videoDurationPts, videoStreamCount, audioStreamCount, otherStreamCount,
     )
 
-    /** The backend ID and the ledger's pinned relative output select one configured publication root.
-     * This does not admit a ComfyUI take; that route remains disconnected until flat-I2V admission. */
+    /** The backend ID and the ledger's pinned relative output select one configured publication root. */
     internal fun resolvePinnedOutput(
         projectRoot: Path, backendId: String, output: VideoGenerationOutput,
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),

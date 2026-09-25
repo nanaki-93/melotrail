@@ -561,27 +561,76 @@ class VideoClipGeneration(
         }
         val job = coordinator.snapshot().jobs.singleOrNull { it.request.id == request.requestId }
             ?: throw IllegalArgumentException("Durable generation job was not found.")
-        require(job.request.projectId == current.id && job.request.backendId == backendId) {
+        require(job.request.projectId == current.id && job.request.backendId in setOf(backendId, LocalVideoBackend.BACKEND_ID)) {
             "Completed motion project or backend identity does not match."
         }
-        val input = job.request.input as? VideoControlledMotionGenerationInput
-            ?: throw IllegalArgumentException("Completed route is not yet connected for take import.")
+        val input = job.request.input
         val policy = job.request.execution as? VideoLocalExecutionPolicy
-        require(policy != null && policy == execution && input.media.execution == policy &&
-            job.request.modelRequirements == modelRequirements &&
-            job.request.requestFingerprint == controlledMotionRequestFingerprint(
-                backendId, input, modelRequirements, job.request.maximumAttempts,
-            )) { "Completed motion fingerprint or persisted execution policy changed." }
+        require(policy != null && policy == execution && job.request.modelRequirements == modelRequirements) {
+            "Completed motion fingerprint or persisted execution policy changed."
+        }
+        when (input) {
+            is VideoControlledMotionGenerationInput -> require(job.request.backendId == backendId &&
+                input.media.execution == policy && job.request.requestFingerprint == controlledMotionRequestFingerprint(
+                    backendId, input, modelRequirements, job.request.maximumAttempts)) {
+                "Completed motion fingerprint or persisted execution policy changed."
+            }
+            is VideoClipGenerationInput -> {
+                require(job.request.backendId == LocalVideoBackend.BACKEND_ID && input.primaryPrompt != null &&
+                    input.durationMillis == 5_160L && input.width == 768 && input.height == 448 &&
+                    input.framesPerSecond == 25 && job.request.requestFingerprint == comfyRequestFingerprint(
+                        current.id, LocalVideoBackend.BACKEND_ID, input, modelRequirements)) {
+                    "Completed flat fingerprint, backend or native settings changed."
+                }
+                val graph = requireNotNull(flatGraph) { "Pinned flat graph is not configured." }
+                ComfyShortI2VBinding.verifyConfiguration(graph, flatRuntimePins, modelRequirements)
+                ComfyShortI2VBinding.verify(input)
+                require(input.dependencyPins.single { it.id == ComfyShortI2VBinding.WORKFLOW_ID } == graph &&
+                    input.dependencyPins.single { it.id == "flat-runtime-profile" } == flatRuntimePins.single()) {
+                    "Completed flat graph or runtime pin changed."
+                }
+                val image = input.dependencyPins.single { it.id == ComfyShortI2VBinding.IMAGE_ID }
+                val library = when (val opened = VideoAssetImport(VideoProjectLifecycle(store), VideoImageFiles()).open(request.session.root)) {
+                    is VideoAssetLibraryResult.Loaded -> opened
+                    is VideoAssetLibraryResult.Rejected -> throw IllegalArgumentException(opened.problem.message)
+                }
+                require(library.session.project == current) { "Finished reference changed during import." }
+                require(current.referenceVersions.count { record ->
+                    VideoSceneLooks().select(current, library.assets, record.id) is VideoSceneLookSelectionResult.Selected &&
+                        library.assets.any { it.id == record.id && it.original.artifact.sha256 == image.sha256 &&
+                            VideoImageFiles().resolveOriginal(request.session.root, record).toString() == image.ownedPath }
+                } == 1) { "Finished reference is missing, changed or ambiguous." }
+            }
+            else -> throw IllegalArgumentException("Completed route is not connected for take import.")
+        }
         val attempt = job.attempts.lastOrNull()
         require(attempt?.id == request.attemptId && attempt.status == VideoGenerationAttemptStatus.SUCCEEDED &&
-            attempt.controlledEvidence?.stage == VideoControlledStage.COMPLETED) {
-            "Only the latest successfully completed controlled attempt can become a take."
+            (input !is VideoControlledMotionGenerationInput || attempt.controlledEvidence?.stage == VideoControlledStage.COMPLETED)) {
+            "Only the latest successfully completed attempt can become a take."
         }
         val output = job.outputs.singleOrNull { it.id == request.outputId && it.id == job.currentOutputId &&
             it.attemptId == attempt.id } ?: throw IllegalArgumentException("Successful job has no matching current output.")
+        if (input is VideoClipGenerationInput) {
+            val backendOutput = output.backendOutputId.split(":", limit = 3)
+            val publishedName = output.relativePath?.substringAfterLast('/')
+            require(backendOutput.size == 3 && backendOutput[0].matches(Regex("[A-Za-z0-9_-]+")) &&
+                backendOutput[1] == ComfyShortI2VBinding.workflow.output.nodeId &&
+                backendOutput[2].substringAfterLast('/') == publishedName?.removePrefix("${backendOutput[0]}-") &&
+                publishedName.startsWith("${backendOutput[0]}-") &&
+                output.relativePath.startsWith("generated/${job.request.id}/${attempt.id}/") &&
+                publishedName.endsWith(".mp4")) {
+                "Flat output does not belong to the current ComfyUI publication attempt."
+            }
+            VideoClipGenerationResult.Imported(resultImport.import(request.session, request.expectedRevision,
+                output, input, job.request, cancellation) {
+                coordinator.snapshot().jobs.singleOrNull { it.request.id == job.request.id }
+                    ?: throw IllegalArgumentException("Durable job disappeared before take publication.")
+            })
+        } else {
+        input as VideoControlledMotionGenerationInput
         require(output.id == "${attempt.id}-preview" && output.backendOutputId == output.id &&
             output.relativePath == "${attempt.id}/preview.mp4" &&
-            attempt.controlledEvidence.output?.let { evidence ->
+            attempt.controlledEvidence?.output?.let { evidence ->
                 evidence.backendOutputId == output.backendOutputId && evidence.relativePath == output.relativePath &&
                     evidence.sha256 == output.sha256 && evidence.byteCount == output.byteCount
             } == true) { "Controlled output does not match the current attempt's durable evidence." }
@@ -621,6 +670,7 @@ class VideoClipGeneration(
             coordinator.snapshot().jobs.singleOrNull { it.request.id == job.request.id }
                 ?: throw IllegalArgumentException("Durable job disappeared before take publication.")
         })
+        }
     } catch (error: Exception) {
         VideoClipGenerationResult.Rejected(error.message ?: "Generated media could not be imported safely.")
     }

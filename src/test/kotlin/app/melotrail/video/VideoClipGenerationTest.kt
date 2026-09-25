@@ -245,7 +245,7 @@ class VideoClipGenerationTest {
         rejection(command, "policy")
         ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(
             input = VideoKeyframeGenerationInput("move", listOf(pin), 320, 180)))))
-        rejection(command, "not yet connected")
+        rejection(command, "not connected")
         ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(
             requestFingerprint = "d".repeat(64)))))
         rejection(command, "fingerprint")
@@ -710,6 +710,7 @@ class VideoClipGenerationTest {
         var ledger = VideoJobLedger("shared", Instant.now().toString())
         var launches = 0
         var lastInput: VideoClipGenerationInput? = null
+        var fakeCompletedOutput: VideoBackendOutput? = null
         val backend = object : VideoGenerationBackendPort {
             override val backendId = LocalVideoBackend.BACKEND_ID
             override fun availability() = VideoBackendAvailability(backendId, VideoBackendAvailabilityStatus.AVAILABLE,
@@ -720,7 +721,9 @@ class VideoClipGenerationTest {
                 lastInput = assertIs<VideoClipGenerationInput>(command.input)
                 return VideoBackendSubmission.Uncertain("Fake submission; no model launched")
             }
-            override fun observe(ownedAttempt: VideoOwnedBackendAttempt) = VideoBackendObservation.Unknown("fake")
+            override fun observe(ownedAttempt: VideoOwnedBackendAttempt): VideoBackendObservation =
+                fakeCompletedOutput?.let { VideoBackendObservation.Completed("fake-owned", it) }
+                    ?: VideoBackendObservation.Unknown("fake")
             override fun requestCancellation(ownedAttempt: VideoOwnedBackendAttempt) = VideoBackendCancellation.Unknown("fake")
         }
         val persistence = object : VideoJobPersistence {
@@ -846,6 +849,167 @@ class VideoClipGenerationTest {
         assertTrue(collision.reason.contains("different immutable inputs", ignoreCase = true), collision.reason)
         assertEquals(1, launches)
         assertEquals(session.project, store.open(projectRoot))
+
+        // Fake transport completed output: the import path still independently decodes
+        // both media identities via the injected probe, without loading any model.
+        Files.createDirectory(root.resolve("protected-midi"))
+        val publication = Files.createDirectory(root.resolve("comfy-publication"))
+        val attemptId = assertIs<VideoJobResult.Accepted>(accepted.result).attempt!!.id
+        val relative = "generated/stable-flat/$attemptId/prompt-preview.mp4"
+        val media = publication.resolve(relative)
+        Files.createDirectories(media.parent)
+        Files.writeString(media, "owned flat output")
+        fakeCompletedOutput = VideoBackendOutput("prompt:16:/preview.mp4", relative, sha(media), Files.size(media))
+        val completion = assertIs<VideoJobResult.Accepted>(coordinator.reconcile(accepted.request.id, attemptId))
+        assertEquals(VideoGenerationAttemptStatus.SUCCEEDED, completion.attempt?.status)
+        val output = completion.job.outputs.single()
+        val attempt = completion.job.attempts.single()
+        assertEquals(completion.job, ledger.jobs.single())
+        val tools = Files.createDirectory(root.resolve("media-tools"))
+        val java = Path.of(System.getProperty("java.home"), "bin", "java")
+        for (name in listOf("ffmpeg", "ffprobe")) {
+            val binary = Files.copy(java, tools.resolve(name))
+            Files.setPosixFilePermissions(binary, PosixFilePermissions.fromString("rwx------"))
+        }
+        Files.writeString(tools.resolve(VideoMediaProbe.MANIFEST_NAME), """
+            {"schema":"melotrail-video-media-tools","version":1,
+             "distributionId":"${VideoMediaProbe.DISTRIBUTION_ID}",
+             "installation":"${VideoMediaProbe.INSTALLATION_STRATEGY}",
+             "sourceUrl":"${VideoMediaProbe.SOURCE_URL}",
+             "sourceRevision":"${VideoMediaProbe.SOURCE_REVISION}",
+             "sourceSha256":"${VideoMediaProbe.SOURCE_SHA256}",
+             "ffmpegSha256":"${VideoMediaProbe.FFMPEG_SHA256}",
+             "ffprobeSha256":"${VideoMediaProbe.FFPROBE_SHA256}",
+             "buildOptions":[${VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString { "\"$it\"" }}],
+             "notices":["test"]}
+        """.trimIndent())
+        var ticks = 129
+        var firstPts = 0
+        var probes = 0
+        val probe = VideoMediaProbe { job, _ ->
+            probes++
+            Files.createDirectory(job.workingDirectory)
+            if (job.workingDirectory.fileName.toString() == "strip-incidental-audio")
+                Files.writeString(Path.of(job.arguments.last()), "independent silent derivative")
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                    VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-show_frames" in job.arguments ->
+                    """{"frames":[${(firstPts until firstPts + 129).joinToString { "{\"best_effort_timestamp\":$it}" }}]}"""
+                else -> """{"streams":[{"codec_type":"video","codec_name":"h264","width":768,"height":448,
+                    "sample_aspect_ratio":"1:1","avg_frame_rate":"25/1","nb_read_frames":"129",
+                    "time_base":"1/25","start_pts":"$firstPts","duration_ts":"$ticks"}${if (job.arguments.last().endsWith("silent-take.mp4")) "" else ", {\"codec_type\":\"audio\"}"}],"format":{"duration":"5.16"}}"""
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        fun importer(rootPath: Path = publication) = VideoResultImport(store, probe, idFactory = { "flat-take" },
+            comfyOutputRoot = rootPath, protectedMidiRoots = listOf(root.resolve("protected-midi")),
+            flatMediaToolsDirectory = tools)
+        fun importWith(imp: VideoResultImport = importer(), graph: VideoGenerationDependencyPin = graphPin,
+                       selectedModels: List<VideoModelRequirement> = models,
+                       cmd: VideoCompletedTakeImport = VideoCompletedTakeImport(session, session.project.revision,
+                           accepted.request.id, attempt.id, output.id)): VideoClipGenerationResult =
+            VideoClipGeneration(VideoScenePreparation(), coordinator, imp, VideoMotionRenderer(),
+                "controlled-local", policy, selectedModels, projects = store, flatGraph = graph,
+                flatRuntimePins = listOf(runtimePin)).importCompleted(cmd)
+        fun fails(fragment: String, result: VideoClipGenerationResult) {
+            val rejected = assertIs<VideoClipGenerationResult.Rejected>(result)
+            assertTrue(rejected.reason.contains(fragment, ignoreCase = true), rejected.reason)
+            assertTrue(store.open(projectRoot).takeVersions.isEmpty())
+        }
+        val flatCommand = VideoCompletedTakeImport(session, session.project.revision,
+            accepted.request.id, attempt.id, output.id)
+        fails("latest", importWith(cmd = flatCommand.copy(attemptId = "older")))
+        val wrongRoot = Files.createDirectory(projectRoot.resolve("controlled-outputs"))
+        fails("root", importWith(imp = importer(wrongRoot)))
+        fails("policy", importWith(selectedModels = models.dropLast(1)))
+        fails("graph", importWith(graph = graphPin.copy(sha256 = "f".repeat(64))))
+        val graphBytes = Files.readAllBytes(graph)
+        try {
+            Files.writeString(graph, "changed graph after completion")
+            fails("graph", importWith())
+        } finally { Files.write(graph, graphBytes) }
+        val runtimeBytes = Files.readAllBytes(runtime)
+        try {
+            Files.writeString(runtime, "changed runtime after completion")
+            fails("runtime", importWith())
+        } finally { Files.write(runtime, runtimeBytes) }
+        val pinnedJob = ledger.jobs.single()
+        ledger = ledger.copy(jobs = listOf(pinnedJob.copy(request = accepted.request.copy(
+            backendId = "controlled-local", requestFingerprint = comfyRequestFingerprint(
+                session.project.id, "controlled-local", bound, models)))))
+        fails("backend", importWith())
+        ledger = ledger.copy(jobs = listOf(pinnedJob))
+        val changedModels = models.map { if (it.id == models.first().id) it.copy(sha256 = "f".repeat(64)) else it }
+        ledger = ledger.copy(jobs = listOf(pinnedJob.copy(request = accepted.request.copy(
+            modelRequirements = changedModels, requestFingerprint = comfyRequestFingerprint(
+                session.project.id, LocalVideoBackend.BACKEND_ID, bound, changedModels)))))
+        fails("policy", importWith())
+        ledger = ledger.copy(jobs = listOf(pinnedJob))
+        ticks = 128
+        fails("measured", importWith())
+        ticks = 129
+        val link = publication.resolve(relative)
+        val escaped = root.resolve("protected-midi/private.mp4")
+        Files.move(link, escaped)
+        Files.createSymbolicLink(link, escaped)
+        fails("symbolic", importWith())
+        Files.delete(link)
+        Files.move(escaped, link)
+        val imagePath = store.resolveArtifact(projectRoot, imported.asset.original.artifact)
+        val imageBytes = Files.readAllBytes(imagePath)
+        try {
+            Files.writeString(imagePath, "changed image")
+            fails("pinned", importWith())
+        } finally { Files.write(imagePath, imageBytes) }
+        val first = assertIs<VideoClipGenerationResult.Imported>(importWith())
+        assertTrue(probes > 0)
+        assertEquals(129L, first.result.take.sourceMeasurement?.decodedFrameCount)
+        assertEquals(1, first.result.take.sourceMeasurement?.audioStreamCount)
+        assertEquals(0, first.result.take.publishedMeasurement?.audioStreamCount)
+        assertEquals("AUDIO_REMUX", first.result.take.conversion)
+        assertTrue(first.result.take.sourceMeasurement?.sha256 != first.result.take.publishedMeasurement?.sha256)
+        assertEquals(imported.asset.id, first.result.take.provenance?.finishedReferenceId)
+        assertEquals(null, first.result.take.provenance?.preparedSceneId)
+        assertEquals(null, first.result.take.lookId)
+        assertEquals(bound.dependencyPins, first.result.take.provenance?.consumedPins)
+        assertTrue(first.result.project.selectedTakeIds.isEmpty())
+        val replaySession = VideoProjectSession(projectRoot, store.open(projectRoot))
+        val replay = assertIs<VideoClipGenerationResult.Imported>(importWith(cmd = flatCommand.copy(
+            session = replaySession, expectedRevision = replaySession.project.revision)))
+        assertEquals(first.result.take, replay.result.take)
+        assertEquals(replaySession.project, replay.result.project)
+        assertEquals(1, replay.result.project.takeVersions.size)
+        assertEquals(1, launches)
+        val priorBytes = Files.readAllBytes(store.resolveArtifact(projectRoot, first.result.take.artifact))
+        firstPts = 1
+        val mediaCollision = assertIs<VideoClipGenerationResult.Rejected>(importWith(cmd = flatCommand.copy(
+            session = replaySession, expectedRevision = replaySession.project.revision)))
+        assertTrue(mediaCollision.reason.contains("collid", ignoreCase = true), mediaCollision.reason)
+        firstPts = 0
+        val sourceBytes = Files.readAllBytes(media)
+        Files.writeString(media, "changed flat output")
+        assertIs<VideoClipGenerationResult.Rejected>(importWith(cmd = flatCommand.copy(
+            session = replaySession, expectedRevision = replaySession.project.revision)))
+        Files.write(media, sourceBytes)
+        assertEquals(replaySession.project, store.open(projectRoot))
+        val originalJob = ledger.jobs.single()
+        val newerAttempt = attempt.copy(id = "newer-flat-attempt", number = 2,
+            ownershipToken = "newer-owned-flat")
+        val newerOutput = output.copy(id = "newer-flat-output", attemptId = newerAttempt.id,
+            relativePath = "generated/stable-flat/${newerAttempt.id}/prompt-preview.mp4")
+        ledger = ledger.copy(jobs = listOf(originalJob.copy(attempts = originalJob.attempts + newerAttempt,
+            outputs = originalJob.outputs + newerOutput, currentOutputId = newerOutput.id)))
+        val older = assertIs<VideoClipGenerationResult.Rejected>(importWith(cmd = flatCommand.copy(
+            session = replaySession, expectedRevision = replaySession.project.revision)))
+        assertTrue(older.reason.contains("latest", ignoreCase = true), older.reason)
+        ledger = ledger.copy(jobs = listOf(originalJob))
+        assertEquals(replaySession.project, store.open(projectRoot))
+        assertTrue(priorBytes.contentEquals(Files.readAllBytes(store.resolveArtifact(projectRoot, first.result.take.artifact))))
+        assertEquals(first.result.take.publishedMeasurement?.sha256,
+            sha(store.resolveArtifact(projectRoot, first.result.take.artifact)))
+        assertEquals(sha(media), first.result.take.sourceMeasurement?.sha256)
     }
 
     private fun fixtureTake(project: VideoProject, root: Path, id: VideoVersionedId,
