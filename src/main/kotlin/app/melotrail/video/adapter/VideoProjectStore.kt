@@ -510,6 +510,13 @@ class VideoProjectStore(
                 p.executableFingerprint)
         }
         require(identities.distinct().size == identities.size) { "Import identities must be unique" }
+        require(replacement.takeReviewEvents.startsWith(current.takeReviewEvents)) {
+            "Take review events are immutable and append-only"
+        }
+        require(replacement.takeReviewEvents.drop(current.takeReviewEvents.size).none { event ->
+            event.decision == app.melotrail.video.domain.VideoTakeReviewDecision.REJECTED &&
+                event.takeId in current.selectedTakeIds
+        }) { "Explicitly deselect a selected take in a prior revision before rejecting it" }
         require(replacement.exportRecords.startsWith(current.exportRecords)) {
             "Export records are immutable and append-only"
         }
@@ -738,7 +745,7 @@ fun interface VideoAtomicWriteObserver {
 
 private object VideoProjectSchema {
     const val SCHEMA = "melotrail-video-project"
-    const val VERSION = 3
+    const val VERSION = 4
 
     private val json = Json {
         prettyPrint = true

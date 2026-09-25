@@ -18,6 +18,7 @@ data class VideoProject(
     val lookVersions: List<VideoLookRecord> = emptyList(),
     val preparedSceneVersions: List<VideoPreparedSceneRecord> = emptyList(),
     val takeVersions: List<VideoTakeRecord> = emptyList(),
+    val takeReviewEvents: List<VideoTakeReviewEvent> = emptyList(),
     val selectedReferenceIds: List<VideoVersionedId> = emptyList(),
     val selectedLookId: VideoVersionedId? = null,
     val selectedTakeIds: List<VideoVersionedId> = emptyList(),
@@ -71,8 +72,15 @@ data class VideoProject(
         require(selectedLookId == null || selectedLookId in looks) {
             "The selected look must identify a persisted look version"
         }
+        requireUnique(takeReviewEvents.map(VideoTakeReviewEvent::id), "Take review event")
+        require(takeReviewEvents.all { it.takeId in takes }) {
+            "Every take review must identify an existing take version"
+        }
         require(selectedTakeIds.distinct().size == selectedTakeIds.size && selectedTakeIds.all(takes::contains)) {
             "Selected takes must be unique persisted take versions"
+        }
+        require(selectedTakeIds.none { reviewStatus(it) == VideoTakeReviewStatus.REJECTED }) {
+            "A rejected take must be explicitly deselected before review"
         }
         require(exportRecords.all { export -> export.takeIds.isNotEmpty() && export.takeIds.all(takes::contains) }) {
             "Every export must identify persisted take versions"
@@ -89,6 +97,15 @@ data class VideoProject(
         }
     }
 
+    fun reviewStatus(takeId: VideoVersionedId): VideoTakeReviewStatus {
+        require(takeVersions.any { it.id == takeId }) { "Review status needs an existing take version" }
+        return when (takeReviewEvents.lastOrNull { it.takeId == takeId }?.decision) {
+            VideoTakeReviewDecision.APPROVED -> VideoTakeReviewStatus.APPROVED
+            VideoTakeReviewDecision.REJECTED -> VideoTakeReviewStatus.REJECTED
+            null -> VideoTakeReviewStatus.UNREVIEWED
+        }
+    }
+
     fun artifacts(): List<VideoArtifact> = buildList {
         addAll(referenceVersions.map(VideoReferenceRecord::artifact))
         addAll(lookVersions.map(VideoLookRecord::artifact))
@@ -98,6 +115,30 @@ data class VideoProject(
         }
         addAll(takeVersions.map(VideoTakeRecord::artifact))
         addAll(exportRecords.map(VideoExportRecord::artifact))
+    }
+}
+
+enum class VideoTakeReviewDecision { APPROVED, REJECTED }
+enum class VideoTakeReviewStatus { UNREVIEWED, APPROVED, REJECTED }
+
+@Serializable
+data class VideoTakeReviewEvent(
+    val id: String,
+    val takeId: VideoVersionedId,
+    val decision: VideoTakeReviewDecision,
+    val reviewer: String,
+    val createdAt: String,
+    val note: String? = null,
+) {
+    init {
+        requireSafeId(id, "Take review event")
+        require(reviewer.isNotBlank() && reviewer.length <= 120 && reviewer.none(Char::isISOControl)) {
+            "Take reviewer must be a nonblank name of at most 120 characters without control characters"
+        }
+        requireTimestamp(createdAt, "Take review event")
+        require(note == null || note.length <= 1000 && note.none(Char::isISOControl)) {
+            "Take review note must be at most 1000 characters without control characters"
+        }
     }
 }
 

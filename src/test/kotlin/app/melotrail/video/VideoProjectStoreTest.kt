@@ -625,7 +625,7 @@ class VideoProjectStoreTest {
             lifecycle(projectStore).create(CreateVideoProject(videoRoot, "Original", "video-1")),
         ).session.project
         val projectFile = videoRoot.resolve(VideoProjectStore.PROJECT_FILE)
-        listOf(1, 2, 4).forEach { unsupportedVersion ->
+        listOf(1, 2, 3, 5).forEach { unsupportedVersion ->
             val unsupported = """{"schema":"melotrail-video-project","version":$unsupportedVersion,"project":{}}"""
             Files.writeString(projectFile, unsupported)
             val beforeUnsupported = Files.readAllBytes(projectFile)
