@@ -243,6 +243,14 @@ evidence, and starts neither the 900-frame job nor a retry. Focused suites (6
 executed), `make test`, `make build`, and diff check passed; logs
 `build/vg2/vg02-continuation/1.3-*.log`.
 
+Step 1.4: reviewed combined candidate `5106d2382` including preserved registration,
+preflight, budget-before-admission, per-job disk baselines, monitor-through-import,
+finite child ceilings and the production backend identity. All five focused suites
+passed fresh (6 executed); `make test`, `make build`, and diff check passed.
+Logs: `build/vg2/vg02-continuation/1.4-*.log`. Step 3.3's fixture wiring gate is
+complete; VG2-03 stays open for native proof. This is coordinator technical review,
+not independent human or artistic approval.
+
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
   `VideoJobCoordinator.kt`, `core/video/domain/VideoGenerationJob.kt`,
