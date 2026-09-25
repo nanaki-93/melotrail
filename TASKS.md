@@ -215,9 +215,9 @@ connections; do not assume fake-backend tests prove a working renderer job.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
-| VG2-01 | Finish the durable controlled-render bridge: persisted intent/claim precedes the real media stage, with pinned dependencies and frame ranges, owned cancellation and restart reconciliation. No bypass of admission or second ledger; ComfyUI must not claim compositor support. | VG1-01 | TODO |
-| VG2-02 | Finish fully decoded result import and persisted take review/selection. Bind output to the successful current attempt, scene and measured media facts; strip incidental audio and reject stale/corrupt/mismatched results. New/rejected takes never overwrite or silently replace selected ones. | VG2-01 | TODO |
-| VG2-03 | Route flat-image I2V and prepared controlled motion through production services with honest capability/limit reporting. Prove five-second and 20–30-second controlled previews use the full-output renderer; keep the measured short I2V limit explicit, not a promise of long generative coherence. | VG2-02 | TODO |
+| VG2-01 | Finish the durable controlled-render bridge: persisted intent/claim precedes the real media stage, with pinned dependencies and frame ranges, owned cancellation and restart reconciliation. No bypass of admission or second ledger; ComfyUI must not claim compositor support. | VG1-01 | DONE |
+| VG2-02 | Finish fully decoded result import and persisted take review/selection. Bind output to the successful current attempt, scene and measured media facts; strip incidental audio and reject stale/corrupt/mismatched results. New/rejected takes never overwrite or silently replace selected ones. | VG2-01 | DONE |
+| VG2-03 | Route flat-image I2V and prepared controlled motion through production services with honest capability/limit reporting. Prove five-second and 20–30-second controlled previews use the full-output renderer; keep the measured short I2V limit explicit, not a promise of long generative coherence. | VG2-02 | WAITING_USER |
 
 VG02 continuation — Step 1.1 verified on `dff7f4dc5` plus the preserved preview
 candidate: narrow owned-process/resource seams retain real admission and claims;
@@ -279,6 +279,18 @@ ceilings, and selected canonical tools-directory, Node-executable, Canvas-manife
 and absent output paths under `build/vg2/`. Historical installed paths are not a
 new selection or authorization. Full native decode/motion/recovery receipts remain
 missing; this gate and VG2-03 cannot close. Independent integration proceeds.
+
+Step 3.1 / VG2-01 and VG2-02 technical disposition: candidate `8c7c40b34` passed
+fresh generation/coordinator/project-store/import/review/local-backend/Comfy-client/
+media-probe suites (123 tests; 6 Gradle tasks executed), `make test`, `make build`,
+and diff check. Logs `build/vg2/vg02-continuation/3.1-*.log`; current full XML is
+under `build/test-results/test/`. Current Step 1.4 controlled-stage checks and
+Steps 2.1–2.2 production-composition/recovery checks establish persisted claims,
+no-start/retry/cancellation containment, attempt-bound receipt confinement,
+measured once-only publication and explicit review/selection. These two backend
+rows are DONE; native preview delivery remains VG2-03, WAITING_USER. Flat I2V is
+still exactly 129 frames at 25 fps (5.16 seconds), not long generative coherence.
+No graph/profile, MIDI, artwork or prior evidence bytes were changed by this run.
 
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
