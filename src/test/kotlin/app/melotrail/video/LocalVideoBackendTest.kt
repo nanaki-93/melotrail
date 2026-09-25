@@ -19,6 +19,11 @@ import app.melotrail.video.adapter.VideoJobStore
 import app.melotrail.video.adapter.comfyRequestFingerprint
 import app.melotrail.video.adapter.videoRequestFingerprint
 import app.melotrail.video.application.VideoBackendObservation
+import app.melotrail.video.application.VideoBackendAvailability
+import app.melotrail.video.application.VideoBackendAvailabilityStatus
+import app.melotrail.video.application.VideoGenerationBackendPort
+import app.melotrail.video.application.VideoGenerationInputKind
+import app.melotrail.video.application.VideoBackendCancellation
 import app.melotrail.video.application.VideoBackendSubmission
 import app.melotrail.video.application.VideoBackendSubmissionCommand
 import app.melotrail.video.application.VideoJobCoordinator
@@ -37,6 +42,7 @@ import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoGenerationJobRequest
+import app.melotrail.video.domain.VideoGenerationJob
 import app.melotrail.video.domain.VideoKeyframeGenerationInput
 import app.melotrail.video.domain.VideoLocalExecutionPolicy
 import app.melotrail.video.domain.VideoSubmissionPhase
@@ -242,6 +248,87 @@ class LocalVideoBackendTest {
         assertTrue(rejected(pinned).contains("image"))
         assertEquals(0, rejectedApi.submitCalls)
         assertEquals(0, slots.get())
+    }
+
+    @Test
+    fun `production flat binding pins exact primary guidance and runtime before fake transport`() {
+        val fixture = fixture()
+        Files.write(fixture.workflow, checkNotNull(javaClass.getResourceAsStream("/video/comfyui/short-shot-api.json")).use { it.readBytes() })
+        val runtime = fixture.root.resolve("runtime-profile.json")
+        Files.write(runtime, checkNotNull(javaClass.getResourceAsStream("/video/comfyui/runtime-profile.json")).use { it.readBytes() })
+        val guidance = checkNotNull(javaClass.getResourceAsStream("/video/video-generation-guidelines.json")).use { sha256(it.readBytes()) }
+        val prompt = "Move gently\n\nPreserve the artwork."
+        val input = ComfyShortI2VBinding.input(prompt,
+            VideoGenerationDependencyPin(ComfyShortI2VBinding.WORKFLOW_ID, sha256(fixture.workflow), fixture.workflow.toString()),
+            VideoGenerationDependencyPin(ComfyShortI2VBinding.IMAGE_ID, sha256(fixture.reference), fixture.reference.toString()),
+            5_160, 768, 448, 25, primaryPrompt = "Move gently", guidanceSha256 = sha256(prompt.toByteArray()),
+            guidelineSourceSha256 = guidance,
+            runtimePins = listOf(VideoGenerationDependencyPin("flat-runtime-profile", sha256(runtime), runtime.toString())))
+        val base = fixture.request()
+        val request = base.copy(input = input, requestFingerprint = comfyRequestFingerprint(base.projectId, base.backendId, input, emptyList()))
+        val api = FakeApi()
+        assertIs<VideoBackendSubmission.Accepted>(fixture.backend(api, request).submit(fixture.command(request)))
+        assertEquals("129", api.submission?.scalarInputs?.get(VideoComfyInputSlot("23", "value"))?.content)
+        assertEquals(prompt, api.submission?.scalarInputs?.get(VideoComfyInputSlot("20", "value"))?.content)
+        val blocked = FakeApi()
+        fun reject(changed: VideoClipGenerationInput): String {
+            val altered = request.copy(input = changed, requestFingerprint = comfyRequestFingerprint(base.projectId, base.backendId, changed, emptyList()))
+            return assertIs<VideoBackendSubmission.Rejected>(fixture.backend(blocked, altered).submit(fixture.command(altered))).reason
+        }
+        assertTrue(reject(input.copy(primaryPrompt = "Different")).contains("primary"))
+        assertTrue(reject(input.copy(prompt = "Changed")).contains("primary"))
+        assertTrue(reject(input.copy(dependencyPins = input.dependencyPins.map {
+            if (it.id == "flat-guideline-source") it.copy(sha256 = "a".repeat(64)) else it
+        })).contains("guidelines"))
+        Files.writeString(runtime, "changed runtime")
+        assertTrue(reject(input).contains("runtime"))
+        assertEquals(0, blocked.submitCalls)
+    }
+
+    @Test
+    fun `preexisting null-primary clip fingerprint survives persisted uncertain job recovery`() {
+        // Recorded with the pre-flat-admission canonical encoder. This constant must
+        // not be recomputed from the current implementation or a new missing-field marker.
+        val expected = "155f6593e484e9be6324e90127b3c4475e536885d22b7ba3df23d8847d70d4d5"
+        val input = VideoClipGenerationInput("Persisted prompt", listOf(
+            VideoGenerationDependencyPin(ComfyShortI2VBinding.WORKFLOW_ID, "a".repeat(64), "/owned/graph.json"),
+            VideoGenerationDependencyPin(ComfyShortI2VBinding.IMAGE_ID, "b".repeat(64), "/owned/image.png"),
+        ), 5_160, 768, 448, 25, ComfyShortI2VBinding.workflow)
+        assertEquals(expected, comfyRequestFingerprint("project-1", LocalVideoBackend.BACKEND_ID, input, emptyList()))
+        assertTrue(expected != comfyRequestFingerprint("project-1", LocalVideoBackend.BACKEND_ID,
+            input.copy(primaryPrompt = "Persisted prompt"), emptyList()))
+        val root = createTempDirectory("legacy-clip-job-").toRealPath()
+        val store = VideoJobStore(root.resolve("jobs"), "shared", listOf(root.resolve("protected-midi").createDirectories()))
+        val request = VideoGenerationJobRequest("old-clip", "project-1", LocalVideoBackend.BACKEND_ID,
+            emptyList(), input, expected, 2, NOW, VideoLocalExecutionPolicy(60_000, 1_000_000_000, 1_000_000))
+        var observed = 0
+        val backend = object : VideoGenerationBackendPort {
+            override val backendId = LocalVideoBackend.BACKEND_ID
+            override fun availability() = VideoBackendAvailability(backendId, VideoBackendAvailabilityStatus.AVAILABLE,
+                NOW, setOf(VideoGenerationInputKind.VIDEO), emptyList(), "fake recovery")
+            override fun submit(command: VideoBackendSubmissionCommand): VideoBackendSubmission =
+                VideoBackendSubmission.Uncertain("Persisted ambiguous submission")
+            override fun observe(ownedAttempt: VideoOwnedBackendAttempt): VideoBackendObservation {
+                observed++
+                assertEquals(expected, ownedAttempt.requestFingerprint)
+                return VideoBackendObservation.Unknown("uncertain previous submission")
+            }
+            override fun requestCancellation(ownedAttempt: VideoOwnedBackendAttempt) = VideoBackendCancellation.Unknown("fake")
+        }
+        val submission = VideoJobCoordinator("shared", store, listOf(backend)).submit(request)
+        val initial = assertIs<VideoJobResult.Accepted>(submission, submission.toString())
+        val attempt = requireNotNull(initial.attempt)
+        assertEquals(VideoGenerationAttemptStatus.SUBMISSION_UNCERTAIN, attempt.status)
+        val reopened = VideoJobStore(root.resolve("jobs"), "shared", listOf(root.resolve("protected-midi")))
+        val coordinator = VideoJobCoordinator("shared", reopened, listOf(backend))
+        assertEquals(expected, coordinator.snapshot().jobs.single().request.requestFingerprint)
+        val recovered = requireNotNull(assertIs<VideoJobResult.Accepted>(coordinator.recover().single()).attempt)
+        assertEquals(attempt.id, recovered.id)
+        assertEquals(attempt.ownershipToken, recovered.ownershipToken)
+        assertEquals(VideoGenerationAttemptStatus.SUBMISSION_UNCERTAIN, recovered.status)
+        assertEquals(1, observed)
+        assertEquals(request, assertIs<VideoJobResult.Accepted>(coordinator.submit(request)).job.request)
+        assertEquals(1, reopened.snapshot().jobs.size)
     }
 
     @Test
@@ -641,7 +728,7 @@ class LocalVideoBackendTest {
         }
     }
 
-    private fun coordinator(store: VideoJobStore, backend: LocalVideoBackend) = VideoJobCoordinator(
+    private fun coordinator(store: VideoJobStore, backend: VideoGenerationBackendPort) = VideoJobCoordinator(
         "comfy-test", store, listOf(backend), clock = Clock.fixed(Instant.parse(NOW), ZoneOffset.UTC),
     )
 

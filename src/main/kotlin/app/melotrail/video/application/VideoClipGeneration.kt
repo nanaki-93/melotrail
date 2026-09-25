@@ -24,6 +24,13 @@ import app.melotrail.video.domain.VideoMotionUnit
 import app.melotrail.video.domain.VideoControlledMotionRuntimeBinding
 import app.melotrail.video.domain.VideoLayerKind
 import app.melotrail.video.domain.VideoClipGenerationInput
+import app.melotrail.video.adapter.ComfyShortI2VBinding
+import app.melotrail.video.adapter.LocalVideoBackend
+import app.melotrail.video.adapter.comfyRequestFingerprint
+import app.melotrail.video.domain.VideoDependencyPin
+import app.melotrail.video.domain.VideoGuidanceKind
+import app.melotrail.video.domain.VideoPromptBackendCapabilities
+import app.melotrail.video.domain.VideoReferenceRole
 import app.melotrail.video.adapter.VideoImportedTake
 import app.melotrail.video.adapter.VideoProjectStore
 import app.melotrail.video.adapter.VideoPreparedSceneStore
@@ -118,10 +125,12 @@ class VideoClipGeneration(
     private val clock: Clock = Clock.systemUTC(),
     private val requestIdFactory: () -> String = { "clip-${java.util.UUID.randomUUID()}" },
     private val projects: VideoProjectStore? = null,
+    /** Selected owned ComfyUI configuration; never supplied by the generateFlat caller. */
+    private val flatGraph: VideoGenerationDependencyPin? = null,
+    private val flatRuntimePins: List<VideoGenerationDependencyPin> = emptyList(),
 ) {
     /** Read-only eligibility, not a setup probe or an authorization to launch native work.
-     * Full pin, coverage and media checks still run during admission. Flat admission is
-     * intentionally unavailable until the shared I2V binding is connected. */
+     * Full pin, coverage and media checks still run during admission. */
     fun capabilities(
         session: VideoProjectSession,
         preparedSceneId: VideoVersionedId? = null,
@@ -222,8 +231,20 @@ class VideoClipGeneration(
         }
         val flatBlockers = buildList {
             if (!finished) add(blocker(VideoCapabilityBlockerCode.MISSING_ARTWORK, "Import an eligible finished scene image."))
-            add(blocker(VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME,
-                "The short-I2V application route is not connected yet; configure and verify an owned ComfyUI session after integration."))
+            if (execution !is VideoLocalExecutionPolicy) add(blocker(VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME,
+                "Select a bounded local execution policy for short I2V; hosted execution is not supported."))
+            val verifiedConfiguration = flatGraph?.let { graph ->
+                runCatching { ComfyShortI2VBinding.verifyConfiguration(graph, flatRuntimePins, modelRequirements) }.getOrNull()
+            }
+            if (flatGraph == null || verifiedConfiguration == null)
+                add(blocker(VideoCapabilityBlockerCode.MISSING_TOOL,
+                    "Select and verify unchanged pinned short-I2V graph, runtime files and models before generation."))
+            val availability = runCatching { coordinator.availability(LocalVideoBackend.BACKEND_ID) }.getOrNull()
+            if (availability?.status != VideoBackendAvailabilityStatus.AVAILABLE ||
+                VideoGenerationInputKind.VIDEO !in availability.supportedInputs || modelRequirements.any { required ->
+                    availability.availableModels.none { it.id == required.id && it.version == required.version && it.sha256 == required.sha256 }
+                }) add(blocker(VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME,
+                "Configure an owned ComfyUI session with the selected pinned models before short I2V."))
             if (occupied) add(blocker(VideoCapabilityBlockerCode.OCCUPIED_ADMISSION, "Reconcile or finish the current local attempt before admitting another."))
         }
         val viewport = scene?.layers?.singleOrNull { it.kind == VideoLayerKind.FINISHED_SCENE }?.bounds
@@ -232,7 +253,7 @@ class VideoClipGeneration(
                 controls, viewport?.width?.toInt(), viewport?.height?.toInt(), 3840, 2160, 30,
                 1, 9_000, 34, 300_000, "Native controlled frames at 30 fps; bounded chunks of 300 frames. No full-length delivery/export is implemented.",
                 setOf("H264_SILENT_REENCODE")),
-            VideoRouteCapability(VideoClipRoute.FLAT_IMAGE_I2V, false, flatBlockers,
+            VideoRouteCapability(VideoClipRoute.FLAT_IMAGE_I2V, flatBlockers.isEmpty(), flatBlockers,
                 emptyList(), null, null, 768, 448, 25, 129, 129,
                 5_160, 5_160, "Measured short I2V: 129 frames / 25 fps = 5.16 seconds at 768x448; no regional or character control and no 20–30 second I2V.",
                 setOf("SILENT_DERIVATIVE")),
@@ -441,6 +462,92 @@ class VideoClipGeneration(
         return VideoClipGenerationResult.Admitted(admitted.job.request, admitted)
     }
 
+    /** Admit only the measured short, native flat route. No prepared scene, look record,
+     * inferred regional controls or native process is needed to verify one finished image. */
+    fun generateFlat(command: VideoFlatGenerationRequest): VideoClipGenerationResult {
+        if (execution !is VideoLocalExecutionPolicy) return VideoClipGenerationResult.Rejected("Flat I2V requires a configured local policy.")
+        val store = projects ?: return VideoClipGenerationResult.Rejected("Verified project storage is required for flat admission.")
+        val input = try {
+            val current = store.open(command.session.root)
+            require(current == command.session.project && current.revision == command.expectedRevision) {
+                "Project revision changed before flat admission; reopen it."
+            }
+            require(command.regionalControls.isEmpty()) { "Flat I2V has no regional controls; prepare layers for controlled motion." }
+            require(command.framesPerSecond == 25 && command.width == 768 && command.height == 448) {
+                "Short I2V supports only native 768x448 at 25 fps; conversion is not implicit."
+            }
+            val product = Math.multiplyExact(command.durationMillis, command.framesPerSecond.toLong())
+            val frames = Math.addExact(product, 999L) / 1_000L
+            require(frames > 0 && frames <= Int.MAX_VALUE && (frames - 1) % 8 == 0L) {
+                "LTX I2V frame count must be 8*n+1, without changing the requested duration."
+            }
+            require(command.durationMillis == 5_160L && frames == 129L) {
+                "Measured short I2V supports 129 frames at 25 fps (5.16 seconds), not 20–30 seconds."
+            }
+            require(command.maximumAttempts in 1..3) { "Flat attempt bound must be 1..3." }
+            require(command.requestId == null || command.requestId.matches(Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}"))) {
+                "Flat request ID is invalid."
+            }
+            val graph = requireNotNull(flatGraph) { "Select a pinned short-I2V graph before admission." }
+            ComfyShortI2VBinding.verifyConfiguration(graph, flatRuntimePins, modelRequirements)
+            val library = when (val opened = VideoAssetImport(VideoProjectLifecycle(store), VideoImageFiles()).open(command.session.root)) {
+                is VideoAssetLibraryResult.Loaded -> opened
+                is VideoAssetLibraryResult.Rejected -> throw IllegalArgumentException(opened.problem.message)
+            }
+            require(library.session.project == current) { "Project changed while verifying finished artwork." }
+            val look = when (val selected = VideoSceneLooks().select(current, library.assets, command.finishedReferenceId)) {
+                is VideoSceneLookSelectionResult.Selected -> selected.look
+                is VideoSceneLookSelectionResult.Rejected -> throw IllegalArgumentException(selected.problems.joinToString(" ") { it.message })
+            }
+            val record = current.referenceVersions.single { it.id == look.id }
+            val imagePath = VideoImageFiles().resolveOriginal(command.session.root, record)
+            val guidelines = VideoPromptCompiler().decodeGuidelines(checkNotNull(
+                javaClass.getResourceAsStream("/video/video-generation-guidelines.json")) { "Pinned motion guidance is missing." }
+                .use { it.readBytes() })
+            val capabilities = VideoPromptBackendCapabilities(LocalVideoBackend.BACKEND_ID, "short-i2v-v1", true, 1,
+                setOf(VideoReferenceRole.COMPLETE_SCENE), false, VideoGuidanceKind.entries.toSet(), 5, 6,
+                modelRequirements.map { VideoDependencyPin(it.id, requireNotNull(it.sha256)) },
+                listOf(VideoDependencyPin(graph.id, graph.sha256)), emptyList(),
+                VideoDependencyPin("native-768x448-129-at-25", app.melotrail.video.application.digest("768", "448", "129", "25")))
+            val compiled = VideoPromptCompiler().compileMotion(command.primaryPrompt, look, capabilities, guidelines)
+            require(compiled.canPrepareRequests && compiled.bindings.single().status == VideoReferenceBindingStatus.BOUND) {
+                "Finished-reference guidance could not be bound to the short I2V route."
+            }
+            val backendPrompt = requireNotNull(compiled.backendPrompt)
+            ComfyShortI2VBinding.input(backendPrompt, graph,
+                VideoGenerationDependencyPin(ComfyShortI2VBinding.IMAGE_ID, look.original.artifact.sha256, imagePath.toString()),
+                command.durationMillis, command.width, command.height, command.framesPerSecond,
+                primaryPrompt = compiled.primaryPrompt,
+                guidanceSha256 = MessageDigest.getInstance("SHA-256").digest(backendPrompt.toByteArray(Charsets.UTF_8))
+                    .joinToString("") { "%02x".format(it) },
+                guidelineSourceSha256 = guidelines.sourceSha256,
+                runtimePins = flatRuntimePins)
+        } catch (error: Exception) {
+            return VideoClipGenerationResult.Rejected(error.message ?: "Flat source, settings or pins could not be verified.")
+        }
+        // A slow decode or pin verification must not admit against a now-stale project.
+        val current = try { store.open(command.session.root) } catch (error: Exception) {
+            return VideoClipGenerationResult.Rejected(error.message ?: "Project verification failed.")
+        }
+        if (current != command.session.project) return VideoClipGenerationResult.Rejected("Project changed during flat admission; reopen it.")
+        val job = try {
+            val id = command.requestId ?: requestIdFactory()
+            val existing = coordinator.snapshot().jobs.singleOrNull { it.request.id == id }?.request
+            VideoGenerationJobRequest(id, current.id, LocalVideoBackend.BACKEND_ID,
+                modelRequirements, input, comfyRequestFingerprint(current.id, LocalVideoBackend.BACKEND_ID, input, modelRequirements),
+                command.maximumAttempts, existing?.createdAt ?: Instant.now(clock).toString(), execution)
+        } catch (error: Exception) {
+            return VideoClipGenerationResult.Rejected(error.message ?: "Flat request identity is invalid.")
+        }
+        return when (val admitted = coordinator.submit(job)) {
+            is VideoJobResult.Rejected -> VideoClipGenerationResult.Rejected(admitted.problem.message)
+            is VideoJobResult.Accepted -> if (admitted.attempt?.status in setOf(
+                VideoGenerationAttemptStatus.FAILED, VideoGenerationAttemptStatus.CANCELLED))
+                VideoClipGenerationResult.Rejected(admitted.attempt?.failure ?: "Flat I2V attempt did not complete.")
+            else VideoClipGenerationResult.Admitted(admitted.job.request, admitted)
+        }
+    }
+
     /** A result is importable only after its newest durable attempt succeeded. */
     fun importCompleted(
         request: VideoCompletedTakeImport,
@@ -592,6 +699,20 @@ private fun controlledSourceIdentity(
     return MessageDigest.getInstance("SHA-256").digest(source.toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
 }
+
+data class VideoFlatGenerationRequest(
+    val session: VideoProjectSession,
+    val expectedRevision: Long,
+    val finishedReferenceId: VideoVersionedId,
+    val primaryPrompt: String,
+    val durationMillis: Long,
+    val width: Int = 768,
+    val height: Int = 448,
+    val framesPerSecond: Int = 25,
+    val regionalControls: List<VideoSceneMotionControlRequest> = emptyList(),
+    val maximumAttempts: Int = 2,
+    val requestId: String? = null,
+)
 
 data class VideoCompletedTakeImport(
     val session: VideoProjectSession,

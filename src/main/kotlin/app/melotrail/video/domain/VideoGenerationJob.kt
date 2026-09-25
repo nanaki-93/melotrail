@@ -141,9 +141,12 @@ data class VideoClipGenerationInput(
     val height: Int,
     val framesPerSecond: Int,
     override val comfyWorkflow: VideoComfyWorkflowRequest? = null,
+    /** Exact user text for the production flat route; [prompt] is the compiled backend text. */
+    val primaryPrompt: String? = null,
 ) : VideoGenerationInput {
     init {
         requireVideoPrompt(prompt)
+        primaryPrompt?.let(::requireVideoPrompt)
         requireVideoDependencyPins(dependencyPins)
         requireComfyDependencies(dependencyPins, comfyWorkflow)
         require(durationMillis in 100L..60_000L) { "One generated video request must be 0.1..60 seconds" }

@@ -456,6 +456,9 @@ fun videoRequestFingerprint(
         is VideoClipGenerationInput -> {
             field("video"); field(input.durationMillis.toString()); field(input.width.toString())
             field(input.height.toString()); field(input.framesPerSecond.toString())
+            // Existing persisted clip requests had no primaryPrompt field. Do not add
+            // an "absent" marker to their already durable fingerprint.
+            input.primaryPrompt?.let { optional(it) }
         }
         is VideoControlledMotionGenerationInput -> error("Controlled motion uses its domain identity")
     }

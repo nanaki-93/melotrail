@@ -1,6 +1,9 @@
 package app.melotrail.video
 
 import app.melotrail.video.adapter.VideoProjectStore
+import app.melotrail.video.adapter.ComfyShortI2VBinding
+import app.melotrail.video.adapter.LocalVideoBackend
+import app.melotrail.video.adapter.comfyRequestFingerprint
 import app.melotrail.video.adapter.VideoResultImport
 import app.melotrail.video.adapter.VideoMediaProbe
 import app.melotrail.video.adapter.VideoMotionRenderer
@@ -93,8 +96,9 @@ class VideoClipGenerationTest {
         assertEquals(setOf(VideoCapabilityBlockerCode.MISSING_ARTWORK, VideoCapabilityBlockerCode.UNSUPPORTED_MOTION,
             VideoCapabilityBlockerCode.MISSING_TOOL, VideoCapabilityBlockerCode.OCCUPIED_ADMISSION),
             capabilities.first().blockers.map { it.code }.toSet())
-        assertEquals(setOf(VideoCapabilityBlockerCode.MISSING_ARTWORK, VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME,
-            VideoCapabilityBlockerCode.OCCUPIED_ADMISSION), capabilities.last().blockers.map { it.code }.toSet())
+        assertEquals(setOf(VideoCapabilityBlockerCode.MISSING_ARTWORK, VideoCapabilityBlockerCode.MISSING_TOOL,
+            VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME, VideoCapabilityBlockerCode.OCCUPIED_ADMISSION),
+            capabilities.last().blockers.map { it.code }.toSet())
         assertTrue(capabilities.last().supportedControls.isEmpty())
         assertEquals(129, capabilities.last().maximumNativeFrames)
         assertEquals(25, capabilities.last().nativeFramesPerSecond)
@@ -673,6 +677,175 @@ class VideoClipGenerationTest {
         assertEquals(listOf(first, second), afterSecond.takeVersions)
         assertFalse(afterSecond.selectedTakeIds.isNotEmpty())
         assertEquals(firstArtifact.sha256, sha(store.resolveArtifact(root, firstArtifact)))
+    }
+
+    @Test fun `flat admission verifies one finished image and pinned short route before durable fake submission`() {
+        val root = Files.createTempDirectory("flat-admission-").toRealPath()
+        val projectRoot = root.resolve("video-project")
+        val store = VideoProjectStore(listOf(root.resolve("protected-midi")))
+        val lifecycle = VideoProjectLifecycle(store)
+        val initial = assertIs<VideoProjectLifecycleResult.Opened>(lifecycle.create(
+            CreateVideoProject(projectRoot, "Flat", "flat-project"))).session
+        val picture = root.resolve("finished.png")
+        val image = BufferedImage(100, 60, BufferedImage.TYPE_INT_RGB)
+        val graphics = image.createGraphics()
+        try { graphics.color = Color.BLUE; graphics.fillRect(0, 0, 100, 60) } finally { graphics.dispose() }
+        assertTrue(ImageIO.write(image, "png", picture.toFile()))
+        val imported = assertIs<VideoAssetImportResult.Imported>(VideoAssetImport(lifecycle, VideoImageFiles(),
+            idFactory = { "finished" }).import(initial, ImportVideoAsset(picture, VideoReferenceRole.COMPLETE_SCENE)))
+        val session = imported.session
+        val graph = root.resolve("short-shot-api.json")
+        Files.write(graph, checkNotNull(javaClass.getResourceAsStream("/video/comfyui/short-shot-api.json")).use { it.readBytes() })
+        val runtime = root.resolve("runtime-profile.json")
+        Files.write(runtime, checkNotNull(javaClass.getResourceAsStream("/video/comfyui/runtime-profile.json")).use { it.readBytes() })
+        val graphPin = VideoGenerationDependencyPin(ComfyShortI2VBinding.WORKFLOW_ID, sha(graph), graph.toString())
+        val runtimePin = VideoGenerationDependencyPin("flat-runtime-profile", sha(runtime), runtime.toString())
+        val models = listOf(
+            VideoModelRequirement("ltx-2-3-distilled-q4", "22b-distilled-1.1-Q4_K_M", "5d09efdc0b8ec2054c44a05366cd7c6634ffa333b379b1f8baf018a78974b73d"),
+            VideoModelRequirement("gemma-3-12b-it-qat", "Q4_K_XL", "da98f81c86916ed1c76b3eeda56b25cb7b8352b01093e2edb8028110fe2cb53b"),
+            VideoModelRequirement("ltx-2-3-connectors", "distilled-1.1", "c61cbb396e2a8175d8b2da51f0fdac885a4ccd22c9f64dafa5aa2c455dc8a507"),
+            VideoModelRequirement("ltx-2-3-video-vae", "distilled-1.1", "e68d6d8f8a42942ac9b862cc315beb3bc30805a8876c7ad63ba5bf7a2b8e168a"),
+        )
+        val policy = VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000)
+        var ledger = VideoJobLedger("shared", Instant.now().toString())
+        var launches = 0
+        var lastInput: VideoClipGenerationInput? = null
+        val backend = object : VideoGenerationBackendPort {
+            override val backendId = LocalVideoBackend.BACKEND_ID
+            override fun availability() = VideoBackendAvailability(backendId, VideoBackendAvailabilityStatus.AVAILABLE,
+                Instant.now().toString(), setOf(VideoGenerationInputKind.VIDEO),
+                models.map { VideoAvailableModel(it.id, it.version, it.sha256) }, "owned fake")
+            override fun submit(command: VideoBackendSubmissionCommand): VideoBackendSubmission {
+                launches++
+                lastInput = assertIs<VideoClipGenerationInput>(command.input)
+                return VideoBackendSubmission.Uncertain("Fake submission; no model launched")
+            }
+            override fun observe(ownedAttempt: VideoOwnedBackendAttempt) = VideoBackendObservation.Unknown("fake")
+            override fun requestCancellation(ownedAttempt: VideoOwnedBackendAttempt) = VideoBackendCancellation.Unknown("fake")
+        }
+        val persistence = object : VideoJobPersistence {
+            override fun loadOrCreate(admissionDomainId: String, createdAt: String) = ledger
+            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger {
+                assertEquals(ledger.revision, expectedRevision)
+                ledger = replacement
+                return ledger
+            }
+        }
+        val coordinator = VideoJobCoordinator("shared", persistence, listOf(backend))
+        fun service(graph: VideoGenerationDependencyPin = graphPin, runtimePins: List<VideoGenerationDependencyPin> = listOf(runtimePin),
+                    selectedModels: List<VideoModelRequirement> = models,
+                    selectedPolicy: VideoExecutionPolicy = policy) = VideoClipGeneration(VideoScenePreparation(), coordinator,
+            VideoResultImport(store, VideoMediaProbe()), VideoMotionRenderer(), "controlled-local", selectedPolicy,
+            selectedModels, projects = store, flatGraph = graph, flatRuntimePins = runtimePins)
+        val command = VideoFlatGenerationRequest(session, session.project.revision, imported.asset.id,
+            "  Drift across the view.\nKeep the drawing.  ", 5_160, requestId = "stable-flat")
+        fun flatCapability(generator: VideoClipGeneration = service()) =
+            generator.capabilities(session).single { it.route == VideoClipRoute.FLAT_IMAGE_I2V }
+        assertTrue(flatCapability().available)
+        assertTrue(flatCapability().blockers.isEmpty())
+        fun blockedConfiguration(generator: VideoClipGeneration) {
+            val capability = flatCapability(generator)
+            assertFalse(capability.available)
+            assertTrue(VideoCapabilityBlockerCode.MISSING_TOOL in capability.blockers.map { it.code }, capability.toString())
+            assertEquals(0, launches, "Capability queries must not submit work")
+        }
+        blockedConfiguration(service(graphPin.copy(sha256 = "f".repeat(64))))
+        blockedConfiguration(service(runtimePins = listOf(runtimePin.copy(sha256 = "f".repeat(64)))))
+        val originalRuntime = Files.readAllBytes(runtime)
+        try {
+            Files.writeString(runtime, "changed runtime")
+            blockedConfiguration(service())
+        } finally { Files.write(runtime, originalRuntime) }
+        val originalGraph = Files.readAllBytes(graph)
+        try {
+            Files.writeString(graph, "changed graph")
+            blockedConfiguration(service())
+        } finally { Files.write(graph, originalGraph) }
+        val unsafeGraph = root.resolve("unsafe-graph")
+        Files.createSymbolicLink(unsafeGraph, graph)
+        blockedConfiguration(service(graphPin.copy(ownedPath = unsafeGraph.toString())))
+        blockedConfiguration(service(runtimePins = emptyList()))
+        blockedConfiguration(service(runtimePins = listOf(runtimePin.copy(id = "flat-runtime-other"))))
+        blockedConfiguration(service(runtimePins = listOf(runtimePin, runtimePin.copy(id = "flat-runtime-other"))))
+        blockedConfiguration(service(selectedModels = models.dropLast(1)))
+        blockedConfiguration(service(selectedModels = models.map { if (it.id == "gemma-3-12b-it-qat") it.copy(sha256 = "a".repeat(64)) else it }))
+        val hosted = VideoHostedExecutionPolicy("budget", "USD", 1, "2026-09-25T00:00:00Z", "2026-09-26T00:00:00Z", 1)
+        val nonlocal = service(selectedPolicy = hosted)
+        assertFalse(flatCapability(nonlocal).available)
+        assertTrue(VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME in flatCapability(nonlocal).blockers.map { it.code })
+        assertTrue(flatCapability().available)
+        fun rejected(request: VideoFlatGenerationRequest, fragment: String, generator: VideoClipGeneration = service()) {
+            val before = ledger
+            val result = assertIs<VideoClipGenerationResult.Rejected>(generator.generateFlat(request))
+            assertTrue(result.reason.contains(fragment, ignoreCase = true), result.reason)
+            assertEquals(before, ledger, "A rejection must not reserve a durable attempt")
+            assertEquals(0, launches)
+        }
+        rejected(command.copy(expectedRevision = 0), "revision")
+        rejected(command.copy(finishedReferenceId = VideoVersionedId("missing", 1)), "not an imported")
+        rejected(command.copy(durationMillis = Long.MAX_VALUE), "overflow")
+        rejected(command.copy(durationMillis = 5_000), "8*n+1")
+        rejected(command.copy(durationMillis = 20_000), "8*n+1")
+        rejected(command.copy(durationMillis = 30_000), "8*n+1")
+        rejected(command.copy(durationMillis = 20_520), "129 frames") // 513 legal LTX frames, still unsupported here.
+        rejected(command.copy(durationMillis = 30_120), "129 frames") // 753 legal LTX frames, still unsupported here.
+        rejected(command.copy(framesPerSecond = 30), "25 fps")
+        rejected(command.copy(width = 576), "768x448")
+        rejected(command.copy(regionalControls = listOf(VideoSceneMotionControlRequest("region", VideoSceneMotionIntent.BLINK,
+            "unsupported", 0.0, 1.0, 0.5))), "regional")
+        rejected(command, "graph", service(graphPin.copy(sha256 = "f".repeat(64))))
+        rejected(command, "runtime", service(runtimePins = listOf(runtimePin.copy(sha256 = "f".repeat(64)))))
+        rejected(command, "models", service(selectedModels = emptyList()))
+        rejected(command, "models", service(selectedModels = models.dropLast(1)))
+        rejected(command, "models", service(selectedModels = models.map { if (it.id == "gemma-3-12b-it-qat") it.copy(sha256 = "a".repeat(64)) else it }))
+        rejected(command, "runtime", service(runtimePins = listOf(runtimePin.copy(id = "flat-runtime-other"))))
+        rejected(command, "runtime", service(runtimePins = listOf(runtimePin, runtimePin.copy(id = "flat-runtime-other"))))
+        rejected(command, "local policy", nonlocal)
+        val original = Files.readAllBytes(store.resolveArtifact(projectRoot, imported.asset.original.artifact))
+        val originalPath = store.resolveArtifact(projectRoot, imported.asset.original.artifact)
+        try {
+            Files.writeString(originalPath, "changed original")
+            rejected(command, "pinned byte")
+        } finally { Files.write(originalPath, original) }
+        try {
+            Files.delete(originalPath)
+            rejected(command, "missing")
+            Files.createSymbolicLink(originalPath, picture)
+            rejected(command, "symbolic link")
+        } finally {
+            Files.deleteIfExists(originalPath)
+            Files.write(originalPath, original)
+        }
+        val storedGraph = Files.readAllBytes(graph)
+        try {
+            Files.writeString(graph, "altered graph")
+            rejected(command, "graph")
+        } finally { Files.write(graph, storedGraph) }
+        val symlink = root.resolve("graph-symlink.json")
+        Files.createSymbolicLink(symlink, graph)
+        rejected(command, "unsafe", service(graphPin.copy(ownedPath = symlink.toString())))
+        val accepted = assertIs<VideoClipGenerationResult.Admitted>(service().generateFlat(command))
+        assertEquals(1, launches)
+        assertEquals(1, ledger.jobs.size)
+        val bound = requireNotNull(lastInput)
+        assertEquals(command.primaryPrompt, bound.primaryPrompt)
+        assertTrue(bound.prompt.startsWith(command.primaryPrompt))
+        assertTrue(bound.prompt.length > command.primaryPrompt.length, "Derived guidance must remain distinguishable")
+        assertEquals(5_160L, bound.durationMillis)
+        assertEquals(25, bound.framesPerSecond)
+        assertEquals(ComfyShortI2VBinding.workflow, bound.comfyWorkflow)
+        assertEquals(setOf(ComfyShortI2VBinding.WORKFLOW_ID, ComfyShortI2VBinding.IMAGE_ID,
+            "flat-runtime-profile", "flat-guidance", "flat-guideline-source"), bound.dependencyPins.map { it.id }.toSet())
+        assertEquals(comfyRequestFingerprint(session.project.id, LocalVideoBackend.BACKEND_ID, bound, models),
+            accepted.request.requestFingerprint)
+        assertEquals(1, accepted.result.let { assertIs<VideoJobResult.Accepted>(it).job.attempts.size })
+        assertIs<VideoClipGenerationResult.Admitted>(service().generateFlat(command.copy(requestId = "another-click")))
+        assertEquals(1, launches, "Same immutable intent reuses the in-flight attempt")
+        assertEquals(1, ledger.jobs.size)
+        val collision = assertIs<VideoClipGenerationResult.Rejected>(service().generateFlat(command.copy(primaryPrompt = "Different motion")))
+        assertTrue(collision.reason.contains("different immutable inputs", ignoreCase = true), collision.reason)
+        assertEquals(1, launches)
+        assertEquals(session.project, store.open(projectRoot))
     }
 
     private fun fixtureTake(project: VideoProject, root: Path, id: VideoVersionedId,
