@@ -203,10 +203,12 @@ class VideoPreviewHostCheckTest {
             val service = VideoClipGeneration(VideoScenePreparation(), VideoJobCoordinator("preview-proof", f.jobs(), emptyList()),
                 VideoResultImport(store, PreviewProductionRun.importProbe(f.config.budget, f::process), controlledOutputRoot = f.project.resolve("controlled-outputs")),
                 VideoMotionRenderer(), VideoControlledMediaStage.BACKEND_ID, f.config.budget.policy(), projects = store)
+            val nativeCalls = f.calls.size
             val replay = service.importCompleted(VideoCompletedTakeImport(reopened,
                 reopened.project.revision, job.request.id, attempt.id, output.id))
             val imported = assertIs<VideoClipGenerationResult.Imported>(replay, replay.toString())
             assertEquals(take.id, imported.result.take.id)
+            assertEquals(nativeCalls, f.calls.size, "Exact reimport must not start any native work")
             assertEquals(project, imported.result.project)
         }
         assertEquals(jobs, f.jobs().snapshot().jobs)
@@ -218,6 +220,32 @@ class VideoPreviewHostCheckTest {
             assertEquals(PreviewPreflight.sha(original), asset.original.artifact.sha256)
             assertEquals(asset.original.artifact.sha256, PreviewPreflight.sha(store.resolveArtifact(f.project, asset.original.artifact)))
         }
+    }
+
+    @Test fun `reconstructed recovery rejects changed output and noncurrent attempt without overwriting takes`() {
+        val f = ProductionFixture(fixture())
+        f.run()
+        val job = f.jobs().snapshot().jobs.last()
+        val attempt = job.attempts.single()
+        val output = job.outputs.single()
+        val project = f.store().open(f.project)
+        val publishedHashes = project.takeVersions.associate { it.artifact to PreviewPreflight.sha(f.store().resolveArtifact(f.project, it.artifact)) }
+        assertFailsWith<Exception> {
+            PreviewProductionRun.recover(f.config, PreviewTicket(job.request.id, "older-attempt"), output.id)
+        }
+        val path = f.project.resolve("controlled-outputs").resolve(output.relativePath!!)
+        val stamp = Files.getLastModifiedTime(path)
+        val bytes = Files.readAllBytes(path)
+        // Same size and restored timestamp must not disguise changed source content.
+        Files.setPosixFilePermissions(path, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"))
+        Files.write(path, bytes.map { (it.toInt() xor 1).toByte() }.toByteArray())
+        Files.setLastModifiedTime(path, stamp)
+        assertFailsWith<Exception> {
+            PreviewProductionRun.recover(f.config, PreviewTicket(job.request.id, attempt.id), output.id)
+        }
+        assertEquals(project, f.store().open(f.project))
+        publishedHashes.forEach { (artifact, hash) -> assertEquals(hash, PreviewPreflight.sha(f.store().resolveArtifact(f.project, artifact))) }
+        assertEquals(1, f.jobs().snapshot().jobs.last().attempts.size)
     }
 
     @Test fun `frame evidence covers every boundary and authored phase and rejects discontinuity`() {

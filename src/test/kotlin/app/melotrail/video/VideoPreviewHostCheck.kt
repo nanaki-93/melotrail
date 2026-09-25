@@ -420,6 +420,35 @@ internal object PreviewProductionRun {
             run(boundedImportRequest(request, budget), cancellation)
         }
 
+    internal fun recover(config: PreviewConfiguration, ticket: PreviewTicket, outputId: String,
+        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()) {
+        val protected = listOf(Path.of(System.getProperty("user.dir")).toRealPath().resolve("docs"))
+        val root = config.output.resolve("project")
+        val publication = root.resolve("controlled-outputs")
+        val store = VideoProjectStore(protected)
+        val before = store.open(root)
+        val jobs = VideoJobStore(config.output.resolve("jobs"), before.id, protected)
+        val ledger = jobs.snapshot()
+        val noNative: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult = { _, _ ->
+            error("Recovery must not launch native work")
+        }
+        val stage = VideoControlledMediaStage(jobs, before.id, root, publication,
+            renderer = VideoMotionRenderer(runProcess = noNative), runProcess = noNative)
+        val service = VideoClipGeneration(VideoScenePreparation(), VideoJobCoordinator(before.id, jobs, listOf(stage)),
+            VideoResultImport(store, importProbe(config.budget, noNative), controlledOutputRoot = publication),
+            VideoMotionRenderer(), VideoControlledMediaStage.BACKEND_ID, config.budget.policy(), projects = store)
+        val session = VideoProjectSession(root, before)
+        val observed = service.reconcile(session, ticket.requestId, ticket.attemptId) as? VideoJobResult.Accepted
+            ?: error("Reconstructed attempt could not be reconciled")
+        require(observed.attempt?.status == VideoGenerationAttemptStatus.SUCCEEDED && observed.job.currentOutputId == outputId)
+        val imported = service.importCompleted(VideoCompletedTakeImport(session, before.revision,
+            ticket.requestId, ticket.attemptId, outputId), cancellation) as? VideoClipGenerationResult.Imported
+            ?: error("Reconstructed exact reimport rejected")
+        require(imported.result.project == before && store.open(root) == before && jobs.snapshot() == ledger) {
+            "Recovery changed publication, selection, revision or attempts"
+        }
+    }
+
     fun run(config: PreviewConfiguration,
         runProcess: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult =
             { request, cancellation -> VideoMediaProcess().run(request, cancellation) },
@@ -525,6 +554,7 @@ internal object PreviewProductionRun {
                 PreviewFrameEvidence.inspect(config, input, source,
                     store.resolveArtifact(projectRoot, result.result.take.artifact),
                     output.resolve("frames-${input.motion.endFrameExclusive}"), cancellation, runProcess)
+                recover(config, ticket, outputId, cancellation)
                 return PreviewImported(result.result.take.id.id,
                     requireNotNull(result.result.take.sourceMeasurement).sha256,
                     requireNotNull(result.result.take.publishedMeasurement).sha256,

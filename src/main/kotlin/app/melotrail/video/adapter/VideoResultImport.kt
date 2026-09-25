@@ -83,6 +83,40 @@ class VideoResultImport(
         if (controlled != null) verifyPins(controlled.motion.preparedPins, session.root, cancellation)
         else ComfyShortI2VBinding.verify(requireNotNull(flat))
         require(!cancellation.isCancelled()) { "Take import was cancelled." }
+        // A previously measured immutable controlled publication is a read, not another media job.
+        // Bind both byte identities and the complete current execution provenance before
+        // reusing its persisted measurement. Never accept an orphan or an older attempt.
+        val reopened = projects.open(session.root)
+        require(reopened.id == session.project.id && reopened.revision == expectedRevision) { "Project changed before exact reimport." }
+        val replay = reopened.takeVersions.singleOrNull { take ->
+            take.provenance?.let { p -> p.projectId == request.projectId && p.requestId == request.id &&
+                p.attemptId == output.attemptId && p.outputId == output.id &&
+                p.executableFingerprint == request.requestFingerprint } == true
+        }
+        if (replay != null && controlled != null) {
+            val provenance = requireNotNull(replay.provenance)
+            require(provenance.backendId == request.backendId && provenance.consumedPins == input.dependencyPins &&
+                replay.sourceMeasurement?.sha256 == output.sha256 && replay.sourceMeasurement.bytes == output.byteCount) {
+                "Exact reimport provenance or source measurement changed."
+            }
+            val scene = Json.decodeFromJsonElement<VideoPreparedScene>(
+                Json.parseToJsonElement(controlled.motion.descriptor.requestJson).jsonObject.getValue("preparedScene"))
+            require(provenance.sourceIdentity == controlled.motion.descriptor.sourceIdentity && provenance.preparedSceneId == scene.id) {
+                "Exact reimport prepared scene identity changed."
+            }
+            checkCurrentJob(currentJob(), request, output)
+            verifyPins(controlled.motion.preparedPins, session.root, cancellation)
+            val published = projects.resolveArtifact(session.root, replay.artifact)
+            val measured = requireNotNull(replay.publishedMeasurement)
+            require(measured.sha256 == replay.artifact.sha256 && Files.size(published) == measured.bytes &&
+                sha256(published, cancellation) == measured.sha256 && Files.size(source) == output.byteCount &&
+                sha256(source, cancellation) == output.sha256) { "Exact reimport bytes changed." }
+            checkCurrentJob(currentJob(), request, output)
+            verifyPins(controlled.motion.preparedPins, session.root, cancellation)
+            resolvePinnedOutput(session.root, request.backendId, output, cancellation)
+            require(projects.open(session.root) == reopened && !cancellation.isCancelled()) { "Project changed during exact reimport." }
+            return imported(reopened, replay)
+        }
         val tools = controlled?.motion?.descriptor?.runtime?.mediaManifest?.ownedPath?.let { Path.of(it).parent }
             ?: requireNotNull(flatMediaToolsDirectory) { "Pinned flat media tools directory is not configured." }
         val probeRequest = VideoMediaProbeRequest(tools, source,
@@ -182,14 +216,15 @@ class VideoResultImport(
                     "Completed output changed before publication."
                 }
             }
-            return VideoImportedTake(saved, published, VideoTakeMediaFacts(
-                published.publishedMeasurement!!.decodedFrameCount,
-                published.publishedMeasurement.frameRate.let { it.numerator.toDouble() / it.denominator },
-                published.sourceMeasurement!!.width, published.sourceMeasurement.height,
-                published.publishedMeasurement.width, published.publishedMeasurement.height,
-                published.conversion!!))
+            return imported(saved, published)
         } finally { Files.deleteIfExists(stage) }
     }
+
+    private fun imported(project: VideoProject, take: VideoTakeRecord) = VideoImportedTake(project, take, VideoTakeMediaFacts(
+        take.publishedMeasurement!!.decodedFrameCount,
+        take.publishedMeasurement.frameRate.let { it.numerator.toDouble() / it.denominator },
+        take.sourceMeasurement!!.width, take.sourceMeasurement.height,
+        take.publishedMeasurement.width, take.publishedMeasurement.height, take.conversion!!))
 
     private fun flatReference(project: VideoProject, root: Path, input: VideoClipGenerationInput): VideoVersionedId {
         val image = input.dependencyPins.single { it.id == ComfyShortI2VBinding.IMAGE_ID }

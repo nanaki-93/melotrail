@@ -261,6 +261,17 @@ suites (6 executed), `make test`, `make build`, and diff check passed; logs
 `build/vg2/vg02-continuation/2.1-*.log`. These are synthetic wiring checks; native
 frame inspection and human motion review are not claimed.
 
+Step 2.2: every preview now reconstructs project/job/coordinator/stage/import
+services, reconciles and exact-reimports with a native-launch-rejecting process
+boundary; project, ledger, takes, selections and revisions remain identical.
+A reproduced gap required a narrow `VideoResultImport.kt` repair: controlled
+exact replay verifies persisted provenance, current attempt, prepared pins and
+source/published digests without another decode job. Initial import and flat-I2V
+measurement behavior remain unchanged. Regressions reject same-size/restored-time
+source tampering and noncurrent attempt IDs while preserving published takes.
+Fresh host/coordinator/import/generation suites (6 executed), full test/build and
+diff checks passed; logs `build/vg2/vg02-continuation/2.2-*.log`.
+
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
   `VideoJobCoordinator.kt`, `core/video/domain/VideoGenerationJob.kt`,
