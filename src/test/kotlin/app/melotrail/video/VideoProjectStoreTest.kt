@@ -2,6 +2,7 @@ package app.melotrail.video
 
 import app.melotrail.video.adapter.VideoAtomicWriteObserver
 import app.melotrail.video.adapter.VideoProjectStore
+import app.melotrail.video.adapter.VideoMediaProcessCancellation
 import app.melotrail.video.application.CreateVideoProject
 import app.melotrail.video.application.InvalidVideoProjectException
 import app.melotrail.video.application.UnsafeVideoProjectLocationException
@@ -164,7 +165,7 @@ class VideoProjectStoreTest {
             populated.copy(takeVersions = listOf(measured.copy(publishedMeasurement = published.copy(sha256 = "f".repeat(64)))))
         }
         val badBytes = measured.copy(publishedMeasurement = published.copy(bytes = published.bytes + 1))
-        assertFailsWith<InvalidVideoProjectException> {
+        assertFailsWith<IllegalArgumentException> {
             projectStore.save(videoRoot, 1L, saved.copy(takeVersions = saved.takeVersions + badBytes.copy(
                 id = VideoVersionedId("take-2", 1),
                 artifact = artifact(videoRoot, "takes/take-2.mp4", "take-two"),
@@ -231,6 +232,182 @@ class VideoProjectStoreTest {
         val saved = projectStore.save(videoRoot, 1L, sources.copy(takeVersions = listOf(valid), revision = 2L))
         assertEquals(valid, projectStore.open(videoRoot).takeVersions.single())
         assertTrue(saved.selectedTakeIds.isEmpty())
+    }
+
+    @Test
+    fun `identity publication converges across stores and never links source bytes`() {
+        val videoRoot = root.resolve("video-project")
+        val copying = java.util.concurrent.CountDownLatch(1)
+        val resumeCopy = java.util.concurrent.CountDownLatch(1)
+        val pauseCopy = java.util.concurrent.atomic.AtomicBoolean(false)
+        val checking = java.util.concurrent.CountDownLatch(1)
+        val resumeCheck = java.util.concurrent.CountDownLatch(1)
+        val pauseCheck = java.util.concurrent.atomic.AtomicBoolean(false)
+        val first = VideoProjectStore(listOf(root.resolve("midi-projects")), takeCopyObserver = {
+            if (pauseCopy.get()) {
+                copying.countDown()
+                check(resumeCopy.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            }
+        })
+        val second = store()
+        first.create(videoRoot, emptyProject())
+        val source = Files.writeString(root.resolve("output.mp4"), "verified output")
+        val digest = sha256(source)
+        val target = VideoArtifact("takes/import-identity/v1/preview.mp4", digest)
+        val measurement = VideoTakeMeasurementRecord(digest, Files.size(source), "h264", 100, 60,
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(30, 1), 30,
+            VideoTakeRationalRecord(1, 30), 0, 30, 1, 0, 0)
+        fun take(id: String) = VideoTakeRecord(VideoVersionedId(id, 1), target, null,
+            "2026-09-13T00:03:00Z", measurement, measurement, "NONE",
+            VideoTakeProvenanceRecord("video-1", "request", "attempt", "output", "comfyui-local",
+                "a".repeat(64), "b".repeat(64), null, null, null,
+                listOf(VideoGenerationDependencyPin("source", "c".repeat(64)))))
+        val cancel = VideoMediaProcessCancellation()
+        val stage = first.stageTake(videoRoot, source, digest, cancel)
+        try {
+            val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+            val gate = java.util.concurrent.CountDownLatch(1)
+            val (saved, published) = try {
+                val one = pool.submit<Pair<VideoProject, VideoTakeRecord>> {
+                    gate.await()
+                    first.publishImportedTake(videoRoot, 0, take("first"), stage, cancel) { }
+                }
+                val two = pool.submit<Pair<VideoProject, VideoTakeRecord>> {
+                    gate.await()
+                    second.publishImportedTake(videoRoot, 0, take("first"), stage, cancel) { }
+                }
+                gate.countDown()
+                fun resolved(future: java.util.concurrent.Future<Pair<VideoProject, VideoTakeRecord>>):
+                    Pair<VideoProject, VideoTakeRecord> = try {
+                    future.get(10, java.util.concurrent.TimeUnit.SECONDS)
+                } catch (error: java.util.concurrent.ExecutionException) {
+                    assertIs<app.melotrail.video.application.VideoProjectConcurrencyException>(error.cause)
+                    // A losing writer refreshes before resolving the winning take.
+                    second.publishImportedTake(videoRoot, 1, take("first"), stage, cancel) { }
+                }
+                val result = resolved(one)
+                assertEquals(result, resolved(two))
+                result
+            } finally { pool.shutdownNow() }
+            assertEquals(1, saved.takeVersions.size)
+            assertEquals(take("first"), published)
+            val publishedPath = first.resolveArtifact(videoRoot, target)
+            Files.writeString(source, "changed source")
+            assertEquals("verified output", Files.readString(publishedPath))
+            val (reopened, reused) = second.publishImportedTake(videoRoot, 0, take("loser"), stage, cancel) { }
+            assertEquals(saved, reopened)
+            assertEquals(published, reused)
+            assertEquals(1, second.open(videoRoot).takeVersions.size)
+            assertFailsWith<IllegalArgumentException> {
+                second.publishImportedTake(videoRoot, 1, take("collision").copy(
+                    provenance = take("collision").provenance!!.copy(sourceIdentity = "d".repeat(64))), stage, cancel) { }
+            }
+            assertEquals(saved, second.open(videoRoot))
+            // Hold the independent copy. Another store must still acquire the project
+            // lock and commit a revision before this publication reaches its CAS.
+            val different = take("other").copy(
+                artifact = VideoArtifact("takes/another-import/v1/preview.mp4", digest),
+                provenance = take("other").provenance!!.copy(requestId = "different"))
+            pauseCopy.set(true)
+            val writers = java.util.concurrent.Executors.newFixedThreadPool(2)
+            try {
+                val pending = writers.submit<Pair<VideoProject, VideoTakeRecord>> {
+                    first.publishImportedTake(videoRoot, saved.revision, different, stage, cancel) { }
+                }
+                assertTrue(copying.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                val updated = writers.submit<VideoProject> {
+                    second.save(videoRoot, saved.revision, saved.copy(name = "Unrelated edit", revision = saved.revision + 1))
+                }.get(5, java.util.concurrent.TimeUnit.SECONDS)
+                assertEquals("Unrelated edit", updated.name)
+                resumeCopy.countDown()
+                val conflict = assertFailsWith<java.util.concurrent.ExecutionException> {
+                    pending.get(10, java.util.concurrent.TimeUnit.SECONDS)
+                }
+                assertIs<app.melotrail.video.application.VideoProjectConcurrencyException>(conflict.cause)
+                assertEquals(updated, second.open(videoRoot))
+                assertFalse(Files.exists(videoRoot.resolve(different.artifact.relativePath)))
+                // A final source/pin digest check must likewise not hold the document
+                // lock. A concurrent save succeeds, and the publisher loses its CAS.
+                pauseCopy.set(false)
+                pauseCheck.set(true)
+                val finalCheck = writers.submit<Pair<VideoProject, VideoTakeRecord>> {
+                    var checks = 0
+                    first.publishImportedTake(videoRoot, updated.revision, different, stage, cancel) {
+                        if (++checks == 2 && pauseCheck.get()) {
+                            checking.countDown()
+                            check(resumeCheck.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                        }
+                    }
+                }
+                assertTrue(checking.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                val next = second.save(videoRoot, updated.revision,
+                    updated.copy(name = "Another edit", revision = updated.revision + 1))
+                resumeCheck.countDown()
+                val losingCheck = assertFailsWith<java.util.concurrent.ExecutionException> {
+                    finalCheck.get(10, java.util.concurrent.TimeUnit.SECONDS)
+                }
+                assertIs<app.melotrail.video.application.VideoProjectConcurrencyException>(losingCheck.cause)
+                assertEquals(next, second.open(videoRoot))
+                assertFalse(Files.exists(videoRoot.resolve(different.artifact.relativePath)))
+            } finally { resumeCopy.countDown(); resumeCheck.countDown(); writers.shutdownNow() }
+        } finally { Files.deleteIfExists(stage) }
+    }
+
+    @Test
+    fun `cancelled and failed publication leave project intact and exact orphan is reusable`() {
+        val videoRoot = root.resolve("video-project")
+        var fail = false
+        val guarded = VideoProjectStore(listOf(root.resolve("midi-projects")),
+            VideoAtomicWriteObserver { _, _ -> if (fail) error("simulated document failure") })
+        val original = guarded.create(videoRoot, emptyProject())
+        val document = videoRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val before = Files.readAllBytes(document)
+        val source = Files.writeString(root.resolve("output.mp4"), "output")
+        val digest = sha256(source)
+        val artifact = VideoArtifact("takes/import-once/v1/preview.mp4", digest)
+        val measurement = VideoTakeMeasurementRecord(digest, Files.size(source), "h264", 100, 60,
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(30, 1), 30,
+            VideoTakeRationalRecord(1, 30), 0, 30, 1, 0, 0)
+        val take = VideoTakeRecord(VideoVersionedId("take", 1), artifact, null,
+            "2026-09-13T00:03:00Z", measurement, measurement, "NONE",
+            VideoTakeProvenanceRecord("video-1", "request", "attempt", "output", "comfyui-local",
+                "a".repeat(64), "b".repeat(64), null, null, null,
+                listOf(VideoGenerationDependencyPin("source", "c".repeat(64)))))
+        val cancellation = VideoMediaProcessCancellation()
+        val stage = guarded.stageTake(videoRoot, source, digest, cancellation)
+        try {
+            val cancelled = VideoMediaProcessCancellation().also { it.cancel() }
+            assertFailsWith<Exception> { guarded.publishImportedTake(videoRoot, 0, take, stage, cancelled) { } }
+            assertFalse(Files.exists(videoRoot.resolve(artifact.relativePath)))
+            assertContentEquals(before, Files.readAllBytes(document))
+            Files.writeString(stage, "tampered")
+            assertFailsWith<IllegalArgumentException> {
+                guarded.publishImportedTake(videoRoot, 0, take, stage, cancellation) { }
+            }
+            assertFalse(Files.exists(videoRoot.resolve(artifact.relativePath)))
+            Files.writeString(stage, "output")
+            fail = true
+            assertFailsWith<VideoProjectSaveException> {
+                guarded.publishImportedTake(videoRoot, 0, take, stage, cancellation) { }
+            }
+            assertEquals(original, guarded.open(videoRoot))
+            assertContentEquals(before, Files.readAllBytes(document))
+            assertEquals("output", Files.readString(videoRoot.resolve(artifact.relativePath)))
+            fail = false
+            val (saved, _) = guarded.publishImportedTake(videoRoot, 0, take, stage, cancellation) { }
+            assertEquals(listOf(take), saved.takeVersions)
+            assertEquals(saved, guarded.open(videoRoot))
+            val after = Files.readAllBytes(document)
+            val late = VideoMediaProcessCancellation()
+            guarded.publishImportedTake(videoRoot, 0, take, stage, late) { }
+            late.cancel() // A cancellation after the committed reference cannot remove it.
+            assertContentEquals(after, Files.readAllBytes(document))
+            assertFailsWith<app.melotrail.video.application.VideoProjectConcurrencyException> {
+                guarded.publishImportedTake(videoRoot, 0, take.copy(id = VideoVersionedId("other", 1),
+                    provenance = take.provenance!!.copy(requestId = "other")), stage, cancellation) { }
+            }
+            assertContentEquals(after, Files.readAllBytes(document))
+        } finally { Files.deleteIfExists(stage) }
     }
 
     @Test

@@ -311,7 +311,18 @@ class VideoClipGeneration(
         }
         val finishedImage = scene.layers.single { it.kind == app.melotrail.video.domain.VideoLayerKind.FINISHED_SCENE }.image
         val reference = scene.source.references.single { it.original == finishedImage }
-        require(descriptor.sourceIdentity == controlledSourceIdentity(current, scene, record, reference)) {
+        val previouslyImported = current.takeVersions.any { take ->
+            take.provenance?.let { provenance ->
+                provenance.projectId == current.id && provenance.requestId == job.request.id &&
+                    provenance.attemptId == attempt.id && provenance.outputId == output.id &&
+                    provenance.executableFingerprint == job.request.requestFingerprint &&
+                    provenance.sourceIdentity == descriptor.sourceIdentity &&
+                    take.sourceMeasurement?.sha256 == output.sha256
+            } == true
+        }
+        // Admission's source fingerprint includes the project revision. Importing a take
+        // advances that revision; an exact replay must retain the original pinned identity.
+        require(previouslyImported || descriptor.sourceIdentity == controlledSourceIdentity(current, scene, record, reference)) {
             "Controlled source identity changed since admission."
         }
         val pins = (listOf(record.artifact) + record.consumedArtifacts).distinct().mapIndexed { index, artifact ->
@@ -322,7 +333,10 @@ class VideoClipGeneration(
             "Persisted prepared dependency pins changed."
         }
         VideoClipGenerationResult.Imported(resultImport.import(request.session, request.expectedRevision,
-            output, input, job.request, cancellation))
+            output, input, job.request, cancellation) {
+            coordinator.snapshot().jobs.singleOrNull { it.request.id == job.request.id }
+                ?: throw IllegalArgumentException("Durable job disappeared before take publication.")
+        })
     } catch (error: Exception) {
         VideoClipGenerationResult.Rejected(error.message ?: "Generated media could not be imported safely.")
     }

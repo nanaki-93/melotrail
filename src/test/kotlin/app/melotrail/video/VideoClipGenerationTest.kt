@@ -272,9 +272,9 @@ class VideoClipGenerationTest {
             VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
                 VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
         }
+        val resultImport = VideoResultImport(store, probe, idFactory = { "imported" }, controlledOutputRoot = publicationRoot)
         val service = VideoClipGeneration(VideoScenePreparation(), VideoJobCoordinator("domain", persistence, emptyList()),
-            VideoResultImport(store, probe, idFactory = { "imported" }, controlledOutputRoot = publicationRoot),
-            VideoMotionRenderer(), backendId, policy, projects = store)
+            resultImport, VideoMotionRenderer(), backendId, policy, projects = store)
         val command = VideoCompletedTakeImport(session, session.project.revision, request.id, attempt.id, output.id)
         val preparedPath = store.resolveArtifact(projectRoot, record.consumedArtifacts.first())
         val originalPrepared = Files.readAllBytes(preparedPath)
@@ -287,6 +287,35 @@ class VideoClipGenerationTest {
         assertIs<VideoClipGenerationResult.Rejected>(service.importCompleted(command))
         assertTrue(store.open(projectRoot).takeVersions.isEmpty())
         durationTicks = 30
+        // Mutate in the third durable-job refresh, after the outside-lock
+        // digest check but before the publication guard. Retain inode, length
+        // and mtime: the content seal must also detect the changed ctime.
+        for (path in listOf(source, preparedPath)) {
+            val original = Files.readAllBytes(path)
+            val timestamp = Files.getLastModifiedTime(path)
+            var refreshes = 0
+            try {
+                assertFailsWith<IllegalArgumentException> {
+                    resultImport.import(session, session.project.revision, output, input, request,
+                        currentJob = {
+                            if (++refreshes == 3) {
+                                val changed = original.clone()
+                                changed[0] = (changed[0].toInt() xor 1).toByte()
+                                Files.write(path, changed)
+                                Files.setLastModifiedTime(path, timestamp)
+                                assertEquals(original.size.toLong(), Files.size(path))
+                                assertEquals(timestamp, Files.getLastModifiedTime(path))
+                            }
+                            ledger.jobs.single()
+                        })
+                }
+                assertEquals(3, refreshes, "Mutation must occur at the final publication check")
+            } finally {
+                Files.write(path, original)
+                Files.setLastModifiedTime(path, timestamp)
+            }
+            assertTrue(store.open(projectRoot).takeVersions.isEmpty())
+        }
         val result = service.importCompleted(command)
         val imported = assertIs<VideoClipGenerationResult.Imported>(result, result.toString())
         assertTrue(probes > 0, "The persisted output must pass independent media validation")
@@ -316,6 +345,12 @@ class VideoClipGenerationTest {
         assertEquals(sha(source), sha(store.resolveArtifact(projectRoot, imported.result.take.artifact)))
         assertEquals(sha(source), output.sha256)
         assertEquals("owned silent controlled preview", Files.readString(source))
+        val refreshed = VideoProjectSession(projectRoot, store.open(projectRoot))
+        val replay = service.importCompleted(command.copy(session = refreshed, expectedRevision = refreshed.project.revision))
+        val reused = assertIs<VideoClipGenerationResult.Imported>(replay, replay.toString())
+        assertEquals(take, reused.result.take)
+        assertEquals(refreshed.project, reused.result.project)
+        assertEquals(1, store.open(projectRoot).takeVersions.size)
     }
 
     @Test fun `cancellation interrupts immutable take hashing and copying before publication`() {

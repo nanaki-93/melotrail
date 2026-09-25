@@ -12,6 +12,7 @@ import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoPreparedSceneRecord
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoProjectControlPaths
+import app.melotrail.video.domain.VideoTakeRecord
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
@@ -22,6 +23,8 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileTime
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -38,6 +41,7 @@ import kotlinx.serialization.json.jsonPrimitive
 class VideoProjectStore(
     protectedMidiRoots: Collection<Path>,
     private val atomicWriteObserver: VideoAtomicWriteObserver = VideoAtomicWriteObserver.NONE,
+    private val takeCopyObserver: (Path) -> Unit = {},
 ) : VideoProjectPersistence {
     private val protectedRoots = protectedMidiRoots.map { it.toAbsolutePath() }
 
@@ -105,6 +109,158 @@ class VideoProjectStore(
             project
         }
     }
+
+    /** Stage independent bytes before acquiring the document lock. The temporary is owned by
+     * this import and never becomes an externally writable alias of a published take. */
+    internal fun stageTake(projectRoot: Path, source: Path, digest: String,
+                           cancellation: VideoMediaProcessCancellation): Path {
+        val root = existingSafeRoot(validateLocation(projectRoot))
+        val stage = Files.createTempFile(root, ".take-import-", ".tmp")
+        try {
+            Files.newInputStream(source).use { input ->
+                Files.newOutputStream(stage).use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) throw cancelledTake()
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        output.write(buffer, 0, n)
+                    }
+                }
+            }
+            if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) throw cancelledTake()
+            require(sha256(stage) == digest && sha256(source) == digest) { "Take bytes changed during staging." }
+            return stage
+        } catch (error: Exception) {
+            Files.deleteIfExists(stage)
+            throw error
+        }
+    }
+
+    /** Recheck the admission and publish the reference under the same cross-instance lock as CAS.
+     * A failed document write leaves only unreferenced, immutable owned evidence. */
+    internal fun publishImportedTake(projectRoot: Path, expectedRevision: Long, take: VideoTakeRecord,
+                                     stage: Path, cancellation: VideoMediaProcessCancellation,
+                                     recheckJob: () -> Unit = {},
+                                     contentPaths: List<Path> = emptyList(),
+                                     recheck: (VideoProject) -> Unit): Pair<VideoProject, VideoTakeRecord> {
+        val root = existingSafeRoot(validateLocation(projectRoot))
+        // Expensive verification and the independent publication copy must not serialize
+        // unrelated project writers. The lock below only guards the final identity/CAS.
+        val inspected = open(root)
+        recheck(inspected)
+        require(Files.isRegularFile(stage, LinkOption.NOFOLLOW_LINKS) && stage.parent == root &&
+            !Files.isSymbolicLink(stage) && Files.size(stage) == take.publishedMeasurement!!.bytes &&
+            sha256(stage) == take.artifact.sha256) { "Staged take bytes changed." }
+        val target = root.resolve(take.artifact.relativePath)
+        require(target.startsWith(root)) { "Take path escapes project." }
+        val parent = requireNotNull(target.parent)
+        requireNoSymlinkComponents(root, parent)
+        Files.createDirectories(parent)
+        requireNoSymlinkComponents(root, parent)
+        require(parent.toRealPath().startsWith(root)) { "Take path escapes project." }
+        val temporary = Files.createTempFile(parent, ".take-publish-", ".tmp")
+        try {
+            takeCopyObserver(temporary)
+            Files.newInputStream(stage).use { input ->
+                Files.newOutputStream(temporary, StandardOpenOption.TRUNCATE_EXISTING).use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) throw cancelledTake()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) throw cancelledTake()
+            require(Files.size(temporary) == take.publishedMeasurement.bytes &&
+                sha256(temporary) == take.artifact.sha256) { "Take bytes changed during publication staging." }
+            Files.setPosixFilePermissions(temporary, java.nio.file.attribute.PosixFilePermissions.fromString("r--r--r--"))
+            // Pin every mutable input around its full digest verification. Unix change time
+            // cannot be restored by resetting mtime, unlike the metadata-only check it
+            // replaces. Require it again at commit without reading gigabytes under the lock.
+            val inputs = (contentPaths + listOf(temporary)).distinct()
+            val before = inputs.associateWith(::contentStamp)
+            recheck(inspected)
+            require(contentStamp(temporary) == before.getValue(temporary) &&
+                sha256(temporary) == take.artifact.sha256) { "Staged take bytes changed." }
+            val existingStamp = if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                val stamp = contentStamp(target)
+                verifyArtifact(root, take.artifact)
+                stamp
+            } else null
+            val existing = existingStamp != null
+            val stamps = (inputs + if (existing) listOf(target) else emptyList()).associateWith(::contentStamp)
+            require(existingStamp == stamps[target]) { "Take artifact changed during verification." }
+            require(before.all { (path, stamp) -> stamps[path] == stamp }) { "Take inputs changed during verification." }
+            return withWriteLock(root) {
+            val current = readCurrentProject(root)
+            if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) throw cancelledTake()
+            recheckJob()
+            require(stamps.all { (path, stamp) -> contentStamp(path) == stamp }) {
+                "Take inputs changed before publication."
+            }
+            // No source or artifact digest is computed under the document lock.
+            val previous = current.takeVersions.find { it.provenance?.let { p ->
+                val incoming = take.provenance!!
+                p.projectId == incoming.projectId && p.requestId == incoming.requestId &&
+                    p.attemptId == incoming.attemptId && p.outputId == incoming.outputId &&
+                    p.executableFingerprint == incoming.executableFingerprint
+            } == true }
+            // A reused identity must agree on all media and provenance, not merely on a path.
+            if (previous != null) {
+                require(previous.sourceMeasurement == take.sourceMeasurement &&
+                    previous.publishedMeasurement == take.publishedMeasurement &&
+                    previous.conversion == take.conversion && previous.provenance == take.provenance) {
+                    "Import identity collides with changed take facts."
+                }
+                if (current != inspected || !existing || previous.artifact != take.artifact) {
+                    throw VideoProjectConcurrencyException("Take appeared during publication; refresh and retry.")
+                }
+                return@withWriteLock current to previous
+            }
+            if (current != inspected || current.revision != expectedRevision) throw VideoProjectConcurrencyException(
+                "The video project changed from revision $expectedRevision to ${current.revision}.")
+            require(current.takeVersions.none { it.id == take.id }) { "Take ID already exists." }
+            // Cancellation and project publication share the same synchronization point.
+            cancellation.publishIfActive {
+                if (Thread.currentThread().isInterrupted) throw cancelledTake()
+                requireNoSymlinkComponents(root, parent)
+                require(parent.toRealPath().startsWith(root)) { "Take path escapes project." }
+                if (existing) {
+                    require(Files.exists(target, LinkOption.NOFOLLOW_LINKS)) { "Verified orphan disappeared." }
+                } else {
+                    require(!Files.exists(target, LinkOption.NOFOLLOW_LINKS)) { "Take destination appeared after verification." }
+                    publishNewFile(temporary, target)
+                }
+                val replacement = current.copy(takeVersions = current.takeVersions + take,
+                    revision = Math.addExact(expectedRevision, 1L))
+                requireAppendOnlyHistory(current, replacement)
+                publishDocument(root, projectFile(root), replacement, replace = true)
+                replacement to take
+            }
+            }
+        } finally { Files.deleteIfExists(temporary) }
+    }
+
+    /** Optimistic content seal: pair a full digest taken outside the document lock with
+     * the filesystem's non-user-restorable change time and inode identity at commit.
+     * Fail closed on filesystems without unix change-time support. */
+    private data class ContentStamp(val key: Any, val size: Long, val mtime: FileTime, val ctime: FileTime)
+
+    private fun contentStamp(path: Path): ContentStamp {
+        require(Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path)) {
+            "Verified take input is missing or unsafe: $path"
+        }
+        val attrs = Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+        val key = requireNotNull(attrs.fileKey()) { "Take input has no stable file identity: $path" }
+        val ctime = Files.getAttribute(path, "unix:ctime", LinkOption.NOFOLLOW_LINKS) as FileTime
+        return ContentStamp(key, attrs.size(), attrs.lastModifiedTime(), ctime)
+    }
+
+    private fun cancelledTake() = VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED,
+        "Take import was cancelled before publication.")
 
     fun resolveArtifact(projectRoot: Path, artifact: VideoArtifact): Path {
         val root = existingSafeRoot(validateLocation(projectRoot))
@@ -299,6 +455,12 @@ class VideoProjectStore(
         require(replacement.takeVersions.startsWith(current.takeVersions)) {
             "Take versions are immutable and append-only"
         }
+        val identities = replacement.takeVersions.map { take ->
+            val p = requireNotNull(take.provenance)
+            listOf(p.projectId, p.requestId, p.attemptId, p.outputId,
+                p.executableFingerprint)
+        }
+        require(identities.distinct().size == identities.size) { "Import identities must be unique" }
         require(replacement.exportRecords.startsWith(current.exportRecords)) {
             "Export records are immutable and append-only"
         }

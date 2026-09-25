@@ -14,6 +14,8 @@ import app.melotrail.video.domain.VideoTakeRationalRecord
 import app.melotrail.video.domain.VideoTakeProvenanceRecord
 import app.melotrail.video.domain.VideoVersionedId
 import app.melotrail.video.domain.VideoGenerationJobRequest
+import app.melotrail.video.domain.VideoGenerationJob
+import app.melotrail.video.domain.VideoGenerationAttemptStatus
 import app.melotrail.video.domain.VideoPreparedScene
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -62,6 +64,7 @@ class VideoResultImport(
         input: VideoControlledMotionGenerationInput,
         request: VideoGenerationJobRequest,
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
+        currentJob: () -> VideoGenerationJob = { throw IllegalStateException("A durable job refresh is required for publication.") },
     ): VideoImportedTake {
         require(!cancellation.isCancelled()) { "Take import was cancelled." }
         require(session.project.revision == expectedRevision) { "Project revision changed before take import." }
@@ -100,9 +103,6 @@ class VideoResultImport(
             } && verified.audioStreamCount == 0) {
             "Measured media facts do not match persisted controlled motion settings."
         }
-        val facts = VideoTakeMediaFacts(verified.decodedFrameCount,
-            verified.frameRate.numerator.toDouble() / verified.frameRate.denominator,
-            validation.source.width, validation.source.height, verified.width, verified.height, validation.conversion.name)
         require(Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) { "Output changed during media validation." }
         verifyPins(input.motion.preparedPins, session.root, cancellation)
 
@@ -111,11 +111,15 @@ class VideoResultImport(
         if (current.revision != expectedRevision || current.id != session.project.id) {
             throw VideoProjectConcurrencyException("Video project changed while the take was being validated.")
         }
+        // Identity-derived artifact path permits recovery of a matching orphan after a failed
+        // document save, without relying on the newly allocated record ID for its location.
+        val identity = listOf(current.id, request.id, output.attemptId, output.id,
+            request.requestFingerprint, requireNotNull(output.sha256)).joinToString("\u0000")
+        val identityHash = MessageDigest.getInstance("SHA-256")
+            .digest(identity.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
         val id = VideoVersionedId(idFactory(), 1)
-        require(current.takeVersions.none { it.id.id == id.id }) { "Take ID already exists; use a new immutable take ID." }
-        val takePath = "takes/${id.id}/v${id.version}/preview.mp4"
-        val artifact = projects.copyImmutableArtifact(session.root, validatedOutput, takePath, validatedDigest, cancellation)
-        require(!cancellation.isCancelled() && !Thread.currentThread().isInterrupted) { "Take import was cancelled before publication." }
+        val takePath = "takes/import-$identityHash/v1/preview.mp4"
+        val artifact = VideoArtifact(takePath, validatedDigest)
         // The finished reference is a scene-source ID, NOT the persisted look ID.
         val scene = Json.decodeFromJsonElement<VideoPreparedScene>(
             Json.parseToJsonElement(input.motion.descriptor.requestJson).jsonObject.getValue("preparedScene"),
@@ -132,15 +136,46 @@ class VideoResultImport(
             reference.id, sceneRecord.id, sceneRecord.sourceLookId, input.dependencyPins)
         val take = VideoTakeRecord(id, artifact, sceneRecord.sourceLookId, Instant.now(clock).toString(),
             validation.source.toRecord(), verified.toRecord(), validation.conversion.name, provenance)
-        val replacement = current.copy(takeVersions = current.takeVersions + take, revision = Math.addExact(expectedRevision, 1L))
+        val stage = projects.stageTake(session.root, validatedOutput, validatedDigest, cancellation)
+        // Bulk decode, staging and its verification are already outside the lock. A
+        // final digest of each externally writable input is still necessary at commit:
+        // file keys, length and timestamps cannot attest to unchanged content.
         try {
-            val saved = projects.save(session.root, expectedRevision, replacement)
-            return VideoImportedTake(saved, take, facts)
-        } catch (error: Exception) {
-            // The immutable bytes may remain as orphaned evidence, but the project and prior takes
-            // remain authoritative. Never remove or overwrite an existing artifact.
-            throw error
-        }
+            val (saved, published) = projects.publishImportedTake(session.root, expectedRevision, take,
+                stage, cancellation, recheckJob = {
+                    checkCurrentJob(currentJob(), request, output)
+                }, contentPaths = listOf(source) + input.motion.preparedPins.map {
+                    Path.of(requireNotNull(it.ownedPath))
+                }) { latest ->
+                require(latest.id == current.id) { "Project identity changed before publication." }
+                checkCurrentJob(currentJob(), request, output)
+                require(latest.preparedSceneVersions.any { it == sceneRecord } &&
+                    latest.referenceVersions.any { it.id == reference.id } &&
+                    (sceneRecord.sourceLookId == null || latest.lookVersions.any { it.id == sceneRecord.sourceLookId })) {
+                    "Consumed project identities changed before publication."
+                }
+                verifyPins(input.motion.preparedPins, session.root, cancellation)
+                require(Files.isRegularFile(source, NOFOLLOW_LINKS) && source.toRealPath() == source &&
+                    Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) {
+                    "Completed output changed before publication."
+                }
+            }
+            return VideoImportedTake(saved, published, VideoTakeMediaFacts(
+                published.publishedMeasurement!!.decodedFrameCount,
+                published.publishedMeasurement.frameRate.let { it.numerator.toDouble() / it.denominator },
+                published.sourceMeasurement!!.width, published.sourceMeasurement.height,
+                published.publishedMeasurement.width, published.publishedMeasurement.height,
+                published.conversion!!))
+        } finally { Files.deleteIfExists(stage) }
+    }
+
+    private fun checkCurrentJob(job: VideoGenerationJob, request: VideoGenerationJobRequest,
+                                output: VideoGenerationOutput) {
+        require(job.request == request && job.attempts.lastOrNull()?.let {
+            it.id == output.attemptId && it.status == VideoGenerationAttemptStatus.SUCCEEDED
+        } == true && job.currentOutputId == output.id && job.outputs.singleOrNull {
+            it.id == output.id && it.attemptId == output.attemptId
+        } == output) { "Current durable attempt or output changed before publication." }
     }
 
     private fun VideoSourceMeasurement.toRecord() = VideoTakeMeasurementRecord(
