@@ -292,6 +292,15 @@ rows are DONE; native preview delivery remains VG2-03, WAITING_USER. Flat I2V is
 still exactly 129 frames at 25 fps (5.16 seconds), not long generative coherence.
 No graph/profile, MIDI, artwork or prior evidence bytes were changed by this run.
 
+Step 3.2: candidate `6b8fe566f` passed owned motion-fixture generation, both Node
+motion suites (22/22, explicit `/opt/homebrew/bin/node`), fresh architecture and
+documentation checks (6 executed), and uncached desktop tests (11 executed).
+`make test` passed (1 executed, 13 up-to-date), `make build` passed (14 up-to-date),
+and diff check passed. Logs `build/vg2/vg02-continuation/3.2-*.log`.
+No optional video runtime was added to MIDI composition/startup, no new MIDI
+player or Video UI was introduced, and no model inference or hosted activity ran.
+Fixture motion and desktop tests are not visual, musical or release approval.
+
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
   `VideoJobCoordinator.kt`, `core/video/domain/VideoGenerationJob.kt`,
