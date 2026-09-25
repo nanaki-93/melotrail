@@ -17,6 +17,9 @@ import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.attribute.BasicFileAttributes
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.security.MessageDigest
 import java.time.Duration
 import java.util.Locale
@@ -38,6 +41,32 @@ data class VideoMediaMetadata(
     val decodedFrameCount: Long?,
     val audioStreamCount: Int,
 )
+
+data class VideoMediaRational(val numerator: Long, val denominator: Long) {
+    init { require(numerator >= 0 && denominator > 0) }
+    fun seconds(ticks: Long): Double = BigDecimal.valueOf(ticks).multiply(BigDecimal.valueOf(numerator))
+        .divide(BigDecimal.valueOf(denominator), java.math.MathContext.DECIMAL128).toDouble()
+}
+
+/** Facts from the original bytes, not a container-wide (possibly audio-tailed) duration. */
+data class VideoSourceMeasurement(
+    val sha256: String,
+    val bytes: Long,
+    val videoCodec: String,
+    val width: Int,
+    val height: Int,
+    val sampleAspectRatio: VideoMediaRational,
+    val frameRate: VideoMediaRational,
+    val decodedFrameCount: Long,
+    val videoTimeBase: VideoMediaRational,
+    val videoStartPts: Long,
+    val videoDurationPts: Long,
+    val videoStreamCount: Int,
+    val audioStreamCount: Int,
+    val otherStreamCount: Int,
+) {
+    val durationSeconds: Double get() = videoTimeBase.seconds(videoDurationPts)
+}
 
 data class VideoMediaProbeResult(
     val outputDirectory: Path,
@@ -81,9 +110,36 @@ class VideoMediaProbe internal constructor(
     fun inspectTake(
         request: VideoMediaProbeRequest,
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
-    ): VideoMediaMetadata {
-        val output = validateTake(request)
-        return output.first
+    ): VideoSourceMeasurement {
+        checkCancelled(cancellation)
+        val validated = validate(request)
+        checkCancelled(cancellation)
+        val output = createPrivateDirectory(validated.outputDirectory, "source measurement output")
+        val operations = mutableListOf<OperationEvidence>()
+        try {
+            val ffmpegVersion = invoke("source-ffmpeg-version", validated.ffmpeg, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
+            val ffprobeVersion = invoke("source-ffprobe-version", validated.ffprobe, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
+            verifyReportedBuild(ffmpegVersion, validated.manifest, "ffmpeg")
+            verifyReportedBuild(ffprobeVersion, validated.manifest, "ffprobe")
+            checkCancelled(cancellation)
+            val before = Files.readAttributes(validated.input, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
+            val digest = sha256(validated.input, cancellation)
+            val result = invoke("source-streams", validated.ffprobe, listOf(
+                "-v", "error", "-protocol_whitelist", "file,pipe", "-count_frames",
+                "-show_entries", "stream=codec_type,codec_name,width,height,sample_aspect_ratio,avg_frame_rate,nb_read_frames,time_base,start_pts,duration_ts",
+                "-of", "json", validated.input.toString(),
+            ), output, request, cancellation, operations)
+            val measurement = parseSource(result.stdout.text, digest, before.size())
+            decodeFully("source-full-decode", validated.ffmpeg, validated.input, output, request, cancellation, operations)
+            val after = Files.readAttributes(validated.input, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
+            if (before.fileKey() != after.fileKey() || before.size() != after.size() ||
+                before.lastModifiedTime() != after.lastModifiedTime() || sha256(validated.input, cancellation) != digest
+            ) invalidOutput("Source video changed during measurement.")
+            checkCancelled(cancellation)
+            return measurement
+        } catch (error: VideoMediaProbeException) { throw error }
+        catch (error: VideoMediaProcessException) { throw error }
+        catch (error: Exception) { throw storageFailure("Source measurement failed: ${usefulMessage(error)}", error) }
     }
 
     /** Returns validated metadata and, when needed, an audio-stripped immutable candidate. */
@@ -357,6 +413,7 @@ class VideoMediaProbe internal constructor(
                 cancellation,
             ).also { evidence += OperationEvidence(operation, it.elapsed.toMillis()) }
         } catch (error: VideoMediaProcessException) {
+            if (error.failure == VideoMediaProcessFailure.CANCELLED) throw error
             val diskFull = hasDiskExhaustionDiagnostic(error.message, error.stderr.text)
             throw VideoMediaProbeException(
                 if (diskFull) VideoMediaProbeFailure.DISK_EXHAUSTED else VideoMediaProbeFailure.PROCESS_FAILED,
@@ -424,6 +481,46 @@ class VideoMediaProbe internal constructor(
         "-c:v", "h264_videotoolbox", "-allow_sw", "0", "-pix_fmt", "yuv420p",
         "-movflags", "+faststart", "-f", "mp4", ENCODED_VIDEO_NAME,
     )
+
+    private fun parseSource(text: String, digest: String, bytes: Long): VideoSourceMeasurement {
+        val operation = "source-streams"
+        val root = try { MANIFEST_JSON.parseToJsonElement(text).jsonObject }
+            catch (error: Exception) { invalidMedia("$operation returned invalid JSON.", operation, error) }
+        val streams = root["streams"] as? JsonArray ?: invalidMedia("$operation returned no stream list.", operation)
+        val entries = try { streams.map { it.jsonObject } }
+            catch (error: Exception) { invalidMedia("$operation returned invalid streams.", operation, error) }
+        val videos = entries.filter { it["codec_type"]?.jsonPrimitive?.content == "video" }
+        if (videos.size != 1) invalidMedia("$operation found ${videos.size} video streams; expected one.", operation)
+        val video = videos.single()
+        fun field(name: String): String = (video[name] as? JsonPrimitive)?.content
+            ?: invalidMedia("$operation is missing $name.", operation)
+        fun positiveInt(name: String): Int = field(name).toIntOrNull()?.takeIf { it > 0 }
+            ?: invalidMedia("$operation has invalid $name.", operation)
+        fun rational(name: String, allowZero: Boolean = false): VideoMediaRational {
+            val value = field(name)
+            // ffprobe prints sample_aspect_ratio as "1:1", while rates/time bases use "n/d".
+            val parts = value.split(if (name == "sample_aspect_ratio") ':' else '/')
+            if (parts.size != 2) invalidMedia("$operation has invalid $name: $value.", operation)
+            val n = parts[0].toLongOrNull() ?: invalidMedia("$operation has invalid $name: $value.", operation)
+            val d = parts[1].toLongOrNull() ?: invalidMedia("$operation has invalid $name: $value.", operation)
+            if (n < 0 || (!allowZero && n == 0L) || d <= 0) invalidMedia("$operation has invalid $name: $value.", operation)
+            val gcd = BigInteger.valueOf(n).gcd(BigInteger.valueOf(d)).longValueExact()
+            return VideoMediaRational(n / gcd, d / gcd)
+        }
+        val frames = field("nb_read_frames").toLongOrNull()?.takeIf { it > 0 }
+            ?: invalidMedia("$operation has no positive decoded frame count.", operation)
+        val start = field("start_pts").toLongOrNull() ?: invalidMedia("$operation has invalid start_pts.", operation)
+        val duration = field("duration_ts").toLongOrNull()?.takeIf { it > 0 }
+            ?: invalidMedia("$operation has invalid duration_ts.", operation)
+        val base = rational("time_base")
+        if (!base.seconds(duration).isFinite() || base.seconds(duration) <= 0) invalidMedia("$operation has invalid video duration.", operation)
+        return VideoSourceMeasurement(
+            digest, bytes, field("codec_name"), positiveInt("width"), positiveInt("height"),
+            rational("sample_aspect_ratio"), rational("avg_frame_rate"), frames, base, start, duration,
+            videos.size, entries.count { it["codec_type"]?.jsonPrimitive?.content == "audio" },
+            entries.size - videos.size - entries.count { it["codec_type"]?.jsonPrimitive?.content == "audio" },
+        ).also { if (it.videoCodec.isBlank() || it.otherStreamCount != 0) invalidMedia("$operation has an unsupported or ambiguous stream.", operation) }
+    }
 
     private fun parseMetadata(text: String, operation: String): VideoMediaMetadata {
         val root = try {
@@ -561,11 +658,18 @@ class VideoMediaProbe internal constructor(
         return path
     }
 
-    private fun sha256(path: Path): String {
+    private fun checkCancelled(cancellation: VideoMediaProcessCancellation) {
+        if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) {
+            throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Video source measurement cancelled.")
+        }
+    }
+
+    private fun sha256(path: Path, cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): String {
         val digest = MessageDigest.getInstance("SHA-256")
         Files.newInputStream(path).use { input ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             while (true) {
+                checkCancelled(cancellation)
                 val count = input.read(buffer)
                 if (count < 0) break
                 digest.update(buffer, 0, count)
