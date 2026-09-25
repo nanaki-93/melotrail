@@ -272,6 +272,14 @@ source tampering and noncurrent attempt IDs while preserving published takes.
 Fresh host/coordinator/import/generation suites (6 executed), full test/build and
 diff checks passed; logs `build/vg2/vg02-continuation/2.2-*.log`.
 
+Step 2.3 — WAITING_USER: no native preview or media probe was launched. Still
+required: explicit authorization for the sequential 150/600/900-frame native run
+under the existing per-job 600-second / 4-GiB memory / 2-GiB staging / 2-GiB output
+ceilings, and selected canonical tools-directory, Node-executable, Canvas-manifest
+and absent output paths under `build/vg2/`. Historical installed paths are not a
+new selection or authorization. Full native decode/motion/recovery receipts remain
+missing; this gate and VG2-03 cannot close. Independent integration proceeds.
+
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
   `VideoJobCoordinator.kt`, `core/video/domain/VideoGenerationJob.kt`,
