@@ -945,6 +945,8 @@ data class VideoGenerationAttempt(
     val failure: String? = null,
     val actualCostMicros: Long? = null,
     val resourceUsage: VideoGenerationResourceUsage? = null,
+    /** Controlled worker checkpoint; not a substitute for verifying the sealed media receipt. */
+    val controlledEvidence: VideoControlledAttemptEvidence? = null,
 ) {
     init {
         requireVideoJobId(id, "Video attempt")
@@ -962,6 +964,10 @@ data class VideoGenerationAttempt(
         require(failure == null || failure.isNotBlank() && failure.length <= 2_000 && failure.none(Char::isISOControl)) {
             "Video attempt failure is invalid"
         }
+        controlledEvidence?.let { evidence ->
+            require(submissionPhase != VideoSubmissionPhase.READY && submissionPhase != VideoSubmissionPhase.NOT_STARTED)
+            require(evidence.output == null || evidence.stage == VideoControlledStage.COMPLETED)
+        }
         if (status.isTerminal) require(finishedAt != null) { "A terminal video attempt needs a completion time" }
         if (!status.isTerminal) require(finishedAt == null) { "A non-terminal video attempt cannot have a completion time" }
         if (submissionPhase == VideoSubmissionPhase.READY) require(
@@ -974,6 +980,40 @@ data class VideoGenerationAttempt(
         if (submissionPhase == VideoSubmissionPhase.NOT_STARTED) require(status.isTerminal) {
             "A conclusive not-started submission must be terminal"
         }
+    }
+}
+
+@Serializable
+enum class VideoControlledStage { CLAIMED, RENDERING, ENCODING, COMPLETED, FAILED, CANCELLED }
+
+@Serializable
+data class VideoControlledAttemptEvidence(
+    val stage: VideoControlledStage,
+    val output: VideoControlledOutputEvidence? = null,
+    val failure: String? = null,
+    val retryable: Boolean = false,
+    val lastActiveStage: VideoControlledStage? = null,
+) {
+    init {
+        require(lastActiveStage == null || stage in setOf(VideoControlledStage.FAILED, VideoControlledStage.CANCELLED) &&
+            lastActiveStage in setOf(VideoControlledStage.CLAIMED, VideoControlledStage.RENDERING, VideoControlledStage.ENCODING))
+        require((stage == VideoControlledStage.COMPLETED) == (output != null))
+        require(failure == null || stage == VideoControlledStage.FAILED && failure.isNotBlank() && failure.length <= 2_000)
+        require(!retryable || stage == VideoControlledStage.FAILED)
+    }
+}
+
+@Serializable
+data class VideoControlledOutputEvidence(
+    val backendOutputId: String,
+    val relativePath: String,
+    val sha256: String,
+    val byteCount: Long,
+) {
+    init {
+        requireVideoJobId(backendOutputId, "Controlled output")
+        VideoArtifact(relativePath, sha256)
+        require(byteCount > 0)
     }
 }
 

@@ -3,6 +3,7 @@ package app.melotrail.video.adapter
 import app.melotrail.video.application.VideoJobConcurrencyException
 import app.melotrail.video.application.VideoJobPersistence
 import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import app.melotrail.video.domain.VideoControlledStage
 import app.melotrail.video.domain.controlledMotionRequestFingerprint
 import app.melotrail.video.domain.VideoGenerationAttempt
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
@@ -131,7 +132,7 @@ class VideoJobStore(
         require(attempt.status == VideoGenerationAttemptStatus.SUBMITTING &&
             attempt.submissionPhase == VideoSubmissionPhase.READY &&
             attempt.providerWorkId == null && attempt.progressPercent == null && attempt.finishedAt == null &&
-            attempt.actualCostMicros == null && attempt.resourceUsage == null
+            attempt.actualCostMicros == null && attempt.resourceUsage == null && attempt.controlledEvidence == null
         ) { "A new video attempt must persist unlaunched durable ownership" }
     }
 
@@ -152,6 +153,15 @@ class VideoJobStore(
             "Recorded actual cost is immutable"
         }
         requireResourceUsageExtension(old.resourceUsage, new.resourceUsage)
+        val previous = old.controlledEvidence
+        val next = new.controlledEvidence
+        require(previous == null || next != null) { "Controlled execution evidence cannot be removed" }
+        if (previous != null && next != null) {
+            if (next.stage in setOf(VideoControlledStage.FAILED, VideoControlledStage.CANCELLED) && previous != next)
+                require(next.lastActiveStage == previous.stage) { "Controlled failure must retain its last active stage" }
+            require(previous == next || previous.stage in setOf(VideoControlledStage.CLAIMED, VideoControlledStage.RENDERING, VideoControlledStage.ENCODING) &&
+                next.stage.ordinal > previous.stage.ordinal) { "Controlled execution evidence cannot be replaced or regressed" }
+        }
         require(new.submissionPhase in allowedSubmissionPhases(old.submissionPhase)) {
             "Invalid submission phase transition ${old.submissionPhase} -> ${new.submissionPhase}"
         }
@@ -389,7 +399,7 @@ class VideoJobStoreException(
 
 private object VideoJobSchema {
     private const val SCHEMA = "melotrail-video-jobs"
-    private const val VERSION = 5
+    private const val VERSION = 6
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true

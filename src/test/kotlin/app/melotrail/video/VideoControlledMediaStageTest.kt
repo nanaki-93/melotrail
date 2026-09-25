@@ -80,6 +80,314 @@ class VideoControlledMediaStageTest {
         } finally { release.countDown() }
     }
 
+    @Test fun `reopen promotes only sealed owned completion and rejects changed bytes without relaunch`() {
+        val root = Files.createTempDirectory("controlled-reopen-").toRealPath()
+        val project = Files.createDirectory(root.resolve("project"))
+        val outputs = Files.createDirectory(project.resolve("attempts"))
+        val domain = "domain-${root.fileName}"
+        val midi = Files.createDirectory(root.resolve("midi"))
+        val store = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+        val input = input()
+        val request = VideoGenerationJobRequest("request", "video-project", VideoControlledMediaStage.BACKEND_ID,
+            emptyList(), input, controlledMotionRequestFingerprint(VideoControlledMediaStage.BACKEND_ID, input, emptyList(), 2),
+            2, Instant.now(clock).toString(), input.media.execution)
+        val initial = store.loadOrCreate(domain, Instant.now(clock).toString())
+        val attempt = VideoGenerationAttempt("attempt", request.id, 1, "owner", VideoGenerationAttemptStatus.SUBMITTING,
+            VideoSubmissionPhase.READY, Instant.now(clock).toString())
+        val admitted = store.compareAndSet(initial.revision, initial.copy(revision = initial.revision + 1,
+            jobs = listOf(VideoGenerationJob(request, listOf(attempt)))))
+        val claimed = attempt.copy(submissionPhase = VideoSubmissionPhase.PENDING,
+            controlledEvidence = VideoControlledAttemptEvidence(VideoControlledStage.ENCODING))
+        store.compareAndSet(admitted.revision, admitted.copy(revision = admitted.revision + 1,
+            jobs = listOf(VideoGenerationJob(request, listOf(claimed)))))
+        val directory = Files.createDirectory(outputs.resolve(attempt.id))
+        val file = directory.resolve("preview.mp4")
+        Files.write(file, byteArrayOf(1, 2, 3, 4))
+        val reopened = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+        val stage = VideoControlledMediaStage(reopened, domain, project, outputs, clock = clock)
+        val coordinator = VideoJobCoordinator(domain, reopened, listOf(stage), clock = clock)
+        val unresolved = assertIs<VideoJobResult.Accepted>(coordinator.reconcile(request.id)).attempt!!
+        assertEquals(VideoGenerationAttemptStatus.SUBMISSION_UNCERTAIN, unresolved.status)
+        assertEquals(VideoJobProblemCode.RETRY_NOT_ALLOWED, assertIs<VideoJobResult.Rejected>(coordinator.retry(request.id)).problem.code)
+        val cancelling = assertIs<VideoJobResult.Accepted>(coordinator.cancel(request.id)).attempt!!
+        assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED, cancelling.status)
+        assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED,
+            assertIs<VideoJobResult.Accepted>(coordinator.reconcile(request.id)).attempt!!.status)
+        val receipt = directory.resolve("completion.json")
+        fun sealReceipt(outputId: String, relativePath: String, media: Path) {
+            if (Files.exists(receipt)) Files.setPosixFilePermissions(receipt,
+                java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"))
+            Files.writeString(receipt, buildJsonObject {
+                put("requestId", request.id); put("attemptId", attempt.id)
+                put("ownershipToken", attempt.ownershipToken); put("fingerprint", request.requestFingerprint)
+                put("output", buildJsonObject {
+                    put("backendOutputId", outputId); put("relativePath", relativePath)
+                    put("sha256", digest(media)); put("byteCount", Files.size(media))
+                })
+            }.toString())
+            Files.setPosixFilePermissions(receipt, java.nio.file.attribute.PosixFilePermissions.fromString("r--------"))
+        }
+        val older = Files.createDirectory(outputs.resolve("older-attempt")).resolve("preview.mp4")
+        Files.write(older, byteArrayOf(5, 6, 7, 8))
+        sealReceipt("attempt-preview", "older-attempt/preview.mp4", older)
+        assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED,
+            assertIs<VideoJobResult.Accepted>(coordinator.reconcile(request.id)).attempt!!.status)
+        assertTrue(reopened.snapshot().jobs.single().outputs.isEmpty(), "Another attempt's bytes must not be promoted")
+        sealReceipt("older-preview", "attempt/preview.mp4", file)
+        assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED,
+            assertIs<VideoJobResult.Accepted>(coordinator.reconcile(request.id)).attempt!!.status)
+        assertTrue(reopened.snapshot().jobs.single().outputs.isEmpty(), "Another output ID must not be promoted")
+        sealReceipt("attempt-preview", "attempt/preview.mp4", file)
+        val first = assertIs<VideoJobResult.Accepted>(coordinator.reconcile(request.id)).job
+        assertEquals(VideoGenerationAttemptStatus.SUCCEEDED, first.attempts.single().status)
+        assertEquals(1, first.outputs.size)
+        assertEquals("attempt-preview", first.currentOutputId)
+        assertEquals(first, assertIs<VideoJobResult.Accepted>(coordinator.reconcile(request.id)).job)
+        val ledger = reopened.snapshot()
+        assertFailsWith<IllegalArgumentException> {
+            reopened.compareAndSet(ledger.revision, ledger.copy(revision = ledger.revision + 1,
+                jobs = listOf(first.copy(attempts = listOf(first.attempts.single().copy(controlledEvidence = null))))))
+        }
+        assertEquals(ledger, reopened.snapshot())
+        assertEquals(VideoJobProblemCode.RETRY_NOT_ALLOWED, assertIs<VideoJobResult.Rejected>(coordinator.retry(request.id)).problem.code)
+        Files.write(file, byteArrayOf(9, 8, 7, 6))
+        assertEquals(VideoJobProblemCode.PERSISTENCE_FAILED,
+            assertIs<VideoJobResult.Rejected>(coordinator.reconcile(request.id)).problem.code)
+        assertEquals(first, reopened.snapshot().jobs.single())
+    }
+
+    @Test fun `confirmed worker failure survives restart and only explicit bounded retry launches`() {
+        val root = Files.createTempDirectory("controlled-terminal-").toRealPath()
+        val domain = "domain-${root.fileName}"
+        val midi = Files.createDirectory(root.resolve("midi"))
+        val store = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+        val calls = AtomicInteger()
+        fun stage(persistence: VideoJobPersistence) = VideoControlledMediaStage(persistence, domain,
+            { _, _, _ -> calls.incrementAndGet(); VideoBackendObservation.Failed(null, "verified fixture stop", true) }, clock)
+        val input = input()
+        val request = VideoGenerationJobRequest("request", "video-project", VideoControlledMediaStage.BACKEND_ID,
+            emptyList(), input, controlledMotionRequestFingerprint(VideoControlledMediaStage.BACKEND_ID, input, emptyList(), 2),
+            2, Instant.now(clock).toString(), input.media.execution)
+        var n = 0
+        fun coordinator(persistence: VideoJobPersistence) = VideoJobCoordinator(domain, persistence, listOf(stage(persistence)), clock = clock,
+            attemptIdFactory = { "attempt-${++n}" }, ownershipTokenFactory = { "owner-$n" })
+        val first = assertIs<VideoJobResult.Accepted>(coordinator(store).submit(request)).attempt!!
+        val reopened = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+        val restored = coordinator(reopened)
+        val until = System.nanoTime() + Duration.ofSeconds(5).toNanos()
+        while (reopened.snapshot().jobs.single().attempts.single().controlledEvidence?.stage != VideoControlledStage.FAILED &&
+            System.nanoTime() < until) Thread.sleep(10)
+        val failed = assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!
+        assertEquals(VideoGenerationAttemptStatus.FAILED, failed.status)
+        assertTrue(failed.retryable)
+        assertEquals(1, calls.get())
+        val retry = assertIs<VideoJobResult.Accepted>(restored.retry(request.id)).attempt!!
+        assertNotEquals(first.id, retry.id)
+        val stale = VideoOwnedBackendAttempt(request.id, request.requestFingerprint, first.id, first.ownershipToken,
+            VideoControlledMediaStage.BACKEND_ID, null)
+        assertIs<VideoBackendObservation.Unknown>(stage(reopened).observe(stale))
+        assertIs<VideoBackendCancellation.Unknown>(stage(reopened).requestCancellation(stale))
+        while (reopened.snapshot().jobs.single().attempts.last().controlledEvidence?.stage != VideoControlledStage.FAILED &&
+            System.nanoTime() < until) Thread.sleep(10)
+        assertEquals(VideoGenerationAttemptStatus.FAILED,
+            assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!.status)
+        assertEquals(VideoJobProblemCode.ATTEMPT_LIMIT_REACHED,
+            assertIs<VideoJobResult.Rejected>(restored.retry(request.id)).problem.code)
+        assertEquals(2, calls.get())
+    }
+
+    @Test fun `cancellation request retains admission until owned worker confirms stop`() {
+        val root = Files.createTempDirectory("controlled-stop-").toRealPath()
+        val domain = "domain-${root.fileName}"
+        val midi = Files.createDirectory(root.resolve("midi"))
+        val store = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val worker = VideoControlledMediaStage(store, domain, { _, _, cancellation ->
+            entered.countDown()
+            assertTrue(release.await(5, TimeUnit.SECONDS))
+            assertTrue(cancellation.isCancelled())
+            VideoBackendObservation.Cancelled(null)
+        }, clock)
+        val input = input()
+        val request = VideoGenerationJobRequest("request", "video-project", worker.backendId, emptyList(), input,
+            controlledMotionRequestFingerprint(worker.backendId, input, emptyList(), 2), 2,
+            Instant.now(clock).toString(), input.media.execution)
+        val coordinator = VideoJobCoordinator(domain, store, listOf(worker), clock = clock)
+        val attempt = assertIs<VideoJobResult.Accepted>(coordinator.submit(request)).attempt!!
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED,
+                assertIs<VideoJobResult.Accepted>(coordinator.cancel(request.id)).attempt!!.status)
+            val reopened = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+            val restored = VideoJobCoordinator(domain, reopened,
+                listOf(VideoControlledMediaStage(reopened, domain, { _, _, _ -> error("must not relaunch") }, clock)), clock = clock)
+            assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED,
+                assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!.status)
+            assertEquals(VideoJobProblemCode.RETRY_NOT_ALLOWED,
+                assertIs<VideoJobResult.Rejected>(restored.retry(request.id)).problem.code)
+            release.countDown()
+            val until = System.nanoTime() + Duration.ofSeconds(5).toNanos()
+            while (reopened.snapshot().jobs.single().attempts.single().controlledEvidence?.stage != VideoControlledStage.CANCELLED &&
+                System.nanoTime() < until) Thread.sleep(10)
+            val stopped = assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!
+            assertEquals(attempt.id, stopped.id)
+            assertEquals(VideoGenerationAttemptStatus.CANCELLED, stopped.status)
+            assertTrue(stopped.retryable)
+        } finally { release.countDown() }
+    }
+
+    @Test fun `claimed attempt denied a native slot is confirmed failed on reconciliation and retryable`() {
+        val root = Files.createTempDirectory("controlled-slot-stop-")
+        val midi = Files.createDirectory(root.resolve("midi"))
+        val occupied = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val firstDomain = "first-${root.fileName}"
+        val firstStore = VideoJobStore(root.resolve("first-jobs"), firstDomain, listOf(midi))
+        val firstStage = VideoControlledMediaStage(firstStore, firstDomain, { _, _, _ ->
+            occupied.countDown()
+            check(release.await(10, TimeUnit.SECONDS))
+            VideoBackendObservation.Failed(null, "fixture stopped", true)
+        }, clock, boundedNative = true)
+        val first = VideoJobCoordinator(firstDomain, firstStore, listOf(firstStage), clock = clock)
+        try {
+            assertIs<VideoJobResult.Accepted>(first.submit(controlledRequest(firstStage.backendId)))
+            assertTrue(occupied.await(5, TimeUnit.SECONDS))
+            val domain = "second-${root.fileName}"
+            val store = VideoJobStore(root.resolve("second-jobs"), domain, listOf(midi))
+            val calls = AtomicInteger()
+            val stage = VideoControlledMediaStage(store, domain, { _, _, _ ->
+                calls.incrementAndGet(); error("must not run")
+            }, clock, boundedNative = true)
+            val coordinator = VideoJobCoordinator(domain, store, listOf(stage), clock = clock)
+            val request = controlledRequest(stage.backendId)
+            val submitted = assertIs<VideoJobResult.Accepted>(coordinator.submit(request)).attempt!!
+            assertEquals(VideoControlledStage.FAILED, store.snapshot().jobs.single().attempts.single().controlledEvidence?.stage)
+            assertEquals(VideoGenerationAttemptStatus.FAILED, submitted.status)
+            assertTrue(submitted.retryable)
+            val reopened = VideoJobStore(root.resolve("second-jobs"), domain, listOf(midi))
+            val restored = VideoJobCoordinator(domain, reopened, listOf(VideoControlledMediaStage(reopened, domain,
+                { _, _, _ -> error("recovery must not relaunch") }, clock)), clock = clock)
+            val failed = assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!
+            assertEquals(submitted.id, failed.id)
+            assertEquals(VideoGenerationAttemptStatus.FAILED, failed.status)
+            assertTrue(failed.retryable)
+            assertEquals(0, calls.get())
+            // The acknowledged no-start terminal state releases admission without a blind relaunch.
+            assertEquals(2, assertIs<VideoJobResult.Accepted>(restored.retry(request.id)).attempt!!.number)
+        } finally { release.countDown() }
+    }
+
+    @Test fun `queue rejection records confirmed no-start and does not leave a phantom worker`() {
+        val root = Files.createTempDirectory("controlled-queue-stop-")
+        val domain = "domain-${root.fileName}"
+        val store = VideoJobStore(root.resolve("jobs"), domain, listOf(Files.createDirectory(root.resolve("midi"))))
+        val calls = AtomicInteger()
+        val stage = VideoControlledMediaStage(store, domain, { _, _, _ ->
+            calls.incrementAndGet(); error("must not run")
+        }, clock, queueWork = { throw java.util.concurrent.RejectedExecutionException("queue closed") })
+        val request = controlledRequest(stage.backendId)
+        val coordinator = VideoJobCoordinator(domain, store, listOf(stage), clock = clock)
+        val submitted = assertIs<VideoJobResult.Accepted>(coordinator.submit(request)).attempt!!
+        assertEquals(VideoGenerationAttemptStatus.FAILED, submitted.status)
+        assertTrue(submitted.retryable)
+        val evidence = requireNotNull(store.snapshot().jobs.single().attempts.single().controlledEvidence)
+        assertEquals(VideoControlledStage.FAILED, evidence.stage)
+        assertTrue(evidence.retryable)
+        assertContains(requireNotNull(evidence.failure), "queue closed")
+        val reopened = VideoJobStore(root.resolve("jobs"), domain, listOf(Files.createDirectory(root.resolve("other-midi"))))
+        val restored = VideoJobCoordinator(domain, reopened, listOf(VideoControlledMediaStage(reopened, domain,
+            { _, _, _ -> error("recovery must not relaunch") }, clock)), clock = clock)
+        assertEquals(VideoGenerationAttemptStatus.FAILED,
+            assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!.status)
+        assertEquals(0, calls.get())
+        assertEquals(2, assertIs<VideoJobResult.Accepted>(restored.retry(request.id)).attempt!!.number)
+    }
+
+    @Test fun `restart after rejected queue but before submit acknowledgement reconciles no-start evidence`() {
+        val root = Files.createTempDirectory("controlled-no-ack-")
+        val domain = "domain-${root.fileName}"
+        val midi = Files.createDirectory(root.resolve("midi"))
+        val store = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+        val stage = VideoControlledMediaStage(store, domain, { _, _, _ -> error("must not run") }, clock,
+            queueWork = { throw java.util.concurrent.RejectedExecutionException("queue closed") })
+        val request = controlledRequest(stage.backendId)
+        val initial = store.loadOrCreate(domain, Instant.now(clock).toString())
+        val attempt = VideoGenerationAttempt("attempt", request.id, 1, "owner", VideoGenerationAttemptStatus.SUBMITTING,
+            VideoSubmissionPhase.READY, Instant.now(clock).toString())
+        val admitted = store.compareAndSet(initial.revision, initial.copy(revision = initial.revision + 1,
+            jobs = listOf(VideoGenerationJob(request, listOf(attempt)))))
+        store.compareAndSet(admitted.revision, admitted.copy(revision = admitted.revision + 1,
+            jobs = listOf(VideoGenerationJob(request, listOf(attempt.copy(submissionPhase = VideoSubmissionPhase.PENDING))))))
+        val owned = VideoOwnedBackendAttempt(request.id, request.requestFingerprint, attempt.id, attempt.ownershipToken,
+            stage.backendId, null)
+        assertIs<VideoBackendSubmission.Rejected>(stage.submit(VideoBackendSubmissionCommand(owned, request.input,
+            request.modelRequirements, request.execution)))
+        val pending = store.snapshot().jobs.single().attempts.single()
+        assertEquals(VideoSubmissionPhase.PENDING, pending.submissionPhase)
+        assertEquals(VideoControlledStage.FAILED, pending.controlledEvidence?.stage)
+        val reopened = VideoJobStore(root.resolve("jobs"), domain, listOf(midi))
+        val coordinator = VideoJobCoordinator(domain, reopened, listOf(VideoControlledMediaStage(reopened, domain,
+            { _, _, _ -> error("recovery must not relaunch") }, clock)), clock = clock)
+        val stopped = assertIs<VideoJobResult.Accepted>(coordinator.reconcile(request.id)).attempt!!
+        assertEquals(VideoGenerationAttemptStatus.FAILED, stopped.status)
+        assertTrue(stopped.retryable)
+        assertEquals(2, assertIs<VideoJobResult.Accepted>(coordinator.retry(request.id)).attempt!!.number)
+    }
+
+    @Test fun `queued cancellation is confirmed only by owned worker before native execution`() {
+        val root = Files.createTempDirectory("controlled-queued-cancel-")
+        val midi = Files.createDirectory(root.resolve("midi"))
+        val blockingDomain = "blocking-${root.fileName}"
+        val blockingStore = VideoJobStore(root.resolve("blocking-jobs"), blockingDomain, listOf(midi))
+        val occupied = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val blocker = VideoControlledMediaStage(blockingStore, blockingDomain, { _, _, _ ->
+            occupied.countDown()
+            check(release.await(10, TimeUnit.SECONDS))
+            VideoBackendObservation.Failed(null, "fixture stopped", true)
+        }, clock)
+        try {
+            assertIs<VideoJobResult.Accepted>(VideoJobCoordinator(blockingDomain, blockingStore, listOf(blocker), clock = clock)
+                .submit(controlledRequest(blocker.backendId)))
+            assertTrue(occupied.await(5, TimeUnit.SECONDS))
+            val domain = "queued-${root.fileName}"
+            val store = VideoJobStore(root.resolve("queued-jobs"), domain, listOf(midi))
+            val calls = AtomicInteger()
+            val stage = VideoControlledMediaStage(store, domain, { _, _, _ ->
+                calls.incrementAndGet(); error("cancelled work must not execute")
+            }, clock)
+            val request = controlledRequest(stage.backendId)
+            val coordinator = VideoJobCoordinator(domain, store, listOf(stage), clock = clock)
+            assertIs<VideoJobResult.Accepted>(coordinator.submit(request))
+            assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED,
+                assertIs<VideoJobResult.Accepted>(coordinator.cancel(request.id)).attempt!!.status)
+            val reopened = VideoJobStore(root.resolve("queued-jobs"), domain, listOf(midi))
+            val restored = VideoJobCoordinator(domain, reopened, listOf(VideoControlledMediaStage(reopened, domain,
+                { _, _, _ -> error("recovery must not relaunch") }, clock)), clock = clock)
+            assertEquals(VideoGenerationAttemptStatus.CANCELLATION_REQUESTED,
+                assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!.status)
+            assertEquals(VideoJobProblemCode.RETRY_NOT_ALLOWED,
+                assertIs<VideoJobResult.Rejected>(restored.retry(request.id)).problem.code)
+            release.countDown()
+            val until = System.nanoTime() + Duration.ofSeconds(5).toNanos()
+            while (reopened.snapshot().jobs.single().attempts.single().controlledEvidence?.stage != VideoControlledStage.CANCELLED &&
+                System.nanoTime() < until) Thread.sleep(10)
+            assertEquals(VideoControlledStage.CANCELLED, reopened.snapshot().jobs.single().attempts.single().controlledEvidence?.stage)
+            val stopped = assertIs<VideoJobResult.Accepted>(restored.reconcile(request.id)).attempt!!
+            assertEquals(VideoGenerationAttemptStatus.CANCELLED, stopped.status)
+            assertTrue(stopped.retryable)
+            assertEquals(0, calls.get())
+        } finally { release.countDown() }
+    }
+
+    private fun controlledRequest(backendId: String): VideoGenerationJobRequest {
+        val input = input()
+        return VideoGenerationJobRequest("request", "video-project", backendId, emptyList(), input,
+            controlledMotionRequestFingerprint(backendId, input, emptyList(), 2), 2,
+            Instant.now(clock).toString(), input.media.execution)
+    }
+
     @Test fun `unclaimed and older attempts never execute even with matching command fields`() {
         val root = Files.createTempDirectory("controlled-unclaimed-")
         val domain = "domain-${root.fileName}"
@@ -218,8 +526,8 @@ class VideoControlledMediaStageTest {
                 observation = stage.observe(owned)
                 if (observation is VideoBackendObservation.Running) Thread.sleep(10)
             } while (observation is VideoBackendObservation.Running && System.nanoTime() < until)
-            val failed = assertIs<VideoBackendObservation.Unknown>(observation)
-            assertContains(failed.detail, if (resource == "memory") "memory admission" else "disk admission")
+            val failed = assertIs<VideoBackendObservation.Failed>(observation)
+            assertContains(failed.reason, if (resource == "memory") "memory admission" else "disk admission")
             val evidence = outputs.resolve(attempt.id)
             assertEquals(motion.descriptor.requestJson, Files.readString(evidence.resolve("request.json")))
             assertEquals(listOf("request.json"), Files.list(evidence).use { entries ->
@@ -299,14 +607,24 @@ class VideoControlledMediaStageTest {
                 observation = stage.observe(owned)
                 if (observation is VideoBackendObservation.Running) Thread.sleep(50)
             } while (observation is VideoBackendObservation.Running && System.nanoTime() < until)
-            val finished = assertIs<VideoBackendObservation.Unknown>(observation)
+            val finished = observation
             if (memoryGrowth) {
-                assertContains(finished.detail, "memory limit", message = "Native memory growth must terminate the claimed attempt")
+                assertEquals(VideoControlledStage.RENDERING,
+                    store.snapshot().jobs.single().attempts.single().controlledEvidence?.lastActiveStage)
+                assertContains(assertIs<VideoBackendObservation.Failed>(finished).reason, "memory limit", message = "Native memory growth must terminate the claimed attempt")
                 assertEquals(json, Files.readString(evidence.resolve("request.json")))
                 continue
             }
-            assertTrue(finished.detail.contains("Selected pinned FFmpeg build lacks") ||
-                finished.detail.contains("disk admission"), "range $start/$count: ${finished.detail}")
+            val stageEvidence = store.snapshot().jobs.single().attempts.single().controlledEvidence
+            assertEquals(VideoControlledStage.ENCODING,
+                if (stageEvidence?.stage == VideoControlledStage.FAILED) stageEvidence.lastActiveStage else stageEvidence?.stage)
+            val reason = when (finished) {
+                is VideoBackendObservation.Failed -> finished.reason
+                is VideoBackendObservation.Unknown -> finished.detail
+                else -> fail("Unexpected range outcome: $finished")
+            }
+            assertTrue(reason.contains("Selected pinned FFmpeg build lacks") ||
+                reason.contains("disk admission"), "range $start/$count: $reason")
             assertFalse(Files.exists(evidence.resolve("preview.mp4")))
             assertEquals(json, Files.readString(evidence.resolve("request.json")))
             var next = start

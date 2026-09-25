@@ -657,13 +657,13 @@ class VideoJobCoordinatorTest {
         assertFailsWith<IllegalArgumentException> { reopenedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { reopenedStore.loadOrCreate(DOMAIN, NOW) }
         assertContentEquals(tamperedBytes, Files.readAllBytes(path))
-        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 5", "\"version\": 999"))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 6", "\"version\": 999"))
         val unsupportedBytes = Files.readAllBytes(path)
         val unsupportedStore = VideoJobStore(fixture.root.resolve("jobs"), DOMAIN, listOf(fixture.midiRoot))
         assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }
         assertContentEquals(unsupportedBytes, Files.readAllBytes(path))
-        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 5", "\"version\": 4"))
+        Files.writeString(path, validBytes.toString(Charsets.UTF_8).replace("\"version\": 6", "\"version\": 5"))
         val oldBytes = Files.readAllBytes(path)
         assertFailsWith<IllegalArgumentException> { unsupportedStore.snapshot() }
         assertFailsWith<IllegalArgumentException> { unsupportedStore.loadOrCreate(DOMAIN, NOW) }

@@ -7,6 +7,9 @@ import java.time.Instant
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -19,6 +22,7 @@ import java.lang.management.ManagementFactory
 import com.sun.management.OperatingSystemMXBean
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.Semaphore
 
@@ -31,6 +35,8 @@ class VideoControlledMediaStage(
     private val execute: (VideoGenerationJobRequest, VideoOwnedBackendAttempt, VideoMediaProcessCancellation) -> VideoBackendObservation,
     private val clock: Clock = Clock.systemUTC(),
     private val boundedNative: Boolean = false,
+    private val receiptRoot: Path? = null,
+    private val queueWork: (Runnable) -> Unit = { pool.execute(it) },
 ) : VideoGenerationBackendPort {
     /** Production rendering path. Claimed work is rendered, encoded and validated before publication. */
     constructor(jobs: VideoJobPersistence, admissionDomainId: String, projectRoot: Path, outputRoot: Path,
@@ -39,8 +45,20 @@ class VideoControlledMediaStage(
                     (ManagementFactory.getOperatingSystemMXBean() as? OperatingSystemMXBean)?.freeMemorySize ?: -1L
                 }) :
         this(jobs, admissionDomainId, { request, owned, cancellation ->
-            renderClaimed(request, owned, cancellation, projectRoot, outputRoot, renderer, hostFreeMemoryBytes)
-        }, clock, true)
+            try {
+                renderClaimed(request, owned, cancellation, projectRoot, outputRoot, renderer, hostFreeMemoryBytes,
+                    onEncoding = { markEncoding(jobs, admissionDomainId, owned, clock) })
+            } catch (error: VideoMediaProcessException) {
+                if (error.suppressed.isNotEmpty()) VideoBackendObservation.Unknown(
+                    "Controlled native cleanup is unconfirmed: ${error.message}")
+                else when (error.failure) {
+                    VideoMediaProcessFailure.SUPERVISION_FAILED, VideoMediaProcessFailure.UNEXPECTED_DESCENDANTS ->
+                        VideoBackendObservation.Unknown(error.message ?: "Native cleanup was not confirmed.")
+                    VideoMediaProcessFailure.CANCELLED -> VideoBackendObservation.Cancelled(null)
+                    else -> VideoBackendObservation.Failed(null, error.message ?: error.failure.name, true)
+                }
+            }
+        }, clock, true, outputRoot)
 
     override val backendId: String = BACKEND_ID
 
@@ -58,57 +76,187 @@ class VideoControlledMediaStage(
         if (request.input != command.input || request.modelRequirements != command.modelRequirements || request.execution != command.execution) {
             return VideoBackendSubmission.Rejected("Submission fields differ from persisted controlled execution.", false)
         }
-        val key = "$admissionDomainId:${owned.requestId}:${owned.attemptId}:${owned.ownershipToken}"
+        val key = workKey(owned)
+        // Persist a single execution claim across adapter instances before queuing work.
+        if (!checkpoint(owned, VideoControlledStage.CLAIMED, requirePending = true))
+            return VideoBackendSubmission.Uncertain("Controlled claim already has execution evidence; reconcile without relaunch.")
         if (workers.containsKey(key)) return VideoBackendSubmission.Uncertain("Controlled attempt was already submitted; observe its existing work.")
-        if (boundedNative && !nativeSlot.tryAcquire()) return VideoBackendSubmission.Uncertain("Controlled native slot is occupied; no work was queued.")
+        if (boundedNative && !nativeSlot.tryAcquire()) {
+            val reason = "Controlled native slot is occupied; no work was queued."
+            return if (checkpoint(owned, VideoControlledStage.FAILED, failure = reason, retryable = true))
+                VideoBackendSubmission.Rejected(reason, true)
+            else VideoBackendSubmission.Uncertain("Controlled no-start checkpoint could not be confirmed; retain admission.")
+        }
         val work = Work()
         if (workers.putIfAbsent(key, work) != null) {
             if (boundedNative) nativeSlot.release()
             return VideoBackendSubmission.Uncertain("Controlled attempt was already submitted; observe its existing work.")
         }
         try {
-            pool.execute {
+            queueWork(Runnable {
                 try {
-                    // Cancellation or a terminal reconciliation can win after submit. Never
-                    // execute a caller's replacement command or run an unclaimed attempt.
+                    // A queued worker can prove it never entered native work. Reconstructed
+                    // services cannot: they must retain an unconfirmed CLAIMED attempt.
                     val current = claimed(owned, allowAcknowledged = true)
-                    work.result = if (current == null || work.cancellation.isCancelled()) {
-                        VideoBackendObservation.Unknown("Claim changed or cancellation preceded controlled execution.")
-                    } else execute(current, owned, work.cancellation)
+                    work.result = if (work.cancellation.isCancelled() &&
+                        checkpoint(owned, VideoControlledStage.CANCELLED)) {
+                        VideoBackendObservation.Cancelled(key)
+                    } else if (current == null) {
+                        VideoBackendObservation.Unknown("Claim changed before controlled execution.")
+                    } else {
+                        require(checkpoint(owned, VideoControlledStage.RENDERING)) {
+                            "Controlled claim changed before native work; do not execute."
+                        }
+                        val result = if (work.cancellation.isCancelled()) VideoBackendObservation.Cancelled(key)
+                            else execute(current, owned, work.cancellation)
+                        when (result) {
+                            is VideoBackendObservation.Completed -> {
+                                if (verifiedOutput(owned, result.output)) checkpoint(owned, VideoControlledStage.COMPLETED,
+                                    VideoControlledOutputEvidence(result.output.backendOutputId, requireNotNull(result.output.relativePath),
+                                        requireNotNull(result.output.sha256), requireNotNull(result.output.byteCount)))
+                            }
+                            is VideoBackendObservation.Failed -> checkpoint(owned, VideoControlledStage.FAILED,
+                                failure = result.reason, retryable = result.retryable)
+                            is VideoBackendObservation.Cancelled -> checkpoint(owned, VideoControlledStage.CANCELLED)
+                            else -> Unit
+                        }
+                        result
+                    }
                 } catch (error: Exception) {
                     work.result = VideoBackendObservation.Unknown(error.message ?: "Controlled worker outcome is uncertain.")
                 } finally {
                     if (boundedNative) nativeSlot.release()
                 }
-            }
-        } catch (error: Exception) {
-            // No task was enqueued; do not allow another invocation of this identity.
-            work.result = VideoBackendObservation.Unknown("Controlled worker could not start: ${error.message}")
+            })
+        } catch (error: RejectedExecutionException) {
+            // A rejecting queue did not accept this task. Only this submitter can
+            // attest to that fact; absence of a worker after restart cannot.
+            val reason = "Controlled worker could not be queued: ${error.message ?: error.javaClass.simpleName}"
+            val confirmed = checkpoint(owned, VideoControlledStage.FAILED, failure = reason, retryable = true)
+            work.result = if (confirmed) VideoBackendObservation.Failed(key, reason, true)
+                else VideoBackendObservation.Unknown("Controlled no-start checkpoint could not be confirmed.")
+            workers.remove(key, work)
             if (boundedNative) nativeSlot.release()
-            return VideoBackendSubmission.Uncertain("Controlled worker could not start: ${error.message}")
+            return if (confirmed) VideoBackendSubmission.Rejected(reason, true)
+                else VideoBackendSubmission.Uncertain("Controlled no-start checkpoint could not be confirmed; retain admission.")
         }
         return VideoBackendSubmission.Accepted(key)
     }
 
     override fun observe(ownedAttempt: VideoOwnedBackendAttempt): VideoBackendObservation {
-        val key = "$admissionDomainId:${ownedAttempt.requestId}:${ownedAttempt.attemptId}:${ownedAttempt.ownershipToken}"
-        if (ownedAttempt.backendId != backendId ||
-            ownedAttempt.providerWorkId != null && ownedAttempt.providerWorkId != key) {
-            return VideoBackendObservation.Unknown("Controlled attempt identity does not match the worker.")
+        val key = workKey(ownedAttempt)
+        val attempt = persistedAttempt(ownedAttempt) ?: return VideoBackendObservation.Unknown("Controlled ownership or current attempt changed.")
+        if (ownedAttempt.providerWorkId != null && ownedAttempt.providerWorkId != key)
+            return VideoBackendObservation.Unknown("Controlled work identity changed.")
+        var output = attempt.controlledEvidence?.output
+        if (output == null && !attempt.status.isTerminal && receiptRoot != null) {
+            // Publication and its sealed receipt may have committed before the ledger CAS.
+            // Only that exact current owner can promote verified bytes; never render again.
+            val recovered = runCatching { readReceipt(requireNotNull(receiptRoot).resolve(ownedAttempt.attemptId).resolve("completion.json")) }.getOrNull()
+            if (recovered != null && verifiedOutput(ownedAttempt, VideoBackendOutput(recovered.output.backendOutputId,
+                    recovered.output.relativePath, recovered.output.sha256, recovered.output.byteCount)) &&
+                checkpoint(ownedAttempt, VideoControlledStage.COMPLETED, recovered.output)) output = recovered.output
+        }
+        if (output != null) {
+            val candidate = VideoBackendOutput(output.backendOutputId, output.relativePath, output.sha256, output.byteCount)
+            return if (verifiedOutput(ownedAttempt, candidate)) VideoBackendObservation.Completed(key, candidate)
+                else VideoBackendObservation.Unknown("Controlled completion receipt or published bytes changed; retain admission.")
+        }
+        when (attempt.controlledEvidence?.stage) {
+            VideoControlledStage.FAILED -> return VideoBackendObservation.Failed(key,
+                requireNotNull(attempt.controlledEvidence.failure), attempt.controlledEvidence.retryable)
+            VideoControlledStage.CANCELLED -> return VideoBackendObservation.Cancelled(key)
+            else -> Unit
         }
         val work = workers[key] ?: return VideoBackendObservation.Unknown("Claimed controlled execution has no known worker; do not relaunch it.")
-        return work.result ?: VideoBackendObservation.Running(key, null)
+        val result = work.result
+        return when (result) {
+            is VideoBackendObservation.Completed, is VideoBackendObservation.Failed, is VideoBackendObservation.Cancelled ->
+                VideoBackendObservation.Unknown("Controlled terminal evidence was not durably verified.")
+            else -> result ?: VideoBackendObservation.Running(key, null)
+        }
     }
 
     override fun requestCancellation(ownedAttempt: VideoOwnedBackendAttempt): VideoBackendCancellation {
-        val key = "$admissionDomainId:${ownedAttempt.requestId}:${ownedAttempt.attemptId}:${ownedAttempt.ownershipToken}"
-        if (ownedAttempt.backendId != backendId ||
+        val key = workKey(ownedAttempt)
+        if (persistedAttempt(ownedAttempt) == null ||
             ownedAttempt.providerWorkId != null && ownedAttempt.providerWorkId != key) {
             return VideoBackendCancellation.Unknown("Controlled attempt identity does not match the worker.")
         }
         val work = workers[key] ?: return VideoBackendCancellation.Unknown("No owned worker can be confirmed stopped.")
         work.cancellation.cancel()
         return VideoBackendCancellation.Requested
+    }
+
+    private fun workKey(owned: VideoOwnedBackendAttempt) =
+        "$admissionDomainId:${owned.requestId}:${owned.attemptId}:${owned.ownershipToken}"
+
+    private fun persistedAttempt(owned: VideoOwnedBackendAttempt): VideoGenerationAttempt? {
+        if (owned.backendId != backendId) return null
+        val ledger = jobs.loadOrCreate(admissionDomainId, Instant.now(clock).toString())
+        val job = ledger.jobs.singleOrNull { it.request.id == owned.requestId } ?: return null
+        if (ledger.admissionDomainId != admissionDomainId || job.request.backendId != backendId ||
+            job.request.requestFingerprint != owned.requestFingerprint || job.attempts.lastOrNull()?.id != owned.attemptId) return null
+        return job.attempts.last().takeIf { it.ownershipToken == owned.ownershipToken }
+    }
+
+    private fun checkpoint(owned: VideoOwnedBackendAttempt, stage: VideoControlledStage,
+        output: VideoControlledOutputEvidence? = null, requirePending: Boolean = false,
+        failure: String? = null, retryable: Boolean = false): Boolean {
+        repeat(64) {
+            val ledger = jobs.loadOrCreate(admissionDomainId, Instant.now(clock).toString())
+            val index = ledger.jobs.indexOfFirst { it.request.id == owned.requestId }
+            if (index < 0) return false
+            val job = ledger.jobs[index]
+            val attempt = job.attempts.lastOrNull() ?: return false
+            if (job.request.backendId != backendId || job.request.requestFingerprint != owned.requestFingerprint ||
+                attempt.id != owned.attemptId || attempt.ownershipToken != owned.ownershipToken ||
+                attempt.status.isTerminal || requirePending && (attempt.submissionPhase != VideoSubmissionPhase.PENDING ||
+                    attempt.status != VideoGenerationAttemptStatus.SUBMITTING || attempt.controlledEvidence != null)) return false
+            val old = attempt.controlledEvidence
+            val next = VideoControlledAttemptEvidence(stage, output, failure?.take(2_000)?.filterNot(Char::isISOControl), retryable,
+                if (stage in setOf(VideoControlledStage.FAILED, VideoControlledStage.CANCELLED)) old?.stage else null)
+            if (old != null && old.stage in setOf(VideoControlledStage.COMPLETED,
+                    VideoControlledStage.FAILED, VideoControlledStage.CANCELLED)) return old == next && !requirePending
+            if (old != null && old.stage.ordinal >= stage.ordinal) return old == next && !requirePending
+            val changed = job.copy(attempts = job.attempts.dropLast(1) + attempt.copy(controlledEvidence = next))
+            try {
+                jobs.compareAndSet(ledger.revision, ledger.copy(revision = Math.addExact(ledger.revision, 1),
+                    jobs = ledger.jobs.toMutableList().also { list -> list[index] = changed }))
+                return true
+            } catch (_: VideoJobConcurrencyException) { /* re-evaluate the claim */ }
+        }
+        return false
+    }
+
+    private fun verifiedOutput(owned: VideoOwnedBackendAttempt, output: VideoBackendOutput): Boolean {
+        val root = receiptRoot ?: return false
+        return runCatching {
+            require(persistedAttempt(owned) != null)
+            val request = jobs.loadOrCreate(admissionDomainId, Instant.now(clock).toString()).jobs
+                .single { it.request.id == owned.requestId }.request
+            val limit = (request.input as VideoControlledMotionGenerationInput).media.maximumOutputBytes
+            val evidence = readReceipt(root.resolve(owned.attemptId).resolve("completion.json"))
+            // The receipt is evidence, not authority to choose a different output. In
+            // particular, another attempt's bytes under this publication root must
+            // never be promoted as the current attempt's completed preview.
+            require(evidence.output.backendOutputId == "${owned.attemptId}-preview" &&
+                evidence.output.relativePath == "${owned.attemptId}/preview.mp4")
+            require(evidence.requestId == owned.requestId && evidence.attemptId == owned.attemptId &&
+                evidence.ownershipToken == owned.ownershipToken && evidence.fingerprint == owned.requestFingerprint &&
+                evidence.output == VideoControlledOutputEvidence(output.backendOutputId,
+                    requireNotNull(output.relativePath), requireNotNull(output.sha256), requireNotNull(output.byteCount)))
+            val directory = root.toRealPath()
+            require(root.toAbsolutePath().normalize() == directory &&
+                root.resolve(owned.attemptId).toRealPath() == directory.resolve(owned.attemptId) &&
+                Files.getPosixFilePermissions(root.resolve(owned.attemptId).resolve("completion.json")) ==
+                PosixFilePermissions.fromString("r--------"))
+            val file = directory.resolve(evidence.output.relativePath).normalize()
+            require(file.startsWith(directory) && Files.isRegularFile(file, NOFOLLOW_LINKS) && !Files.isSymbolicLink(file) &&
+                evidence.output.byteCount in 1..limit && Files.size(file) == evidence.output.byteCount &&
+                sha256(file) == evidence.output.sha256)
+            true
+        }.getOrDefault(false)
     }
 
     private fun claimed(owned: VideoOwnedBackendAttempt, allowAcknowledged: Boolean = false): VideoGenerationJobRequest? {
@@ -122,7 +270,7 @@ class VideoControlledMediaStage(
         if (attempt.id != owned.attemptId || attempt.ownershipToken != owned.ownershipToken ||
             !(attempt.submissionPhase == VideoSubmissionPhase.PENDING && attempt.status == VideoGenerationAttemptStatus.SUBMITTING ||
                 allowAcknowledged && attempt.submissionPhase == VideoSubmissionPhase.ACKNOWLEDGED &&
-                attempt.status == VideoGenerationAttemptStatus.ACTIVE && attempt.providerWorkId ==
+                attempt.status in setOf(VideoGenerationAttemptStatus.ACTIVE, VideoGenerationAttemptStatus.CANCELLATION_REQUESTED) && attempt.providerWorkId ==
                 "$admissionDomainId:${owned.requestId}:${owned.attemptId}:${owned.ownershipToken}") ||
             (!allowAcknowledged && attempt.providerWorkId != null) || request.backendId != backendId ||
             request.requestFingerprint != owned.requestFingerprint || request.projectId != input.motion.descriptor.projectId ||
@@ -138,11 +286,53 @@ class VideoControlledMediaStage(
     }
 
     companion object {
+        @Serializable
+        private data class ControlledCompletionReceipt(val requestId: String, val attemptId: String,
+            val ownershipToken: String, val fingerprint: String, val output: VideoControlledOutputEvidence)
+
+        private fun readReceipt(path: Path): ControlledCompletionReceipt {
+            require(Files.isRegularFile(path, NOFOLLOW_LINKS) && !Files.isSymbolicLink(path) && Files.size(path) in 1..4096)
+            return Json.decodeFromString(Files.readString(path))
+        }
+
+        private fun sha256(path: Path): String {
+            val digest = MessageDigest.getInstance("SHA-256")
+            Files.newInputStream(path).use { stream ->
+                val bytes = ByteArray(64 * 1024)
+                while (true) { val n = stream.read(bytes); if (n < 0) break; digest.update(bytes, 0, n) }
+            }
+            return digest.digest().joinToString("") { "%02x".format(it) }
+        }
+
         const val BACKEND_ID = "controlled-media"
+
+        private fun markEncoding(jobs: VideoJobPersistence, domain: String, owned: VideoOwnedBackendAttempt, clock: Clock) {
+            repeat(64) {
+                val ledger = jobs.loadOrCreate(domain, Instant.now(clock).toString())
+                val index = ledger.jobs.indexOfFirst { it.request.id == owned.requestId }
+                require(index >= 0) { "Controlled request disappeared before encoding." }
+                val job = ledger.jobs[index]
+                val attempt = job.attempts.last()
+                require(job.request.backendId == BACKEND_ID && job.request.requestFingerprint == owned.requestFingerprint &&
+                    attempt.id == owned.attemptId && attempt.ownershipToken == owned.ownershipToken && !attempt.status.isTerminal &&
+                    attempt.controlledEvidence?.stage == VideoControlledStage.RENDERING) {
+                    "Controlled claim changed before encoding; do not publish."
+                }
+                val updated = job.copy(attempts = job.attempts.dropLast(1) + attempt.copy(
+                    controlledEvidence = VideoControlledAttemptEvidence(VideoControlledStage.ENCODING)))
+                try {
+                    jobs.compareAndSet(ledger.revision, ledger.copy(revision = Math.addExact(ledger.revision, 1),
+                        jobs = ledger.jobs.toMutableList().also { items -> items[index] = updated }))
+                    return
+                } catch (_: VideoJobConcurrencyException) { /* revalidate the owner */ }
+            }
+            error("Controlled encoding checkpoint stayed busy; do not publish.")
+        }
 
         private fun renderClaimed(request: VideoGenerationJobRequest, owned: VideoOwnedBackendAttempt,
             cancellation: VideoMediaProcessCancellation, projectRoot: Path, outputRoot: Path,
-            renderer: VideoMotionRenderer, hostFreeMemoryBytes: () -> Long): VideoBackendObservation {
+            renderer: VideoMotionRenderer, hostFreeMemoryBytes: () -> Long,
+            onEncoding: () -> Unit): VideoBackendObservation {
             val input = request.input as VideoControlledMotionGenerationInput
             val media = input.media
             val motion = input.motion
@@ -237,6 +427,7 @@ class VideoControlledMediaStage(
                     result.invocations.last().endFrameExclusive == motion.endFrameExclusive &&
                     result.invocations.zipWithNext().all { (a, b) -> a.endFrameExclusive == b.startFrame } &&
                     result.invocations.all { it.endFrameExclusive - it.startFrame in 1..300 }) { "Controlled render chunks are not contiguous." }
+                onEncoding() // Persist the render-to-encode boundary before consuming frame receipts.
                 val preview = encodePreview(result, request, directory, binding.ffmpeg, binding.ffprobe,
                     ::hash, ::budget, ::checkTime, ::remaining, cancellation, beforePublication = {
                         // Stop the sampler before the publication point: joining it (and observing
@@ -245,8 +436,19 @@ class VideoControlledMediaStage(
                         monitor.join()
                         violation.get()?.let { throw it }
                     })
+                val evidence = VideoControlledOutputEvidence("${owned.attemptId}-preview",
+                    "${owned.attemptId}/preview.mp4", preview.sha256, preview.bytes)
+                val receipt = ControlledCompletionReceipt(request.id, owned.attemptId, owned.ownershipToken,
+                    request.requestFingerprint, evidence)
+                // Create-new and sealed: crash after publication but before this receipt is
+                // uncertain; once present, the output is independently recoverable.
+                val receiptPath = directory.resolve("completion.json")
+                Files.writeString(receiptPath, Json.encodeToString(receipt), CREATE_NEW)
+                Files.setPosixFilePermissions(receiptPath, PosixFilePermissions.fromString("r--------"))
                 return VideoBackendObservation.Completed(null, VideoBackendOutput(
-                    "${owned.attemptId}-preview", "${owned.attemptId}/preview.mp4", preview.sha256, preview.bytes))
+                    evidence.backendOutputId, evidence.relativePath, evidence.sha256, evidence.byteCount))
+            } catch (error: Exception) {
+                throw (violation.get() ?: error)
             } finally {
                 if (monitor.isAlive) {
                     monitor.interrupt()

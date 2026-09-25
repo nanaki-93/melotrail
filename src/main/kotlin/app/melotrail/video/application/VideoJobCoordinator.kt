@@ -1,6 +1,7 @@
 package app.melotrail.video.application
 
 import app.melotrail.video.adapter.LocalVideoBackend
+import app.melotrail.video.adapter.VideoControlledMediaStage
 import app.melotrail.video.adapter.comfyRequestFingerprint
 import app.melotrail.video.domain.VideoExecutionPolicy
 import app.melotrail.video.domain.VideoGenerationAttempt
@@ -282,6 +283,9 @@ class VideoJobCoordinator(
             ?: return rejected(VideoJobProblemCode.BACKEND_NOT_CONFIGURED, "Video backend '${job.request.backendId}' is not configured.")
         val observation = runCatching { backend.observe(owned(job, attempt)) }
             .getOrElse { VideoBackendObservation.Unknown(it.message ?: it.javaClass.simpleName) }
+        if (job.request.backendId == VideoControlledMediaStage.BACKEND_ID &&
+            attempt.status == VideoGenerationAttemptStatus.SUCCEEDED && observation !is VideoBackendObservation.Completed)
+            return rejected(VideoJobProblemCode.PERSISTENCE_FAILED, "Controlled output cannot be verified on reopen; preserve the ledger and published evidence.")
         val updated = try {
             integrateObservation(requestId, attempt, observation)
         } catch (error: Exception) {
@@ -533,16 +537,25 @@ class VideoJobCoordinator(
                     job.replaceAttempt(attempt.copy(providerWorkId = workId, status = status, submissionPhase = VideoSubmissionPhase.ACKNOWLEDGED, finishedAt = null, retryable = false, lastObservedAt = now()))
                 }
                 is VideoBackendSubmission.Completed -> complete(job, attempt.copy(submissionPhase = VideoSubmissionPhase.ACKNOWLEDGED), submission.providerWorkId, submission.output, submission.actualCost, submission.resources)
-                is VideoBackendSubmission.Rejected -> if (attempt.status.isTerminal || attempt.submissionPhase == VideoSubmissionPhase.ACKNOWLEDGED) job else terminal(
-                    job,
-                    attempt,
-                    VideoGenerationAttemptStatus.FAILED,
-                    submission.retryable,
-                    submission.reason,
-                    hostedZeroCost(job.request.execution),
-                    null,
-                    submissionPhase = VideoSubmissionPhase.NOT_STARTED,
-                )
+                is VideoBackendSubmission.Rejected -> if (attempt.status.isTerminal || attempt.submissionPhase == VideoSubmissionPhase.ACKNOWLEDGED) job else {
+                    // The controlled adapter owns a durable CLAIMED checkpoint even if
+                    // dispatch failed. Its confirmed failure is not an unclaimed READY
+                    // attempt: retain the evidence and release admission immediately.
+                    val confirmedNoStart = job.request.backendId == VideoControlledMediaStage.BACKEND_ID &&
+                        attempt.controlledEvidence?.let { evidence ->
+                            evidence.stage == app.melotrail.video.domain.VideoControlledStage.FAILED &&
+                                evidence.lastActiveStage == app.melotrail.video.domain.VideoControlledStage.CLAIMED &&
+                                evidence.failure == submission.reason && evidence.retryable == submission.retryable
+                        } == true
+                    terminal(
+                        job, attempt,
+                        if (confirmedNoStart && attempt.status == VideoGenerationAttemptStatus.CANCELLATION_REQUESTED)
+                            VideoGenerationAttemptStatus.CANCELLED else VideoGenerationAttemptStatus.FAILED,
+                        submission.retryable, if (attempt.status == VideoGenerationAttemptStatus.CANCELLATION_REQUESTED) null else submission.reason,
+                        hostedZeroCost(job.request.execution), null,
+                        submissionPhase = if (confirmedNoStart) VideoSubmissionPhase.ACKNOWLEDGED else VideoSubmissionPhase.NOT_STARTED,
+                    )
+                }
                 is VideoBackendSubmission.Uncertain -> if (attempt.status.isTerminal || attempt.submissionPhase == VideoSubmissionPhase.ACKNOWLEDGED) job else job.replaceAttempt(
                     attempt.copy(
                         status = if (attempt.status == VideoGenerationAttemptStatus.CANCELLATION_REQUESTED) attempt.status else VideoGenerationAttemptStatus.SUBMISSION_UNCERTAIN,
@@ -591,7 +604,9 @@ class VideoJobCoordinator(
     ): VideoGenerationJob = mutate { ledger ->
         updateAttempt(ledger, requestId, observedAttempt.id, observedAttempt.ownershipToken) { job, attempt ->
             // A response obtained from an older snapshot cannot overwrite a newer observation/cancel result.
-            if (attempt != observedAttempt) return@updateAttempt job
+            if (attempt != observedAttempt && !(job.request.backendId == VideoControlledMediaStage.BACKEND_ID &&
+                attempt.copy(controlledEvidence = observedAttempt.controlledEvidence) == observedAttempt &&
+                observation !is VideoBackendObservation.Running)) return@updateAttempt job
             val stale = job.attempts.last().id != attempt.id
             when (observation) {
                 is VideoBackendObservation.Running -> {
@@ -663,6 +678,15 @@ class VideoJobCoordinator(
         actualCost: VideoBackendCost?,
         resources: VideoGenerationResourceUsage?,
     ): VideoGenerationJob {
+        if (job.request.backendId == VideoControlledMediaStage.BACKEND_ID) {
+            require(attempt.status !in setOf(VideoGenerationAttemptStatus.FAILED, VideoGenerationAttemptStatus.CANCELLED)) {
+                "A terminal stopped controlled attempt cannot publish late output"
+            }
+            val evidence = requireNotNull(attempt.controlledEvidence?.output) { "Controlled completion needs durable verified media evidence" }
+            require(evidence.backendOutputId == backendOutput.backendOutputId &&
+                evidence.relativePath == backendOutput.relativePath && evidence.sha256 == backendOutput.sha256 &&
+                evidence.byteCount == backendOutput.byteCount) { "Controlled completion conflicts with owned media evidence" }
+        }
         val priorForAttempt = job.outputs.singleOrNull { it.attemptId == attempt.id }
         require(priorForAttempt == null || priorForAttempt.backendOutputId == backendOutput.backendOutputId) {
             "A backend cannot replace a persisted output for an attempt"
@@ -677,7 +701,8 @@ class VideoJobCoordinator(
         }
         val existing = priorForAttempt
         val output = existing ?: VideoGenerationOutput(
-            id = outputIdFactory(),
+            // Controlled receipt commits this stable output ID before the ledger CAS.
+            id = if (job.request.backendId == VideoControlledMediaStage.BACKEND_ID) backendOutput.backendOutputId else outputIdFactory(),
             attemptId = attempt.id,
             backendOutputId = backendOutput.backendOutputId,
             createdAt = now(),
