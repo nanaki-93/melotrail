@@ -297,10 +297,19 @@ internal object PreviewLadder {
     private fun projectBytes(root: Path, count: Long): Long {
         if (!Files.exists(root, NOFOLLOW_LINKS)) return 0L
         var total = 0L
-        Files.walk(root).use { paths -> paths.forEach { path ->
-            check(!Files.isSymbolicLink(path)) { "Preview $count has an unsafe output alias: $path" }
-            if (Files.isRegularFile(path, NOFOLLOW_LINKS)) total = Math.addExact(total, Files.size(path))
-        } }
+        // Publication removes private staging names atomically. A disappearing entry
+        // is not disk growth; permission/I/O errors and aliases must still fail closed.
+        Files.walkFileTree(root, object : java.nio.file.SimpleFileVisitor<Path>() {
+            override fun visitFile(path: Path, attrs: java.nio.file.attribute.BasicFileAttributes): java.nio.file.FileVisitResult {
+                check(!attrs.isSymbolicLink) { "Preview $count has an unsafe output alias: $path" }
+                if (attrs.isRegularFile) total = Math.addExact(total, attrs.size())
+                return java.nio.file.FileVisitResult.CONTINUE
+            }
+            override fun visitFileFailed(path: Path, error: java.io.IOException): java.nio.file.FileVisitResult {
+                if (error !is java.nio.file.NoSuchFileException) throw error
+                return java.nio.file.FileVisitResult.CONTINUE
+            }
+        })
         return total
     }
 }

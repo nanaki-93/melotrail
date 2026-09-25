@@ -1,6 +1,11 @@
 package app.melotrail.video
 
-import app.melotrail.video.adapter.VideoMediaProbe
+import app.melotrail.video.adapter.*
+import app.melotrail.video.application.*
+import app.melotrail.video.domain.*
+import kotlinx.serialization.json.*
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import app.melotrail.video.adapter.VideoControlledMediaStage
 import app.melotrail.video.adapter.VideoProjectStore
 import app.melotrail.video.adapter.VideoResultImport
@@ -63,6 +68,145 @@ class VideoPreviewHostCheckTest {
         Files.createDirectories(packageDir.parent.resolve("canvas-darwin-arm64"))
         Files.writeString(packageDir.parent.resolve("canvas-darwin-arm64/skia.darwin-arm64.node"), "owned canvas")
         return Fixture(root, tools, node, canvas, script, root.resolve("fresh"), hashes)
+    }
+
+    /** Synthetic process facts only: the application, ledger, renderer receipts and importer remain real. */
+    private class ProductionFixture(val f: Fixture) {
+        val protected = listOf(f.root.resolve("midi"))
+        val calls = mutableListOf<String>()
+        var beforeProcess: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> Unit = { _, _ -> }
+        val config: PreviewConfiguration
+        init {
+            val validated = f.validate()
+            // The fake process replaces executable attestation, not the selected manifest contract.
+            val manifest = f.tools.resolve(VideoMediaProbe.MANIFEST_NAME)
+            Files.writeString(manifest, Files.readString(manifest)
+                .replace(f.hashes.first, VideoMediaProbe.FFMPEG_SHA256)
+                .replace(f.hashes.second, VideoMediaProbe.FFPROBE_SHA256))
+            config = validated.copy(runtime = validated.runtime.map {
+                if (it.id == "media-manifest") it.copy(sha256 = PreviewPreflight.sha(manifest)) else it
+            })
+        }
+        fun jobs() = VideoJobStore(f.output.resolve("jobs"), "preview-proof", protected)
+        fun store() = VideoProjectStore(protected)
+        val project get() = f.output.resolve("project")
+        fun run() = PreviewProductionRun.run(config, ::process, { Long.MAX_VALUE })
+        fun process(request: VideoMediaProcessRequest, cancellation: VideoMediaProcessCancellation): VideoMediaProcessResult {
+            check(!cancellation.isCancelled())
+            beforeProcess(request, cancellation)
+            val args = request.arguments
+            val inputPath = if ("-i" in args) args.getOrNull(args.indexOf("-i") + 1) else args.lastOrNull()
+            val inputFrames = inputPath?.let { runCatching { Files.readString(Path.of(it)).removePrefix("synthetic video ").toLong() }.getOrNull() }
+            val job = jobs().snapshot().jobs.let { jobs -> inputFrames?.let { n -> jobs.single { it.request.id == "preview-$n" } } ?: jobs.last() }
+            val frames = (job.request.input as VideoControlledMotionGenerationInput).motion.endFrameExclusive
+            check(Files.exists(f.output.resolve("job-$frames-budget.json")))
+            check(job.attempts.single().controlledEvidence != null)
+            if (frames > 150) check(Files.exists(f.output.resolve("job-${if (frames == 600L) 150 else 600}-result.json")))
+            check(request.memoryLimitBytes == config.budget.memoryBytes)
+            Files.createDirectories(request.workingDirectory)
+            calls += "$frames:${request.workingDirectory.fileName}"
+            fun argument(key: String) = args[args.indexOf(key) + 1]
+            val text = when {
+                "-version" in args -> "${request.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.joinToString(" ")
+                "-demuxers" in args -> " D image2 image sequence\n"
+                "-encoders" in args -> " V h264_videotoolbox encoder\n"
+                "-muxers" in args -> " E mp4 muxer\n"
+                "-e" in args && args[1].contains("createRequire") -> buildJsonObject {
+                    put("manifest", f.canvas.toString()); put("path", f.canvas.parent.resolve("index.js").toString())
+                    put("version", "0.1.80")
+                    put("artifacts", buildJsonArray { config.runtime.filter { it.id.startsWith("canvas-artifact-") }.forEach { add(it.ownedPath!!) } })
+                }.toString()
+                "-e" in args -> PreviewPreflight.sha(Path.of(args.last()))
+                "--request" in args -> {
+                    val descriptorPath = Path.of(argument("--request"))
+                    val descriptor = Json.parseToJsonElement(Files.readString(descriptorPath)).jsonObject
+                    val range = descriptor.getValue("frameRange").jsonObject
+                    val start = range.getValue("startFrame").jsonPrimitive.long
+                    val count = range.getValue("frameCount").jsonPrimitive.long
+                    val directory = Files.createDirectory(Path.of(argument("--output")))
+                    val records = buildJsonArray {
+                        for (n in start until start + count) {
+                            val name = "frame-${n.toString().padStart(8, '0')}.png"
+                            val file = directory.resolve(name)
+                            Files.writeString(file, "synthetic frame $n")
+                            add(buildJsonObject { put("frame", n); put("file", name); put("sha256", PreviewPreflight.sha(file)) })
+                        }
+                    }
+                    val scene = descriptor.getValue("preparedScene").jsonObject
+                    val pins = listOf("layers", "poses", "masks").flatMap { scene[it]?.jsonArray.orEmpty() }
+                        .mapNotNull { it.jsonObject["image"]?.jsonObject?.get("artifact")?.jsonObject?.get("sha256")?.jsonPrimitive?.content }.toSet()
+                    Files.writeString(directory.resolve("render-receipt.json"), buildJsonObject {
+                        put("schema", "melotrail-controlled-motion-receipt-v1")
+                        put("tool", buildJsonObject { put("version", "1.1.0") })
+                        put("frameRange", range); put("frames", records)
+                        put("sourcePins", buildJsonArray { pins.forEach { add(it) } })
+                        put("requestSha256", PreviewPreflight.sha(descriptorPath))
+                    }.toString())
+                    ""
+                }
+                request.executable.fileName.toString() == "ffprobe" && "-show_frames" in args ->
+                    """{"frames":[${(0 until frames).joinToString { "{\"best_effort_timestamp\":$it}" }}]}"""
+                request.executable.fileName.toString() == "ffprobe" ->
+                    """{"streams":[{"codec_type":"video","codec_name":"h264","width":320,"height":180,"sample_aspect_ratio":"1:1","avg_frame_rate":"30/1","nb_read_frames":"$frames","time_base":"1/30","start_pts":0,"duration_ts":$frames}],"format":{"duration":"${frames / 30.0}"}}"""
+                args.last() == "encoded.mp4" -> { Files.writeString(request.workingDirectory.resolve("encoded.mp4"), "synthetic video $frames"); "" }
+                else -> { check("null" in args) { "Unhandled synthetic process: $args" }; "" }
+            }
+            return VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.toByteArray().size.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, request.workingDirectory)
+        }
+    }
+
+    @Test fun `three complete production imports publish measured unselected immutable takes`() {
+        val f = ProductionFixture(fixture())
+        f.run()
+        val store = f.store()
+        val project = store.open(f.project)
+        assertEquals(3, project.takeVersions.size)
+        assertEquals(3, project.takeVersions.map { it.id }.toSet().size)
+        assertTrue(project.takeReviewEvents.isEmpty())
+        assertTrue(project.selectedTakeIds.isEmpty())
+        val jobs = f.jobs().snapshot().jobs
+        assertEquals(listOf("preview-150", "preview-600", "preview-900"), jobs.map { it.request.id })
+        jobs.zip(listOf(150L, 600L, 900L)).forEach { (job, count) ->
+            val input = assertIs<VideoControlledMotionGenerationInput>(job.request.input)
+            assertEquals(VideoControlledMediaStage.BACKEND_ID, job.request.backendId)
+            assertEquals(0, input.motion.startFrame)
+            assertEquals(count, input.motion.endFrameExclusive)
+            assertEquals(f.config.budget.policy(), job.request.execution)
+            assertEquals(1, job.request.maximumAttempts)
+            assertEquals(controlledMotionRequestFingerprint(job.request.backendId, input, job.request.modelRequirements, 1), job.request.requestFingerprint)
+            input.dependencyPins.forEach { assertEquals(it.sha256, PreviewPreflight.sha(Path.of(it.ownedPath!!))) }
+            val attempt = job.attempts.single()
+            assertEquals(VideoGenerationAttemptStatus.SUCCEEDED, attempt.status)
+            assertEquals(VideoControlledStage.COMPLETED, attempt.controlledEvidence?.stage)
+            val output = job.outputs.single()
+            assertEquals(output.id, job.currentOutputId)
+            assertEquals(attempt.id, output.attemptId)
+            val take = project.takeVersions.single { it.provenance?.requestId == job.request.id }
+            val measurement = assertNotNull(take.sourceMeasurement)
+            assertEquals(count, measurement.decodedFrameCount)
+            assertEquals(measurement, take.publishedMeasurement)
+            assertEquals(output.sha256, measurement.sha256)
+            assertEquals(output.sha256, PreviewPreflight.sha(store.resolveArtifact(f.project, take.artifact)))
+            val reopened = VideoProjectSession(f.project, store.open(f.project))
+            val service = VideoClipGeneration(VideoScenePreparation(), VideoJobCoordinator("preview-proof", f.jobs(), emptyList()),
+                VideoResultImport(store, PreviewProductionRun.importProbe(f.config.budget, f::process), controlledOutputRoot = f.project.resolve("controlled-outputs")),
+                VideoMotionRenderer(), VideoControlledMediaStage.BACKEND_ID, f.config.budget.policy(), projects = store)
+            val replay = service.importCompleted(VideoCompletedTakeImport(reopened,
+                reopened.project.revision, job.request.id, attempt.id, output.id))
+            val imported = assertIs<VideoClipGenerationResult.Imported>(replay, replay.toString())
+            assertEquals(take.id, imported.result.take.id)
+            assertEquals(project, imported.result.project)
+        }
+        assertEquals(jobs, f.jobs().snapshot().jobs)
+        assertEquals(project, store.open(f.project))
+        val library = assertIs<VideoAssetLibraryResult.Loaded>(VideoAssetImport(VideoProjectLifecycle(store), VideoImageFiles()).open(f.project))
+        for (name in listOf("finished", "subject", "clean", "pose")) {
+            val original = f.f.output.resolve("artwork/$name.png")
+            val asset = library.assets.single { it.id.id == name }
+            assertEquals(PreviewPreflight.sha(original), asset.original.artifact.sha256)
+            assertEquals(asset.original.artifact.sha256, PreviewPreflight.sha(store.resolveArtifact(f.project, asset.original.artifact)))
+        }
     }
 
     @Test fun `preflight validates owned pins and finite persisted per-job policy without launching a job`() {

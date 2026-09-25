@@ -223,10 +223,18 @@ VG02 continuation — Step 1.1 verified on `dff7f4dc5` plus the preserved previe
 candidate: narrow owned-process/resource seams retain real admission and claims;
 the fixture now requires a durable FAILED result rather than a deadline escape.
 Focused host-check/controlled-stage tests passed (6 tasks executed), `make test`
-passed (2 executed, 12 up-to-date), `make build` passed (14 up-to-date), and
+passed (1 executed, 13 up-to-date), `make build` passed (14 up-to-date), and
 `git diff --check` passed. Logs: `build/vg2/vg02-continuation/1.1-*.log`.
 Earlier CORE/VG1 evidence and VG2 commits are preserved; VG2 rows remain open
 pending current combined-candidate and native proof. No opt-in probe was run.
+
+Step 1.2: full synthetic 150/600/900-frame production imports, immutable
+artwork/pins/claims/measurements, ordering and reconstructed exact reimport pass.
+The complete-path test exposed a disk sampler race with removed publication staging
+names; the sampler now tolerates only missing entries, not aliases or other I/O
+failures. Focused suites passed (6 executed), `make test` and `make build` passed,
+`git diff --check` passed; logs `build/vg2/vg02-continuation/1.2-*.log`.
+Synthetic process facts prove wiring only, not native rendering or decoding.
 
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
