@@ -90,7 +90,7 @@ class VideoPreviewHostCheckTest {
         fun jobs() = VideoJobStore(f.output.resolve("jobs"), "preview-proof", protected)
         fun store() = VideoProjectStore(protected)
         val project get() = f.output.resolve("project")
-        fun run() = PreviewProductionRun.run(config, ::process, { Long.MAX_VALUE })
+        fun run(sample: ((Long, Long) -> Long)? = null) = PreviewProductionRun.run(config, ::process, { Long.MAX_VALUE }, sample)
         fun process(request: VideoMediaProcessRequest, cancellation: VideoMediaProcessCancellation): VideoMediaProcessResult {
             check(!cancellation.isCancelled())
             beforeProcess(request, cancellation)
@@ -207,6 +207,47 @@ class VideoPreviewHostCheckTest {
             assertEquals(PreviewPreflight.sha(original), asset.original.artifact.sha256)
             assertEquals(asset.original.artifact.sha256, PreviewPreflight.sha(store.resolveArtifact(f.project, asset.original.artifact)))
         }
+    }
+
+    @Test fun `production import cancellation preserves first take and stops the remaining ladder`() {
+        val f = ProductionFixture(fixture())
+        val blocked = java.util.concurrent.atomic.AtomicBoolean()
+        var prior: VideoProject? = null
+        var hashes = emptyMap<Path, String>()
+        var ownedCancelled = false
+        f.beforeProcess = { request, cancellation ->
+            if (request.workingDirectory.fileName.toString() == "take-source-full-decode" && f.jobs().snapshot().jobs.size == 2) {
+                assertEquals(f.config.budget.memoryBytes, request.memoryLimitBytes)
+                prior = f.store().open(f.project)
+                assertEquals(1, prior!!.takeVersions.size)
+                val paths = prior!!.takeVersions.map { f.store().resolveArtifact(f.project, it.artifact) } +
+                    listOf("finished", "subject", "clean", "pose").map { f.f.output.resolve("artwork/$it.png") }
+                hashes = paths.associateWith(PreviewPreflight::sha)
+                blocked.set(true)
+                val deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos()
+                while (!cancellation.isCancelled() && System.nanoTime() < deadline) Thread.sleep(5)
+                ownedCancelled = cancellation.isCancelled()
+                check(ownedCancelled) { "Budget monitor failed to cancel the owned import child" }
+                throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "owned import fixture cancelled")
+            }
+        }
+        val failure = assertFailsWith<IllegalStateException> {
+            f.run { _, _ -> check(!blocked.get()) { "fixture import resource ceiling" }; 0L }
+        }
+        assertTrue(failure.message.orEmpty().contains("resource ceiling"))
+        assertTrue(ownedCancelled)
+        val project = f.store().open(f.project)
+        assertEquals(prior, project)
+        hashes.forEach { (path, hash) -> assertEquals(hash, PreviewPreflight.sha(path)) }
+        val jobs = f.jobs().snapshot().jobs
+        assertEquals(listOf("preview-150", "preview-600"), jobs.map { it.request.id })
+        assertTrue(jobs.all { it.attempts.size == 1 })
+        assertEquals(1, project.takeVersions.size)
+        assertTrue(project.selectedTakeIds.isEmpty())
+        assertTrue(Files.exists(f.f.output.resolve("job-150-result.json")))
+        assertTrue(Files.readString(f.f.output.resolve("job-600-failure.txt")).contains("resource ceiling"))
+        assertFalse(Files.exists(f.f.output.resolve("job-600-result.json")))
+        assertFalse(Files.exists(f.f.output.resolve("job-900-budget.json")))
     }
 
     @Test fun `preflight validates owned pins and finite persisted per-job policy without launching a job`() {

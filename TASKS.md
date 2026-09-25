@@ -236,6 +236,13 @@ failures. Focused suites passed (6 executed), `make test` and `make build` passe
 `git diff --check` passed; logs `build/vg2/vg02-continuation/1.2-*.log`.
 Synthetic process facts prove wiring only, not native rendering or decoding.
 
+Step 1.3: production-composition cancellation during the second guarded import
+passes: active budget monitoring cancels the owned child, keeps its finite memory
+ceiling, preserves first-take/artwork hashes and project state, retains failure
+evidence, and starts neither the 900-frame job nor a retry. Focused suites (6
+executed), `make test`, `make build`, and diff check passed; logs
+`build/vg2/vg02-continuation/1.3-*.log`.
+
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
   `VideoJobCoordinator.kt`, `core/video/domain/VideoGenerationJob.kt`,
