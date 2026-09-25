@@ -43,11 +43,13 @@ class VideoControlledMediaStage(
                 renderer: VideoMotionRenderer = VideoMotionRenderer(), clock: Clock = Clock.systemUTC(),
                 hostFreeMemoryBytes: () -> Long = {
                     (ManagementFactory.getOperatingSystemMXBean() as? OperatingSystemMXBean)?.freeMemorySize ?: -1L
-                }) :
+                },
+                runProcess: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult =
+                    { request, cancellation -> VideoMediaProcess().run(request, cancellation) }) :
         this(jobs, admissionDomainId, { request, owned, cancellation ->
             try {
                 renderClaimed(request, owned, cancellation, projectRoot, outputRoot, renderer, hostFreeMemoryBytes,
-                    onEncoding = { markEncoding(jobs, admissionDomainId, owned, clock) })
+                    runProcess, onEncoding = { markEncoding(jobs, admissionDomainId, owned, clock) })
             } catch (error: VideoMediaProcessException) {
                 if (error.suppressed.isNotEmpty()) VideoBackendObservation.Unknown(
                     "Controlled native cleanup is unconfirmed: ${error.message}")
@@ -332,6 +334,7 @@ class VideoControlledMediaStage(
         private fun renderClaimed(request: VideoGenerationJobRequest, owned: VideoOwnedBackendAttempt,
             cancellation: VideoMediaProcessCancellation, projectRoot: Path, outputRoot: Path,
             renderer: VideoMotionRenderer, hostFreeMemoryBytes: () -> Long,
+            runProcess: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult,
             onEncoding: () -> Unit): VideoBackendObservation {
             val input = request.input as VideoControlledMotionGenerationInput
             val media = input.media
@@ -429,7 +432,7 @@ class VideoControlledMediaStage(
                     result.invocations.all { it.endFrameExclusive - it.startFrame in 1..300 }) { "Controlled render chunks are not contiguous." }
                 onEncoding() // Persist the render-to-encode boundary before consuming frame receipts.
                 val preview = encodePreview(result, request, directory, binding.ffmpeg, binding.ffprobe,
-                    ::hash, ::budget, ::checkTime, ::remaining, cancellation, beforePublication = {
+                    ::hash, ::budget, ::checkTime, ::remaining, cancellation, run = runProcess, beforePublication = {
                         // Stop the sampler before the publication point: joining it (and observing
                         // its last failure) must not be a fallible operation after publication.
                         monitor.interrupt()

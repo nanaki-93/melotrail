@@ -75,7 +75,7 @@ class VideoResultImport(
         val controlled = input as? VideoControlledMotionGenerationInput
         val flat = input as? VideoClipGenerationInput
         require(request.projectId == session.project.id && request.input == input &&
-            ((controlled != null && request.backendId == "controlled-local") ||
+            ((controlled != null && request.backendId in setOf("controlled-local", VideoControlledMediaStage.BACKEND_ID)) ||
                 (flat?.primaryPrompt != null && request.backendId == LocalVideoBackend.BACKEND_ID)) &&
             output.attemptId.isNotBlank()) { "Take provenance does not match the verified request." }
         require(output.relativePath != null && output.sha256 != null && output.byteCount != null) { "Completed job output has no immutable file pin." }
@@ -238,7 +238,7 @@ class VideoResultImport(
         projects.open(projectRoot)
         val project = projectRoot.toRealPath()
         val configured = when (backendId) {
-            "controlled-local" -> requireNotNull(controlledOutputRoot) { "Controlled output publication root is not configured." }
+            "controlled-local", VideoControlledMediaStage.BACKEND_ID -> requireNotNull(controlledOutputRoot) { "Controlled output publication root is not configured." }
             LocalVideoBackend.BACKEND_ID -> requireNotNull(comfyOutputRoot) { "ComfyUI publication root is not configured." }
             else -> throw IllegalArgumentException("Output backend has no configured publication root: $backendId")
         }
@@ -250,7 +250,7 @@ class VideoResultImport(
             "Output publication root is missing or unsafe."
         }
         when (backendId) {
-            "controlled-local" -> require(root.startsWith(project) && root != project) {
+            "controlled-local", VideoControlledMediaStage.BACKEND_ID -> require(root.startsWith(project) && root != project) {
                 "Controlled output root must be an owned project subtree."
             }
             LocalVideoBackend.BACKEND_ID -> {

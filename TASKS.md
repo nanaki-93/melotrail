@@ -219,6 +219,15 @@ connections; do not assume fake-backend tests prove a working renderer job.
 | VG2-02 | Finish fully decoded result import and persisted take review/selection. Bind output to the successful current attempt, scene and measured media facts; strip incidental audio and reject stale/corrupt/mismatched results. New/rejected takes never overwrite or silently replace selected ones. | VG2-01 | TODO |
 | VG2-03 | Route flat-image I2V and prepared controlled motion through production services with honest capability/limit reporting. Prove five-second and 20–30-second controlled previews use the full-output renderer; keep the measured short I2V limit explicit, not a promise of long generative coherence. | VG2-02 | TODO |
 
+VG02 continuation — Step 1.1 verified on `dff7f4dc5` plus the preserved preview
+candidate: narrow owned-process/resource seams retain real admission and claims;
+the fixture now requires a durable FAILED result rather than a deadline escape.
+Focused host-check/controlled-stage tests passed (6 tasks executed), `make test`
+passed (2 executed, 12 up-to-date), `make build` passed (14 up-to-date), and
+`git diff --check` passed. Logs: `build/vg2/vg02-continuation/1.1-*.log`.
+Earlier CORE/VG1 evidence and VG2 commits are preserved; VG2 rows remain open
+pending current combined-candidate and native proof. No opt-in probe was run.
+
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
   `VideoJobCoordinator.kt`, `core/video/domain/VideoGenerationJob.kt`,

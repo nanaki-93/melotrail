@@ -106,6 +106,29 @@ tasks.register<JavaExec>("videoMediaProbe") {
     }
 }
 
+// VG2 preview proof runs only when explicitly requested with pinned host paths and a new destination.
+tasks.register<JavaExec>("videoPreviewProbe") {
+    group = "verification"
+    description = "Run bounded sequential controlled previews through production video services (opt-in)."
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("app.melotrail.video.VideoPreviewHostCheck")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+    workingDir(rootDir)
+    doFirst {
+        val names = listOf("videoToolsDirectory", "videoNodeExecutable", "videoCanvasManifest", "videoPreviewOutput")
+        val values = names.map { name ->
+            val value = providers.gradleProperty(name).orNull
+                ?: error("Supply -P$name=/absolute/path (all four videoPreviewProbe paths are required)")
+            require(Path.of(value).isAbsolute && Path.of(value).normalize() == Path.of(value)) {
+                "$name must be an absolute normalized path: $value"
+            }
+            value
+        }
+        setArgs(values)
+    }
+}
+
 // V17 keeps the real ComfyUI generation proof explicit and off ordinary test/app startup paths.
 tasks.register<JavaExec>("comfyVideoProbe") {
     group = "verification"
