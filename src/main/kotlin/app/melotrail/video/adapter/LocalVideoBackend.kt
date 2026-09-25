@@ -194,6 +194,13 @@ class LocalVideoBackend private constructor(
         ) return "Attempt fingerprint or executable bindings do not match the persisted request."
         val expected = videoRequestFingerprint(persisted.projectId, backendId, command.input, command.modelRequirements)
         if (expected != command.ownedAttempt.requestFingerprint) return "Request fingerprint does not include the project and exact executable bindings and dependency pins."
+        if (command.input is VideoClipGenerationInput &&
+            (binding.workflowDependencyId == ComfyShortI2VBinding.WORKFLOW_ID ||
+                command.input.dependencyPins.any { it.id == ComfyShortI2VBinding.WORKFLOW_ID })
+        ) {
+            try { ComfyShortI2VBinding.verify(command.input) }
+            catch (error: Exception) { return usefulLocal(error) }
+        }
         val pins = command.input.dependencyPins.associateBy { it.id }
         val consumed = listOf(binding.workflowDependencyId) + binding.referenceInputs.map { it.dependencyId }
         if (consumed.any { pins[it]?.ownedPath == null }) return "Every consumed ComfyUI input must have a persisted owned path and digest."

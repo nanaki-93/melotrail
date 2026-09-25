@@ -5,6 +5,7 @@ import app.melotrail.video.adapter.ComfyClientCancellation
 import app.melotrail.video.adapter.ComfyClientObservation
 import app.melotrail.video.adapter.ComfyClientSubmission
 import app.melotrail.video.adapter.ComfyClientSubmissionResult
+import app.melotrail.video.adapter.ComfyShortI2VBinding
 import app.melotrail.video.adapter.ComfyHostResources
 import app.melotrail.video.adapter.ComfyMemoryPressure
 import app.melotrail.video.adapter.ComfyVideoApi
@@ -395,28 +396,14 @@ internal object ComfyVideoHostProbe {
         )
     }
 
-    private fun generationInput(request: ValidatedRequest, workflow: Path, workflowHash: String) = VideoClipGenerationInput(
+    internal fun generationInput(request: ValidatedRequest, workflow: Path, workflowHash: String) = ComfyShortI2VBinding.input(
         prompt = request.prompt,
-        dependencyPins = listOf(
-            VideoGenerationDependencyPin(WORKFLOW_DEPENDENCY_ID, workflowHash, workflow.toString()),
-            VideoGenerationDependencyPin(IMAGE_DEPENDENCY_ID, sha256(request.composedImage), request.composedImage.toString()),
-        ),
+        graph = VideoGenerationDependencyPin(ComfyShortI2VBinding.WORKFLOW_ID, workflowHash, workflow.toString()),
+        image = VideoGenerationDependencyPin(ComfyShortI2VBinding.IMAGE_ID, sha256(request.composedImage), request.composedImage.toString()),
         durationMillis = request.durationMillis,
         width = request.width,
         height = request.height,
         framesPerSecond = request.framesPerSecond,
-        comfyWorkflow = VideoComfyWorkflowRequest(
-            workflowDependencyId = WORKFLOW_DEPENDENCY_ID,
-            promptInput = VideoComfyInputSlot("20", "value"),
-            referenceInputs = listOf(
-                VideoComfyReferenceInput(IMAGE_DEPENDENCY_ID, VideoComfyInputSlot("4", "image"), "composed-scene.png"),
-            ),
-            widthInput = VideoComfyInputSlot("21", "value"),
-            heightInput = VideoComfyInputSlot("22", "value"),
-            frameCountInput = VideoComfyInputSlot("23", "value"),
-            framesPerSecondInput = VideoComfyInputSlot("24", "value"),
-            output = VideoComfyOutputBinding("16", setOf("mp4")),
-        ),
     )
 
     private fun modelRequirements() = MODEL_PINS.map { VideoModelRequirement(it.id, it.version, it.sha256) }
@@ -638,8 +625,6 @@ internal object ComfyVideoHostProbe {
     private fun elapsedMillis(started: Long): Long = Duration.ofNanos(System.nanoTime() - started).toMillis()
     private fun useful(error: Throwable): String = error.message?.takeIf(String::isNotBlank) ?: error.javaClass.name
 
-    private const val WORKFLOW_DEPENDENCY_ID = "comfyui-short-shot-v1"
-    private const val IMAGE_DEPENDENCY_ID = "composed-scene-image"
     private const val LOCAL_MEMORY_ADMISSION_BYTES = 48L * 1024L * 1024L * 1024L
     private const val LOCAL_DISK_ADMISSION_BYTES = 10L * 1024L * 1024L * 1024L
     private val INFERENCE_LIMIT: Duration = Duration.ofMinutes(20)
@@ -842,6 +827,26 @@ private class ComfyProcessSampler(
 }
 
 class ComfyVideoHostCheckTest {
+    @Test
+    fun `host generation input uses production pinned graph binding and canonical fingerprint`() {
+        withHostRequestFixture { root, requestPath, request ->
+            val validated = ComfyVideoHostProbe.validateRequest(requestPath)
+            val graph = root.resolve("short-shot-api.json")
+            Files.write(graph, checkNotNull(javaClass.getResourceAsStream("/video/comfyui/short-shot-api.json")).use { it.readBytes() })
+            val graphDigest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(graph))
+                .joinToString("") { "%02x".format(it) }
+            val host = ComfyVideoHostProbe.generationInput(validated, graph, graphDigest)
+            val production = ComfyShortI2VBinding.input(
+                request.prompt, VideoGenerationDependencyPin(ComfyShortI2VBinding.WORKFLOW_ID, graphDigest, graph.toString()),
+                VideoGenerationDependencyPin(ComfyShortI2VBinding.IMAGE_ID, request.composedImageSha256, request.composedImage),
+                request.durationMillis, request.width, request.height, request.framesPerSecond,
+            )
+            assertEquals(production, host)
+            assertEquals(comfyRequestFingerprint("host-probe-project", LocalVideoBackend.BACKEND_ID, production, emptyList()),
+                comfyRequestFingerprint("host-probe-project", LocalVideoBackend.BACKEND_ID, host, emptyList()))
+        }
+    }
+
     @Test
     fun `host rejects protected MIDI roots above equal to or below application support before setup`() {
         assertProtectedRootOverlapRejected { Path.of(it.applicationSupportRoot) }

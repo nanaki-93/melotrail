@@ -8,6 +8,7 @@ import app.melotrail.video.adapter.ComfyClientCancellation
 import app.melotrail.video.adapter.ComfyClientObservation
 import app.melotrail.video.adapter.ComfyClientSubmission
 import app.melotrail.video.adapter.ComfyClientSubmissionResult
+import app.melotrail.video.adapter.ComfyShortI2VBinding
 import app.melotrail.video.adapter.ComfyVideoApi
 import app.melotrail.video.adapter.ComfyVideoRuntime
 import app.melotrail.video.adapter.ComfyVideoRuntimeException
@@ -190,6 +191,57 @@ class LocalVideoBackendTest {
         val missing = fixture.backend(FakeApi(), request = null)
         val result = missing.observe(fixture.owned(providerWorkId = null))
         assertTrue(assertIs<VideoBackendObservation.Unknown>(result).detail.contains("bindings"))
+    }
+
+    @Test
+    fun `pinned host graph uses shared production binding and rejects changed slots graph and image before transport`() {
+        val fixture = fixture()
+        Files.write(fixture.workflow, checkNotNull(javaClass.getResourceAsStream("/video/comfyui/short-shot-api.json")).use { it.readBytes() })
+        val base = fixture.request()
+        val pinned = ComfyShortI2VBinding.input(
+            "Describe a calm scene",
+            VideoGenerationDependencyPin(ComfyShortI2VBinding.WORKFLOW_ID, sha256(fixture.workflow), fixture.workflow.toString()),
+            VideoGenerationDependencyPin(ComfyShortI2VBinding.IMAGE_ID, sha256(fixture.reference), fixture.reference.toString()),
+            5_160, 576, 320, 25,
+        )
+        assertEquals(ComfyShortI2VBinding.workflow, pinned.comfyWorkflow)
+        assertEquals(VideoComfyInputSlot("4", "image"), pinned.comfyWorkflow!!.referenceInputs.single().slot)
+        assertEquals(VideoComfyInputSlot("20", "value"), pinned.comfyWorkflow.promptInput)
+        assertEquals(listOf("21", "22", "23", "24"), listOfNotNull(pinned.comfyWorkflow.widthInput,
+            pinned.comfyWorkflow.heightInput, pinned.comfyWorkflow.frameCountInput, pinned.comfyWorkflow.framesPerSecondInput).map { it.nodeId })
+        assertEquals("16", pinned.comfyWorkflow.output.nodeId)
+        val request = base.copy(input = pinned, requestFingerprint = comfyRequestFingerprint(base.projectId, base.backendId, pinned, emptyList()))
+        val api = FakeApi()
+        val accepted = assertIs<VideoBackendSubmission.Accepted>(fixture.backend(api, request).submit(fixture.command(request)))
+        val submitted = requireNotNull(api.submission)
+        assertEquals(accepted.providerWorkId, submitted.promptId)
+        assertEquals(request.requestFingerprint, submitted.requestFingerprint)
+        assertEquals(ComfyShortI2VBinding.workflow.output, submitted.output)
+        assertEquals(VideoComfyInputSlot("4", "image"), submitted.uploads.single().slot)
+        assertEquals("Describe a calm scene", submitted.scalarInputs[VideoComfyInputSlot("20", "value")]?.content)
+        assertEquals("129", submitted.scalarInputs[VideoComfyInputSlot("23", "value")]?.content)
+        val slots = AtomicInteger()
+        val rejectedApi = FakeApi()
+        fun rejected(input: VideoClipGenerationInput): String {
+            val altered = request.copy(input = input, requestFingerprint = comfyRequestFingerprint(request.projectId, request.backendId, input, emptyList()))
+            return assertIs<VideoBackendSubmission.Rejected>(fixture.backend(rejectedApi, altered, acquire = {
+                slots.incrementAndGet(); true
+            }).submit(fixture.command(altered))).reason
+        }
+        assertTrue(rejected(pinned.copy(comfyWorkflow = pinned.comfyWorkflow.copy(promptInput = VideoComfyInputSlot("20", "text")))).contains("slots"))
+        assertTrue(rejected(pinned.copy(comfyWorkflow = pinned.comfyWorkflow.copy(output = VideoComfyOutputBinding("15", setOf("mp4"))))).contains("binding"))
+        assertTrue(rejected(pinned.copy(dependencyPins = pinned.dependencyPins.map {
+            if (it.id == ComfyShortI2VBinding.WORKFLOW_ID) it.copy(sha256 = "f".repeat(64)) else it
+        })).contains("graph"))
+        Files.writeString(fixture.workflow, "altered graph bytes")
+        assertTrue(rejected(pinned.copy(dependencyPins = pinned.dependencyPins.map {
+            if (it.id == ComfyShortI2VBinding.WORKFLOW_ID) it.copy(sha256 = sha256(fixture.workflow)) else it
+        })).contains("graph"))
+        Files.write(fixture.workflow, checkNotNull(javaClass.getResourceAsStream("/video/comfyui/short-shot-api.json")).use { it.readBytes() })
+        Files.writeString(fixture.reference, "mutated image")
+        assertTrue(rejected(pinned).contains("image"))
+        assertEquals(0, rejectedApi.submitCalls)
+        assertEquals(0, slots.get())
     }
 
     @Test
