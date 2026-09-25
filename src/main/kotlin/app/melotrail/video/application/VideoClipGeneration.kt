@@ -322,7 +322,7 @@ class VideoClipGeneration(
             "Persisted prepared dependency pins changed."
         }
         VideoClipGenerationResult.Imported(resultImport.import(request.session, request.expectedRevision,
-            output, input, record.sourceLookId, cancellation))
+            output, input, job.request, cancellation))
     } catch (error: Exception) {
         VideoClipGenerationResult.Rejected(error.message ?: "Generated media could not be imported safely.")
     }

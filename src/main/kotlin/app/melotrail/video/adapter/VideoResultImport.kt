@@ -9,8 +9,15 @@ import app.melotrail.video.domain.VideoControlledMotionGenerationInput
 import java.time.Duration
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoTakeRecord
-import app.melotrail.video.domain.VideoTakeMediaFactsRecord
+import app.melotrail.video.domain.VideoTakeMeasurementRecord
+import app.melotrail.video.domain.VideoTakeRationalRecord
+import app.melotrail.video.domain.VideoTakeProvenanceRecord
 import app.melotrail.video.domain.VideoVersionedId
+import app.melotrail.video.domain.VideoGenerationJobRequest
+import app.melotrail.video.domain.VideoPreparedScene
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
 import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
@@ -53,11 +60,15 @@ class VideoResultImport(
         expectedRevision: Long,
         output: VideoGenerationOutput,
         input: VideoControlledMotionGenerationInput,
-        lookId: VideoVersionedId?,
+        request: VideoGenerationJobRequest,
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
     ): VideoImportedTake {
         require(!cancellation.isCancelled()) { "Take import was cancelled." }
         require(session.project.revision == expectedRevision) { "Project revision changed before take import." }
+        require(request.projectId == session.project.id && request.input == input &&
+            request.backendId == "controlled-local" && output.attemptId.isNotBlank()) {
+            "Take provenance does not match the verified controlled request."
+        }
         require(output.relativePath != null && output.sha256 != null && output.byteCount != null) { "Completed job output has no immutable file pin." }
         val source = resolvePinnedOutput(session.root, "controlled-local", output, cancellation)
         verifyPins(input.motion.preparedPins, session.root, cancellation)
@@ -105,10 +116,22 @@ class VideoResultImport(
         val takePath = "takes/${id.id}/v${id.version}/preview.mp4"
         val artifact = projects.copyImmutableArtifact(session.root, validatedOutput, takePath, validatedDigest, cancellation)
         require(!cancellation.isCancelled() && !Thread.currentThread().isInterrupted) { "Take import was cancelled before publication." }
-        val take = VideoTakeRecord(id, artifact, lookId, Instant.now(clock).toString(), VideoTakeMediaFactsRecord(
-            facts.frameCount, facts.frameRate, facts.nativeWidth, facts.nativeHeight,
-            facts.outputWidth, facts.outputHeight, facts.conversion,
-        ))
+        // The finished reference is a scene-source ID, NOT the persisted look ID.
+        val scene = Json.decodeFromJsonElement<VideoPreparedScene>(
+            Json.parseToJsonElement(input.motion.descriptor.requestJson).jsonObject.getValue("preparedScene"),
+        )
+        val sceneRecord = current.preparedSceneVersions.single { it.id == scene.id }
+        val finished = scene.layers.single { it.kind == app.melotrail.video.domain.VideoLayerKind.FINISHED_SCENE }.image
+        val reference = scene.source.references.single { it.original == finished }
+        require(reference.id in sceneRecord.sourceReferenceIds && current.referenceVersions.any { it.id == reference.id } &&
+            sceneRecord.sourceLookId?.let { look -> current.lookVersions.any { it.id == look } } != false) {
+            "Take source identities are not persisted in this project."
+        }
+        val provenance = VideoTakeProvenanceRecord(current.id, request.id, output.attemptId, output.id,
+            request.backendId, request.requestFingerprint, input.motion.descriptor.sourceIdentity,
+            reference.id, sceneRecord.id, sceneRecord.sourceLookId, input.dependencyPins)
+        val take = VideoTakeRecord(id, artifact, sceneRecord.sourceLookId, Instant.now(clock).toString(),
+            validation.source.toRecord(), verified.toRecord(), validation.conversion.name, provenance)
         val replacement = current.copy(takeVersions = current.takeVersions + take, revision = Math.addExact(expectedRevision, 1L))
         try {
             val saved = projects.save(session.root, expectedRevision, replacement)
@@ -119,6 +142,14 @@ class VideoResultImport(
             throw error
         }
     }
+
+    private fun VideoSourceMeasurement.toRecord() = VideoTakeMeasurementRecord(
+        sha256, bytes, videoCodec, width, height,
+        VideoTakeRationalRecord(sampleAspectRatio.numerator, sampleAspectRatio.denominator),
+        VideoTakeRationalRecord(frameRate.numerator, frameRate.denominator), decodedFrameCount,
+        VideoTakeRationalRecord(videoTimeBase.numerator, videoTimeBase.denominator),
+        videoStartPts, videoDurationPts, videoStreamCount, audioStreamCount, otherStreamCount,
+    )
 
     /** The backend ID and the ledger's pinned relative output select one configured publication root.
      * This does not admit a ComfyUI take; that route remains disconnected until flat-I2V admission. */

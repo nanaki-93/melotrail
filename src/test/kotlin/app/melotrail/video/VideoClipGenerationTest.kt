@@ -293,6 +293,24 @@ class VideoClipGenerationTest {
         assertEquals(30, imported.result.facts.frameCount)
         assertEquals(30.0, imported.result.facts.frameRate)
         assertEquals(record.sourceLookId, imported.result.take.lookId)
+        val take = imported.result.take
+        assertEquals(session.project.id, take.provenance?.projectId)
+        assertEquals(request.id, take.provenance?.requestId)
+        assertEquals(attempt.id, take.provenance?.attemptId)
+        assertEquals(output.id, take.provenance?.outputId)
+        assertEquals(backendId, take.provenance?.backendId)
+        assertEquals(request.requestFingerprint, take.provenance?.executableFingerprint)
+        assertEquals(sourceIdentity, take.provenance?.sourceIdentity)
+        assertEquals(finished, take.provenance?.finishedReferenceId)
+        assertEquals(record.id, take.provenance?.preparedSceneId)
+        assertEquals(record.sourceLookId, take.provenance?.persistedLookId)
+        assertEquals(input.dependencyPins, take.provenance?.consumedPins)
+        assertEquals("NONE", take.conversion)
+        assertEquals(sha(source), take.sourceMeasurement?.sha256)
+        assertEquals(Files.size(source), take.sourceMeasurement?.bytes)
+        assertEquals(take.sourceMeasurement, take.publishedMeasurement)
+        assertEquals(30L, take.publishedMeasurement?.decodedFrameCount)
+        assertEquals(0, take.publishedMeasurement?.audioStreamCount)
         assertEquals(listOf(imported.result.take), store.open(projectRoot).takeVersions)
         assertTrue(store.open(projectRoot).selectedTakeIds.isEmpty())
         assertEquals(sha(source), sha(store.resolveArtifact(projectRoot, imported.result.take.artifact)))
@@ -386,7 +404,7 @@ class VideoClipGenerationTest {
         Files.write(source, byteArrayOf(1, 2, 3))
         val sourceHash = sha(source)
         val artifact = store.copyImmutableArtifact(root, source, "takes/take-1/v1/preview.mp4", sourceHash)
-        val take = VideoTakeRecord(VideoVersionedId("take-1", 1), artifact, null, "2026-09-24T00:00:01Z")
+        val take = fixtureTake(project, root, VideoVersionedId("take-1", 1), artifact, "2026-09-24T00:00:01Z")
         val saved = store.save(root, 0, project.copy(takeVersions = listOf(take), revision = 1))
         assertEquals(1, saved.revision)
         assertTrue(saved.selectedTakeIds.isEmpty())
@@ -404,15 +422,26 @@ class VideoClipGenerationTest {
         store.create(root, project)
         val firstSource = root.resolve("first.mp4"); Files.write(firstSource, byteArrayOf(1, 1))
         val firstArtifact = store.copyImmutableArtifact(root, firstSource, "takes/take-1/v1/preview.mp4", sha(firstSource))
-        val first = VideoTakeRecord(VideoVersionedId("take-1", 1), firstArtifact, null, "2026-09-24T00:00:01Z")
+        val first = fixtureTake(project, root, VideoVersionedId("take-1", 1), firstArtifact, "2026-09-24T00:00:01Z")
         val afterFirst = store.save(root, 0, project.copy(takeVersions = listOf(first), revision = 1))
         val secondSource = root.resolve("second.mp4"); Files.write(secondSource, byteArrayOf(2, 2))
         val secondArtifact = store.copyImmutableArtifact(root, secondSource, "takes/take-2/v1/preview.mp4", sha(secondSource))
-        val second = VideoTakeRecord(VideoVersionedId("take-2", 1), secondArtifact, null, "2026-09-24T00:00:02Z")
+        val second = fixtureTake(project, root, VideoVersionedId("take-2", 1), secondArtifact, "2026-09-24T00:00:02Z")
         val afterSecond = store.save(root, 1, afterFirst.copy(takeVersions = afterFirst.takeVersions + second, revision = 2))
         assertEquals(listOf(first, second), afterSecond.takeVersions)
         assertFalse(afterSecond.selectedTakeIds.isNotEmpty())
         assertEquals(firstArtifact.sha256, sha(store.resolveArtifact(root, firstArtifact)))
+    }
+
+    private fun fixtureTake(project: VideoProject, root: Path, id: VideoVersionedId,
+                            artifact: VideoArtifact, createdAt: String): VideoTakeRecord {
+        val measurement = VideoTakeMeasurementRecord(artifact.sha256, Files.size(root.resolve(artifact.relativePath)),
+            "h264", 100, 60, VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(30, 1),
+            30, VideoTakeRationalRecord(1, 30), 0, 30, 1, 0, 0)
+        val provenance = VideoTakeProvenanceRecord(project.id, "request-${id.id}", "attempt-${id.id}",
+            "output-${id.id}", "comfyui-local", "a".repeat(64), "b".repeat(64),
+            null, null, null, listOf(VideoGenerationDependencyPin("fixture", "c".repeat(64))))
+        return VideoTakeRecord(id, artifact, null, createdAt, measurement, measurement, "NONE", provenance)
     }
 
     private fun sha(path: Path) = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path))

@@ -354,6 +354,13 @@ class VideoProjectStore(
 
     private fun verifyArtifacts(root: Path, project: VideoProject) {
         project.artifacts().forEach { verifyArtifact(root, it) }
+        project.takeVersions.forEach { take ->
+            take.publishedMeasurement?.let { measurement ->
+                if (Files.size(root.resolve(take.artifact.relativePath)) != measurement.bytes) {
+                    throw InvalidVideoProjectException("Published take byte count differs from its measurement")
+                }
+            }
+        }
     }
 
     private fun sha256(path: Path): String = Files.newInputStream(path).use { input ->
@@ -520,7 +527,7 @@ fun interface VideoAtomicWriteObserver {
 
 private object VideoProjectSchema {
     const val SCHEMA = "melotrail-video-project"
-    const val VERSION = 2
+    const val VERSION = 3
 
     private val json = Json {
         prettyPrint = true

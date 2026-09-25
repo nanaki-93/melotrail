@@ -17,6 +17,10 @@ import app.melotrail.video.domain.VideoPreparedSceneRecord
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoReferenceRecord
 import app.melotrail.video.domain.VideoTakeRecord
+import app.melotrail.video.domain.VideoTakeMeasurementRecord
+import app.melotrail.video.domain.VideoTakeRationalRecord
+import app.melotrail.video.domain.VideoTakeProvenanceRecord
+import app.melotrail.video.domain.VideoGenerationDependencyPin
 import app.melotrail.video.domain.VideoVersionedId
 import java.nio.file.Files
 import java.nio.file.Path
@@ -56,13 +60,10 @@ class VideoProjectStoreTest {
         val firstTakeBytes = Files.readAllBytes(videoRoot.resolve("takes/take-1.mp4"))
 
         val secondTakeId = VideoVersionedId("take-1", 2)
-        val secondTake = VideoTakeRecord(
-            secondTakeId,
-            artifact(videoRoot, "takes/take-1-v2.mp4", "take-two"),
-            reopened.project.selectedLookId,
+        val secondTake = measuredTake(reopened.project, videoRoot, secondTakeId,
+            artifact(videoRoot, "takes/take-1-v2.mp4", "take-two"), reopened.project.selectedLookId,
             // Completion may be recorded later while retaining an earlier provider timestamp.
-            "2026-09-12T23:59:00Z",
-        )
+            "2026-09-12T23:59:00Z")
         val reselection = reopened.project.copy(
             takeVersions = reopened.project.takeVersions + secondTake,
             selectedTakeIds = listOf(secondTakeId),
@@ -123,6 +124,113 @@ class VideoProjectStoreTest {
         assertEquals(VideoProjectProblemCode.IMMUTABLE_HISTORY, result.problem.code)
         assertContentEquals(before, Files.readAllBytes(videoRoot.resolve(VideoProjectStore.PROJECT_FILE)))
         assertEquals(populated, projectStore.open(videoRoot))
+    }
+
+    @Test
+    fun `measured take provenance survives reopen and direct saves cannot revise either measurement`() {
+        val videoRoot = root.resolve("video-project")
+        val projectStore = store()
+        val created = projectStore.create(videoRoot, emptyProject())
+        val populated = populatedProject(created, videoRoot)
+        val first = populated.takeVersions.single()
+        val ratio = VideoTakeRationalRecord(1, 1)
+        val source = VideoTakeMeasurementRecord("a".repeat(64), 100, "h264", 100, 60,
+            ratio, VideoTakeRationalRecord(30, 1), 30, VideoTakeRationalRecord(1, 30), 0, 30, 1, 1, 0)
+        val published = source.copy(sha256 = first.artifact.sha256, bytes = Files.size(videoRoot.resolve(first.artifact.relativePath)), audioStreamCount = 0)
+        val provenance = requireNotNull(first.provenance)
+        val measured = first.copy(sourceMeasurement = source, publishedMeasurement = published,
+            conversion = "AUDIO_REMUX")
+        val saved = projectStore.save(videoRoot, 0L, populated.copy(takeVersions = listOf(measured)))
+        assertEquals(measured, projectStore.open(videoRoot).takeVersions.single())
+        val document = videoRoot.resolve(VideoProjectStore.PROJECT_FILE)
+        val before = Files.readAllBytes(document)
+        val takeBytes = Files.readAllBytes(videoRoot.resolve(first.artifact.relativePath))
+        listOf(
+            measured.copy(sourceMeasurement = source.copy(bytes = 101)),
+            measured.copy(provenance = provenance.copy(requestId = "another-request")),
+            measured.copy(conversion = "AUDIO_REMUX_START_NORMALIZED"),
+        ).forEach { edited ->
+            assertFailsWith<IllegalArgumentException> {
+                projectStore.save(videoRoot, 1L, saved.copy(takeVersions = listOf(edited), revision = 2L))
+            }
+            assertContentEquals(before, Files.readAllBytes(document))
+            assertContentEquals(takeBytes, Files.readAllBytes(videoRoot.resolve(first.artifact.relativePath)))
+        }
+        assertEquals(saved, projectStore.open(videoRoot))
+        assertFailsWith<IllegalArgumentException> {
+            measured.copy(publishedMeasurement = published.copy(decodedFrameCount = 29))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            populated.copy(takeVersions = listOf(measured.copy(publishedMeasurement = published.copy(sha256 = "f".repeat(64)))))
+        }
+        val badBytes = measured.copy(publishedMeasurement = published.copy(bytes = published.bytes + 1))
+        assertFailsWith<InvalidVideoProjectException> {
+            projectStore.save(videoRoot, 1L, saved.copy(takeVersions = saved.takeVersions + badBytes.copy(
+                id = VideoVersionedId("take-2", 1),
+                artifact = artifact(videoRoot, "takes/take-2.mp4", "take-two"),
+                publishedMeasurement = published.copy(bytes = 999, sha256 = sha256(videoRoot.resolve("takes/take-2.mp4"))),
+            ), revision = 2L))
+        }
+        assertContentEquals(before, Files.readAllBytes(document))
+    }
+
+    @Test
+    fun `direct save cannot append a take without complete measurements and provenance`() {
+        val videoRoot = root.resolve("video-project")
+        val projectStore = store()
+        val original = projectStore.create(videoRoot, emptyProject())
+        val before = Files.readAllBytes(videoRoot.resolve(VideoProjectStore.PROJECT_FILE))
+        val takeArtifact = artifact(videoRoot, "takes/incomplete.mp4", "take")
+        assertFailsWith<IllegalArgumentException> {
+            projectStore.save(videoRoot, 0L, original.copy(
+                takeVersions = listOf(VideoTakeRecord(VideoVersionedId("incomplete", 1),
+                    takeArtifact, null, "2026-09-13T00:03:00Z")), revision = 1L))
+        }
+        assertContentEquals(before, Files.readAllBytes(videoRoot.resolve(VideoProjectStore.PROJECT_FILE)))
+        assertEquals(original, projectStore.open(videoRoot))
+    }
+
+    @Test
+    fun `direct save rejects take source IDs from another prepared scene`() {
+        val videoRoot = root.resolve("video-project")
+        val projectStore = store()
+        val original = projectStore.create(videoRoot, emptyProject())
+        val referenceOne = VideoVersionedId("reference-one", 1)
+        val referenceTwo = VideoVersionedId("reference-two", 1)
+        val lookOne = VideoVersionedId("look-one", 1)
+        val lookTwo = VideoVersionedId("look-two", 1)
+        val sceneId = VideoVersionedId("scene-one", 1)
+        val scene = VideoPreparedSceneRecord(sceneId,
+            artifact(videoRoot, "prepared-scenes/scene-one/v1/scene.json", "scene"),
+            lookOne, listOf(referenceOne), emptyList(), "2026-09-13T00:02:00Z")
+        val sources = original.copy(
+            referenceVersions = listOf(referenceOne, referenceTwo).map { id ->
+                VideoReferenceRecord(id, artifact(videoRoot, "references/${id.id}.png", id.id), "2026-09-13T00:01:00Z")
+            },
+            lookVersions = listOf(lookOne, lookTwo).map { id ->
+                VideoLookRecord(id, artifact(videoRoot, "looks/${id.id}.png", id.id),
+                    listOf(if (id == lookOne) referenceOne else referenceTwo), "2026-09-13T00:01:00Z")
+            },
+            preparedSceneVersions = listOf(scene), revision = 1L)
+        projectStore.save(videoRoot, 0L, sources)
+        val before = Files.readAllBytes(videoRoot.resolve(VideoProjectStore.PROJECT_FILE))
+        val take = measuredTake(sources, videoRoot, VideoVersionedId("take", 1),
+            artifact(videoRoot, "takes/take.mp4", "take"), lookOne, "2026-09-13T00:03:00Z", referenceOne)
+        val valid = take.copy(provenance = take.provenance!!.copy(
+            backendId = "controlled-local", preparedSceneId = sceneId))
+        // Both alternate IDs exist in the project, but neither belongs to this scene.
+        listOf(
+            valid.copy(provenance = valid.provenance!!.copy(finishedReferenceId = referenceTwo)),
+            valid.copy(lookId = lookTwo, provenance = valid.provenance!!.copy(persistedLookId = lookTwo)),
+        ).forEach { mismatched ->
+            assertFailsWith<IllegalArgumentException> {
+                projectStore.save(videoRoot, 1L, sources.copy(takeVersions = listOf(mismatched), revision = 2L))
+            }
+            assertContentEquals(before, Files.readAllBytes(videoRoot.resolve(VideoProjectStore.PROJECT_FILE)))
+        }
+        val saved = projectStore.save(videoRoot, 1L, sources.copy(takeVersions = listOf(valid), revision = 2L))
+        assertEquals(valid, projectStore.open(videoRoot).takeVersions.single())
+        assertTrue(saved.selectedTakeIds.isEmpty())
     }
 
     @Test
@@ -196,14 +304,15 @@ class VideoProjectStoreTest {
             lifecycle(projectStore).create(CreateVideoProject(videoRoot, "Original", "video-1")),
         ).session.project
         val projectFile = videoRoot.resolve(VideoProjectStore.PROJECT_FILE)
-        val unsupported = """{"schema":"melotrail-video-project","version":1,"project":{}}"""
-        Files.writeString(projectFile, unsupported)
-        val beforeUnsupported = Files.readAllBytes(projectFile)
-
-        assertFailsWith<UnsupportedVideoProjectException> {
-            projectStore.save(videoRoot, 0L, original.copy(revision = 1L))
+        listOf(1, 2, 4).forEach { unsupportedVersion ->
+            val unsupported = """{"schema":"melotrail-video-project","version":$unsupportedVersion,"project":{}}"""
+            Files.writeString(projectFile, unsupported)
+            val beforeUnsupported = Files.readAllBytes(projectFile)
+            assertFailsWith<UnsupportedVideoProjectException> {
+                projectStore.save(videoRoot, 0L, original.copy(revision = 1L))
+            }
+            assertContentEquals(beforeUnsupported, Files.readAllBytes(projectFile))
         }
-        assertContentEquals(beforeUnsupported, Files.readAllBytes(projectFile))
 
         Files.writeString(projectFile, "{\"schema\":")
         val beforeMalformed = Files.readAllBytes(projectFile)
@@ -500,12 +609,9 @@ class VideoProjectStoreTest {
                 ),
             ),
             takeVersions = listOf(
-                VideoTakeRecord(
-                    takeId,
-                    artifact(videoRoot, "takes/take-1.mp4", "take"),
-                    lookId,
-                    "2026-09-13T00:03:00Z",
-                ),
+                measuredTake(project, videoRoot, takeId,
+                    artifact(videoRoot, "takes/take-1.mp4", "take"), lookId,
+                    "2026-09-13T00:03:00Z", referenceId),
             ),
             selectedReferenceIds = listOf(referenceId),
             selectedLookId = lookId,
@@ -520,6 +626,21 @@ class VideoProjectStoreTest {
             ),
             revision = 1L,
         )
+    }
+
+    private fun measuredTake(
+        project: VideoProject, videoRoot: Path, id: VideoVersionedId, artifact: VideoArtifact,
+        lookId: VideoVersionedId?, createdAt: String, referenceId: VideoVersionedId? = project.referenceVersions.firstOrNull()?.id,
+    ): VideoTakeRecord {
+        val measurement = VideoTakeMeasurementRecord(artifact.sha256,
+            Files.size(videoRoot.resolve(artifact.relativePath)), "h264", 100, 60,
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(30, 1), 30,
+            VideoTakeRationalRecord(1, 30), 0, 30, 1, 0, 0)
+        val provenance = VideoTakeProvenanceRecord(project.id, "request-${id.id}-v${id.version}",
+            "attempt-${id.id}-v${id.version}", "output-${id.id}-v${id.version}",
+            "comfyui-local", "b".repeat(64), "c".repeat(64), referenceId, null, lookId,
+            listOf(VideoGenerationDependencyPin("source-1", "d".repeat(64))))
+        return VideoTakeRecord(id, artifact, lookId, createdAt, measurement, measurement, "NONE", provenance)
     }
 
     private fun emptyProject() = VideoProject("video-1", "Video", "2026-09-13T00:00:00Z")
