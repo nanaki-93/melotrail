@@ -251,6 +251,16 @@ Logs: `build/vg2/vg02-continuation/1.4-*.log`. Step 3.3's fixture wiring gate is
 complete; VG2-03 stays open for native proof. This is coordinator technical review,
 not independent human or artistic approval.
 
+Step 2.1: opt-in preview check now independently measures source/published clips,
+retains decoded first/middle/final and both-side chunk-boundary PNGs, compares the
+subject region to absolute rendered frames, and checks a seeded authored blink
+phase rather than unequal endpoints. The owned fixture uses contrasting pose art
+and seed 73 (seed 42's first blink falls after five seconds). Missing, invalid,
+wrong-size and discontinuous samples reject. Fresh focused media/motion/host
+suites (6 executed), `make test`, `make build`, and diff check passed; logs
+`build/vg2/vg02-continuation/2.1-*.log`. These are synthetic wiring checks; native
+frame inspection and human motion review are not claimed.
+
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,
   `VideoJobCoordinator.kt`, `core/video/domain/VideoGenerationJob.kt`,

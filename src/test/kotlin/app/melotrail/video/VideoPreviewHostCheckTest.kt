@@ -128,7 +128,13 @@ class VideoPreviewHostCheckTest {
                         for (n in start until start + count) {
                             val name = "frame-${n.toString().padStart(8, '0')}.png"
                             val file = directory.resolve(name)
-                            Files.writeString(file, "synthetic frame $n")
+                            val image = java.awt.image.BufferedImage(320, 180, java.awt.image.BufferedImage.TYPE_INT_RGB)
+                            val g = image.createGraphics()
+                            g.color = java.awt.Color(50, 60, 80); g.fillRect(0, 0, 320, 180)
+                            val amount = PreviewFrameEvidence.blink(n)
+                            g.color = java.awt.Color((170 + 60 * amount).toInt(), (100 + 120 * amount).toInt(), (150 - 90 * amount).toInt())
+                            g.fillOval(10, 10, 20, 30); g.dispose()
+                            check(javax.imageio.ImageIO.write(image, "png", file.toFile()))
                             add(buildJsonObject { put("frame", n); put("file", name); put("sha256", PreviewPreflight.sha(file)) })
                         }
                     }
@@ -148,6 +154,11 @@ class VideoPreviewHostCheckTest {
                     """{"frames":[${(0 until frames).joinToString { "{\"best_effort_timestamp\":$it}" }}]}"""
                 request.executable.fileName.toString() == "ffprobe" ->
                     """{"streams":[{"codec_type":"video","codec_name":"h264","width":320,"height":180,"sample_aspect_ratio":"1:1","avg_frame_rate":"30/1","nb_read_frames":"$frames","time_base":"1/30","start_pts":0,"duration_ts":$frames}],"format":{"duration":"${frames / 30.0}"}}"""
+                "-vf" in args -> {
+                    val frame = argument("-vf").substringAfter(',').substringBefore(')').toLong()
+                    val rendered = project.resolve("controlled-outputs/${job.attempts.single().id}/encode-frames/frame-${frame.toString().padStart(8, '0')}.png")
+                    Files.copy(rendered, Path.of(args.last())); ""
+                }
                 args.last() == "encoded.mp4" -> { Files.writeString(request.workingDirectory.resolve("encoded.mp4"), "synthetic video $frames"); "" }
                 else -> { check("null" in args) { "Unhandled synthetic process: $args" }; "" }
             }
@@ -207,6 +218,27 @@ class VideoPreviewHostCheckTest {
             assertEquals(PreviewPreflight.sha(original), asset.original.artifact.sha256)
             assertEquals(asset.original.artifact.sha256, PreviewPreflight.sha(store.resolveArtifact(f.project, asset.original.artifact)))
         }
+    }
+
+    @Test fun `frame evidence covers every boundary and authored phase and rejects discontinuity`() {
+        for (count in listOf(150L, 600L, 900L)) {
+            val samples = PreviewFrameEvidence.sampleFrames(count)
+            assertTrue(samples.containsAll(listOf(0, count / 2, count - 1)))
+            for (boundary in 300 until count step 300) assertTrue(samples.containsAll(listOf(boundary - 1, boundary)))
+            assertTrue(samples.any { PreviewFrameEvidence.blink(it) > 0.25 })
+        }
+        val a = java.awt.image.BufferedImage(320, 180, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        val b = java.awt.image.BufferedImage(320, 180, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        val g = b.createGraphics(); g.color = java.awt.Color.WHITE; g.fillRect(10, 10, 20, 30); g.dispose()
+        assertFailsWith<IllegalArgumentException> { PreviewFrameEvidence.checkPixels(a, b) }
+        assertFailsWith<IllegalArgumentException> {
+            PreviewFrameEvidence.checkPixels(a, java.awt.image.BufferedImage(100, 100, java.awt.image.BufferedImage.TYPE_INT_RGB))
+        }
+        assertFailsWith<IllegalArgumentException> { PreviewFrameEvidence.sampleFrames(299) }
+        val missing = Files.createTempDirectory("preview-sample-").resolve("absent.png")
+        assertFailsWith<IllegalArgumentException> { PreviewFrameEvidence.readSample(missing) }
+        Files.writeString(missing, "not a decoded frame")
+        assertFailsWith<IllegalArgumentException> { PreviewFrameEvidence.readSample(missing) }
     }
 
     @Test fun `production import cancellation preserves first take and stops the remaining ladder`() {

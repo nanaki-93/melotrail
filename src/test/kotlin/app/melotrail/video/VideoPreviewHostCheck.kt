@@ -314,6 +314,98 @@ internal object PreviewLadder {
     }
 }
 
+/** Bounded native evidence for this owned blink fixture, not a general artistic evaluator. */
+internal object PreviewFrameEvidence {
+    // Independent implementation of the pinned compositor's absolute-time blink schedule.
+    internal fun blink(frame: Long): Double {
+        fun unit(label: String, slot: Long): Double {
+            val bytes = MessageDigest.getInstance("SHA-256").digest("73:blink:$label:$slot".toByteArray())
+            return (java.nio.ByteBuffer.wrap(bytes).int.toLong() and 0xffffffffL) / 4294967296.0
+        }
+        fun smooth(value: Double): Double = value.coerceIn(0.0, 1.0).let { it * it * (3 - 2 * it) }
+        val time = frame / 30.0
+        val epoch = (time / 7).toLong()
+        return ((epoch - 1)..(epoch + 1)).maxOf { slot ->
+            val start = slot * 7 + 1 + unit("start", slot) * 4.5
+            val close = 0.08 + unit("close", slot) * 0.05
+            val open = 0.11 + unit("open", slot) * 0.06
+            when {
+                time >= start && time < start + close -> smooth((time - start) / close)
+                time >= start + close && time < start + close + open -> 1 - smooth((time - start - close) / open)
+                else -> 0.0
+            }
+        } * 0.5
+    }
+
+    internal fun sampleFrames(count: Long): List<Long> {
+        require(count in listOf(150L, 600L, 900L))
+        return (listOf(0L, count / 2, count - 1) +
+            (300 until count step 300).flatMap { listOf(it - 1, it) } +
+            (0 until count step 210).map { start -> (start until minOf(start + 210, count)).maxBy(::blink) })
+            .distinct().sorted()
+    }
+
+    internal fun readSample(path: Path): BufferedImage {
+        require(Files.isRegularFile(path, NOFOLLOW_LINKS) && !Files.isSymbolicLink(path)) { "Missing decoded frame: $path" }
+        return requireNotNull(ImageIO.read(path.toFile())) { "Invalid decoded frame: $path" }
+    }
+
+    internal fun checkPixels(expected: BufferedImage, decoded: BufferedImage) {
+        require(expected.width == decoded.width && expected.height == decoded.height) { "Decoded frame viewport differs" }
+        var error = 0L
+        // Compare the authored subject, not a whole-canvas mean that can hide lost motion.
+        for (y in 12 until 38) for (x in 12 until 28) for (shift in listOf(0, 8, 16))
+            error += kotlin.math.abs(((expected.getRGB(x, y) shr shift) and 255) - ((decoded.getRGB(x, y) shr shift) and 255))
+        require(error.toDouble() / (26 * 16 * 3) <= 8.0) { "Decoded motion sample differs from its absolute rendered frame" }
+    }
+
+    fun inspect(config: PreviewConfiguration, input: VideoControlledMotionGenerationInput, source: Path,
+        published: Path, evidence: Path, cancellation: VideoMediaProcessCancellation,
+        run: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult) {
+        val count = input.motion.endFrameExclusive - input.motion.startFrame
+        require(input.motion.startFrame == 0L)
+        val directory = Files.createDirectory(evidence)
+        val probe = PreviewProductionRun.importProbe(config.budget, run)
+        val frames = sampleFrames(count)
+        val records = mutableListOf<String>()
+        for ((label, clip) in listOf("source" to source, "published" to published)) {
+            val digest = PreviewPreflight.sha(clip)
+            val measurement = probe.inspectTake(VideoMediaProbeRequest(config.tools, clip, directory.resolve("$label-measurement")), cancellation)
+            require(measurement.sha256 == digest && measurement.videoCodec == "h264" &&
+                measurement.width == input.motion.descriptor.width && measurement.height == input.motion.descriptor.height &&
+                measurement.sampleAspectRatio == VideoMediaRational(1, 1) && measurement.frameRate == VideoMediaRational(30, 1) &&
+                measurement.decodedFrameCount == count && measurement.videoStreamCount == 1 &&
+                measurement.audioStreamCount == 0 && measurement.otherStreamCount == 0 &&
+                java.math.BigInteger.valueOf(measurement.videoDurationPts) * java.math.BigInteger.valueOf(measurement.videoTimeBase.numerator) * java.math.BigInteger.valueOf(30) ==
+                java.math.BigInteger.valueOf(count) * java.math.BigInteger.valueOf(measurement.videoTimeBase.denominator)) { "Native preview media contract differs" }
+            val decoded = mutableMapOf<Long, BufferedImage>()
+            for (frame in frames) {
+                val png = directory.resolve("$label-$frame.png")
+                val tool = input.motion.descriptor.runtime.ffmpeg
+                run(VideoMediaProcessRequest(Path.of(tool.ownedPath!!), tool.sha256,
+                    listOf("-nostdin", "-hide_banner", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe",
+                        "-i", clip.toString(), "-vf", "select=eq(n\\,$frame)", "-vsync", "0", "-frames:v", "1",
+                        "-an", "-sn", "-dn", "-c:v", "png", "-f", "image2", png.toString()),
+                    directory.resolve("$label-$frame-process"), Duration.ofSeconds(30), memoryLimitBytes = config.budget.memoryBytes), cancellation)
+                val image = readSample(png)
+                val rendered = source.parent.resolve("encode-frames/frame-${frame.toString().padStart(8, '0')}.png")
+                checkPixels(readSample(rendered), image)
+                decoded[frame] = image
+                records += """{"clip":"$label","clipSha256":"$digest","frame":$frame,"width":${image.width},"height":${image.height},"pngSha256":"${PreviewPreflight.sha(png)}","renderedSha256":"${PreviewPreflight.sha(rendered)}","blink":${blink(frame)}}"""
+            }
+            val closed = frames.maxBy(::blink)
+            require(blink(closed) > 0.25) { "Missing authored blink phase" }
+            val a = decoded.getValue(0).getRGB(20, 25)
+            val b = decoded.getValue(closed).getRGB(20, 25)
+            require(listOf(0, 8, 16).maxOf { kotlin.math.abs(((a shr it) and 255) - ((b shr it) and 255)) } >= 15) {
+                "Authored blink phase is not visible in decoded subject pixels"
+            }
+            require(PreviewPreflight.sha(clip) == digest) { "Clip changed during frame inspection" }
+        }
+        Files.writeString(directory.resolve("frames.json"), """{"frameCount":$count,"samples":[${records.joinToString(",")}],"approval":"NOT_REVIEWED"}""", CREATE_NEW)
+    }
+}
+
 /** The fixture is technical artwork, not a human-approved production image. */
 internal object PreviewProductionRun {
     internal fun boundedImportRequest(request: VideoMediaProcessRequest, budget: PreviewBudget) =
@@ -391,7 +483,7 @@ internal object PreviewProductionRun {
                 val finished = imported("finished", Color(45, 55, 75), false, 320, 180, VideoReferenceRole.COMPLETE_SCENE)
                 val subject = imported("subject", Color(170, 100, 150), true, 20, 30, VideoReferenceRole.SUBJECT)
                 val clean = imported("clean", Color(50, 60, 80), false, 320, 180, VideoReferenceRole.ENVIRONMENT)
-                val pose = imported("pose", Color(160, 90, 140), true, 20, 30, VideoReferenceRole.SUBJECT)
+                val pose = imported("pose", Color(230, 220, 60), true, 20, 30, VideoReferenceRole.SUBJECT)
                 val bounds = VideoRect("scene", 10.0, 10.0, 20.0, 30.0)
                 val preparation = VideoPreparedSceneImport(store, scenes).import(projectRoot, session.project.revision,
                     PrepareVideoAnimationAssets(VideoVersionedId("scene-$frames", 1), finished,
@@ -411,7 +503,7 @@ internal object PreviewProductionRun {
                 val admission = service.generate(VideoClipGenerationRequest(session.project, session.project.revision,
                     look, scene, VideoSceneMotionRequest("Blink gently without changing the artwork.", listOf(
                         VideoSceneMotionControlRequest("blink", VideoSceneMotionIntent.BLINK, controls.id, 0.0, 1.0, 0.5))),
-                    capabilities, guidelines, pins, config.runtime, 0, frames, 42,
+                    capabilities, guidelines, pins, config.runtime, 0, frames, 73,
                     maximumAttempts = 1, requestId = "preview-$frames", projectRoot = projectRoot, expectedCanvasVersion = "0.1.80"))
                 val admitted = admission as? VideoClipGenerationResult.Admitted ?: error("Controlled admission: $admission")
                 val attempt = requireNotNull((admitted.result as VideoJobResult.Accepted).attempt)
@@ -427,6 +519,12 @@ internal object PreviewProductionRun {
                     ticket.requestId, ticket.attemptId, outputId), cancellation) as? VideoClipGenerationResult.Imported
                     ?: error("Guarded take import rejected for ${ticket.requestId}")
                 session = VideoProjectSession(projectRoot, result.result.project)
+                val job = jobs.snapshot().jobs.single { it.request.id == ticket.requestId }
+                val input = job.request.input as VideoControlledMotionGenerationInput
+                val source = publication.resolve(requireNotNull(job.outputs.single { it.id == outputId }.relativePath))
+                PreviewFrameEvidence.inspect(config, input, source,
+                    store.resolveArtifact(projectRoot, result.result.take.artifact),
+                    output.resolve("frames-${input.motion.endFrameExclusive}"), cancellation, runProcess)
                 return PreviewImported(result.result.take.id.id,
                     requireNotNull(result.result.take.sourceMeasurement).sha256,
                     requireNotNull(result.result.take.publishedMeasurement).sha256,
