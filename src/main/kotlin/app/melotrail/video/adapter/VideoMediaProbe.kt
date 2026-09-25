@@ -68,6 +68,15 @@ data class VideoSourceMeasurement(
     val durationSeconds: Double get() = videoTimeBase.seconds(videoDurationPts)
 }
 
+enum class VideoTakeConversion { NONE, AUDIO_REMUX, AUDIO_REMUX_START_NORMALIZED }
+
+data class VideoValidatedTake(
+    val source: VideoSourceMeasurement,
+    val published: VideoSourceMeasurement,
+    val validatedPath: Path,
+    val conversion: VideoTakeConversion,
+)
+
 data class VideoMediaProbeResult(
     val outputDirectory: Path,
     val report: Path,
@@ -117,66 +126,156 @@ class VideoMediaProbe internal constructor(
         val output = createPrivateDirectory(validated.outputDirectory, "source measurement output")
         val operations = mutableListOf<OperationEvidence>()
         try {
-            val ffmpegVersion = invoke("source-ffmpeg-version", validated.ffmpeg, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
-            val ffprobeVersion = invoke("source-ffprobe-version", validated.ffprobe, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
-            verifyReportedBuild(ffmpegVersion, validated.manifest, "ffmpeg")
-            verifyReportedBuild(ffprobeVersion, validated.manifest, "ffprobe")
-            checkCancelled(cancellation)
-            val before = Files.readAttributes(validated.input, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
-            val digest = sha256(validated.input, cancellation)
-            val result = invoke("source-streams", validated.ffprobe, listOf(
-                "-v", "error", "-protocol_whitelist", "file,pipe", "-count_frames",
-                "-show_entries", "stream=codec_type,codec_name,width,height,sample_aspect_ratio,avg_frame_rate,nb_read_frames,time_base,start_pts,duration_ts",
-                "-of", "json", validated.input.toString(),
-            ), output, request, cancellation, operations)
-            val measurement = parseSource(result.stdout.text, digest, before.size())
-            decodeFully("source-full-decode", validated.ffmpeg, validated.input, output, request, cancellation, operations)
-            val after = Files.readAttributes(validated.input, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
-            if (before.fileKey() != after.fileKey() || before.size() != after.size() ||
-                before.lastModifiedTime() != after.lastModifiedTime() || sha256(validated.input, cancellation) != digest
-            ) invalidOutput("Source video changed during measurement.")
-            checkCancelled(cancellation)
-            return measurement
+            verifyTools(validated, output, request, cancellation, operations, "source")
+            return measure("source", validated.input, validated, output, request, cancellation, operations)
         } catch (error: VideoMediaProbeException) { throw error }
         catch (error: VideoMediaProcessException) { throw error }
         catch (error: Exception) { throw storageFailure("Source measurement failed: ${usefulMessage(error)}", error) }
     }
 
-    /** Returns validated metadata and, when needed, an audio-stripped immutable candidate. */
+    /** Independently measures and decodes the original and any video-only remux. */
     fun validateTake(
         request: VideoMediaProbeRequest,
         cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
-    ): Pair<VideoMediaMetadata, Path> {
+    ): VideoValidatedTake {
+        checkCancelled(cancellation)
         val validated = validate(request)
-        val digest = sha256(validated.input)
+        checkCancelled(cancellation)
         val output = createPrivateDirectory(validated.outputDirectory, "take validation output")
         val operations = mutableListOf<OperationEvidence>()
         try {
-            val ffmpegVersion = invoke("take-ffmpeg-version", validated.ffmpeg, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
-            val ffprobeVersion = invoke("take-ffprobe-version", validated.ffprobe, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
-            verifyReportedBuild(ffmpegVersion, validated.manifest, "ffmpeg")
-            verifyReportedBuild(ffprobeVersion, validated.manifest, "ffprobe")
-            val metadata = metadata("take-metadata", validated.ffprobe, validated.input, output, request, cancellation, operations)
-            requireUsableVideo(metadata, requireSilent = false, label = "Generated take")
-            decodeFully("take-full-decode", validated.ffmpeg, validated.input, output, request, cancellation, operations)
-            if (metadata.audioStreamCount > 0) {
-                require(metadata.videoCodec == "h264" && metadata.width == 1920 && metadata.height == 1080 && metadata.frameRate == 30.0) {
-                    "Incidental-audio stripping is admitted only for existing H.264 1920x1080 30-fps previews; this output needs an explicit remux conversion policy."
-                }
+            verifyTools(validated, output, request, cancellation, operations, "take")
+            val source = measure("take-source", validated.input, validated, output, request, cancellation, operations)
+            val sourceFrames = presentationTimestamps("take-source-frames", validated.input, source, validated, output, request, cancellation, operations)
+            if (source.videoCodec != "h264") invalidMedia("Take video codec is not supported for MP4 remux: ${source.videoCodec}.")
+            val result = if (source.audioStreamCount > 0) {
                 val silent = output.resolve("silent-take.mp4")
-                invoke("strip-incidental-audio", validated.ffmpeg, listOf("-nostdin", "-hide_banner", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe", "-i", validated.input.toString(), "-map", "0:v:0", "-an", "-sn", "-dn", "-c:v", "copy", "-f", "mp4", silent.toString()), output, request, cancellation, operations)
-                val stripped = metadata("stripped-take-metadata", validated.ffprobe, silent, output, request, cancellation, operations)
-                requireUsableVideo(stripped, requireSilent = true, label = "Audio-stripped take")
-                decodeFully("stripped-take-full-decode", validated.ffmpeg, silent, output, request, cancellation, operations)
-                require(Files.size(silent) > 0L && sha256(silent) != digest) { "Audio-stripping did not produce a distinct silent video." }
-                Files.writeString(output.resolve("take-validation.json"), "{\"inputSha256\":\"$digest\",\"publishedSha256\":\"${sha256(silent)}\",\"decodedFrames\":${stripped.decodedFrameCount},\"audioStreamCount\":0}", CREATE_NEW)
-                return stripped to silent
+                invoke("strip-incidental-audio", validated.ffmpeg, listOf(
+                    "-nostdin", "-hide_banner", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe",
+                    "-i", validated.input.toString(), "-map", "0:v:0", "-an", "-sn", "-dn",
+                    "-c:v", "copy", "-f", "mp4", silent.toString(),
+                ), output, request, cancellation, operations)
+                requireNewArtifact(silent, "silent take")
+                val published = measure("take-published", silent, validated, output, request, cancellation, operations)
+                val publishedFrames = presentationTimestamps("take-published-frames", silent, published, validated, output, request, cancellation, operations)
+                if (published.sha256 == source.sha256) invalidOutput("Audio remux did not produce distinct bytes.")
+                if (source.videoCodec != published.videoCodec || source.width != published.width || source.height != published.height ||
+                    source.sampleAspectRatio != published.sampleAspectRatio || source.frameRate != published.frameRate ||
+                    source.decodedFrameCount != published.decodedFrameCount ||
+                    !equalTiming(source.videoDurationPts, source.videoTimeBase, published.videoDurationPts, published.videoTimeBase)
+                ) invalidOutput("Audio remux changed video geometry, cadence, frames or presentation duration.")
+                val normalized = !equalTiming(source.videoStartPts, source.videoTimeBase, published.videoStartPts, published.videoTimeBase)
+                if (normalized && published.videoStartPts != 0L) invalidOutput("Audio remux changed presentation start without zero normalization.")
+                // Compare every presentation instant relative to its stream start. The only
+                // permitted shift is the uniform move of the stream start to zero.
+                if (sourceFrames.indices.any { index ->
+                    !equalPresentationOffset(sourceFrames[index], source, publishedFrames[index], published)
+                }) invalidOutput("Audio remux changed per-frame presentation timing.")
+                VideoValidatedTake(source, published, silent, if (normalized) VideoTakeConversion.AUDIO_REMUX_START_NORMALIZED else VideoTakeConversion.AUDIO_REMUX)
+            } else VideoValidatedTake(source, source, validated.input, VideoTakeConversion.NONE)
+            if (result.published.videoStreamCount != 1 || result.published.audioStreamCount != 0 || result.published.otherStreamCount != 0) {
+                invalidOutput("Published take must contain exactly one video stream and no other streams.")
             }
-            if (sha256(validated.input) != digest) invalidOutput("Generated take changed during full decode.")
-            Files.writeString(output.resolve("take-validation.json"), "{\"inputSha256\":\"$digest\",\"publishedSha256\":\"$digest\",\"decodedFrames\":${metadata.decodedFrameCount},\"audioStreamCount\":0}", CREATE_NEW)
-            return metadata to validated.input
+            // Recheck the original after remux; the published measurement checks its own bytes after decode.
+            if (sha256(validated.input, cancellation) != source.sha256) invalidOutput("Source changed during take validation.")
+            if (result.validatedPath != validated.input &&
+                (!Files.isRegularFile(result.validatedPath, NOFOLLOW_LINKS) || Files.isSymbolicLink(result.validatedPath) ||
+                    Files.size(result.validatedPath) != result.published.bytes ||
+                    sha256(result.validatedPath, cancellation) != result.published.sha256)
+            ) invalidOutput("Published derivative changed before validation completed.")
+            checkCancelled(cancellation)
+            Files.writeString(output.resolve("take-validation.json"), REPORT_JSON.encodeToString(JsonObject.serializer(), buildJsonObject {
+                put("inputSha256", source.sha256)
+                put("publishedSha256", result.published.sha256)
+                put("decodedFrames", result.published.decodedFrameCount)
+                put("conversion", result.conversion.name)
+                put("sourceStartPts", source.videoStartPts)
+                put("sourceTimeBase", "${source.videoTimeBase.numerator}/${source.videoTimeBase.denominator}")
+                put("publishedStartPts", result.published.videoStartPts)
+                put("publishedTimeBase", "${result.published.videoTimeBase.numerator}/${result.published.videoTimeBase.denominator}")
+            }), CREATE_NEW)
+            return result
         } catch (error: VideoMediaProbeException) { throw error }
+        catch (error: VideoMediaProcessException) { throw error }
         catch (error: Exception) { throw storageFailure("Generated take validation failed: ${usefulMessage(error)}", error) }
+    }
+
+    private fun equalTiming(aTicks: Long, aBase: VideoMediaRational, bTicks: Long, bBase: VideoMediaRational): Boolean =
+        BigInteger.valueOf(aTicks).multiply(BigInteger.valueOf(aBase.numerator)).multiply(BigInteger.valueOf(bBase.denominator)) ==
+            BigInteger.valueOf(bTicks).multiply(BigInteger.valueOf(bBase.numerator)).multiply(BigInteger.valueOf(aBase.denominator))
+
+    private fun equalPresentationOffset(sourcePts: Long, source: VideoSourceMeasurement,
+                                        publishedPts: Long, published: VideoSourceMeasurement): Boolean {
+        val sourceOffset = BigInteger.valueOf(sourcePts).subtract(BigInteger.valueOf(source.videoStartPts))
+        val publishedOffset = BigInteger.valueOf(publishedPts).subtract(BigInteger.valueOf(published.videoStartPts))
+        return sourceOffset.multiply(BigInteger.valueOf(source.videoTimeBase.numerator))
+            .multiply(BigInteger.valueOf(published.videoTimeBase.denominator)) ==
+            publishedOffset.multiply(BigInteger.valueOf(published.videoTimeBase.numerator))
+                .multiply(BigInteger.valueOf(source.videoTimeBase.denominator))
+    }
+
+    private fun presentationTimestamps(label: String, input: Path, measurement: VideoSourceMeasurement,
+                                       validated: ValidatedRequest, output: Path, request: VideoMediaProbeRequest,
+                                       cancellation: VideoMediaProcessCancellation,
+                                       operations: MutableList<OperationEvidence>): List<Long> {
+        val response = invoke(label, validated.ffprobe, listOf(
+            "-v", "error", "-protocol_whitelist", "file,pipe", "-select_streams", "v:0",
+            "-show_frames", "-show_entries", "frame=best_effort_timestamp", "-of", "json", input.toString(),
+        ), output, request, cancellation, operations).stdout
+        if (response.truncated || response.totalBytes > 1_048_576L) {
+            invalidMedia("$label presentation timestamps exceeded the bounded probe output.", label)
+        }
+        // FFprobe may attach side_data_list to H.264 frames even when only the timestamp
+        // was requested. Read the frame objects, not CSV rows/fields containing side data.
+        val frames = try {
+            MANIFEST_JSON.parseToJsonElement(response.text).jsonObject["frames"]?.jsonArray
+        } catch (error: Exception) {
+            invalidMedia("$label returned invalid frame JSON.", label, error)
+        } ?: invalidMedia("$label returned no frame list.", label)
+        if (frames.size.toLong() != measurement.decodedFrameCount) {
+            invalidMedia("$label frame timestamp count differs from fully decoded frame count.", label)
+        }
+        var previous: Long? = null
+        return frames.map { frame ->
+            checkCancelled(cancellation)
+            val pts = try {
+                (frame.jsonObject["best_effort_timestamp"] as? JsonPrimitive)?.content?.toLongOrNull()
+            } catch (_: Exception) { null }
+                ?: invalidMedia("$label has a missing or invalid presentation timestamp.", label)
+            if (previous != null && pts <= previous!!) invalidMedia("$label has non-increasing presentation timestamps.", label)
+            previous = pts
+            pts
+        }
+    }
+
+    private fun verifyTools(validated: ValidatedRequest, output: Path, request: VideoMediaProbeRequest,
+                            cancellation: VideoMediaProcessCancellation, operations: MutableList<OperationEvidence>, prefix: String) {
+        val ffmpegVersion = invoke("$prefix-ffmpeg-version", validated.ffmpeg, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
+        val ffprobeVersion = invoke("$prefix-ffprobe-version", validated.ffprobe, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
+        verifyReportedBuild(ffmpegVersion, validated.manifest, "ffmpeg")
+        verifyReportedBuild(ffprobeVersion, validated.manifest, "ffprobe")
+    }
+
+    private fun measure(label: String, input: Path, validated: ValidatedRequest, output: Path,
+                        request: VideoMediaProbeRequest, cancellation: VideoMediaProcessCancellation,
+                        operations: MutableList<OperationEvidence>): VideoSourceMeasurement {
+        checkCancelled(cancellation)
+        val before = Files.readAttributes(input, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
+        if (!before.isRegularFile || before.size() <= 0 || Files.isSymbolicLink(input)) invalidMedia("$label is not a non-empty regular file.")
+        val digest = sha256(input, cancellation)
+        val result = invoke("$label-streams", validated.ffprobe, listOf(
+            "-v", "error", "-protocol_whitelist", "file,pipe", "-count_frames",
+            "-show_entries", "stream=codec_type,codec_name,width,height,sample_aspect_ratio,avg_frame_rate,nb_read_frames,time_base,start_pts,duration_ts",
+            "-of", "json", input.toString(),
+        ), output, request, cancellation, operations)
+        val measurement = parseSource(result.stdout.text, digest, before.size(), "$label-streams")
+        decodeFully("$label-full-decode", validated.ffmpeg, input, output, request, cancellation, operations)
+        val after = Files.readAttributes(input, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
+        if (!after.isRegularFile || before.fileKey() != after.fileKey() || before.size() != after.size() ||
+            before.lastModifiedTime() != after.lastModifiedTime() || sha256(input, cancellation) != digest
+        ) invalidOutput("$label changed during measurement.")
+        checkCancelled(cancellation)
+        return measurement
     }
 
     fun run(
@@ -482,8 +581,7 @@ class VideoMediaProbe internal constructor(
         "-movflags", "+faststart", "-f", "mp4", ENCODED_VIDEO_NAME,
     )
 
-    private fun parseSource(text: String, digest: String, bytes: Long): VideoSourceMeasurement {
-        val operation = "source-streams"
+    private fun parseSource(text: String, digest: String, bytes: Long, operation: String): VideoSourceMeasurement {
         val root = try { MANIFEST_JSON.parseToJsonElement(text).jsonObject }
             catch (error: Exception) { invalidMedia("$operation returned invalid JSON.", operation, error) }
         val streams = root["streams"] as? JsonArray ?: invalidMedia("$operation returned no stream list.", operation)

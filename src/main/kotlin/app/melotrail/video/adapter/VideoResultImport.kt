@@ -54,11 +54,13 @@ class VideoResultImport(
         val source = projects.resolveArtifact(session.root, VideoArtifact(output.relativePath, output.sha256))
         require(Files.size(source) == output.byteCount && sha256(source) == output.sha256) { "Completed output bytes no longer match the durable job pin." }
         require(probeRequest.input.toAbsolutePath().normalize() == source) { "Media validation must inspect the exact durable job output." }
-        val (verified, validatedOutput) = mediaProbe.validateTake(probeRequest)
+        val validation = mediaProbe.validateTake(probeRequest)
+        val verified = validation.published
+        val validatedOutput = validation.validatedPath
         val validatedDigest = sha256(validatedOutput)
         val validatedSize = Files.size(validatedOutput)
         require(validatedSize > 0L) { "Validated take output is empty." }
-        require(verified.decodedFrameCount == facts.frameCount && verified.frameRate == facts.frameRate &&
+        require(verified.decodedFrameCount == facts.frameCount && verified.frameRate.numerator.toDouble() / verified.frameRate.denominator == facts.frameRate &&
             verified.width == facts.nativeWidth && verified.height == facts.nativeHeight && verified.audioStreamCount == 0) {
             "Measured media facts do not match the fully decoded silent output."
         }
