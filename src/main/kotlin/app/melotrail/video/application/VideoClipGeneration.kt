@@ -11,6 +11,10 @@ import app.melotrail.video.domain.VideoGenerationJobRequest
 import app.melotrail.video.domain.VideoModelRequirement
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoVersionedId
+import app.melotrail.video.domain.VideoPreparedScene
+import app.melotrail.video.domain.VideoPreparedSceneRecord
+import app.melotrail.video.domain.VideoGenerationAttemptStatus
+import app.melotrail.video.domain.VideoControlledStage
 import app.melotrail.video.adapter.VideoImportedTake
 import app.melotrail.video.adapter.VideoProjectStore
 import app.melotrail.video.adapter.VideoPreparedSceneStore
@@ -18,9 +22,7 @@ import app.melotrail.video.adapter.VideoImageFiles
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.security.MessageDigest
-import app.melotrail.video.adapter.VideoMediaProbeRequest
 import app.melotrail.video.adapter.VideoResultImport
-import app.melotrail.video.adapter.VideoTakeMediaFacts
 import app.melotrail.video.adapter.VideoMotionRenderer
 import app.melotrail.video.adapter.VideoMediaProcessCancellation
 import java.nio.file.Path
@@ -29,6 +31,7 @@ import java.time.Instant
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -155,11 +158,7 @@ class VideoClipGeneration(
                 }
                 require(digest.digest().joinToString("") { "%02x".format(it) } == pin.sha256) { "Runtime bytes changed: ${pin.id}" }
             }
-            val source = "${current.id}:${current.revision}:${reference.id.id}:${reference.id.version}:${reference.descriptorArtifact.sha256}:${reference.original.artifact.sha256}:${record.id.id}:${record.id.version}:${record.artifact.sha256}:" +
-                scene.consumedArtifacts().sortedBy { it.relativePath }.joinToString("|") { "${it.relativePath}:${it.sha256}" }
-            val sourceIdentity = MessageDigest.getInstance("SHA-256").digest(source.toByteArray(Charsets.UTF_8))
-                .joinToString("") { "%02x".format(it) }
-            Triple(scene, pins, sourceIdentity)
+            Triple(scene, pins, controlledSourceIdentity(current, scene, record, reference))
         } catch (error: Exception) {
             return VideoClipGenerationResult.Rejected(error.message ?: "Controlled source or runtime verification failed.")
         }
@@ -266,30 +265,66 @@ class VideoClipGeneration(
     }
 
     /** A result is importable only after its newest durable attempt succeeded. */
-    fun importCompleted(request: VideoCompletedTakeImport): VideoClipGenerationResult {
-        if (request.project.revision != request.expectedRevision) return VideoClipGenerationResult.Rejected("Project revision changed before result import.")
+    fun importCompleted(
+        request: VideoCompletedTakeImport,
+        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
+    ): VideoClipGenerationResult = try {
+        require(!cancellation.isCancelled()) { "Take import was cancelled." }
+        val store = requireNotNull(projects) { "Verified project storage is required for result import." }
+        val current = store.open(request.session.root)
+        require(current == request.session.project && current.revision == request.expectedRevision) {
+            "Project revision changed before result import."
+        }
         val job = coordinator.snapshot().jobs.singleOrNull { it.request.id == request.requestId }
-            ?: return VideoClipGenerationResult.Rejected("Durable generation job was not found.")
+            ?: throw IllegalArgumentException("Durable generation job was not found.")
+        require(job.request.projectId == current.id && job.request.backendId == backendId) {
+            "Completed motion project or backend identity does not match."
+        }
         val input = job.request.input as? VideoControlledMotionGenerationInput
-            ?: return VideoClipGenerationResult.Rejected("The completed job is not a controlled-motion request.")
-        if (job.request.projectId != request.project.id || request.session.project.id != request.project.id ||
-            request.session.project.revision != request.expectedRevision || job.request.backendId != backendId ||
-            job.request.requestFingerprint != controlledMotionRequestFingerprint(backendId, input, job.request.modelRequirements, job.request.maximumAttempts) ||
-            job.request.execution !is VideoLocalExecutionPolicy ||
-            input.motion.endFrameExclusive - input.motion.startFrame != request.facts.frameCount) {
-            return VideoClipGenerationResult.Rejected("Completed motion identity, execution or measured frame count does not match this project.")
+            ?: throw IllegalArgumentException("Completed route is not yet connected for take import.")
+        val policy = job.request.execution as? VideoLocalExecutionPolicy
+        require(policy != null && policy == execution && input.media.execution == policy &&
+            job.request.modelRequirements == modelRequirements &&
+            job.request.requestFingerprint == controlledMotionRequestFingerprint(
+                backendId, input, modelRequirements, job.request.maximumAttempts,
+            )) { "Completed motion fingerprint or persisted execution policy changed." }
+        val attempt = job.attempts.lastOrNull()
+        require(attempt?.id == request.attemptId && attempt.status == VideoGenerationAttemptStatus.SUCCEEDED &&
+            attempt.controlledEvidence?.stage == VideoControlledStage.COMPLETED) {
+            "Only the latest successfully completed controlled attempt can become a take."
         }
-        if (job.attempts.lastOrNull()?.status != app.melotrail.video.domain.VideoGenerationAttemptStatus.SUCCEEDED) {
-            return VideoClipGenerationResult.Rejected("Only the latest successfully completed attempt can become a take.")
+        val output = job.outputs.singleOrNull { it.id == request.outputId && it.id == job.currentOutputId &&
+            it.attemptId == attempt.id } ?: throw IllegalArgumentException("Successful job has no matching current output.")
+        require(output.id == "${attempt.id}-preview" && output.backendOutputId == output.id &&
+            output.relativePath == "${attempt.id}/preview.mp4" &&
+            attempt.controlledEvidence.output?.let { evidence ->
+                evidence.backendOutputId == output.backendOutputId && evidence.relativePath == output.relativePath &&
+                    evidence.sha256 == output.sha256 && evidence.byteCount == output.byteCount
+            } == true) { "Controlled output does not match the current attempt's durable evidence." }
+        val descriptor = input.motion.descriptor
+        val pinnedScene = CONTROLLED_SCENE_JSON.decodeFromJsonElement<VideoPreparedScene>(
+            Json.parseToJsonElement(descriptor.requestJson).jsonObject.getValue("preparedScene"))
+        val scene = VideoPreparedSceneStore(store).load(request.session.root, pinnedScene.id)
+        val record = current.preparedSceneVersions.single { it.id == scene.id }
+        require(descriptor.projectId == current.id && scene == pinnedScene) {
+            "Prepared scene changed since controlled admission."
         }
-        val output = job.outputs.singleOrNull { it.attemptId == job.attempts.last().id && it.id == job.currentOutputId }
-            ?: return VideoClipGenerationResult.Rejected("Successful job has no current immutable output.")
-        return try {
-            VideoClipGenerationResult.Imported(resultImport.import(request.session, request.expectedRevision, output,
-                request.probeRequest, request.lookId, request.facts))
-        } catch (error: Exception) {
-            VideoClipGenerationResult.Rejected(error.message ?: "Generated media could not be imported safely.")
+        val finishedImage = scene.layers.single { it.kind == app.melotrail.video.domain.VideoLayerKind.FINISHED_SCENE }.image
+        val reference = scene.source.references.single { it.original == finishedImage }
+        require(descriptor.sourceIdentity == controlledSourceIdentity(current, scene, record, reference)) {
+            "Controlled source identity changed since admission."
         }
+        val pins = (listOf(record.artifact) + record.consumedArtifacts).distinct().mapIndexed { index, artifact ->
+            VideoGenerationDependencyPin("prepared-$index", artifact.sha256,
+                store.resolveArtifact(request.session.root, artifact).toString())
+        }
+        require(input.motion.preparedPins == pins && input.dependencyPins.containsAll(pins)) {
+            "Persisted prepared dependency pins changed."
+        }
+        VideoClipGenerationResult.Imported(resultImport.import(request.session, request.expectedRevision,
+            output, input, record.sourceLookId, cancellation))
+    } catch (error: Exception) {
+        VideoClipGenerationResult.Rejected(error.message ?: "Generated media could not be imported safely.")
     }
 }
 
@@ -322,14 +357,22 @@ data class VideoClipGenerationRequest(
     }
 }
 
+private fun controlledSourceIdentity(
+    project: VideoProject, scene: VideoPreparedScene, record: VideoPreparedSceneRecord,
+    reference: app.melotrail.video.domain.VideoPreparedReferencePin,
+): String {
+    val source = "${project.id}:${project.revision}:${reference.id.id}:${reference.id.version}:${reference.descriptorArtifact.sha256}:${reference.original.artifact.sha256}:${record.id.id}:${record.id.version}:${record.artifact.sha256}:" +
+        scene.consumedArtifacts().sortedBy { it.relativePath }.joinToString("|") { "${it.relativePath}:${it.sha256}" }
+    return MessageDigest.getInstance("SHA-256").digest(source.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
+}
+
 data class VideoCompletedTakeImport(
     val session: VideoProjectSession,
-    val project: VideoProject,
     val expectedRevision: Long,
     val requestId: String,
-    val probeRequest: VideoMediaProbeRequest,
-    val lookId: VideoVersionedId?,
-    val facts: VideoTakeMediaFacts,
+    val attemptId: String,
+    val outputId: String,
 )
 
 sealed interface VideoClipGenerationResult {

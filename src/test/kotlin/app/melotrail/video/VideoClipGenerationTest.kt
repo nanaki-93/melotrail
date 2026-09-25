@@ -3,19 +3,40 @@ package app.melotrail.video
 import app.melotrail.video.adapter.VideoProjectStore
 import app.melotrail.video.adapter.VideoResultImport
 import app.melotrail.video.adapter.VideoMediaProbe
-import app.melotrail.video.adapter.VideoMediaProbeRequest
-import app.melotrail.video.adapter.VideoTakeMediaFacts
 import app.melotrail.video.adapter.VideoMotionRenderer
+import app.melotrail.video.adapter.VideoImageFiles
+import app.melotrail.video.adapter.VideoPreparedSceneStore
+import app.melotrail.video.adapter.VideoPreparedSceneImport
+import app.melotrail.video.adapter.VideoPreparedSceneImportResult
+import app.melotrail.video.adapter.VideoMediaProcessResult
+import app.melotrail.video.adapter.VideoMediaProcessOutput
+import app.melotrail.video.adapter.VideoMediaProcessCancellation
+import app.melotrail.video.adapter.VideoMediaProcessException
+import app.melotrail.video.adapter.VideoMediaProcessFailure
+import java.awt.Color
+import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
+import java.time.Duration
+import java.nio.file.attribute.PosixFilePermissions
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlin.test.assertIs
 import app.melotrail.video.application.*
 import app.melotrail.video.domain.*
 import java.time.Instant
-import java.time.Duration
 import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoTakeRecord
 import app.melotrail.video.domain.VideoVersionedId
 import java.nio.file.Files
 import java.nio.file.Path
+import java.io.RandomAccessFile
+import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,7 +59,7 @@ class VideoClipGenerationTest {
         assertFailsWith<IllegalArgumentException> { motion.copy(endFrameExclusive = 9_001) }
         assertFailsWith<IllegalArgumentException> { motion.copy(startFrame = MAX_JAVASCRIPT_SAFE_INTEGER) }
     }
-    @Test fun `import rejects a mismatched project or frame count before touching media`() {
+    @Test fun `identifier-only import rejects wrong project revision attempt and output before touching media`() {
         val root = Files.createTempDirectory("video-completed-guard-")
         val store = VideoProjectStore(listOf(Files.createTempDirectory("midi-protected-")))
         val project = VideoProject("project", "Project", "2026-09-24T00:00:00Z")
@@ -52,7 +73,14 @@ class VideoClipGenerationTest {
         val request = VideoGenerationJobRequest("request", project.id, backendId, emptyList(), input,
             controlledMotionRequestFingerprint(backendId, input, emptyList(), 1), 1, Instant.now().toString(),
             VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000))
-        val ledger = VideoJobLedger("domain", Instant.now().toString(), listOf(VideoGenerationJob(request)))
+        val attempt = VideoGenerationAttempt("attempt", "request", 1, "owner", VideoGenerationAttemptStatus.SUCCEEDED,
+            VideoSubmissionPhase.ACKNOWLEDGED, Instant.now().toString(), finishedAt = Instant.now().toString(),
+            controlledEvidence = VideoControlledAttemptEvidence(VideoControlledStage.COMPLETED,
+                VideoControlledOutputEvidence("attempt-preview", "attempt/preview.mp4", "c".repeat(64), 100)))
+        val output = VideoGenerationOutput("attempt-preview", "attempt", "attempt-preview", Instant.now().toString(),
+            "attempt/preview.mp4", "c".repeat(64), 100)
+        var ledger = VideoJobLedger("domain", Instant.now().toString(), listOf(VideoGenerationJob(request,
+            listOf(attempt), listOf(output), output.id)))
         val persistence = object : VideoJobPersistence {
             override fun loadOrCreate(admissionDomainId: String, createdAt: String) = ledger
             override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger = error("No write permitted")
@@ -60,21 +88,283 @@ class VideoClipGenerationTest {
         val coordinator = VideoJobCoordinator("domain", persistence, emptyList())
         val service = VideoClipGeneration(VideoScenePreparation(), coordinator,
             VideoResultImport(store, VideoMediaProbe()), VideoMotionRenderer(), backendId,
-            VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000))
-        val probe = VideoMediaProbeRequest(root, root.resolve("absent.mp4"), root.resolve("probe"), Duration.ofSeconds(1))
-        val facts = VideoTakeMediaFacts(149, 30.0, 320, 180, 320, 180, "none")
+            VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000), projects = store)
         val session = VideoProjectSession(root, project)
-        val mismatch = service.importCompleted(VideoCompletedTakeImport(session, project, 0, "request", probe, null, facts))
-        assertTrue(mismatch is VideoClipGenerationResult.Rejected && mismatch.reason.contains("frame count"))
-        val other = project.copy(id = "other")
-        val wrongProject = service.importCompleted(VideoCompletedTakeImport(session, other, 0, "request", probe, null, facts.copy(frameCount = 150)))
-        assertTrue(wrongProject is VideoClipGenerationResult.Rejected && wrongProject.reason.contains("identity"))
-        val wrongSession = VideoProjectSession(root, project.copy(id = "other"))
-        val sessionMismatch = service.importCompleted(VideoCompletedTakeImport(wrongSession, project, 0, "request", probe, null, facts.copy(frameCount = 150)))
-        assertTrue(sessionMismatch is VideoClipGenerationResult.Rejected && sessionMismatch.reason.contains("identity"))
+        fun rejection(command: VideoCompletedTakeImport, fragment: String) {
+            val result = service.importCompleted(command)
+            assertTrue(result is VideoClipGenerationResult.Rejected && result.reason.contains(fragment), "$result")
+        }
+        val command = VideoCompletedTakeImport(session, 0, "request", "attempt", "attempt-preview")
+        val cancelled = app.melotrail.video.adapter.VideoMediaProcessCancellation().also { it.cancel() }
+        val cancelledResult = service.importCompleted(command, cancelled)
+        assertTrue(cancelledResult is VideoClipGenerationResult.Rejected && cancelledResult.reason.contains("cancelled"))
+        rejection(command.copy(expectedRevision = 1), "revision")
+        rejection(command.copy(session = session.copy(project = project.copy(id = "other"))), "revision")
+        rejection(command.copy(attemptId = "older"), "latest")
+        rejection(command.copy(outputId = "different"), "output")
+        val newer = attempt.copy(id = "attempt-2", number = 2, ownershipToken = "owner-2",
+            controlledEvidence = VideoControlledAttemptEvidence(VideoControlledStage.COMPLETED,
+                VideoControlledOutputEvidence("attempt-2-preview", "attempt-2/preview.mp4", "e".repeat(64), 100)))
+        val newerOutput = output.copy(id = "attempt-2-preview", attemptId = newer.id,
+            backendOutputId = "attempt-2-preview", relativePath = "attempt-2/preview.mp4", sha256 = "e".repeat(64))
+        val twoAttemptRequest = request.copy(maximumAttempts = 2, requestFingerprint =
+            controlledMotionRequestFingerprint(backendId, input, emptyList(), 2))
+        ledger = ledger.copy(jobs = listOf(VideoGenerationJob(twoAttemptRequest,
+            listOf(attempt, newer), listOf(output, newerOutput), newerOutput.id)))
+        rejection(command, "latest")
+        ledger = ledger.copy(jobs = listOf(VideoGenerationJob(request, listOf(attempt), listOf(output), output.id)))
+        rejection(command.copy(requestId = "missing"), "not found")
+        val alteredPolicy = VideoLocalExecutionPolicy(1_000_000, 1_000_000, 61_000)
+        ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(
+            input = input.copy(media = input.media.copy(execution = alteredPolicy)), execution = alteredPolicy))))
+        rejection(command, "policy")
+        ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(
+            input = VideoKeyframeGenerationInput("move", listOf(pin), 320, 180)))))
+        rejection(command, "not yet connected")
+        ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(
+            requestFingerprint = "d".repeat(64)))))
+        rejection(command, "fingerprint")
+        val alteredModels = listOf(VideoModelRequirement("changed-model", "v2", "a".repeat(64)))
+        ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(
+            modelRequirements = alteredModels, requestFingerprint = controlledMotionRequestFingerprint(
+                backendId, input, alteredModels, 1)))))
+        rejection(command, "fingerprint")
+        val otherInput = input.copy(motion = input.motion.copy(descriptor = input.motion.descriptor.copy(projectId = "other")))
+        ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(
+            projectId = "other", input = otherInput, requestFingerprint = controlledMotionRequestFingerprint(
+                backendId, otherInput, emptyList(), 1)))))
+        rejection(command, "identity")
+        ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(backendId = "other"))))
+        rejection(command, "identity")
         assertEquals(project, store.open(root))
-        assertFalse(Files.exists(root.resolve("probe")))
+        assertFalse(Files.exists(root.resolve("take-validation-attempt")))
     }
+    @Test fun `identifier-only controlled import publishes a verified take from persisted scene and output root`() {
+        val root = Files.createTempDirectory("video-controlled-import-").toRealPath()
+        val projectRoot = root.resolve("project")
+        val store = VideoProjectStore(listOf(root.resolve("protected-midi")))
+        val lifecycle = VideoProjectLifecycle(store)
+        var session = assertIs<VideoProjectLifecycleResult.Opened>(lifecycle.create(
+            CreateVideoProject(projectRoot, "Controlled import", "project"))).session
+        fun picture(name: String, alpha: Boolean): Path {
+            val path = root.resolve("inputs/$name.png")
+            Files.createDirectories(path.parent)
+            val image = BufferedImage(if (alpha) 20 else 100, if (alpha) 30 else 60,
+                if (alpha) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB)
+            val graphics = image.createGraphics()
+            try {
+                graphics.color = when (name) {
+                    "pose" -> Color(120, 70, 100)
+                    "clean" -> Color(70, 90, 110)
+                    else -> Color(90, 100, 120)
+                }
+                if (alpha) graphics.fillOval(2, 2, 16, 26) else graphics.fillRect(0, 0, 100, 60)
+            } finally { graphics.dispose() }
+            assertTrue(ImageIO.write(image, "png", path.toFile()))
+            return path
+        }
+        fun importImage(id: String, role: VideoReferenceRole, alpha: Boolean): VideoVersionedId {
+            val imported = assertIs<VideoAssetImportResult.Imported>(VideoAssetImport(lifecycle, VideoImageFiles(),
+                idFactory = { id }).import(session, ImportVideoAsset(picture(id, alpha), role)))
+            session = imported.session
+            return imported.asset.id
+        }
+        val finished = importImage("finished", VideoReferenceRole.COMPLETE_SCENE, false)
+        val subject = importImage("subject", VideoReferenceRole.SUBJECT, true)
+        val pose = importImage("pose", VideoReferenceRole.SUBJECT, true)
+        val clean = importImage("clean", VideoReferenceRole.ENVIRONMENT, false)
+        val scenes = VideoPreparedSceneStore(store)
+        val bounds = VideoRect("scene", 10.0, 10.0, 20.0, 30.0)
+        val saved = assertIs<VideoPreparedSceneImportResult.Saved>(VideoPreparedSceneImport(store, scenes).import(
+            projectRoot, session.project.revision, PrepareVideoAnimationAssets(
+                VideoVersionedId("scene", 1), finished,
+                subjectLayers = listOf(VideoPlacedAnimationAsset("subject", subject, bounds)),
+                cleanBackground = VideoPlacedAnimationAsset("clean", clean, VideoRect("scene", 0.0, 0.0, 100.0, 60.0)),
+                poses = listOf(VideoPoseAnimationAsset(VideoPlacedAnimationAsset("blink", pose, bounds), "subject")),
+            )))
+        session = VideoProjectSession(projectRoot, saved.project)
+        val scene = scenes.load(projectRoot, saved.scene.id)
+        val record = session.project.preparedSceneVersions.single()
+        val reference = scene.source.references.single { it.id == finished }
+        val sourceString = "${session.project.id}:${session.project.revision}:${reference.id.id}:${reference.id.version}:${reference.descriptorArtifact.sha256}:${reference.original.artifact.sha256}:${record.id.id}:${record.id.version}:${record.artifact.sha256}:" +
+            scene.consumedArtifacts().sortedBy { it.relativePath }.joinToString("|") { "${it.relativePath}:${it.sha256}" }
+        val sourceIdentity = MessageDigest.getInstance("SHA-256").digest(sourceString.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        val tools = Files.createDirectory(root.resolve("tools"))
+        val java = Path.of(System.getProperty("java.home"), "bin", "java")
+        for (name in listOf("ffmpeg", "ffprobe")) {
+            val binary = Files.copy(java, tools.resolve(name))
+            Files.setPosixFilePermissions(binary, PosixFilePermissions.fromString("rwx------"))
+        }
+        Files.writeString(tools.resolve(VideoMediaProbe.MANIFEST_NAME), """
+            {"schema":"melotrail-video-media-tools","version":1,
+             "distributionId":"${VideoMediaProbe.DISTRIBUTION_ID}",
+             "installation":"${VideoMediaProbe.INSTALLATION_STRATEGY}",
+             "sourceUrl":"${VideoMediaProbe.SOURCE_URL}",
+             "sourceRevision":"${VideoMediaProbe.SOURCE_REVISION}",
+             "sourceSha256":"${VideoMediaProbe.SOURCE_SHA256}",
+             "ffmpegSha256":"${VideoMediaProbe.FFMPEG_SHA256}",
+             "ffprobeSha256":"${VideoMediaProbe.FFPROBE_SHA256}",
+             "buildOptions":[${VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString { "\"$it\"" }}],
+             "notices":["test"]}
+        """.trimIndent())
+        val runtime = motionRuntime(VideoGenerationDependencyPin("compositor", "a".repeat(64), "/runtime/compositor"))
+            .copy(mediaManifest = VideoGenerationDependencyPin("media-manifest", sha(tools.resolve(VideoMediaProbe.MANIFEST_NAME)),
+                tools.resolve(VideoMediaProbe.MANIFEST_NAME).toString()))
+        val pins = (listOf(record.artifact) + record.consumedArtifacts).distinct().mapIndexed { index, artifact ->
+            VideoGenerationDependencyPin("prepared-$index", artifact.sha256, store.resolveArtifact(projectRoot, artifact).toString())
+        }
+        val descriptor = VideoControlledMotionDescriptor(session.project.id, sourceIdentity, buildJsonObject {
+            put("schema", CONTROLLED_MOTION_DESCRIPTOR_SCHEMA)
+            put("preparedScene", Json { encodeDefaults = true }.encodeToJsonElement(VideoPreparedScene.serializer(), scene))
+            put("seed", 42)
+            put("fps", 30)
+            put("canvas", buildJsonObject {
+                put("width", 100); put("height", 60); put("coordinateSpaceId", "scene")
+            })
+            put("frameRange", buildJsonObject { put("startFrame", 0); put("frameCount", 30) })
+            put("controls", kotlinx.serialization.json.buildJsonArray {
+                add(buildJsonObject {
+                    put("id", "blink"); put("kind", "blink")
+                    put("capabilityId", scene.motionCapabilities.single { it.control == VideoMotionControl.POSE_BLEND }.id)
+                    put("amount", 0.5)
+                })
+            })
+        }.toString(), runtime)
+        val policy = VideoLocalExecutionPolicy(1_000_000, 1_000_000, 60_000)
+        val input = VideoControlledMotionGenerationInput("Blink gently.", pins + runtime.allPins,
+            VideoControlledMotionRequest(pins, 0, 30, 42, descriptor), "Blink gently.", motionMedia(policy))
+        val backendId = "controlled-local"
+        val request = VideoGenerationJobRequest("request", session.project.id, backendId, emptyList(), input,
+            controlledMotionRequestFingerprint(backendId, input, emptyList(), 1), 1, Instant.now().toString(), policy)
+        val publicationRoot = Files.createDirectories(projectRoot.resolve("controlled-outputs"))
+        val source = publicationRoot.resolve("attempt/preview.mp4")
+        Files.createDirectories(source.parent)
+        Files.writeString(source, "owned silent controlled preview")
+        val output = VideoGenerationOutput("attempt-preview", "attempt", "attempt-preview", Instant.now().toString(),
+            "attempt/preview.mp4", sha(source), Files.size(source))
+        val attempt = VideoGenerationAttempt("attempt", request.id, 1, "owner", VideoGenerationAttemptStatus.SUCCEEDED,
+            VideoSubmissionPhase.ACKNOWLEDGED, Instant.now().toString(), finishedAt = Instant.now().toString(),
+            controlledEvidence = VideoControlledAttemptEvidence(VideoControlledStage.COMPLETED,
+                VideoControlledOutputEvidence(output.backendOutputId, output.relativePath!!, output.sha256!!, output.byteCount!!)))
+        val ledger = VideoJobLedger("domain", Instant.now().toString(), listOf(VideoGenerationJob(request,
+            listOf(attempt), listOf(output), output.id)))
+        val persistence = object : VideoJobPersistence {
+            override fun loadOrCreate(admissionDomainId: String, createdAt: String) = ledger
+            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger = error("Import cannot write job ledger")
+        }
+        var probes = 0
+        val videoStream = """{"codec_type":"video","codec_name":"h264","width":100,"height":60,
+            "sample_aspect_ratio":"1:1","avg_frame_rate":"30/1","nb_read_frames":"30",
+            "time_base":"1/30","start_pts":"0","duration_ts":"30"}"""
+        val probe = VideoMediaProbe { job, _ ->
+            probes++
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                    VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                job.executable.fileName.toString() == "ffprobe" && "-show_frames" in job.arguments ->
+                    """{"frames":[${(0 until 30).joinToString { "{\"best_effort_timestamp\":$it}" }}]}"""
+                job.executable.fileName.toString() == "ffprobe" -> """{"streams":[$videoStream],"format":{"duration":"1.0"}}"""
+                else -> ""
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val service = VideoClipGeneration(VideoScenePreparation(), VideoJobCoordinator("domain", persistence, emptyList()),
+            VideoResultImport(store, probe, idFactory = { "imported" }, controlledOutputRoot = publicationRoot),
+            VideoMotionRenderer(), backendId, policy, projects = store)
+        val result = service.importCompleted(
+            VideoCompletedTakeImport(session, session.project.revision, request.id, attempt.id, output.id))
+        val imported = assertIs<VideoClipGenerationResult.Imported>(result, result.toString())
+        assertTrue(probes > 0, "The persisted output must pass independent media validation")
+        assertEquals(30, imported.result.facts.frameCount)
+        assertEquals(30.0, imported.result.facts.frameRate)
+        assertEquals(record.sourceLookId, imported.result.take.lookId)
+        assertEquals(listOf(imported.result.take), store.open(projectRoot).takeVersions)
+        assertTrue(store.open(projectRoot).selectedTakeIds.isEmpty())
+        assertEquals(sha(source), sha(store.resolveArtifact(projectRoot, imported.result.take.artifact)))
+        assertEquals(sha(source), output.sha256)
+        assertEquals("owned silent controlled preview", Files.readString(source))
+    }
+
+    @Test fun `cancellation interrupts immutable take hashing and copying before publication`() {
+        val root = Files.createTempDirectory("video-cancellable-take-")
+        val store = VideoProjectStore(listOf(Files.createTempDirectory("midi-protected-")))
+        val project = VideoProject("project", "Project", "2026-09-24T00:00:00Z")
+        store.create(root, project)
+        val source = root.resolve("large.mp4")
+        RandomAccessFile(source.toFile(), "rw").use { it.setLength(256L * 1024 * 1024) }
+        val digest = sha(source)
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            // The importer independently hashes the pinned output (and later the validated
+            // derivative). Exercise its streaming loop, not just the store's copy path.
+            val importer = VideoResultImport(store, VideoMediaProbe())
+            val importHash = VideoResultImport::class.java.getDeclaredMethod(
+                "sha256", Path::class.java, VideoMediaProcessCancellation::class.java,
+            ).also { it.isAccessible = true }
+            val importCancellation = VideoMediaProcessCancellation()
+            val importStarted = CountDownLatch(1)
+            val importHashing = executor.submit<Throwable?> {
+                importStarted.countDown()
+                try {
+                    importHash.invoke(importer, source, importCancellation)
+                    null
+                } catch (error: InvocationTargetException) { error.cause }
+            }
+            assertTrue(importStarted.await(5, TimeUnit.SECONDS))
+            Thread.sleep(5)
+            assertFalse(importHashing.isDone, "Importer hash must still be in progress")
+            importCancellation.cancel()
+            val importError = assertIs<VideoMediaProcessException>(importHashing.get(20, TimeUnit.SECONDS))
+            assertEquals(VideoMediaProcessFailure.CANCELLED, importError.failure)
+
+            val hashingCancellation = VideoMediaProcessCancellation()
+            val started = CountDownLatch(1)
+            val hashing = executor.submit<Throwable?> {
+                started.countDown()
+                runCatching {
+                    store.copyImmutableArtifact(root, source, "takes/hash/v1/preview.mp4", digest, hashingCancellation)
+                }.exceptionOrNull()
+            }
+            assertTrue(started.await(5, TimeUnit.SECONDS))
+            Thread.sleep(5)
+            assertFalse(hashing.isDone, "Hashing must still be in progress when cancellation arrives")
+            hashingCancellation.cancel()
+            val hashError = assertIs<VideoMediaProcessException>(hashing.get(20, TimeUnit.SECONDS))
+            assertEquals(VideoMediaProcessFailure.CANCELLED, hashError.failure)
+            assertFalse(Files.exists(root.resolve("takes/hash/v1/preview.mp4")))
+
+            // A temporary .take-import file exists only once the store has finished hashing
+            // the source and entered its long copy. Cancellation must stop that copy itself.
+            val cancellation = VideoMediaProcessCancellation()
+            val target = "takes/copy/v1/preview.mp4"
+            val copying = executor.submit<Throwable?> {
+                runCatching { store.copyImmutableArtifact(root, source, target, digest, cancellation) }.exceptionOrNull()
+            }
+            val parent = root.resolve("takes/copy/v1")
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20)
+            var observed = false
+            while (System.nanoTime() < deadline && !copying.isDone) {
+                if (Files.isDirectory(parent)) {
+                    Files.list(parent).use { paths ->
+                        observed = paths.anyMatch { it.fileName.toString().startsWith(".take-import-") &&
+                            runCatching { Files.size(it) > 0 }.getOrDefault(false) }
+                    }
+                    if (observed) break
+                }
+                Thread.sleep(1)
+            }
+            assertTrue(observed, "The cancellation test must reach an in-progress copy")
+            cancellation.cancel()
+            val error = assertIs<VideoMediaProcessException>(copying.get(20, TimeUnit.SECONDS))
+            assertEquals(VideoMediaProcessFailure.CANCELLED, error.failure)
+            assertFalse(Files.exists(root.resolve(target)))
+            assertTrue(store.open(root).takeVersions.isEmpty())
+        } finally { executor.shutdownNow() }
+    }
+
     @Test fun `immutable take bytes survive source replacement and reopen without implicit selection`() {
         val root = Files.createTempDirectory("video-take-import-")
         val store = VideoProjectStore(listOf(Files.createTempDirectory("midi-protected-")))

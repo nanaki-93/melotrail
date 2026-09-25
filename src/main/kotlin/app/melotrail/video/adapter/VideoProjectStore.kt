@@ -112,11 +112,34 @@ class VideoProjectStore(
     }
 
     /** Copy verified bytes into a previously absent immutable project path. */
-    fun copyImmutableArtifact(projectRoot: Path, source: Path, relativePath: String, expectedSha256: String): VideoArtifact {
+    fun copyImmutableArtifact(
+        projectRoot: Path, source: Path, relativePath: String, expectedSha256: String,
+        cancellation: VideoMediaProcessCancellation? = null,
+    ): VideoArtifact {
+        fun checkCancelled() {
+            if (cancellation?.isCancelled() == true || Thread.currentThread().isInterrupted) {
+                throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Take import was cancelled during immutable copy.")
+            }
+        }
+        fun digest(path: Path): String {
+            val hash = MessageDigest.getInstance("SHA-256")
+            Files.newInputStream(path).use { input ->
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    checkCancelled()
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    hash.update(buffer, 0, count)
+                }
+            }
+            checkCancelled()
+            return hash.digest().joinToString("") { "%02x".format(it) }
+        }
+        checkCancelled()
         val root = existingSafeRoot(validateLocation(projectRoot))
         val artifact = VideoArtifact(relativePath, expectedSha256)
         require(Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(source)) { "Take source is missing or unsafe." }
-        require(sha256(source) == expectedSha256) { "Take source digest does not match its output pin." }
+        require(digest(source) == expectedSha256) { "Take source digest does not match its output pin." }
         val target = root.resolve(relativePath).normalize()
         require(target.startsWith(root)) { "Take destination escapes the project root." }
         val parent = requireNotNull(target.parent)
@@ -126,10 +149,24 @@ class VideoProjectStore(
         require(parent.toRealPath().startsWith(root) && !Files.exists(target, LinkOption.NOFOLLOW_LINKS)) { "Take destination already exists or is unsafe." }
         val temporary = Files.createTempFile(parent, ".take-import-", ".tmp")
         try {
-            Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING)
-            require(sha256(temporary) == expectedSha256 && sha256(source) == expectedSha256) { "Take bytes changed during immutable copy." }
+            Files.newInputStream(source).use { input ->
+                Files.newOutputStream(temporary).use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        checkCancelled()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            require(digest(temporary) == expectedSha256 && digest(source) == expectedSha256) { "Take bytes changed during immutable copy." }
+            checkCancelled()
             publishNewFile(temporary, target)
-            verifyArtifact(root, artifact)
+            require(Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(target) &&
+                target.toRealPath().startsWith(root) && digest(target) == expectedSha256) {
+                "Published take bytes changed during immutable copy."
+            }
             return artifact
         } finally { runCatching { Files.deleteIfExists(temporary) } }
     }

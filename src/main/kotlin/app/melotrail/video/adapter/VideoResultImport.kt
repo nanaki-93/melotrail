@@ -4,6 +4,8 @@ import app.melotrail.video.application.VideoProjectConcurrencyException
 import app.melotrail.video.application.VideoProjectSession
 import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoGenerationOutput
+import app.melotrail.video.domain.VideoControlledMotionGenerationInput
+import java.time.Duration
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoTakeRecord
 import app.melotrail.video.domain.VideoTakeMediaFactsRecord
@@ -40,40 +42,71 @@ class VideoResultImport(
     private val mediaProbe: VideoMediaProbe,
     private val clock: java.time.Clock = java.time.Clock.systemUTC(),
     private val idFactory: () -> String = { "take-${UUID.randomUUID()}" },
+    private val controlledOutputRoot: Path? = null,
 ) {
     fun import(
         session: VideoProjectSession,
         expectedRevision: Long,
         output: VideoGenerationOutput,
-        probeRequest: VideoMediaProbeRequest,
+        input: VideoControlledMotionGenerationInput,
         lookId: VideoVersionedId?,
-        facts: VideoTakeMediaFacts,
+        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation(),
     ): VideoImportedTake {
+        require(!cancellation.isCancelled()) { "Take import was cancelled." }
         require(session.project.revision == expectedRevision) { "Project revision changed before take import." }
         require(output.relativePath != null && output.sha256 != null && output.byteCount != null) { "Completed job output has no immutable file pin." }
-        val source = projects.resolveArtifact(session.root, VideoArtifact(output.relativePath, output.sha256))
-        require(Files.size(source) == output.byteCount && sha256(source) == output.sha256) { "Completed output bytes no longer match the durable job pin." }
-        require(probeRequest.input.toAbsolutePath().normalize() == source) { "Media validation must inspect the exact durable job output." }
-        val validation = mediaProbe.validateTake(probeRequest)
+        val relative = VideoArtifact(output.relativePath, output.sha256).relativePath
+        val ownedRoot = requireNotNull(controlledOutputRoot) { "Controlled output publication root is not configured." }
+            .toAbsolutePath().normalize()
+        val projectRoot = session.root.toAbsolutePath().normalize()
+        require(ownedRoot.startsWith(projectRoot) && ownedRoot != projectRoot &&
+            Files.isDirectory(ownedRoot, NOFOLLOW_LINKS) && ownedRoot.toRealPath() == ownedRoot) {
+            "Controlled output root must be an owned project subtree."
+        }
+        val source = ownedRoot.resolve(relative).normalize()
+        require(source.startsWith(ownedRoot) && Files.isRegularFile(source, NOFOLLOW_LINKS) &&
+            !Files.isSymbolicLink(source) && source.toRealPath().startsWith(ownedRoot)) {
+            "Controlled output path is missing or unsafe."
+        }
+        require(Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) { "Completed output bytes no longer match the durable job pin." }
+        require(!cancellation.isCancelled()) { "Take import was cancelled." }
+        val runtime = input.motion.descriptor.runtime
+        val tools = Path.of(requireNotNull(runtime.mediaManifest.ownedPath)).parent
+        val probeRequest = VideoMediaProbeRequest(tools, source,
+            session.root.resolve("take-validation-${UUID.randomUUID()}"),
+            Duration.ofMillis(minOf(30_000L, input.media.execution.wallClockLimitMillis)))
+        val validation = mediaProbe.validateTake(probeRequest, cancellation)
         val verified = validation.published
         val validatedOutput = validation.validatedPath
-        val validatedDigest = sha256(validatedOutput)
+        val validatedDigest = sha256(validatedOutput, cancellation)
         val validatedSize = Files.size(validatedOutput)
         require(validatedSize > 0L) { "Validated take output is empty." }
-        require(verified.decodedFrameCount == facts.frameCount && verified.frameRate.numerator.toDouble() / verified.frameRate.denominator == facts.frameRate &&
-            verified.width == facts.nativeWidth && verified.height == facts.nativeHeight && verified.audioStreamCount == 0) {
-            "Measured media facts do not match the fully decoded silent output."
+        val descriptor = input.motion.descriptor
+        require(validation.source.videoCodec == "h264" && verified.videoCodec == "h264" &&
+            validation.source.width == descriptor.width && validation.source.height == descriptor.height &&
+            verified.width == descriptor.width && verified.height == descriptor.height &&
+            validation.source.frameRate == VideoMediaRational(descriptor.fps.toLong(), 1) &&
+            verified.frameRate == VideoMediaRational(descriptor.fps.toLong(), 1) &&
+            validation.source.decodedFrameCount == input.motion.endFrameExclusive - input.motion.startFrame &&
+            verified.decodedFrameCount == validation.source.decodedFrameCount &&
+            verified.sampleAspectRatio == VideoMediaRational(1, 1) && verified.audioStreamCount == 0) {
+            "Measured media facts do not match persisted controlled motion settings."
         }
-        require(Files.size(source) == output.byteCount && sha256(source) == output.sha256) { "Output changed during media validation." }
+        val facts = VideoTakeMediaFacts(verified.decodedFrameCount,
+            verified.frameRate.numerator.toDouble() / verified.frameRate.denominator,
+            validation.source.width, validation.source.height, verified.width, verified.height, validation.conversion.name)
+        require(Files.size(source) == output.byteCount && sha256(source, cancellation) == output.sha256) { "Output changed during media validation." }
 
+        require(!cancellation.isCancelled()) { "Take import was cancelled before publication." }
         val current = projects.open(session.root)
         if (current.revision != expectedRevision || current.id != session.project.id) {
             throw VideoProjectConcurrencyException("Video project changed while the take was being validated.")
         }
         val id = VideoVersionedId(idFactory(), 1)
         require(current.takeVersions.none { it.id.id == id.id }) { "Take ID already exists; use a new immutable take ID." }
-        val relative = "takes/${id.id}/v${id.version}/preview.mp4"
-        val artifact = projects.copyImmutableArtifact(session.root, validatedOutput, relative, validatedDigest)
+        val takePath = "takes/${id.id}/v${id.version}/preview.mp4"
+        val artifact = projects.copyImmutableArtifact(session.root, validatedOutput, takePath, validatedDigest, cancellation)
+        require(!cancellation.isCancelled() && !Thread.currentThread().isInterrupted) { "Take import was cancelled before publication." }
         val take = VideoTakeRecord(id, artifact, lookId, Instant.now(clock).toString(), VideoTakeMediaFactsRecord(
             facts.frameCount, facts.frameRate, facts.nativeWidth, facts.nativeHeight,
             facts.outputWidth, facts.outputHeight, facts.conversion,
@@ -89,10 +122,20 @@ class VideoResultImport(
         }
     }
 
-    private fun sha256(path: Path): String = Files.newInputStream(path).use { input ->
+    private fun sha256(path: Path, cancellation: VideoMediaProcessCancellation): String = Files.newInputStream(path).use { input ->
         val digest = MessageDigest.getInstance("SHA-256")
         val bytes = ByteArray(64 * 1024)
-        while (true) { val n = input.read(bytes); if (n < 0) break; digest.update(bytes, 0, n) }
+        while (true) {
+            if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) {
+                throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Take import was cancelled while hashing media.")
+            }
+            val n = input.read(bytes)
+            if (n < 0) break
+            digest.update(bytes, 0, n)
+        }
+        if (cancellation.isCancelled() || Thread.currentThread().isInterrupted) {
+            throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Take import was cancelled while hashing media.")
+        }
         digest.digest().joinToString("") { "%02x".format(it) }
     }
 }
