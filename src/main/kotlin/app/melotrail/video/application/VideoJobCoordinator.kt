@@ -182,6 +182,19 @@ class VideoJobCoordinator(
 
     fun setup(backendId: String): VideoBackendSetup? = setupById[backendId]?.describeSetup()
 
+    /** Read-only projection of the same guards used by retry, including hosted estimate
+     * validity and reservations. Admission is still rechecked atomically on retry. */
+    internal fun retryEligible(ledger: VideoJobLedger, job: VideoGenerationJob): Boolean = runCatching {
+        if (job !in ledger.jobs) return@runCatching false
+        val previous = job.attempts.lastOrNull() ?: return@runCatching false
+        if (!previous.status.isTerminal || !previous.retryable || job.attempts.size >= job.request.maximumAttempts)
+            return@runCatching false
+        val backend = backendById[job.request.backendId] ?: return@runCatching false
+        if (availabilityProblem(job.request, backend) != null) return@runCatching false
+        requireAdmission(ledger, job.request)
+        true
+    }.getOrDefault(false)
+
     fun submit(request: VideoGenerationJobRequest): VideoJobResult {
         validateExecutableFingerprint(request)?.let { return VideoJobResult.Rejected(it) }
         val persisted = try { snapshot() } catch (error: Exception) { return persistenceRejected(error) }

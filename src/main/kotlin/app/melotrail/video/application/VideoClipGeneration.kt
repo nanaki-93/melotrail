@@ -14,7 +14,16 @@ import app.melotrail.video.domain.VideoVersionedId
 import app.melotrail.video.domain.VideoPreparedScene
 import app.melotrail.video.domain.VideoPreparedSceneRecord
 import app.melotrail.video.domain.VideoGenerationAttemptStatus
+import app.melotrail.video.domain.VideoComponentReviewStatus
+import app.melotrail.video.domain.VideoMaskPurpose
 import app.melotrail.video.domain.VideoControlledStage
+import app.melotrail.video.domain.VideoTakeReviewStatus
+import app.melotrail.video.domain.VideoMotionControl
+import app.melotrail.video.domain.VideoMotionTargetType
+import app.melotrail.video.domain.VideoMotionUnit
+import app.melotrail.video.domain.VideoControlledMotionRuntimeBinding
+import app.melotrail.video.domain.VideoLayerKind
+import app.melotrail.video.domain.VideoClipGenerationInput
 import app.melotrail.video.adapter.VideoImportedTake
 import app.melotrail.video.adapter.VideoProjectStore
 import app.melotrail.video.adapter.VideoPreparedSceneStore
@@ -66,6 +75,35 @@ private fun app.melotrail.video.domain.VideoControlledMotionRuntimeBinding.verif
     }
 }
 
+private fun controlledRuntimeBinding(runtime: List<VideoGenerationDependencyPin>, canvasVersion: String): VideoControlledMotionRuntimeBinding {
+    val byId = runtime.associateBy { it.id }
+    require(byId.size == runtime.size) { "Controlled runtime roles must be unique." }
+    fun pin(id: String) = requireNotNull(byId[id]) { "Controlled runtime requires $id." }
+    val artifacts = runtime.filter { it.id.startsWith("canvas-artifact-") }.sortedBy { it.id }
+    val required = setOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe", "media-manifest")
+    require(artifacts.isNotEmpty()) { "Canvas loaded artifacts must be pinned." }
+    require(byId.keys.all { it in required || it.startsWith("canvas-artifact-") }) {
+        "Controlled runtime contains an unsupported role."
+    }
+    required.forEach(::pin)
+    val binding = VideoControlledMotionRuntimeBinding(
+        pin("node"), pin("compositor"), pin("scenery"), pin("canvas-manifest"), artifacts,
+        pin("ffmpeg"), pin("ffprobe"), pin("media-manifest"), canvasVersion,
+    )
+    val mediaPath = Path.of(requireNotNull(binding.mediaManifest.ownedPath))
+    require(mediaPath.fileName.toString() == "melotrail-video-tools.json" &&
+        Path.of(requireNotNull(binding.ffmpeg.ownedPath)).parent == mediaPath.parent &&
+        Path.of(requireNotNull(binding.ffprobe.ownedPath)).parent == mediaPath.parent) {
+        "Pinned media manifest must accompany the selected FFmpeg and ffprobe binaries."
+    }
+    val script = Path.of(requireNotNull(binding.compositor.ownedPath))
+    require(Path.of(requireNotNull(binding.scenery.ownedPath)) == script.parent.resolve("scenery.cjs")) {
+        "Scenery must be the compositor's pinned sibling module."
+    }
+    binding.verifyResolvedCanvas() // Static resolution only; Node checks require.cache after claim.
+    return binding
+}
+
 private val CONTROLLED_SCENE_JSON = Json { encodeDefaults = true }
 
 /** Production orchestration from already prepared motion through durable job and immutable take. */
@@ -81,6 +119,170 @@ class VideoClipGeneration(
     private val requestIdFactory: () -> String = { "clip-${java.util.UUID.randomUUID()}" },
     private val projects: VideoProjectStore? = null,
 ) {
+    /** Read-only eligibility, not a setup probe or an authorization to launch native work.
+     * Full pin, coverage and media checks still run during admission. Flat admission is
+     * intentionally unavailable until the shared I2V binding is connected. */
+    fun capabilities(
+        session: VideoProjectSession,
+        preparedSceneId: VideoVersionedId? = null,
+        configuredRuntimePins: List<VideoGenerationDependencyPin> = emptyList(),
+    ): List<VideoRouteCapability> {
+        val store = requireNotNull(projects) { "Verified project storage is required for capability queries." }
+        val project = store.open(session.root)
+        require(project.id == session.project.id) { "Video project identity changed; reopen it." }
+        val occupied = coordinator.snapshot().jobs.any { job ->
+            job.request.execution is VideoLocalExecutionPolicy && job.attempts.any { !it.status.isTerminal }
+        }
+        val library = when (val opened = VideoAssetImport(VideoProjectLifecycle(store), VideoImageFiles()).open(session.root)) {
+            is VideoAssetLibraryResult.Loaded -> opened.assets
+            is VideoAssetLibraryResult.Rejected -> throw IllegalArgumentException(opened.problem.message)
+        }
+        val scene = preparedSceneId?.let { VideoPreparedSceneStore(store).load(session.root, it) }
+        val finishedScene = scene?.layers?.singleOrNull { it.kind == VideoLayerKind.FINISHED_SCENE }
+        val selectedReference = scene?.source?.references?.singleOrNull { reference ->
+            reference.original == finishedScene?.image
+        }
+        val finished = project.referenceVersions.any { record ->
+            VideoSceneLooks().select(project, library, record.id) is VideoSceneLookSelectionResult.Selected
+        }
+        val controlledArtwork = selectedReference?.let { reference ->
+            (VideoSceneLooks().select(project, library, reference.id) as? VideoSceneLookSelectionResult.Selected)
+                ?.look?.let { it.sourceDescriptor == reference.descriptorArtifact && it.original == reference.original }
+        } == true
+        // These are only operations for which the verified prepared scene has the
+        // requisite kind of source. Per-request bounds/coverage remain admission checks.
+        val controls = scene?.motionCapabilities.orEmpty().mapNotNull { capability ->
+            if (capability.reviewStatus == VideoComponentReviewStatus.REJECTED) return@mapNotNull null
+            val subject = scene?.layers.orEmpty().singleOrNull { it.id == capability.targetId &&
+                it.kind == VideoLayerKind.SUBJECT && it.reviewStatus != VideoComponentReviewStatus.REJECTED }
+            when {
+                capability.control == VideoMotionControl.POSE_BLEND && capability.targetType == VideoMotionTargetType.POSE &&
+                    scene?.poses.orEmpty().any { it.id == capability.targetId && it.reviewStatus != VideoComponentReviewStatus.REJECTED } &&
+                    capability.unit == VideoMotionUnit.RATIO && capability.minimum >= 0 &&
+                    capability.maximum > 0 && capability.minimum <= 1 -> VideoSceneMotionIntent.BLINK
+                capability.control == VideoMotionControl.TRANSLATE_Y && capability.targetType == VideoMotionTargetType.LAYER &&
+                    subject != null && capability.unit == VideoMotionUnit.PIXELS &&
+                    capability.minimum < 0 && capability.maximum > 0 &&
+                    scene?.layers.orEmpty().any { it.kind == VideoLayerKind.ENVIRONMENT &&
+                        it.bounds.coordinateSpaceId == subject.bounds.coordinateSpaceId &&
+                        it.reviewStatus != VideoComponentReviewStatus.REJECTED } -> VideoSceneMotionIntent.BREATHING
+                capability.control == VideoMotionControl.ROTATE && capability.targetType == VideoMotionTargetType.LAYER &&
+                    subject != null && capability.unit == VideoMotionUnit.DEGREES &&
+                    capability.minimum < 0 && capability.maximum > 0 &&
+                    scene?.masks.orEmpty().count { it.purpose == VideoMaskPurpose.HEAD_REGION &&
+                        it.layerIds == listOf(capability.targetId) && it.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+                        it.alpha?.isUsableCutout == true } == 1 -> VideoSceneMotionIntent.HEAD_GESTURE
+                capability.control == VideoMotionControl.EFFECT_RATE && capability.targetType == VideoMotionTargetType.EFFECT_ANCHOR &&
+                    capability.unit == VideoMotionUnit.PER_SECOND && capability.minimum <= 8 &&
+                    capability.maximum > 0 && scene?.effectAnchors.orEmpty().any { it.id == capability.targetId &&
+                        it.reviewStatus != VideoComponentReviewStatus.REJECTED } -> VideoSceneMotionIntent.STEAM
+                capability.control in setOf(VideoMotionControl.TRANSLATE_X, VideoMotionControl.TRANSLATE_Y) &&
+                    capability.targetType == VideoMotionTargetType.SCENERY_COVERAGE && capability.unit == VideoMotionUnit.PIXELS &&
+                    (capability.minimum < 0 || capability.maximum > 0) &&
+                    scene?.sceneryCoverage.orEmpty().any { coverage -> coverage.id == capability.targetId &&
+                        coverage.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+                        scene?.layers.orEmpty().any { it.id == coverage.layerId && it.reviewStatus != VideoComponentReviewStatus.REJECTED } } -> VideoSceneMotionIntent.SCENERY_TRAVEL
+                else -> null
+            }
+        }.distinct()
+        val toolsPresent = runCatching { controlledRuntimeBinding(configuredRuntimePins, "0.1.80") }.isSuccess &&
+            configuredRuntimePins.all { pin ->
+                pin.ownedPath?.let { runCatching {
+                    val path = Path.of(it)
+                    path.isAbsolute && path.normalize() == path && Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) &&
+                        !Files.isSymbolicLink(path) && path.toRealPath() == path &&
+                        MessageDigest.getInstance("SHA-256").also { digest ->
+                            Files.newInputStream(path).use { stream ->
+                                val buffer = ByteArray(64 * 1024)
+                                while (true) {
+                                    val count = stream.read(buffer)
+                                    if (count < 0) break
+                                    digest.update(buffer, 0, count)
+                                }
+                            }
+                        }.digest().joinToString("") { byte -> "%02x".format(byte) } == pin.sha256
+                }.getOrDefault(false) } == true
+            }
+        fun blocker(code: VideoCapabilityBlockerCode, action: String) = VideoCapabilityBlocker(code, action)
+        // Only the selected controlled backend is queried. Its availability is a
+        // declarative in-memory observation; explicit setup/pin checks remain separate.
+        val controlledAvailability = runCatching { coordinator.availability(backendId) }.getOrNull()
+        val controlledBlockers = buildList {
+            if (!controlledArtwork) add(blocker(VideoCapabilityBlockerCode.MISSING_ARTWORK,
+                "Select a prepared scene pinned to an eligible finished image, or import replacement artwork."))
+            if (scene == null || controls.isEmpty()) add(blocker(VideoCapabilityBlockerCode.UNSUPPORTED_MOTION,
+                "Prepare ready layers/poses/anchors and select a supported compositor control."))
+            if (!toolsPresent) add(blocker(VideoCapabilityBlockerCode.MISSING_TOOL, "Configure and verify pinned Node, Canvas and media tools before generation."))
+            if (controlledAvailability?.status != VideoBackendAvailabilityStatus.AVAILABLE ||
+                VideoGenerationInputKind.CONTROLLED_MOTION !in controlledAvailability.supportedInputs) {
+                add(blocker(VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME,
+                    "Configure an available controlled media worker; reconcile uncertain prior work before starting a new session."))
+            }
+            if (occupied) add(blocker(VideoCapabilityBlockerCode.OCCUPIED_ADMISSION, "Reconcile or finish the current local attempt before admitting another."))
+        }
+        val flatBlockers = buildList {
+            if (!finished) add(blocker(VideoCapabilityBlockerCode.MISSING_ARTWORK, "Import an eligible finished scene image."))
+            add(blocker(VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME,
+                "The short-I2V application route is not connected yet; configure and verify an owned ComfyUI session after integration."))
+            if (occupied) add(blocker(VideoCapabilityBlockerCode.OCCUPIED_ADMISSION, "Reconcile or finish the current local attempt before admitting another."))
+        }
+        val viewport = scene?.layers?.singleOrNull { it.kind == VideoLayerKind.FINISHED_SCENE }?.bounds
+        return listOf(
+            VideoRouteCapability(VideoClipRoute.CONTROLLED_MOTION, controlledBlockers.isEmpty(), controlledBlockers,
+                controls, viewport?.width?.toInt(), viewport?.height?.toInt(), 3840, 2160, 30,
+                1, 9_000, 34, 300_000, "Native controlled frames at 30 fps; bounded chunks of 300 frames. No full-length delivery/export is implemented.",
+                setOf("H264_SILENT_REENCODE")),
+            VideoRouteCapability(VideoClipRoute.FLAT_IMAGE_I2V, false, flatBlockers,
+                emptyList(), null, null, 768, 448, 25, 129, 129,
+                5_160, 5_160, "Measured short I2V: 129 frames / 25 fps = 5.16 seconds at 768x448; no regional or character control and no 20–30 second I2V.",
+                setOf("SILENT_DERIVATIVE")),
+        )
+    }
+
+    /** Project-scoped durable projection. No polling or inference occurs here. */
+    fun jobs(session: VideoProjectSession): List<VideoClipJobView> {
+        val project = requireNotNull(projects) { "Verified project storage is required for job queries." }.open(session.root)
+        require(project.id == session.project.id) { "Video project identity changed; reopen it." }
+        val ledger = coordinator.snapshot()
+        return ledger.jobs.filter { it.request.projectId == project.id }.map { job ->
+            val attempt = job.attempts.lastOrNull()
+            val remaining = job.request.maximumAttempts - job.attempts.size
+            VideoClipJobView(job.request.id,
+                when (job.request.input) {
+                    is VideoControlledMotionGenerationInput -> VideoClipRoute.CONTROLLED_MOTION
+                    is VideoClipGenerationInput -> VideoClipRoute.FLAT_IMAGE_I2V
+                    else -> VideoClipRoute.OTHER_JOB
+                },
+                attempt?.id, attempt?.status, attempt?.controlledEvidence?.stage, attempt?.progressPercent,
+                job.currentOutputId, remaining,
+                coordinator.retryEligible(ledger, job),
+                project.takeVersions.filter { it.provenance?.requestId == job.request.id }.map { take ->
+                    VideoClipTakeView(take.id, project.reviewStatus(take.id), take.id in project.selectedTakeIds)
+                })
+        }
+    }
+
+    fun snapshot() = coordinator.snapshot()
+    fun recover() = coordinator.recover()
+    fun reconcile(session: VideoProjectSession, requestId: String, attemptId: String? = null): VideoJobResult {
+        requireOwnedJob(session, requestId)
+        return coordinator.reconcile(requestId, attemptId)
+    }
+    fun cancel(session: VideoProjectSession, requestId: String, attemptId: String): VideoJobResult {
+        requireOwnedJob(session, requestId)
+        return coordinator.cancel(requestId, attemptId)
+    }
+    fun retry(session: VideoProjectSession, requestId: String): VideoJobResult {
+        requireOwnedJob(session, requestId)
+        return coordinator.retry(requestId)
+    }
+    private fun requireOwnedJob(session: VideoProjectSession, requestId: String) {
+        val project = requireNotNull(projects) { "Verified project storage is required for job operations." }.open(session.root)
+        require(project.id == session.project.id && coordinator.snapshot().jobs.any {
+            it.request.id == requestId && it.request.projectId == project.id
+        }) { "Durable job is not owned by this video project." }
+    }
+
     fun generate(request: VideoClipGenerationRequest): VideoClipGenerationResult {
         if (request.project.revision != request.expectedRevision) return VideoClipGenerationResult.Rejected("Project revision changed before generation.")
         if (execution !is VideoLocalExecutionPolicy) return VideoClipGenerationResult.Rejected("Controlled compositor execution requires an explicitly configured local execution policy.")
@@ -165,32 +367,7 @@ class VideoClipGeneration(
         val (verifiedScene, preparedPins, sourceIdentity) = verified
         val runtime = request.runtimeDependencies
         val runtimeBinding = try {
-            val byId = runtime.associateBy { it.id }
-            require(byId.size == runtime.size) { "Controlled runtime roles must be unique." }
-            fun pin(id: String) = requireNotNull(byId[id]) { "Controlled runtime requires $id." }
-            val artifacts = runtime.filter { it.id.startsWith("canvas-artifact-") }.sortedBy { it.id }
-            val required = setOf("node", "compositor", "scenery", "canvas-manifest", "ffmpeg", "ffprobe", "media-manifest")
-            require(artifacts.isNotEmpty()) { "Canvas loaded artifacts must be pinned." }
-            require(byId.keys.all { it in required || it.startsWith("canvas-artifact-") }) {
-                "Controlled runtime contains an unsupported role."
-            }
-            required.forEach(::pin)
-            val binding = app.melotrail.video.domain.VideoControlledMotionRuntimeBinding(
-                pin("node"), pin("compositor"), pin("scenery"), pin("canvas-manifest"), artifacts,
-                pin("ffmpeg"), pin("ffprobe"), pin("media-manifest"), request.expectedCanvasVersion,
-            )
-            val mediaPath = Path.of(requireNotNull(binding.mediaManifest.ownedPath))
-            require(mediaPath.fileName.toString() == "melotrail-video-tools.json" &&
-                Path.of(requireNotNull(binding.ffmpeg.ownedPath)).parent == mediaPath.parent &&
-                Path.of(requireNotNull(binding.ffprobe.ownedPath)).parent == mediaPath.parent) {
-                "Pinned media manifest must accompany the selected FFmpeg and ffprobe binaries."
-            }
-            val script = Path.of(requireNotNull(binding.compositor.ownedPath))
-            require(Path.of(requireNotNull(binding.scenery.ownedPath)) == script.parent.resolve("scenery.cjs")) {
-                "Scenery must be the compositor's pinned sibling module."
-            }
-            binding.verifyResolvedCanvas() // No native setup probe runs before durable claim.
-            binding
+            controlledRuntimeBinding(runtime, request.expectedCanvasVersion) // No native setup probe runs before durable claim.
         } catch (error: IllegalArgumentException) {
             return VideoClipGenerationResult.Rejected(error.message ?: "Controlled runtime is incomplete.")
         }
@@ -341,6 +518,41 @@ class VideoClipGeneration(
         VideoClipGenerationResult.Rejected(error.message ?: "Generated media could not be imported safely.")
     }
 }
+
+enum class VideoClipRoute { CONTROLLED_MOTION, FLAT_IMAGE_I2V, OTHER_JOB }
+enum class VideoCapabilityBlockerCode { MISSING_ARTWORK, UNSUPPORTED_MOTION, MISSING_TOOL, UNAVAILABLE_RUNTIME, OCCUPIED_ADMISSION }
+data class VideoCapabilityBlocker(val code: VideoCapabilityBlockerCode, val nextAction: String)
+data class VideoRouteCapability(
+    val route: VideoClipRoute,
+    val available: Boolean,
+    val blockers: List<VideoCapabilityBlocker>,
+    val supportedControls: List<VideoSceneMotionIntent>,
+    val preparedWidth: Int?,
+    val preparedHeight: Int?,
+    val maximumNativeWidth: Int,
+    val maximumNativeHeight: Int,
+    val nativeFramesPerSecond: Int,
+    val minimumNativeFrames: Int,
+    val maximumNativeFrames: Int,
+    /** Native frame bounds above determine precise duration; milliseconds are rounded upward. */
+    val minimumNativeDurationMillis: Int,
+    val maximumNativeDurationMillis: Int,
+    val limitation: String,
+    val permittedConversions: Set<String>,
+)
+data class VideoClipTakeView(val id: VideoVersionedId, val review: VideoTakeReviewStatus, val selected: Boolean)
+data class VideoClipJobView(
+    val requestId: String,
+    val route: VideoClipRoute,
+    val attemptId: String?,
+    val status: VideoGenerationAttemptStatus?,
+    val controlledStage: VideoControlledStage?,
+    val observedProgressPercent: Int?,
+    val currentOutputId: String?,
+    val remainingAttempts: Int,
+    val retryEligible: Boolean,
+    val takes: List<VideoClipTakeView>,
+)
 
 data class VideoClipGenerationRequest(
     val project: VideoProject,

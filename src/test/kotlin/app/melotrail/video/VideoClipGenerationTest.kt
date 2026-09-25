@@ -26,6 +26,8 @@ import kotlin.test.assertIs
 import app.melotrail.video.application.*
 import app.melotrail.video.domain.*
 import java.time.Instant
+import java.time.Clock
+import java.time.ZoneOffset
 import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoTakeRecord
@@ -46,6 +48,125 @@ import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 
 class VideoClipGenerationTest {
+    @Test fun `capabilities and durable projections remain read only and distinguish blockers and unknown progress`() {
+        val root = Files.createTempDirectory("video-capability-")
+        val store = VideoProjectStore(listOf(Files.createTempDirectory("midi-protected-")))
+        val project = VideoProject("project", "Project", "2026-09-24T00:00:00Z")
+        store.create(root, project)
+        val pin = VideoGenerationDependencyPin("prepared", "a".repeat(64), "/owned/scene")
+        val runtime = motionRuntime(VideoGenerationDependencyPin("compositor", "b".repeat(64), "/runtime/compositor"))
+        val input = VideoControlledMotionGenerationInput("Move", listOf(pin) + runtime.allPins,
+            VideoControlledMotionRequest(listOf(pin), 0, 150, 42,
+                motionDescriptor(listOf(runtime.compositor), 0, 150, 42, project.id)), "Move", motionMedia())
+        val policy = input.media.execution
+        val request = VideoGenerationJobRequest("request", project.id, "controlled-local", emptyList(), input,
+            controlledMotionRequestFingerprint("controlled-local", input, emptyList(), 2), 2,
+            Instant.now().toString(), policy)
+        val active = VideoGenerationAttempt("attempt", request.id, 1, "owner", VideoGenerationAttemptStatus.SUBMISSION_UNCERTAIN,
+            VideoSubmissionPhase.UNCERTAIN, Instant.now().toString())
+        var ledger = VideoJobLedger("domain", Instant.now().toString(), listOf(VideoGenerationJob(request, listOf(active))))
+        val persistence = object : VideoJobPersistence {
+            override fun loadOrCreate(admissionDomainId: String, createdAt: String) = ledger
+            override fun compareAndSet(expectedRevision: Long, replacement: VideoJobLedger): VideoJobLedger {
+                ledger = replacement
+                return ledger
+            }
+        }
+        var backendStatus = VideoBackendAvailabilityStatus.AVAILABLE
+        var supportedInputs = setOf(VideoGenerationInputKind.CONTROLLED_MOTION)
+        val backend = object : VideoGenerationBackendPort {
+            override val backendId = request.backendId
+            override fun availability() = VideoBackendAvailability(backendId, backendStatus, Instant.now().toString(),
+                supportedInputs, emptyList(), "test backend")
+            override fun submit(command: VideoBackendSubmissionCommand): VideoBackendSubmission = error("No launch permitted")
+            override fun observe(ownedAttempt: VideoOwnedBackendAttempt): VideoBackendObservation = error("No observation permitted")
+            override fun requestCancellation(ownedAttempt: VideoOwnedBackendAttempt): VideoBackendCancellation = error("No cancellation permitted")
+        }
+        val coordinator = VideoJobCoordinator("domain", persistence, listOf(backend),
+            clock = Clock.fixed(Instant.parse("2026-09-25T12:00:00Z"), ZoneOffset.UTC))
+        val service = VideoClipGeneration(VideoScenePreparation(), coordinator,
+            VideoResultImport(store, VideoMediaProbe()), VideoMotionRenderer(), request.backendId, policy, projects = store)
+        val session = VideoProjectSession(root, project)
+        val before = ledger
+        val capabilities = service.capabilities(session)
+        assertEquals(setOf(VideoClipRoute.CONTROLLED_MOTION, VideoClipRoute.FLAT_IMAGE_I2V), capabilities.map { it.route }.toSet())
+        assertEquals(setOf(VideoCapabilityBlockerCode.MISSING_ARTWORK, VideoCapabilityBlockerCode.UNSUPPORTED_MOTION,
+            VideoCapabilityBlockerCode.MISSING_TOOL, VideoCapabilityBlockerCode.OCCUPIED_ADMISSION),
+            capabilities.first().blockers.map { it.code }.toSet())
+        assertEquals(setOf(VideoCapabilityBlockerCode.MISSING_ARTWORK, VideoCapabilityBlockerCode.UNAVAILABLE_RUNTIME,
+            VideoCapabilityBlockerCode.OCCUPIED_ADMISSION), capabilities.last().blockers.map { it.code }.toSet())
+        assertTrue(capabilities.last().supportedControls.isEmpty())
+        assertEquals(129, capabilities.last().maximumNativeFrames)
+        assertEquals(25, capabilities.last().nativeFramesPerSecond)
+        assertEquals(5_160, capabilities.last().maximumNativeDurationMillis)
+        assertEquals(30, capabilities.first().nativeFramesPerSecond)
+        assertEquals(300_000, capabilities.first().maximumNativeDurationMillis)
+        val view = service.jobs(session).single()
+        assertEquals(VideoClipRoute.CONTROLLED_MOTION, view.route)
+        assertEquals(active.id, view.attemptId)
+        assertEquals(VideoGenerationAttemptStatus.SUBMISSION_UNCERTAIN, view.status)
+        assertEquals(null, view.observedProgressPercent)
+        assertEquals(null, view.controlledStage)
+        assertEquals(1, view.remainingAttempts)
+        assertFalse(view.retryEligible)
+        assertTrue(view.takes.isEmpty())
+        assertEquals(before, ledger)
+        assertEquals(project, store.open(root))
+        val other = VideoProject("other", "Other", project.createdAt)
+        val otherRoot = Files.createTempDirectory("video-other-capability-")
+        store.create(otherRoot, other)
+        assertTrue(service.jobs(VideoProjectSession(otherRoot, other)).isEmpty())
+        assertFailsWith<IllegalArgumentException> { service.cancel(VideoProjectSession(otherRoot, other), request.id, active.id) }
+        assertFailsWith<IllegalArgumentException> { service.retry(VideoProjectSession(otherRoot, other), request.id) }
+        assertFailsWith<IllegalArgumentException> { service.reconcile(VideoProjectSession(otherRoot, other), request.id, active.id) }
+        assertEquals(before, ledger)
+        ledger = ledger.copy(jobs = listOf(VideoGenerationJob(request, listOf(active.copy(
+            status = VideoGenerationAttemptStatus.FAILED, submissionPhase = VideoSubmissionPhase.NOT_STARTED,
+            finishedAt = Instant.now().toString(), retryable = true)))))
+        val retry = service.jobs(session).single()
+        assertTrue(retry.retryEligible)
+        assertEquals(1, retry.remainingAttempts)
+        backendStatus = VideoBackendAvailabilityStatus.OFFLINE
+        assertFalse(service.jobs(session).single().retryEligible, "Offline backend cannot accept a retry")
+        backendStatus = VideoBackendAvailabilityStatus.AVAILABLE
+        supportedInputs = emptySet()
+        assertFalse(service.jobs(session).single().retryEligible, "Unsupported input cannot be retried")
+        supportedInputs = setOf(VideoGenerationInputKind.CONTROLLED_MOTION)
+        assertTrue(service.jobs(session).single().retryEligible)
+        assertEquals(VideoJobProblemCode.ATTEMPT_NOT_FOUND,
+            assertIs<VideoJobResult.Rejected>(service.cancel(session, request.id, "wrong-attempt")).problem.code)
+        assertEquals(VideoGenerationAttemptStatus.FAILED,
+            assertIs<VideoJobResult.Accepted>(service.reconcile(session, request.id, active.id)).attempt?.status)
+        assertTrue(service.recover().isEmpty())
+        ledger = ledger.copy(jobs = listOf(ledger.jobs.single().copy(request = request.copy(maximumAttempts = 1,
+            requestFingerprint = controlledMotionRequestFingerprint(request.backendId, input, emptyList(), 1)))))
+        assertFalse(service.jobs(session).single().retryEligible)
+        assertEquals(0, service.jobs(session).single().remainingAttempts)
+        val otherInput = VideoKeyframeGenerationInput("Still", listOf(pin), 320, 180)
+        val otherRequest = request.copy(id = "keyframe", input = otherInput, requestFingerprint = "d".repeat(64))
+        ledger = ledger.copy(jobs = ledger.jobs + VideoGenerationJob(otherRequest))
+        assertEquals(VideoClipRoute.OTHER_JOB, service.jobs(session).single { it.requestId == "keyframe" }.route)
+        supportedInputs = setOf(VideoGenerationInputKind.KEYFRAME)
+        val hosted = VideoHostedExecutionPolicy("budget", "USD", 60,
+            "2026-09-24T00:00:00Z", "2026-09-24T01:00:00Z", 120)
+        val hostedAttempt = active.copy(id = "host-attempt", requestId = otherRequest.id,
+            status = VideoGenerationAttemptStatus.FAILED, submissionPhase = VideoSubmissionPhase.NOT_STARTED,
+            finishedAt = Instant.now().toString(), retryable = true)
+        fun hostedJob(policy: VideoHostedExecutionPolicy) = VideoGenerationJob(
+            otherRequest.copy(execution = policy), listOf(hostedAttempt))
+        ledger = ledger.copy(jobs = listOf(hostedJob(hosted)))
+        assertFalse(service.jobs(session).single().retryEligible, "An expired estimate cannot admit a retry")
+        assertEquals(VideoJobProblemCode.HOSTED_ESTIMATE_STALE,
+            assertIs<VideoJobResult.Rejected>(coordinator.retry(otherRequest.id)).problem.code)
+        ledger = ledger.copy(jobs = listOf(hostedJob(hosted.copy(estimateExpiresAt = "2026-09-26T00:00:00Z",
+            authorizedSpendCapMicros = 100))))
+        assertFalse(service.jobs(session).single().retryEligible, "The prior reservation and retry exceed the budget")
+        assertEquals(VideoJobProblemCode.HOSTED_BUDGET_EXCEEDED,
+            assertIs<VideoJobResult.Rejected>(coordinator.retry(otherRequest.id)).problem.code)
+        ledger = ledger.copy(jobs = listOf(hostedJob(hosted.copy(estimateExpiresAt = "2026-09-26T00:00:00Z"))))
+        assertTrue(service.jobs(session).single().retryEligible, "A current estimate with room for both attempts is eligible")
+    }
+
     @Test fun `invalid or JavaScript unsafe controlled ranges cannot form a durable request`() {
         val project = VideoProject("project", "Project", "2026-09-24T00:00:00Z")
         // Domain validation also protects direct ledger callers, without filesystem I/O.
@@ -156,6 +277,7 @@ class VideoClipGenerationTest {
                 graphics.color = when (name) {
                     "pose" -> Color(120, 70, 100)
                     "clean" -> Color(70, 90, 110)
+                    "inspiration" -> Color(50, 120, 80)
                     else -> Color(90, 100, 120)
                 }
                 if (alpha) graphics.fillOval(2, 2, 16, 26) else graphics.fillRect(0, 0, 100, 60)
@@ -275,6 +397,40 @@ class VideoClipGenerationTest {
         val resultImport = VideoResultImport(store, probe, idFactory = { "imported" }, controlledOutputRoot = publicationRoot)
         val service = VideoClipGeneration(VideoScenePreparation(), VideoJobCoordinator("domain", persistence, emptyList()),
             resultImport, VideoMotionRenderer(), backendId, policy, projects = store)
+        val capability = service.capabilities(session, scene.id)
+        assertEquals(setOf(VideoSceneMotionIntent.BLINK, VideoSceneMotionIntent.BREATHING), capability.first().supportedControls.toSet())
+        assertTrue(VideoCapabilityBlockerCode.MISSING_TOOL in capability.first().blockers.map { it.code })
+        assertEquals(100, capability.first().preparedWidth)
+        assertEquals(60, capability.first().preparedHeight)
+        assertTrue(capability.last().supportedControls.isEmpty())
+        // Complete, resolved Canvas bindings are required even when all role names and
+        // the package manifest itself are present. This query never launches Node.
+        val packageRoot = Files.createDirectories(root.resolve("node_modules/@napi-rs/canvas"))
+        val loaded = listOf("index.js", "js-binding.js", "geometry.js", "load-image.js")
+            .map(packageRoot::resolve) + listOf(packageRoot.parent.resolve("canvas-darwin-arm64/skia.darwin-arm64.node"))
+        loaded.forEach { Files.createDirectories(it.parent); Files.writeString(it, "pinned $it") }
+        val canvasManifest = packageRoot.resolve("package.json")
+        Files.writeString(canvasManifest, """{"name":"@napi-rs/canvas","version":"0.1.80"}""")
+        val runtimePaths = mapOf(
+            "node" to root.resolve("node"), "compositor" to root.resolve("render.cjs"),
+            "scenery" to root.resolve("scenery.cjs"), "canvas-manifest" to canvasManifest,
+            "ffmpeg" to tools.resolve("ffmpeg"), "ffprobe" to tools.resolve("ffprobe"),
+            "media-manifest" to tools.resolve(VideoMediaProbe.MANIFEST_NAME),
+        ) + loaded.mapIndexed { index, path -> "canvas-artifact-$index" to path }.toMap()
+        runtimePaths.values.filterNot(Files::exists).forEach { Files.writeString(it, "pinned $it") }
+        val completePins = runtimePaths.map { (id, path) -> VideoGenerationDependencyPin(id, sha(path), path.toRealPath().toString()) }
+        // The manifest and one artifact used to pass this readiness test.
+        val incompletePins = completePins.filter { it.id in setOf("node", "compositor", "scenery", "canvas-manifest",
+            "ffmpeg", "ffprobe", "media-manifest", "canvas-artifact-0") }
+        assertTrue(VideoCapabilityBlockerCode.MISSING_TOOL in service.capabilities(session, scene.id, incompletePins)
+            .first().blockers.map { it.code })
+        val wrongArtifact = root.resolve("other-canvas.bin")
+        Files.writeString(wrongArtifact, "pinned other artifact")
+        assertTrue(VideoCapabilityBlockerCode.MISSING_TOOL in service.capabilities(session, scene.id,
+            completePins.map { if (it.id == "canvas-artifact-1") it.copy(ownedPath = wrongArtifact.toString(),
+                sha256 = sha(wrongArtifact)) else it }).first().blockers.map { it.code })
+        assertFalse(VideoCapabilityBlockerCode.MISSING_TOOL in service.capabilities(session, scene.id, completePins)
+            .first().blockers.map { it.code })
         val command = VideoCompletedTakeImport(session, session.project.revision, request.id, attempt.id, output.id)
         val preparedPath = store.resolveArtifact(projectRoot, record.consumedArtifacts.first())
         val originalPrepared = Files.readAllBytes(preparedPath)
@@ -351,6 +507,57 @@ class VideoClipGenerationTest {
         assertEquals(take, reused.result.take)
         assertEquals(refreshed.project, reused.result.project)
         assertEquals(1, store.open(projectRoot).takeVersions.size)
+        val jobView = service.jobs(VideoProjectSession(projectRoot, store.open(projectRoot))).single()
+        assertEquals(VideoControlledStage.COMPLETED, jobView.controlledStage)
+        assertEquals(output.id, jobView.currentOutputId)
+        assertEquals(null, jobView.observedProgressPercent, "A persisted fake completion without an observation must not invent progress")
+        val unreviewed = jobView.takes.single()
+        assertEquals(take.id, unreviewed.id)
+        assertEquals(VideoTakeReviewStatus.UNREVIEWED, unreviewed.review)
+        assertFalse(unreviewed.selected)
+        val beforeReview = store.open(projectRoot)
+        val selected = store.save(projectRoot, beforeReview.revision, beforeReview.copy(
+            selectedTakeIds = listOf(take.id), revision = beforeReview.revision + 1))
+        val selectedView = service.jobs(VideoProjectSession(projectRoot, selected)).single().takes.single()
+        assertEquals(VideoTakeReviewStatus.UNREVIEWED, selectedView.review)
+        assertTrue(selectedView.selected)
+        // A persisted but renderer-incompatible subject range must not be advertised.
+        val breathing = scene.motionCapabilities.single { it.control == VideoMotionControl.TRANSLATE_Y &&
+            it.targetType == VideoMotionTargetType.LAYER }
+        // Invalid units cannot be persisted as a prepared scene in the first place.
+        assertFailsWith<IllegalArgumentException> {
+            scene.copy(motionCapabilities = scene.motionCapabilities.map {
+                if (it.id == breathing.id) it.copy(unit = VideoMotionUnit.RATIO) else it
+            })
+        }
+        val incompatible = scene.copy(id = VideoVersionedId("scene-other", 1), motionCapabilities =
+            scene.motionCapabilities.map { if (it.id == breathing.id) it.copy(minimum = 0.0, maximum = 0.0, defaultValue = 0.0) else it })
+        val revised = scenes.save(projectRoot, selected.revision, incompatible)
+        val projection = service.capabilities(VideoProjectSession(projectRoot, revised), incompatible.id, completePins).first()
+        assertTrue(VideoSceneMotionIntent.BLINK in projection.supportedControls)
+        assertFalse(VideoSceneMotionIntent.BREATHING in projection.supportedControls)
+        // Keep the eligible image in the library, but pin a different, inspiration-only
+        // image as this prepared scene's actual finished layer and source reference.
+        val inspiration = assertIs<VideoAssetImportResult.Imported>(VideoAssetImport(lifecycle, VideoImageFiles(),
+            idFactory = { "inspiration" }).import(VideoProjectSession(projectRoot, revised),
+                ImportVideoAsset(picture("inspiration", false), VideoReferenceRole.STYLE,
+                    usageIntent = VideoAssetUsageIntent.INSPIRATION_ONLY)))
+        val inspirationPin = VideoPreparedReferencePin(inspiration.asset.id,
+            inspiration.session.project.referenceVersions.single { it.id == inspiration.asset.id }.artifact,
+            inspiration.asset.original)
+        val mismatched = scene.copy(id = VideoVersionedId("scene-mismatch", 1),
+            source = scene.source.copy(references = scene.source.references.map {
+                if (it.id == finished) inspirationPin else it
+            }), layers = scene.layers.map {
+                if (it.kind == VideoLayerKind.FINISHED_SCENE) it.copy(image = inspiration.asset.original) else it
+            })
+        val mismatchedProject = scenes.save(projectRoot, inspiration.session.project.revision, mismatched)
+        val mismatchedCapability = service.capabilities(VideoProjectSession(projectRoot, mismatchedProject),
+            mismatched.id, completePins).first()
+        assertTrue(VideoCapabilityBlockerCode.MISSING_ARTWORK in mismatchedCapability.blockers.map { it.code })
+        assertFalse(mismatchedCapability.available)
+        assertFalse(VideoCapabilityBlockerCode.MISSING_ARTWORK in service.capabilities(
+            VideoProjectSession(projectRoot, mismatchedProject), incompatible.id, completePins).first().blockers.map { it.code })
     }
 
     @Test fun `cancellation interrupts immutable take hashing and copying before publication`() {
