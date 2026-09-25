@@ -210,8 +210,8 @@ Fresh verification passed: full selectors `./gradlew :test --no-build-cache --re
 
 ## Feature VG2 — Durable previews and immutable takes
 
-Partial implementation/WIP exists. Preserve it and complete the missing production
-connections; do not assume fake-backend tests prove a working renderer job.
+Backend technical gates are verified below. Native preview delivery remains
+open; fixture-backed service tests do not prove a real native preview ladder.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
@@ -300,6 +300,22 @@ and diff check passed. Logs `build/vg2/vg02-continuation/3.2-*.log`.
 No optional video runtime was added to MIDI composition/startup, no new MIDI
 player or Video UI was introduced, and no model inference or hosted activity ran.
 Fixture motion and desktop tests are not visual, musical or release approval.
+
+Step 3.3 — engineering integration PASS, overall VG02 WAITING_USER. Candidate
+`db1f881eb` plus the final source manifest at
+`build/vg2/vg02-continuation/source-manifest.json` identifies the combined input.
+Final inspection strengthened native evidence against nonuniform timestamps and
+wrong absolute blink phases (not merely average FPS or different endpoints);
+matching regressions pass. Uncached full root tests passed (692 tests, 6 tasks
+executed); uncached desktop tests passed (239 tests, 11 tasks executed). Fresh
+motion fixtures and Node tests passed (22/22); `make test` passed (1 executed,
+13 up-to-date), `make build` passed (14 up-to-date), and diff checks passed.
+Logs `build/vg2/vg02-continuation/3.3-*.log`, archived root/desktop XML, synthetic
+fixture bundles and SHA-256 receipt remain in that ignored evidence directory.
+No native 5/20/30-second ladder ran; no corresponding native receipts exist to
+compare or approve. VG2-01/02 are technically DONE; VG2-03 and overall VG02 stay
+WAITING_USER at Step 2.3. No artistic, 1080p/full-duration, Logic, Video UI,
+installed-app or release completion is claimed.
 
 **Owners by slice:**
 - VG2-01: existing/WIP `core/video/application/VideoClipGeneration.kt`,

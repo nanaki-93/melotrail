@@ -1140,6 +1140,19 @@ Focused lifecycle/error tests, `make test`, `make build` and `git diff --check`
 passed on that unchanged candidate. Generated-video fidelity, installed-app
 integration and final 1080p/3–5 minute delivery remain later tasks.
 
+## VG02 preview continuation boundary
+
+Controlled preview production wiring now has owned fixture coverage for sequential
+150/600/900-frame jobs at 30 fps, measured immutable publication without selection,
+import cancellation and reconstructed exact recovery without native relaunch.
+The opt-in host check also retains source/published decoded frame and timestamp
+evidence, including chunk boundaries and authored blink phases. These synthetic
+regressions do not establish a real native preview run or artistic acceptance.
+The native ladder remains gated on explicit paths and bounded authorization;
+see [Validation](VALIDATION.md#vg02-controlled-preview-proof) and current TASKS.
+Flat-image I2V remains the measured 129-frame/25-fps (5.16-second) short route.
+Neither route establishes long generative coherence, a Video UI or full delivery.
+
 ## Cost and job control
 
 Before submitting, prepare a reviewable batch: exact model/options, references,

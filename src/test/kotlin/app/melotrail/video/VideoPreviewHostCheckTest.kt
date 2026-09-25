@@ -90,7 +90,10 @@ class VideoPreviewHostCheckTest {
         fun jobs() = VideoJobStore(f.output.resolve("jobs"), "preview-proof", protected)
         fun store() = VideoProjectStore(protected)
         val project get() = f.output.resolve("project")
-        fun run(sample: ((Long, Long) -> Long)? = null) = PreviewProductionRun.run(config, ::process, { Long.MAX_VALUE }, sample)
+        fun run(sample: ((Long, Long) -> Long)? = null) {
+            try { PreviewProductionRun.run(config, ::process, { Long.MAX_VALUE }, sample) }
+            finally { println("SYNTHETIC_PREVIEW_WIRING_EVIDENCE root=${f.root}") }
+        }
         fun process(request: VideoMediaProcessRequest, cancellation: VideoMediaProcessCancellation): VideoMediaProcessResult {
             check(!cancellation.isCancelled())
             beforeProcess(request, cancellation)
@@ -246,6 +249,21 @@ class VideoPreviewHostCheckTest {
         assertEquals(project, f.store().open(f.project))
         publishedHashes.forEach { (artifact, hash) -> assertEquals(hash, PreviewPreflight.sha(f.store().resolveArtifact(f.project, artifact))) }
         assertEquals(1, f.jobs().snapshot().jobs.last().attempts.size)
+    }
+
+    @Test fun `native evidence rejects cadence jitter and reset motion despite matching average rate`() {
+        val measurement = VideoSourceMeasurement("a".repeat(64), 10, "h264", 320, 180,
+            VideoMediaRational(1, 1), VideoMediaRational(30, 1), 3, VideoMediaRational(1, 300), 0, 30, 1, 0, 0)
+        fun timestamps(values: List<Int>) = """{"frames":[${values.joinToString { "{\"best_effort_timestamp\":$it}" }}]}"""
+        PreviewFrameEvidence.checkCadence(timestamps(listOf(0, 10, 20)), measurement)
+        for (values in listOf(listOf(0, 11, 20), listOf(0, 10), listOf(0, 10, 10))) {
+            assertFailsWith<IllegalArgumentException> { PreviewFrameEvidence.checkCadence(timestamps(values), measurement) }
+        }
+        val open = java.awt.image.BufferedImage(320, 180, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        open.setRGB(20, 25, java.awt.Color(170, 100, 150).rgb)
+        PreviewFrameEvidence.checkMotionPhase(0, open)
+        val closed = PreviewFrameEvidence.sampleFrames(900).maxBy(PreviewFrameEvidence::blink)
+        assertFailsWith<IllegalArgumentException> { PreviewFrameEvidence.checkMotionPhase(closed, open) }
     }
 
     @Test fun `frame evidence covers every boundary and authored phase and rejects discontinuity`() {

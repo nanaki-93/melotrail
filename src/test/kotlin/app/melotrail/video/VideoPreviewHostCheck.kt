@@ -345,6 +345,28 @@ internal object PreviewFrameEvidence {
             .distinct().sorted()
     }
 
+    internal fun checkCadence(text: String, measurement: VideoSourceMeasurement) {
+        val frames = Json.parseToJsonElement(text).jsonObject.getValue("frames").jsonArray
+        require(frames.size.toLong() == measurement.decodedFrameCount) { "Missing frame cadence evidence" }
+        frames.forEachIndexed { index, frame ->
+            val pts = frame.jsonObject.getValue("best_effort_timestamp").jsonPrimitive.content.toLong()
+            val delta = java.math.BigInteger.valueOf(pts) - java.math.BigInteger.valueOf(measurement.videoStartPts)
+            require(delta * java.math.BigInteger.valueOf(measurement.videoTimeBase.numerator) * java.math.BigInteger.valueOf(30) ==
+                java.math.BigInteger.valueOf(index.toLong()) * java.math.BigInteger.valueOf(measurement.videoTimeBase.denominator)) {
+                "Discontinuous 30-fps presentation at frame $index"
+            }
+        }
+    }
+
+    internal fun checkMotionPhase(frame: Long, image: BufferedImage) {
+        val amount = blink(frame)
+        val expected = listOf(170 + 60 * amount, 100 + 120 * amount, 150 - 90 * amount)
+        val rgb = image.getRGB(20, 25)
+        require(listOf(16, 8, 0).zip(expected).all { (shift, value) -> kotlin.math.abs(((rgb shr shift) and 255) - value) <= 10 }) {
+            "Authored blink phase differs at absolute frame $frame"
+        }
+    }
+
     internal fun readSample(path: Path): BufferedImage {
         require(Files.isRegularFile(path, NOFOLLOW_LINKS) && !Files.isSymbolicLink(path)) { "Missing decoded frame: $path" }
         return requireNotNull(ImageIO.read(path.toFile())) { "Invalid decoded frame: $path" }
@@ -378,6 +400,15 @@ internal object PreviewFrameEvidence {
                 measurement.audioStreamCount == 0 && measurement.otherStreamCount == 0 &&
                 java.math.BigInteger.valueOf(measurement.videoDurationPts) * java.math.BigInteger.valueOf(measurement.videoTimeBase.numerator) * java.math.BigInteger.valueOf(30) ==
                 java.math.BigInteger.valueOf(count) * java.math.BigInteger.valueOf(measurement.videoTimeBase.denominator)) { "Native preview media contract differs" }
+            val probeTool = input.motion.descriptor.runtime.ffprobe
+            val timestamps = run(VideoMediaProcessRequest(Path.of(probeTool.ownedPath!!), probeTool.sha256,
+                listOf("-v", "error", "-protocol_whitelist", "file,pipe", "-select_streams", "v:0", "-show_frames",
+                    "-show_entries", "frame=best_effort_timestamp", "-of", "json", clip.toString()),
+                directory.resolve("$label-cadence"), Duration.ofSeconds(30), maxStdoutBytes = 1_048_576,
+                memoryLimitBytes = config.budget.memoryBytes), cancellation).stdout
+            require(!timestamps.truncated) { "Truncated cadence evidence" }
+            checkCadence(timestamps.text, measurement)
+            Files.writeString(directory.resolve("$label-cadence.json"), timestamps.text, CREATE_NEW)
             val decoded = mutableMapOf<Long, BufferedImage>()
             for (frame in frames) {
                 val png = directory.resolve("$label-$frame.png")
@@ -390,6 +421,7 @@ internal object PreviewFrameEvidence {
                 val image = readSample(png)
                 val rendered = source.parent.resolve("encode-frames/frame-${frame.toString().padStart(8, '0')}.png")
                 checkPixels(readSample(rendered), image)
+                checkMotionPhase(frame, image)
                 decoded[frame] = image
                 records += """{"clip":"$label","clipSha256":"$digest","frame":$frame,"width":${image.width},"height":${image.height},"pngSha256":"${PreviewPreflight.sha(png)}","renderedSha256":"${PreviewPreflight.sha(rendered)}","blink":${blink(frame)}}"""
             }

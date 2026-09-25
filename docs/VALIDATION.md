@@ -135,6 +135,34 @@ generation is tried first. OPTIONAL VG-OPT-01 stays out of automatic selection u
 the user explicitly chooses the hosted fallback after local evidence; any live
 provider request also needs a reviewable capped budget.
 
+### VG02 controlled preview proof
+
+The opt-in `:videoPreviewProbe` uses production artwork import, preparation,
+durable generation, controlled rendering, guarded publication and reconstructed
+recovery. Ordinary `VideoPreviewHostCheckTest` cases replace external process
+responses only; they are **synthetic wiring evidence**, not real MP4 decoding.
+The 320×180 owned blink fixture is not 1080p or full-length delivery.
+
+Native execution remains **WAITING_USER**: select canonical tools-directory,
+Node-executable, Canvas-manifest and fresh output paths, and authorize the
+150/600/900-frame ladder under its unchanged per-job limits (600 seconds, 4 GiB
+native memory, 2 GiB staging, 2 GiB output, 512 MiB disk reserve, one process and
+one attempt). No inference, download, hosted provider or automatic retry is part
+of this check. Historical installed paths are not renewed authorization.
+
+After admission, use `./gradlew :videoPreviewProbe` with all four properties:
+`-PvideoToolsDirectory`, `-PvideoNodeExecutable`, `-PvideoCanvasManifest`, and
+`-PvideoPreviewOutput`. The output must be an absent child under `build/vg2/`.
+Retain the exact source manifest/Git-and-diff identity alongside command logs;
+retain the output's budgets, single job ledger, pinned requests, source and take
+files, per-job result/failure receipts and `frames-*/` evidence. That evidence
+checks independent source/published full decode, stream/viewport/count/duration,
+every rational presentation timestamp, first/middle/final frames, both sides of
+300-frame boundaries and the authored blink phases. Recovery rejects any native
+launch and must leave jobs, takes, selections and revisions unchanged. Inspect
+the retained moving media separately: technical checks grant no human approval.
+No native preview ladder receipt is claimed for the VG02 continuation yet.
+
 ### Q03a clean native installation and startup
 
 Recovery on 2026-09-13 **PASS**: clean uncached architecture and 22 focused
