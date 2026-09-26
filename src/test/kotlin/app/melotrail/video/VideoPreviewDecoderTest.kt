@@ -12,6 +12,10 @@ import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -103,6 +107,20 @@ class VideoPreviewDecoderTest {
         repeat(6) { budget.releaseFrame(frameBytes) }
         budget.reserveDecode(frameBytes)
         budget.releaseDecode(frameBytes, published = false)
+    }
+
+    @Test fun `staged files and concurrent reader claims never underflow the encoded ceiling`() {
+        val budget = VideoPreviewBufferBudget()
+        budget.reserveEncoded(VideoPreviewBufferBudget.MAX_ENCODED_BYTES)
+        budget.measuredStaging(VideoPreviewBufferBudget.MAX_ENCODED_BYTES, 40L * 1024 * 1024)
+        budget.reserveEncoded(24L * 1024 * 1024) // concurrent PNG reader's byte array
+        assertFailsWith<VideoPreviewImageException> { budget.reserveEncoded(1) }
+        budget.releaseEncoded(24L * 1024 * 1024)
+        assertFailsWith<VideoPreviewImageException> { budget.reserveEncoded(25L * 1024 * 1024) }
+        budget.releaseEncoded(40L * 1024 * 1024) // only after removing staged files
+        assertFailsWith<IllegalArgumentException> { budget.releaseEncoded(1) }
+        budget.reserveEncoded(VideoPreviewBufferBudget.MAX_ENCODED_BYTES)
+        budget.releaseEncoded(VideoPreviewBufferBudget.MAX_ENCODED_BYTES)
     }
 
     @Test fun `retained and in flight pixel reservations are bounded and released on close`() {
@@ -272,6 +290,313 @@ class VideoPreviewDecoderTest {
                 decoder.presentationAt(admitted, 1)
             }.failure)
         }
+    }
+
+    @Test fun `bounded windows decode first interior final and backward frames without staging whole take`() {
+        val request = persisted(520, 0, 520)
+        tools(request.toolsDirectory)
+        val jobs = mutableListOf<VideoMediaProcessRequest>()
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            jobs += job
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                job.executable.fileName.toString() == "ffprobe" -> {
+                    val interval = job.arguments[job.arguments.indexOf("-read_intervals") + 1]
+                    val start = if (interval.startsWith("%")) 0 else interval.substringBefore('%').toBigDecimal().multiply(24.toBigDecimal()).toInt() + 1
+                    """{"frames":[${(start until minOf(start + 256, 520)).joinToString { """{"best_effort_timestamp":$it}""" }}]}"""
+                }
+                else -> {
+                    assertEquals(Duration.ofSeconds(30), job.timeout)
+                    assertEquals(512L * 1024 * 1024, job.memoryLimitBytes)
+                    assertEquals("image2", job.arguments[job.arguments.indexOf("-f") + 1])
+                    assertEquals("png", job.arguments[job.arguments.indexOf("-c:v") + 1])
+                    assertEquals("0", job.arguments[job.arguments.indexOf("-vsync") + 1])
+                    val windowSize = job.arguments[job.arguments.indexOf("-frames:v") + 1].toInt()
+                    assertEquals((VideoPreviewBufferBudget.MAX_ENCODED_BYTES / windowSize).toString(),
+                        job.arguments[job.arguments.indexOf("-fs") + 1], "Each image2 file must have a share of the window allowance")
+                    val select = job.arguments[job.arguments.indexOf("-vf") + 1]
+                    val first = select.substringAfter("n\\,").substringBefore("\\,").toInt()
+                    val last = select.substringAfterLast("\\,").substringBefore(')').toInt()
+                    for (i in first..last) {
+                        val path = job.workingDirectory.resolve("frame-%03d.png".format(i - first + 1))
+                        val image = BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB)
+                        image.setRGB(0, 0, i)
+                        assertTrue(ImageIO.write(image, "png", path.toFile()))
+                    }
+                    ""
+                }
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        for ((first, length) in listOf(0L to 2, 518L to 2, 261L to 3, 5L to 1)) {
+            decoder.extractWindow(admitted, first, length).useFrames { frames ->
+                assertEquals(length, frames.size)
+                frames.forEachIndexed { index, frame ->
+                    assertEquals(first + index, frame.presentation.frameIndex)
+                    assertEquals(first + index, frame.presentation.pts)
+                    assertEquals((first + index).toInt(), frame.image.argbAt(0, 0))
+                }
+            }
+        }
+        val extracts = jobs.filter { it.executable.fileName.toString() == "ffmpeg" && "-vf" in it.arguments }
+        assertEquals(4, extracts.size)
+        assertTrue(extracts.all { !Files.exists(it.workingDirectory) })
+        assertTrue(extracts.all { it.arguments[it.arguments.indexOf("-frames:v") + 1].toInt() <= 4 })
+        assertEquals(4, jobs.count { "-vf" in it.arguments })
+    }
+
+    private inline fun <T> List<VideoPreviewDecoder.Frame>.useFrames(block: (List<VideoPreviewDecoder.Frame>) -> T): T =
+        try { block(this) } finally { forEach { it.close() } }
+
+    @Test fun `simultaneous PNG decode cannot spend the extraction staging allowance`() {
+        val request = persisted(1, 0, 1)
+        tools(request.toolsDirectory)
+        val input = png("concurrent.png")
+        val started = CountDownLatch(1)
+        val finish = CountDownLatch(1)
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":0}]}"""
+                else -> {
+                    started.countDown()
+                    check(finish.await(5, TimeUnit.SECONDS))
+                    Files.copy(input, job.workingDirectory.resolve("frame-001.png"))
+                    ""
+                }
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        val pending = CompletableFuture.supplyAsync { runCatching { decoder.extractWindow(admitted, 0) } }
+        try {
+            assertTrue(started.await(5, TimeUnit.SECONDS))
+            assertFailsWith<VideoPreviewImageException> { decoder.decodeExtractedPng(input) }
+        } finally { finish.countDown() }
+        // Wrong geometry is expected, but all claims must be released on failure.
+        assertIs<VideoPreviewImageException>(pending.get(10, TimeUnit.SECONDS).exceptionOrNull())
+        decoder.decodeExtractedPng(input).close()
+    }
+
+    @Test fun `probe and extraction never overlap and cleanup uncertainty blocks metadata launches`() {
+        val request = persisted(1, 0, 1)
+        tools(request.toolsDirectory)
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val active = AtomicInteger()
+        val peak = AtomicInteger()
+        val calls = AtomicInteger()
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            val now = active.incrementAndGet()
+            peak.accumulateAndGet(now, ::maxOf)
+            calls.incrementAndGet()
+            try {
+                Files.createDirectory(job.workingDirectory)
+                val text = when {
+                    "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                    "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":0}]}"""
+                    else -> {
+                        started.countDown()
+                        check(release.await(5, TimeUnit.SECONDS))
+                        ImageIO.write(BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB), "png",
+                            job.workingDirectory.resolve("frame-001.png").toFile())
+                        ""
+                    }
+                }
+                VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                    VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            } finally { active.decrementAndGet() }
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        val extracting = CompletableFuture.supplyAsync { decoder.extractWindow(admitted, 0) }
+        try {
+            assertTrue(started.await(5, TimeUnit.SECONDS))
+            val probeReady = CountDownLatch(1)
+            val probing = CompletableFuture.supplyAsync {
+                probeReady.countDown()
+                decoder.presentationAt(admitted, 0)
+            }
+            try {
+                assertTrue(probeReady.await(5, TimeUnit.SECONDS))
+                Thread.sleep(100)
+                assertFalse(probing.isDone, "Metadata must wait for the extraction process")
+                assertEquals(1, active.get())
+            } finally { release.countDown() }
+            extracting.get(10, TimeUnit.SECONDS).useFrames { assertEquals(1, it.size) }
+            assertEquals(0L, probing.get(10, TimeUnit.SECONDS).pts)
+            assertEquals(1, peak.get())
+            assertEquals(0, active.get())
+        } finally { release.countDown() }
+    }
+
+    @Test fun `excess unexpected staging entries are inspected with bounded metadata and block retries`() {
+        val request = persisted(1, 0, 1)
+        tools(request.toolsDirectory)
+        val launches = AtomicInteger()
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            launches.incrementAndGet()
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":0}]}"""
+                else -> {
+                    repeat(2000) { Files.writeString(job.workingDirectory.resolve("unexpected-$it"), "keep") }
+                    ""
+                }
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        assertTrue(assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }.message.orEmpty().contains("cannot be bounded"))
+        val calls = launches.get()
+        repeat(3) {
+            assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
+            assertFailsWith<VideoPreviewImageException> { decoder.presentationAt(admitted, 0) }
+        }
+        assertEquals(calls, launches.get(), "Retained unknown files must not admit another preview process")
+        val retained = Files.list(request.scratchDirectory).use { it.filter { p -> p.fileName.toString().startsWith("preview-frames-") }.toList().single() }
+        assertEquals(2000L, Files.list(retained).use { it.count() })
+    }
+
+    @Test fun `oversized staging and unexpected files never publish pixels or delete unknown entries`() {
+        val request = persisted(1, 0, 1)
+        tools(request.toolsDirectory)
+        var extra = false
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":0}]}"""
+                else -> {
+                    RandomAccessFile(job.workingDirectory.resolve("frame-001.png").toFile(), "rw").use {
+                        it.setLength(VideoPreviewBufferBudget.MAX_ENCODED_BYTES + 1)
+                    }
+                    if (extra) Files.writeString(job.workingDirectory.resolve("unknown.txt"), "keep")
+                    ""
+                }
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
+        assertEquals(0L, Files.list(request.scratchDirectory).use { it.filter { path -> path.fileName.toString().startsWith("preview-frames-") }.count() })
+        extra = true
+        assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
+        val retained = Files.list(request.scratchDirectory).use { it.filter { path -> path.fileName.toString().startsWith("preview-frames-") }.toList().single() }
+        assertEquals("keep", Files.readString(retained.resolve("unknown.txt")))
+        assertFalse(Files.exists(retained.resolve("frame-001.png")), "Confirmed owned output must not be retained with unknown files")
+        repeat(3) {
+            assertTrue(assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }.message.orEmpty().contains("unconfirmed"))
+        }
+        assertEquals(1L, Files.list(request.scratchDirectory).use { it.filter { path -> path.fileName.toString().startsWith("preview-frames-") }.count() }, "Retained staging cannot accumulate on retry")
+    }
+
+    @Test fun `oversized unexpected entry is preserved but cleanup failure is bounded and explicit`() {
+        val request = persisted(1, 0, 1)
+        tools(request.toolsDirectory)
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":0}]}"""
+                else -> {
+                    ImageIO.write(BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB), "png",
+                        job.workingDirectory.resolve("frame-001.png").toFile())
+                    RandomAccessFile(job.workingDirectory.resolve("unknown-large.bin").toFile(), "rw").use {
+                        it.setLength(VideoPreviewBufferBudget.MAX_ENCODED_BYTES + 1)
+                    }
+                    ""
+                }
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        val failure = assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
+        assertTrue(failure.message.orEmpty().contains("cannot be bounded"))
+        assertTrue(failure.message.orEmpty().contains("oversized"))
+        assertTrue(failure.message.orEmpty().length < 300)
+        val retained = Files.list(request.scratchDirectory).use { it.filter { p -> p.fileName.toString().startsWith("preview-frames-") }.toList().single() }
+        assertEquals(VideoPreviewBufferBudget.MAX_ENCODED_BYTES + 1, Files.size(retained.resolve("unknown-large.bin")))
+        assertFalse(Files.exists(retained.resolve("frame-001.png")))
+        repeat(3) { assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) } }
+        assertEquals(1L, Files.list(request.scratchDirectory).use { it.filter { path -> path.fileName.toString().startsWith("preview-frames-") }.count() })
+    }
+
+    @Test fun `changed bytes with restored size and time fail before extraction and after a racing extract`() {
+        val request = persisted(2, 0, 2)
+        tools(request.toolsDirectory)
+        val media = request.projectRoot.resolve("takes/take.mp4")
+        val original = Files.readAllBytes(media)
+        val modified = Files.getLastModifiedTime(media)
+        var extract = false
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":0},{"best_effort_timestamp":1}]}"""
+                else -> {
+                    extract = true
+                    Files.write(media, ByteArray(original.size) { 7 })
+                    Files.setLastModifiedTime(media, modified)
+                    ImageIO.write(BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB), "png", job.workingDirectory.resolve("frame-001.png").toFile())
+                    ""
+                }
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
+        assertTrue(extract)
+        assertEquals(modified, Files.getLastModifiedTime(media))
+        extract = false
+        assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
+        assertFalse(extract)
+        assertContentEquals(ByteArray(original.size) { 7 }, Files.readAllBytes(media))
+    }
+
+    @Test fun `disk failure and uncertain cleanup retain only their owned bounded diagnostic staging`() {
+        val request = persisted(1, 0, 1)
+        tools(request.toolsDirectory)
+        val media = request.projectRoot.resolve("takes/take.mp4")
+        val before = Files.readAllBytes(media)
+        val keep = Files.writeString(root.resolve("unknown.txt"), "keep")
+        var knownOnly = false
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":0}]}"""
+                else -> {
+                    if (knownOnly) Files.writeString(job.workingDirectory.resolve("frame-001.png"), "partial")
+                    else Files.writeString(job.workingDirectory.resolve("diagnostic.txt"), "partial")
+                    throw VideoMediaProcessException(if (knownOnly) VideoMediaProcessFailure.TIMED_OUT else VideoMediaProcessFailure.NONZERO_EXIT,
+                        if (knownOnly) "Timed out after confirmed cleanup" else "No space left on device",
+                        stderr = VideoMediaProcessOutput("No space left on device", 23, false))
+                }
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        val disk = assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
+        assertTrue(disk.message.orEmpty().contains("cannot be bounded"))
+        assertEquals(VideoMediaProcessFailure.NONZERO_EXIT, assertIs<VideoMediaProcessException>(disk.suppressed.single()).failure)
+        val retained = Files.list(request.scratchDirectory).use { it.filter { path -> path.fileName.toString().startsWith("preview-frames-") }.toList().single() }
+        assertEquals("partial", Files.readString(retained.resolve("diagnostic.txt")))
+        knownOnly = true
+        assertTrue(assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }.message.orEmpty().contains("unconfirmed"))
+        assertEquals(1, Files.list(request.scratchDirectory).use { it.filter { path -> path.fileName.toString().startsWith("preview-frames-") }.count() })
+        assertContentEquals(before, Files.readAllBytes(media))
+        assertEquals("keep", Files.readString(keep))
     }
 
     @Test fun `open is lazy read only and authenticates persisted silent take before any extraction`() {

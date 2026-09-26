@@ -8,6 +8,10 @@ import app.melotrail.video.domain.VideoTakeMeasurementRecord
 import app.melotrail.video.domain.VideoVersionedId
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.attribute.BasicFileAttributes
+import java.security.MessageDigest
+import java.time.Duration
+import java.util.UUID
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 
@@ -76,7 +80,18 @@ internal class VideoPreviewBufferBudget {
         encoded += bytes
     }
 
-    @Synchronized fun releaseEncoded(bytes: Long) { encoded -= bytes }
+    @Synchronized fun releaseEncoded(bytes: Long) {
+        require(bytes >= 0 && bytes <= encoded) { "Preview encoded budget was released twice." }
+        encoded -= bytes
+    }
+
+    /** Exchange the process's full output allowance for the measured files, atomically.
+     * File bytes remain charged until cleanup, alongside the reader's separate byte array. */
+    @Synchronized fun measuredStaging(allowance: Long, bytes: Long) {
+        require(allowance >= 0 && allowance <= encoded)
+        if (bytes < 0 || bytes > allowance) throw VideoPreviewImageException("Preview encoded staging exceeds 64 MiB.")
+        encoded -= allowance - bytes
+    }
 
     @Synchronized fun reserveDecode(bytes: Long) {
         if (bytes <= 0 || pixelBuffers > 6 || bytes > (MAX_RESIDENT_BYTES - pixelBytes) / 2) {
@@ -107,23 +122,222 @@ internal class VideoPreviewBufferBudget {
  * launches a native process. Call [open] on a worker, never on the UI thread. */
 class VideoPreviewDecoder internal constructor(
     private val projects: VideoProjectStore,
-    runProcess: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult,
+    private val runProcess: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult,
 ) {
     constructor(projects: VideoProjectStore) : this(projects, { request, cancellation -> VideoMediaProcess().run(request, cancellation) })
 
-    private val probe = VideoMediaProbe(runProcess)
+    private val extractionLock = Any()
+    private var ownershipUncertain = false
+
+    // Tool checks, timing scans and PNG extraction share the same process gate. A failed
+    // supervision cannot be followed by another launch, even from a different entry point.
+    private fun ownedProcess(request: VideoMediaProcessRequest, cancellation: VideoMediaProcessCancellation): VideoMediaProcessResult =
+        synchronized(extractionLock) {
+            checkOwnership()
+            try {
+                runProcess(request, cancellation)
+            } catch (error: VideoMediaProcessException) {
+                if (!teardownConfirmed(error)) ownershipUncertain = true
+                throw error
+            }
+        }
+
+    private fun teardownConfirmed(error: VideoMediaProcessException) =
+        error.failure != VideoMediaProcessFailure.SUPERVISION_FAILED &&
+            error.failure != VideoMediaProcessFailure.UNEXPECTED_DESCENDANTS &&
+            !error.message.orEmpty().contains("Cleanup incomplete") && error.suppressed.isEmpty()
+
+    private fun checkOwnership() {
+        if (ownershipUncertain) throw VideoPreviewImageException(
+            "Preview process or staging cleanup is unconfirmed; inspect the private scratch child before creating a new decoder.")
+    }
+
+    private val probe = VideoMediaProbe(::ownedProcess)
 
     /** Exact timestamp of a zero-based decoded frame. This scans bounded probe windows rather
      * than guessing a seek position from average FPS. No pixel buffer is allocated here. */
     fun presentationAt(admitted: VideoPreviewOpenResult.Admitted, frameIndex: Long,
                        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): VideoPreviewPresentation =
-        probe.previewPresentation(admitted.artifact, admitted.measurement, admitted.tools, admitted.scratch, frameIndex, cancellation)
+        synchronized(extractionLock) {
+            checkOwnership()
+            probe.previewPresentation(admitted.artifact, admitted.measurement, admitted.tools, admitted.scratch, frameIndex, cancellation)
+        }
     private val imageFiles = VideoImageFiles()
     private val buffers = VideoPreviewBufferBudget()
 
-    /** Decodes a single already-extracted PNG, without claiming it represents a take frame.
-     * Frame identity and presentation timing are established by the later extraction boundary. */
+    /** Decodes a single already-extracted PNG, without claiming it represents a take frame. */
     internal fun decodeExtractedPng(path: Path): VideoPreviewImage = imageFiles.decodePreviewPng(path, buffers)
+
+    data class Frame(val presentation: VideoPreviewPresentation, val image: VideoPreviewImage) : AutoCloseable {
+        override fun close() = image.close()
+    }
+
+    /** One owned FFmpeg invocation per window. Select uses decoded-frame numbers, not a
+     * rounded seek timestamp. Work is synchronous: the session must call this on its worker. */
+    fun extractWindow(admitted: VideoPreviewOpenResult.Admitted, first: Long, requested: Int = 1,
+                      cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): List<Frame> {
+        val count = admitted.measurement.decodedFrameCount
+        require(requested in 1..4 && first >= 0 && first < count && requested.toLong() <= count - first) {
+            "Preview window must contain 1..4 decoded frames inside 0..${count - 1}."
+        }
+        return synchronized(extractionLock) {
+            checkOwnership()
+            if (cancellation.isCancelled()) throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Preview extraction cancelled.")
+            if (!Files.isDirectory(admitted.scratch, NOFOLLOW_LINKS) || admitted.scratch.toRealPath() != admitted.scratch) {
+                throw VideoPreviewImageException("Preview scratch changed; select a fresh private scratch child.")
+            }
+            val identity = sourceIdentity(admitted, cancellation)
+            // Timing metadata is bounded independently. It must agree with the decoded-frame
+            // ordering used by select; no guessed rate or approximate seek identifies a frame.
+            val times = (0 until requested).map { presentationAt(admitted, first + it, cancellation) }
+            sourceIdentity(admitted, cancellation, identity)
+            buffers.reserveEncoded(VideoPreviewBufferBudget.MAX_ENCODED_BYTES)
+            var reserved = VideoPreviewBufferBudget.MAX_ENCODED_BYTES
+            val job = admitted.scratch.resolve("preview-frames-${UUID.randomUUID()}")
+            var processConfirmed = false
+            var operationFailure: Exception? = null
+            val frames = mutableListOf<Frame>()
+            try {
+                val last = first + requested - 1
+                val result = ownedProcess(VideoMediaProcessRequest(
+                    admitted.tools.ffmpeg, admitted.tools.ffmpegSha256,
+                    listOf("-hide_banner", "-nostdin", "-v", "error", "-protocol_whitelist", "file,pipe",
+                        "-i", admitted.artifact.toString(), "-map", "0:v:0", "-an", "-sn", "-dn",
+                        "-vf", "select=between(n\\,$first\\,$last)", "-vsync", "0",
+                        "-frames:v", requested.toString(), "-c:v", "png", "-f", "image2",
+                        // image2 may apply -fs to each output file, not the aggregate window.
+                        "-fs", (VideoPreviewBufferBudget.MAX_ENCODED_BYTES / requested).toString(),
+                        job.resolve("frame-%03d.png").toString()),
+                    job, Duration.ofSeconds(30), maxStdoutBytes = 8192, maxStderrBytes = 8192,
+                    environment = mapOf("LC_ALL" to "C", "LANG" to "C"),
+                    memoryLimitBytes = 512L * 1024 * 1024,
+                ), cancellation)
+                processConfirmed = true
+                if (result.stdout.truncated || result.stdout.totalBytes > 8192 || result.stderr.truncated) {
+                    throw VideoPreviewImageException("Preview process diagnostics exceeded their bound.")
+                }
+                // Do not follow unexpected links or read files outside this fresh owned job.
+                val expected = (1..requested).map { "frame-%03d.png".format(it) }.toSet()
+                var entries = 0
+                Files.newDirectoryStream(job).use { directory ->
+                    for (entry in directory) {
+                        entries++
+                        if (entries > requested || entry.fileName.toString() !in expected) {
+                            throw VideoPreviewImageException("Preview extraction produced missing or unexpected frame files.")
+                        }
+                    }
+                }
+                if (entries != requested) throw VideoPreviewImageException("Preview extraction produced missing frame files.")
+                var staged = 0L
+                for (number in 1..requested) {
+                    val file = job.resolve("frame-%03d.png".format(number))
+                    if (!Files.isRegularFile(file, NOFOLLOW_LINKS)) throw VideoPreviewImageException("Preview frame is not a regular owned file.")
+                    val size = Files.size(file)
+                    if (size <= 0 || size > VideoPreviewBufferBudget.MAX_ENCODED_BYTES - staged) {
+                        throw VideoPreviewImageException("Preview encoded staging exceeds 64 MiB.")
+                    }
+                    staged += size
+                }
+                buffers.measuredStaging(reserved, staged)
+                reserved = staged
+                for (number in 1..requested) {
+                    val file = job.resolve("frame-%03d.png".format(number))
+                    // The file and the in-flight reader array are distinct encoded storage.
+                    // Both remain charged until the reader returns and the file is deleted.
+                    val image = decodeExtractedPng(file)
+                    if (image.width != admitted.measurement.width || image.height != admitted.measurement.height) {
+                        image.close()
+                        throw VideoPreviewImageException("Preview frame geometry differs from the measured take.")
+                    }
+                    frames += Frame(times[number - 1], image)
+                }
+                sourceIdentity(admitted, cancellation, identity)
+                frames.toList()
+            } catch (error: Exception) {
+                operationFailure = error
+                frames.forEach { it.close() }
+                // A suppressed cleanup failure means the child may still own this directory.
+                if (error is VideoMediaProcessException) {
+                    processConfirmed = teardownConfirmed(error)
+                    if (!processConfirmed) ownershipUncertain = true
+                }
+                throw error
+            } finally {
+                var cleaned = false
+                try {
+                    if (processConfirmed) {
+                        deleteOwnedFrames(job, requested)
+                        cleaned = true
+                    }
+                } catch (error: IOException) {
+                    ownershipUncertain = true
+                    frames.forEach { it.close() }
+                    val failure = VideoPreviewImageException("Could not safely complete preview staging cleanup: ${error.message}; inspect the private scratch child.", error)
+                    operationFailure?.let { failure.addSuppressed(it) }
+                    throw failure
+                } finally {
+                    // Keep the full allowance charged when cleanup is incomplete. Even unknown
+                    // entries larger than the allowance cannot permit another launch on this decoder.
+                    if (cleaned) buffers.releaseEncoded(reserved)
+                }
+            }
+        }
+    }
+
+    private data class SourceIdentity(val key: Any?, val size: Long, val hash: String)
+
+    private fun sourceIdentity(admitted: VideoPreviewOpenResult.Admitted, cancellation: VideoMediaProcessCancellation,
+                               expected: SourceIdentity? = null): SourceIdentity {
+        val path = admitted.artifact
+        if (!Files.isRegularFile(path, NOFOLLOW_LINKS) || Files.isSymbolicLink(path) || path.toRealPath() != path) {
+            throw VideoPreviewImageException("Published take is missing or unsafe; reopen the project.")
+        }
+        val before = Files.readAttributes(path, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
+        val digest = MessageDigest.getInstance("SHA-256")
+        Files.newInputStream(path, NOFOLLOW_LINKS).use { input ->
+            val chunk = ByteArray(8192)
+            while (true) {
+                if (cancellation.isCancelled()) throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Preview source check cancelled.")
+                val read = input.read(chunk)
+                if (read < 0) break
+                digest.update(chunk, 0, read)
+            }
+        }
+        val after = Files.readAttributes(path, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
+        val hash = digest.digest().joinToString("") { "%02x".format(it) }
+        val identity = SourceIdentity(after.fileKey(), after.size(), hash)
+        if (before.fileKey() != after.fileKey() || before.size() != after.size() || before.lastModifiedTime() != after.lastModifiedTime() ||
+            hash != admitted.measurement.sha256 || after.size() != admitted.measurement.bytes ||
+            (expected != null && identity != expected)) {
+            throw VideoPreviewImageException("Published take changed during preview; restore the original bytes and reopen.")
+        }
+        return identity
+    }
+
+    private fun deleteOwnedFrames(job: Path, requested: Int) {
+        if (!Files.exists(job, NOFOLLOW_LINKS)) return // no process directory was created
+        if (!Files.isDirectory(job, NOFOLLOW_LINKS) || job.parent.toRealPath() != job.parent) {
+            throw VideoPreviewImageException("Owned preview directory changed; nothing was removed.")
+        }
+        // Only these exact outputs are ours. Inspect at most one remaining entry; never
+        // enumerate an attacker-sized directory or retain its names in memory.
+        for (number in 1..requested) {
+            val file = job.resolve("frame-%03d.png".format(number))
+            if (Files.isRegularFile(file, NOFOLLOW_LINKS)) Files.delete(file)
+        }
+        Files.newDirectoryStream(job).use { entries ->
+            val iterator = entries.iterator()
+            if (iterator.hasNext()) {
+                val entry = iterator.next()
+                val oversized = Files.isRegularFile(entry, NOFOLLOW_LINKS) &&
+                    Files.size(entry) > VideoPreviewBufferBudget.MAX_ENCODED_BYTES
+                throw VideoPreviewImageException(
+                    if (oversized) "Unexpected oversized entry preserved; retained content cannot be bounded safely."
+                    else "Unexpected entry preserved; retained content cannot be bounded safely.")
+            }
+        }
+        Files.delete(job)
+    }
 
     fun open(request: VideoPreviewOpen, cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): VideoPreviewOpenResult {
         fun reject(kind: VideoPreviewOpenFailure, message: String, remedy: String) =
@@ -191,7 +405,10 @@ class VideoPreviewDecoder internal constructor(
             return reject(VideoPreviewOpenFailure.INVALID_REQUEST, "Preview scratch overlaps the Video project.", "Choose separate preview scratch storage.")
         }
         val pins = try {
-            probe.verifyPreviewTools(request.toolsDirectory, scratchPath, cancellation)
+            synchronized(extractionLock) {
+                checkOwnership()
+                probe.verifyPreviewTools(request.toolsDirectory, scratchPath, cancellation)
+            }
         } catch (error: VideoMediaProbeException) {
             return reject(VideoPreviewOpenFailure.TOOLS, error.message.orEmpty(), "Select the separately installed, hash-pinned FFmpeg 9.0.1 tools and a fresh scratch child; no PATH fallback is used.")
         } catch (error: VideoMediaProcessException) {
