@@ -135,6 +135,7 @@ class VideoPreviewDecoder internal constructor(
         synchronized(extractionLock) {
             checkOwnership()
             try {
+                if (cancellation.isCancelled()) throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "Preview process cancelled before launch.")
                 runProcess(request, cancellation)
             } catch (error: VideoMediaProcessException) {
                 if (!teardownConfirmed(error)) ownershipUncertain = true
@@ -146,6 +147,9 @@ class VideoPreviewDecoder internal constructor(
         error.failure != VideoMediaProcessFailure.SUPERVISION_FAILED &&
             error.failure != VideoMediaProcessFailure.UNEXPECTED_DESCENDANTS &&
             !error.message.orEmpty().contains("Cleanup incomplete") && error.suppressed.isEmpty()
+
+    /** Called after the session worker has joined; never report clean close with an orphaned child. */
+    fun requireConfirmedTeardown() = synchronized(extractionLock) { checkOwnership() }
 
     private fun checkOwnership() {
         if (ownershipUncertain) throw VideoPreviewImageException(
