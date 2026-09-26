@@ -36,6 +36,72 @@ sealed interface VideoPreviewOpenResult {
     data class Rejected(val failure: VideoPreviewOpenFailure, val message: String, val nextAction: String) : VideoPreviewOpenResult
 }
 
+/** A caller-owned ARGB8888 frame. Pixel reads never expose the backing array.
+ * Closing drops the buffer and its budget claim, and invalidates further reads. */
+class VideoPreviewImage internal constructor(
+    val width: Int,
+    val height: Int,
+    pixels: IntArray,
+    private val budget: VideoPreviewBufferBudget,
+    private val bytes: Long,
+) : AutoCloseable {
+    val pixelFormat: String = "ARGB8888"
+    private var ownedPixels: IntArray? = pixels
+
+    @Synchronized fun argbAt(x: Int, y: Int): Int {
+        require(x in 0 until width && y in 0 until height)
+        return checkNotNull(ownedPixels) { "Preview frame was released." }[y * width + x]
+    }
+
+    @Synchronized override fun close() {
+        if (ownedPixels != null) {
+            ownedPixels = null
+            budget.releaseFrame(bytes)
+        }
+    }
+}
+
+class VideoPreviewImageException(message: String, cause: Throwable? = null) : IOException(message, cause)
+
+/** Shared per-decoder accounting. A decode reserves both the ImageIO raster and output, so
+ * concurrent decodes and retained images cannot exceed eight pixel buffers or 64 MiB. */
+internal class VideoPreviewBufferBudget {
+    private var encoded = 0L
+    private var pixelBytes = 0L
+    private var pixelBuffers = 0
+
+    @Synchronized fun reserveEncoded(bytes: Long) {
+        if (bytes <= 0 || bytes > MAX_ENCODED_BYTES - encoded) throw VideoPreviewImageException("Preview encoded staging exceeds 64 MiB.")
+        encoded += bytes
+    }
+
+    @Synchronized fun releaseEncoded(bytes: Long) { encoded -= bytes }
+
+    @Synchronized fun reserveDecode(bytes: Long) {
+        if (bytes <= 0 || pixelBuffers > 6 || bytes > (MAX_RESIDENT_BYTES - pixelBytes) / 2) {
+            throw VideoPreviewImageException("Preview pixel buffers exceed eight frames or 64 MiB.")
+        }
+        pixelBytes += bytes * 2
+        pixelBuffers += 2
+    }
+
+    @Synchronized fun releaseDecode(bytes: Long, published: Boolean) {
+        pixelBytes -= if (published) bytes else bytes * 2
+        pixelBuffers -= if (published) 1 else 2
+    }
+
+    @Synchronized fun releaseFrame(bytes: Long) {
+        pixelBytes -= bytes
+        pixelBuffers--
+    }
+
+    internal companion object {
+        const val MAX_ENCODED_BYTES = 64L * 1024 * 1024
+        const val MAX_RESIDENT_BYTES = 64L * 1024 * 1024
+        const val MAX_FRAME_BYTES = 8L * 1024 * 1024
+    }
+}
+
 /** Read-only preview admission. Constructing this adapter neither touches the filesystem nor
  * launches a native process. Call [open] on a worker, never on the UI thread. */
 class VideoPreviewDecoder internal constructor(
@@ -45,6 +111,12 @@ class VideoPreviewDecoder internal constructor(
     constructor(projects: VideoProjectStore) : this(projects, { request, cancellation -> VideoMediaProcess().run(request, cancellation) })
 
     private val probe = VideoMediaProbe(runProcess)
+    private val imageFiles = VideoImageFiles()
+    private val buffers = VideoPreviewBufferBudget()
+
+    /** Decodes a single already-extracted PNG, without claiming it represents a take frame.
+     * Frame identity and presentation timing are established by the later extraction boundary. */
+    internal fun decodeExtractedPng(path: Path): VideoPreviewImage = imageFiles.decodePreviewPng(path, buffers)
 
     fun open(request: VideoPreviewOpen, cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): VideoPreviewOpenResult {
         fun reject(kind: VideoPreviewOpenFailure, message: String, remedy: String) =

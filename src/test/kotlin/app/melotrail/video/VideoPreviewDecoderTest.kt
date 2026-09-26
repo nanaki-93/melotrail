@@ -2,7 +2,12 @@ package app.melotrail.video
 
 import app.melotrail.video.adapter.*
 import app.melotrail.video.domain.*
+import java.awt.image.BufferedImage
+import java.io.RandomAccessFile
+import java.nio.ByteBuffer
 import java.nio.file.Files
+import java.util.zip.CRC32
+import javax.imageio.ImageIO
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
@@ -14,6 +19,105 @@ import org.junit.jupiter.api.io.TempDir
 class VideoPreviewDecoderTest {
     @TempDir lateinit var root: Path
     private val id = VideoVersionedId("take", 1)
+
+    private fun png(name: String, width: Int = 2, height: Int = 2): Path {
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        image.setRGB(0, 0, 0x7f123456)
+        image.setRGB(width - 1, height - 1, 0xffaabbcc.toInt())
+        return root.resolve(name).also { assertTrue(ImageIO.write(image, "png", it.toFile())) }
+    }
+
+    @Test fun `extracted PNG has actual immutable pixels and no project or thumbnail side effects`() {
+        val input = png("extracted.png")
+        val before = Files.readAllBytes(input)
+        val decoder = VideoPreviewDecoder(store()) { _, _ -> error("PNG decode must not launch tools") }
+        val image = decoder.decodeExtractedPng(input)
+        assertEquals(2, image.width)
+        assertEquals(2, image.height)
+        assertEquals("ARGB8888", image.pixelFormat)
+        assertEquals(0x7f123456, image.argbAt(0, 0))
+        assertEquals(0xffaabbcc.toInt(), image.argbAt(1, 1))
+        assertTrue(VideoPreviewImage::class.java.methods.none { it.returnType == IntArray::class.java },
+            "No mutable backing array or unaccounted pixel copy may escape")
+        assertEquals(0x7f123456, image.argbAt(0, 0))
+        assertContentEquals(before, Files.readAllBytes(input))
+        assertEquals(listOf("extracted.png"), Files.list(root).use { it.map { p -> p.fileName.toString() }.toList() })
+        image.close()
+        image.close()
+        assertFailsWith<IllegalStateException> { image.argbAt(0, 0) }
+    }
+
+    @Test fun `RGB and palette PNGs convert to owned ARGB without leaking raster formats`() {
+        val rgb = BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).apply { setRGB(0, 0, 0xff224466.toInt()) }
+        val indexed = BufferedImage(1, 1, BufferedImage.TYPE_BYTE_INDEXED).apply { setRGB(0, 0, 0xffaabbcc.toInt()) }
+        val decoder = VideoPreviewDecoder(store()) { _, _ -> error("No process allowed") }
+        for ((name, image) in listOf("rgb" to rgb, "palette" to indexed)) {
+            val path = root.resolve("$name.png")
+            assertTrue(ImageIO.write(image, "png", path.toFile()))
+            decoder.decodeExtractedPng(path).use { frame ->
+                assertEquals("ARGB8888", frame.pixelFormat)
+                assertEquals(image.getRGB(0, 0), frame.argbAt(0, 0), name)
+            }
+        }
+    }
+
+    @Test fun `truncated changed checksum oversize and compressed dimension bomb yield no frame`() {
+        val valid = Files.readAllBytes(png("valid.png"))
+        val truncated = root.resolve("truncated.png").also { Files.write(it, valid.copyOf(valid.size - 1)) }
+        val badChecksum = root.resolve("checksum.png").also {
+            Files.write(it, valid.copyOf().apply { this[lastIndex] = (last().toInt() xor 1).toByte() })
+        }
+        val bomb = valid.copyOf()
+        ByteBuffer.wrap(bomb).putInt(16, 8192).putInt(20, 8192)
+        val crc = CRC32().apply { update(bomb, 12, 17) }
+        ByteBuffer.wrap(bomb).putInt(29, crc.value.toInt())
+        val bombPath = root.resolve("bomb.png").also { Files.write(it, bomb) }
+        val oversized = root.resolve("oversized.png")
+        RandomAccessFile(oversized.toFile(), "rw").use { it.setLength(64L * 1024 * 1024 + 1) }
+        val decoder = VideoPreviewDecoder(store()) { _, _ -> error("No process allowed") }
+        for (path in listOf(truncated, badChecksum, bombPath, oversized)) {
+            val error = assertFailsWith<VideoPreviewImageException>(path.fileName.toString()) { decoder.decodeExtractedPng(path) }
+            assertTrue(error.message.orEmpty().isNotBlank())
+        }
+        assertEquals(0L, Files.list(root).use { it.filter { p -> Files.isDirectory(p) }.count() })
+        decoder.decodeExtractedPng(root.resolve("valid.png")).use { assertEquals(0x7f123456, it.argbAt(0, 0)) }
+    }
+
+    @Test fun `encoded staging and raster plus published pixel accounting enforce byte ceilings`() {
+        val budget = VideoPreviewBufferBudget()
+        budget.reserveEncoded(64L * 1024 * 1024)
+        assertFailsWith<VideoPreviewImageException> { budget.reserveEncoded(1) }
+        budget.releaseEncoded(64L * 1024 * 1024)
+        budget.reserveEncoded(1)
+        budget.releaseEncoded(1)
+
+        val frameBytes = 8L * 1024 * 1024
+        repeat(7) {
+            budget.reserveDecode(frameBytes)
+            budget.releaseDecode(frameBytes, published = true)
+        }
+        assertFailsWith<VideoPreviewImageException> { budget.reserveDecode(frameBytes) }
+        budget.releaseFrame(frameBytes)
+        budget.reserveDecode(frameBytes)
+        budget.releaseDecode(frameBytes, published = false)
+        repeat(6) { budget.releaseFrame(frameBytes) }
+        budget.reserveDecode(frameBytes)
+        budget.releaseDecode(frameBytes, published = false)
+    }
+
+    @Test fun `retained and in flight pixel reservations are bounded and released on close`() {
+        val input = png("one.png")
+        val decoder = VideoPreviewDecoder(store()) { _, _ -> error("No process allowed") }
+        val frames = (1..7).map { decoder.decodeExtractedPng(input) }
+        try {
+            assertFailsWith<VideoPreviewImageException> { decoder.decodeExtractedPng(input) }
+            frames.first().close()
+            decoder.decodeExtractedPng(input).use { assertEquals(0x7f123456, it.argbAt(0, 0)) }
+        } finally {
+            frames.forEach { it.close() }
+        }
+        decoder.decodeExtractedPng(input).close()
+    }
     private fun digest(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString("") { "%02x".format(it) }
     private fun store() = VideoProjectStore(listOf(root.resolve("midi")))

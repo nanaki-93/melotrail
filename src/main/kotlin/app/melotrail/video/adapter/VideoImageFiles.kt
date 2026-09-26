@@ -32,6 +32,7 @@ import java.util.UUID
 import java.util.zip.CRC32
 import javax.imageio.ImageIO
 import javax.imageio.stream.MemoryCacheImageInputStream
+import javax.imageio.stream.ImageInputStreamImpl
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -40,6 +41,84 @@ import kotlinx.serialization.json.Json
 class VideoImageFiles(
     private val limits: VideoImageLimits = VideoImageLimits(),
 ) : VideoAssetFiles {
+    /** Decode only an extracted PNG. Never imports, publishes or writes a project asset. The
+     * caller owns the returned pixels and must close them when they leave the preview window. */
+    internal fun decodePreviewPng(path: Path, budget: VideoPreviewBufferBudget): VideoPreviewImage {
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) throw VideoPreviewImageException("Preview PNG is missing or unsafe.")
+        val size = try { Files.size(path) } catch (error: IOException) {
+            throw VideoPreviewImageException("Cannot inspect preview PNG size.", error)
+        }
+        if (size !in 1..VideoPreviewBufferBudget.MAX_ENCODED_BYTES) {
+            throw VideoPreviewImageException("Preview PNG exceeds the 64 MiB encoded staging limit or is empty.")
+        }
+        budget.reserveEncoded(size)
+        try {
+            // One exactly sized array, not a ByteArrayOutputStream plus its full-size copy.
+            val bytes = ByteArray(size.toInt())
+            try {
+                Files.newInputStream(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { input ->
+                    var offset = 0
+                    while (offset < bytes.size) {
+                        val count = input.read(bytes, offset, bytes.size - offset)
+                        if (count < 0) throw VideoPreviewImageException("Preview PNG is truncated.")
+                        offset += count
+                    }
+                    if (input.read() != -1) throw VideoPreviewImageException("Preview PNG grew beyond its declared bound.")
+                }
+            } catch (error: IOException) {
+                throw VideoPreviewImageException("Cannot read preview PNG.", error)
+            }
+            if (signatureFormat(bytes) != VideoImageFormat.PNG) throw VideoPreviewImageException("Preview frame is not a PNG.")
+            try { validatePngStructure(bytes) } catch (error: VideoAssetFileException) {
+                throw VideoPreviewImageException("Preview PNG structure is corrupt.", error)
+            }
+            try {
+                PreviewByteInput(bytes).use { input ->
+                    val readers = ImageIO.getImageReaders(input)
+                    if (!readers.hasNext()) throw VideoPreviewImageException("No PNG reader is available.")
+                    val reader = readers.next()
+                    try {
+                        var warned = false
+                        reader.addIIOReadWarningListener { _, _ -> warned = true }
+                        reader.setInput(input, false, true)
+                        if (!reader.formatName.equals("png", ignoreCase = true)) throw VideoPreviewImageException("Preview format is not PNG.")
+                        val width = reader.getWidth(0)
+                        val height = reader.getHeight(0)
+                        val pixels = width.toLong() * height.toLong()
+                        if (width !in 1..8192 || height !in 1..8192 || pixels > VideoPreviewBufferBudget.MAX_FRAME_BYTES / 4) {
+                            throw VideoPreviewImageException("Preview dimensions exceed the bounded pixel limit.")
+                        }
+                        // Only 8-bit RGB/RGBA (including grayscale/palette) may enter the preview.
+                        // A 16-bit ImageIO raster can consume more than four bytes per pixel.
+                        if (bytes[24].toInt() and 0xff != 8) throw VideoPreviewImageException("Preview PNG must use 8-bit samples.")
+                        val pixelBytes = pixels * 4
+                        budget.reserveDecode(pixelBytes) // source raster + published ARGB, both in flight
+                        var published = false
+                        try {
+                            val image = reader.read(0) ?: throw VideoPreviewImageException("PNG reader returned no pixels.")
+                            if (warned || image.width != width || image.height != height) throw VideoPreviewImageException("Preview PNG is incomplete.")
+                            val argb = IntArray(pixels.toInt())
+                            image.getRGB(0, 0, width, height, argb, 0, width)
+                            val frame = VideoPreviewImage(width, height, argb, budget, pixelBytes)
+                            published = true
+                            return frame
+                        } finally {
+                            budget.releaseDecode(pixelBytes, published)
+                        }
+                    } finally {
+                        reader.dispose()
+                    }
+                }
+            } catch (error: VideoPreviewImageException) {
+                throw error
+            } catch (error: Exception) {
+                throw VideoPreviewImageException("Preview PNG cannot be decoded completely.", error)
+            }
+        } finally {
+            budget.releaseEncoded(size)
+        }
+    }
+
     override fun inspect(source: Path): PreparedVideoImage {
         // Preserve filesystem traversal order; normalizing symlink/.. can select a different file.
         val selected = source.toAbsolutePath()
@@ -803,6 +882,28 @@ class VideoImageFiles(
             0x89.toByte(), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         )
     }
+}
+
+/** Seekable ImageIO input over the one bounded encoded array; does not cache another copy. */
+private class PreviewByteInput(private val bytes: ByteArray) : ImageInputStreamImpl() {
+    override fun read(): Int {
+        bitOffset = 0
+        if (streamPos >= bytes.size) return -1
+        return bytes[streamPos++.toInt()].toInt() and 0xff
+    }
+
+    override fun read(buffer: ByteArray, off: Int, len: Int): Int {
+        if (off < 0 || len < 0 || off > buffer.size - len) throw IndexOutOfBoundsException()
+        bitOffset = 0
+        if (len == 0) return 0
+        if (streamPos >= bytes.size) return -1
+        val count = minOf(len.toLong(), bytes.size - streamPos).toInt()
+        bytes.copyInto(buffer, off, streamPos.toInt(), streamPos.toInt() + count)
+        streamPos += count
+        return count
+    }
+
+    override fun length(): Long = bytes.size.toLong()
 }
 
 data class VideoImageLimits(
