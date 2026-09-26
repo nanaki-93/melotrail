@@ -66,6 +66,27 @@ class VideoMediaProbeTest {
             VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
     }
 
+    @Test fun `preview tool admission shares manifest and reported build checks without media work`() {
+        val request = request("preview-tools")
+        val jobs = mutableListOf<VideoMediaProcessRequest>()
+        val scratch = root.resolve("preview-tools-scratch")
+        val pins = fake(onProcess = { job, _ -> jobs += job }).verifyPreviewTools(request.toolsDirectory, scratch)
+        assertEquals(VideoMediaProbe.FFMPEG_SHA256, pins.ffmpegSha256)
+        assertEquals(VideoMediaProbe.FFPROBE_SHA256, pins.ffprobeSha256)
+        assertEquals(2, jobs.size)
+        assertTrue(jobs.all { it.arguments == listOf("-hide_banner", "-version") && it.executableSha256 in
+            setOf(VideoMediaProbe.FFMPEG_SHA256, VideoMediaProbe.FFPROBE_SHA256) })
+        assertFailsWith<VideoMediaProbeException> { fake().verifyPreviewTools(request.toolsDirectory, scratch) }
+        val changed = Files.readString(request.toolsDirectory.resolve(VideoMediaProbe.MANIFEST_NAME))
+            .replace(VideoMediaProbe.FFMPEG_SHA256, "0".repeat(64))
+        Files.writeString(request.toolsDirectory.resolve(VideoMediaProbe.MANIFEST_NAME), changed)
+        val another = root.resolve("preview-tools-other")
+        assertEquals(VideoMediaProbeFailure.TOOL_CONFIGURATION, assertFailsWith<VideoMediaProbeException> {
+            fake().verifyPreviewTools(request.toolsDirectory, another)
+        }.failure)
+        assertFalse(Files.exists(another))
+    }
+
     @Test fun `audio tail does not extend video timing and original identity is measured`() {
         val request = request("audio-tail")
         val bytes = Files.readAllBytes(request.input)

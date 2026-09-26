@@ -24,6 +24,11 @@ import java.security.MessageDigest
 import java.time.Duration
 import java.util.Locale
 
+internal data class VideoPreviewToolPins(
+    val ffmpeg: Path, val ffmpegSha256: String,
+    val ffprobe: Path, val ffprobeSha256: String,
+)
+
 data class VideoMediaProbeRequest(
     val toolsDirectory: Path,
     val input: Path,
@@ -249,11 +254,41 @@ class VideoMediaProbe internal constructor(
     }
 
     private fun verifyTools(validated: ValidatedRequest, output: Path, request: VideoMediaProbeRequest,
-                            cancellation: VideoMediaProcessCancellation, operations: MutableList<OperationEvidence>, prefix: String) {
-        val ffmpegVersion = invoke("$prefix-ffmpeg-version", validated.ffmpeg, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
-        val ffprobeVersion = invoke("$prefix-ffprobe-version", validated.ffprobe, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout.text
-        verifyReportedBuild(ffmpegVersion, validated.manifest, "ffmpeg")
-        verifyReportedBuild(ffprobeVersion, validated.manifest, "ffprobe")
+                            cancellation: VideoMediaProcessCancellation, operations: MutableList<OperationEvidence>, prefix: String) =
+        verifyTools(validated.ffmpeg, validated.ffprobe, validated.manifest, output, request, cancellation, operations, prefix)
+
+    private fun verifyTools(ffmpeg: ToolPin, ffprobe: ToolPin, manifest: ToolManifest, output: Path,
+                            request: VideoMediaProbeRequest, cancellation: VideoMediaProcessCancellation,
+                            operations: MutableList<OperationEvidence>, prefix: String) {
+        val ffmpegVersion = invoke("$prefix-ffmpeg-version", ffmpeg, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout
+        val ffprobeVersion = invoke("$prefix-ffprobe-version", ffprobe, listOf("-hide_banner", "-version"), output, request, cancellation, operations).stdout
+        if (ffmpegVersion.truncated || ffprobeVersion.truncated) toolConfiguration("Pinned media tool version output was truncated.")
+        verifyReportedBuild(ffmpegVersion.text, manifest, "ffmpeg")
+        verifyReportedBuild(ffprobeVersion.text, manifest, "ffprobe")
+    }
+
+    /** Shared admission for preview; no PATH lookup or media decode. The owned scratch child is
+     * created only after the caller has verified its persisted artifact and measured silence. */
+    internal fun verifyPreviewTools(toolsDirectory: Path, scratchDirectory: Path,
+                                    cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): VideoPreviewToolPins {
+        checkCancelled(cancellation)
+        val tools = validateTools(toolsDirectory)
+        val output = requireAbsoluteNormalized(scratchDirectory, "Preview scratch directory")
+        if (Files.exists(output, NOFOLLOW_LINKS)) invalidRequest("Refusing to reuse preview scratch directory: $output")
+        val parent = output.parent ?: invalidRequest("Preview scratch directory needs a parent.")
+        if (!Files.isDirectory(parent, NOFOLLOW_LINKS) || Files.isSymbolicLink(parent)) {
+            invalidRequest("Preview scratch parent must be an existing non-symbolic-link directory: $parent")
+        }
+        val realOutput = parent.toRealPath().resolve(output.fileName.toString())
+        if (realOutput.startsWith(tools.directory) || tools.directory.startsWith(realOutput)) {
+            invalidRequest("Preview scratch must be separate from pinned media tools.")
+        }
+        val request = VideoMediaProbeRequest(tools.directory, tools.ffmpeg.path, realOutput)
+        val owned = createPrivateDirectory(realOutput, "preview tool validation")
+        verifyTools(tools.ffmpeg, tools.ffprobe, tools.manifest, owned, request, cancellation,
+            mutableListOf(), "preview")
+        checkCancelled(cancellation)
+        return VideoPreviewToolPins(tools.ffmpeg.path, tools.ffmpeg.sha256, tools.ffprobe.path, tools.ffprobe.sha256)
     }
 
     private fun measure(label: String, input: Path, validated: ValidatedRequest, output: Path,
@@ -397,8 +432,8 @@ class VideoMediaProbe internal constructor(
         }
     }
 
-    private fun validate(request: VideoMediaProbeRequest): ValidatedRequest {
-        val tools = requireAbsoluteNormalized(request.toolsDirectory, "Tools directory")
+    private fun validateTools(directory: Path): ToolSelection {
+        val tools = requireAbsoluteNormalized(directory, "Tools directory")
         if (!Files.isDirectory(tools, NOFOLLOW_LINKS) || Files.isSymbolicLink(tools)) {
             invalidRequest("Tools directory must be an existing non-symbolic-link directory: $tools")
         }
@@ -410,7 +445,11 @@ class VideoMediaProbe internal constructor(
         val manifest = parseManifest(manifestPath)
         val ffmpeg = validateTool(realTools, "ffmpeg", manifest.ffmpegSha256)
         val ffprobe = validateTool(realTools, "ffprobe", manifest.ffprobeSha256)
+        return ToolSelection(realTools, ffmpeg, ffprobe, manifest)
+    }
 
+    private fun validate(request: VideoMediaProbeRequest): ValidatedRequest {
+        val tools = validateTools(request.toolsDirectory)
         val input = requireAbsoluteNormalized(request.input, "Input video")
         if (!Files.isRegularFile(input, NOFOLLOW_LINKS) || Files.isSymbolicLink(input)) {
             invalidRequest("Input video must be an existing regular non-symbolic-link file: $input")
@@ -427,7 +466,7 @@ class VideoMediaProbe internal constructor(
         if (request.timeoutPerProcess.isZero || request.timeoutPerProcess.isNegative || request.timeoutPerProcess > MAX_PROCESS_TIMEOUT) {
             invalidRequest("Per-process timeout must be greater than zero and no more than ${MAX_PROCESS_TIMEOUT.toMinutes()} minutes.")
         }
-        return ValidatedRequest(realTools, realInput, resolvedOutput, ffmpeg, ffprobe, manifest)
+        return ValidatedRequest(tools.directory, realInput, resolvedOutput, tools.ffmpeg, tools.ffprobe, tools.manifest)
     }
 
     private fun parseManifest(path: Path): ToolManifest {
@@ -797,6 +836,7 @@ class VideoMediaProbe internal constructor(
         val buildOptions: List<String>,
         val notices: List<String>,
     )
+    private data class ToolSelection(val directory: Path, val ffmpeg: ToolPin, val ffprobe: ToolPin, val manifest: ToolManifest)
     private data class ValidatedRequest(
         val toolsDirectory: Path,
         val input: Path,
