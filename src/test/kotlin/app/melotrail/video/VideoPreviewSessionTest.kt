@@ -5,6 +5,7 @@ import app.melotrail.video.application.*
 import app.melotrail.video.domain.*
 import java.awt.image.BufferedImage
 import java.nio.file.Files
+import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
@@ -34,18 +35,38 @@ class VideoPreviewSessionTest {
     private fun digest(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString("") { "%02x".format(it) }
 
-    private fun fixture(): VideoPreviewOpen {
+    private fun sampleTable(count: Int, delta: Int = 1, withOffsets: Boolean = false,
+                            editMediaTime: Int? = null, editDuration: Int = count * delta): ByteArray {
+        fun box(type: String, content: ByteArray): ByteArray = ByteBuffer.allocate(content.size + 8).apply {
+            putInt(content.size + 8); put(type.toByteArray(Charsets.US_ASCII)); put(content)
+        }.array()
+        fun ints(vararg values: Int) = ByteBuffer.allocate(values.size * 4).apply { values.forEach(::putInt) }.array()
+        val mdhd = box("mdhd", ints(0, 0, 0, 24, count * delta, 0))
+        val hdlr = box("hdlr", ints(0, 0, 0x76696465))
+        val stts = box("stts", ints(0, 1, count, delta))
+        val ctts = if (withOffsets) box("ctts", ints(0, count, *IntArray(count * 2) { i ->
+            if (i % 2 == 0) 1 else listOf(2, 0, 1)[(i / 2) % 3]
+        })) else byteArrayOf()
+        val edit = editMediaTime?.let { box("edts", box("elst", ints(0, 1, editDuration, it, 0x10000))) }
+            ?: byteArrayOf()
+        val movieHeader = if (editMediaTime != null) box("mvhd", ints(0, 0, 0, 24, count * delta)) else byteArrayOf()
+        return box("moov", movieHeader + box("trak", edit + box("mdia", mdhd + hdlr +
+            box("minf", box("stbl", stts + ctts)))))
+    }
+
+    private fun fixture(frameCount: Long = 3, indexed: Boolean = false, withOffsets: Boolean = false,
+                        editMediaTime: Int? = null, editDuration: Int = frameCount.toInt()): VideoPreviewOpen {
         val projects = VideoProjectStore(listOf(root.resolve("midi")))
         val folder = root.resolve("project")
         val project = projects.create(folder, VideoProject("video", "Video", "2026-09-13T00:00:00Z"))
         val media = folder.resolve("takes/take.mp4")
         Files.createDirectories(media.parent)
-        val bytes = "owned silent take".toByteArray()
+        val bytes = if (indexed) sampleTable(frameCount.toInt(), withOffsets = withOffsets, editMediaTime = editMediaTime, editDuration = editDuration) else "owned silent take".toByteArray()
         Files.write(media, bytes)
         val hash = digest(bytes)
         val measurement = VideoTakeMeasurementRecord(hash, bytes.size.toLong(), "h264", 320, 180,
-            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(24, 1), 3,
-            VideoTakeRationalRecord(1, 24), 3000, 8, 1, 0, 0)
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(24, 1), frameCount,
+            VideoTakeRationalRecord(1, 24), 3000, if (indexed) frameCount else frameCount * 3, 1, 0, 0)
         val take = VideoTakeRecord(takeId, VideoArtifact("takes/take.mp4", hash), null, "2026-09-13T00:01:00Z",
             measurement, measurement, "NONE", VideoTakeProvenanceRecord("video", "request", "attempt", "output", "comfyui-local",
                 "a".repeat(64), "b".repeat(64), null, null, null,
@@ -73,6 +94,18 @@ class VideoPreviewSessionTest {
         return VideoPreviewOpen(folder, takeId, tools, root.resolve("preview-work"))
     }
 
+    private fun requestedIndex(job: VideoMediaProcessRequest): Long =
+        listOf(3000L, 3002L, 3007L).indexOf(
+            Regex("eq\\(pts\\\\,(-?\\d+)\\)").find(job.arguments[job.arguments.indexOf("-vf") + 1])!!.groupValues[1].toLong()
+        ).toLong().also { check(it >= 0) }
+
+    private fun fakeResult(job: VideoMediaProcessRequest, text: String): VideoMediaProcessResult {
+        val pts = if ("-vf" in job.arguments) listOf(3000L, 3002L, 3007L)[requestedIndex(job).toInt()] else null
+        val diagnostic = pts?.let { "[Parsed_showinfo_1] n: 0 pts: $it pts_time: 0" } ?: ""
+        return VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+            VideoMediaProcessOutput(diagnostic, diagnostic.length.toLong(), false), Duration.ZERO, job.workingDirectory)
+    }
+
     private fun decoder(onExtract: (Long) -> Unit = {}): Pair<VideoPreviewDecoder, MutableList<Long>> {
         val extracted = mutableListOf<Long>()
         val decoder = VideoPreviewDecoder(VideoProjectStore(listOf(root.resolve("midi")))) { job, _ ->
@@ -82,7 +115,7 @@ class VideoPreviewSessionTest {
                     VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
                 "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":3000},{"best_effort_timestamp":3002},{"best_effort_timestamp":3007}]}"""
                 else -> {
-                    val index = job.arguments[job.arguments.indexOf("-vf") + 1].substringAfter("n\\,").substringBefore("\\,").toLong()
+                    val index = requestedIndex(job)
                     extracted += index
                     onExtract(index)
                     val image = BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB)
@@ -91,8 +124,7 @@ class VideoPreviewSessionTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         return decoder to extracted
     }
@@ -100,6 +132,148 @@ class VideoPreviewSessionTest {
     private fun session(scheduler: TestCoroutineScheduler, decoder: VideoPreviewDecoder) = VideoPreviewSession(
         decoder, StandardTestDispatcher(scheduler), VideoPreviewClock { scheduler.currentTime * 1_000_000 },
     )
+
+    @Test fun `long take seeks and playback use bounded GOP windows with verified identity`() = runTest {
+        val request = fixture(9000, indexed = true, editMediaTime = 0)
+        val probes = mutableListOf<VideoMediaProcessRequest>()
+        val extracts = mutableListOf<VideoMediaProcessRequest>()
+        val decoder = VideoPreviewDecoder(VideoProjectStore(listOf(root.resolve("midi")))) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                    VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> {
+                    probes += job
+                    val interval = job.arguments[job.arguments.indexOf("-read_intervals") + 1]
+                    val tick = if (interval.startsWith("%")) 0 else
+                        (interval.substringBefore('%').toBigDecimal() * 24.toBigDecimal()).toLong() - 3000
+                    val first = (tick.coerceAtLeast(0) / 240 * 240).toInt()
+                    """{"frames":[${(first until minOf(first + 256, 9000)).joinToString { """{"best_effort_timestamp":${3000 + it}}""" }}]}"""
+                }
+                else -> {
+                    extracts += job
+                    val pts = Regex("eq\\(pts\\\\,(-?\\d+)\\)").find(job.arguments[job.arguments.indexOf("-vf") + 1])!!.groupValues[1].toLong()
+                    assertTrue(job.arguments[job.arguments.indexOf("-ss") + 1].toBigDecimal() > java.math.BigDecimal.ZERO || pts == 3000L)
+                    val image = BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB)
+                    image.setRGB(0, 0, pts.toInt())
+                    assertTrue(ImageIO.write(image, "png", job.workingDirectory.resolve("frame-001.png").toFile()))
+                    ""
+                }
+            }
+            val pts = if ("-vf" in job.arguments) Regex("eq\\(pts\\\\,(-?\\d+)\\)")
+                .find(job.arguments[job.arguments.indexOf("-vf") + 1])!!.groupValues[1] else null
+            val diagnostic = pts?.let { "[Parsed_showinfo_1] n: 0 pts: $it pts_time: 0" } ?: ""
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput(diagnostic, diagnostic.length.toLong(), false), Duration.ZERO, job.workingDirectory)
+        }
+        val preview = session(testScheduler, decoder)
+        preview.open(request); runCurrent()
+        preview.seek(8997); runCurrent()
+        assertEquals(8997L, assertIs<VideoPreviewState.Paused>(preview.state.value).frame.presentation.frameIndex)
+        val scanned = probes.size
+        assertTrue(scanned <= 2, "Cold distant seek must not probe the clip prefix: $scanned")
+        preview.seek(8995); runCurrent()
+        assertEquals(8995L, assertIs<VideoPreviewState.Paused>(preview.state.value).frame.presentation.frameIndex)
+        preview.play(); runCurrent()
+        advanceTimeBy(42); runCurrent()
+        assertEquals(8996L, assertIs<VideoPreviewState.Playing>(preview.state.value).frame.presentation.frameIndex)
+        advanceTimeBy(42); runCurrent()
+        assertEquals(8997L, assertIs<VideoPreviewState.Playing>(preview.state.value).frame.presentation.frameIndex)
+        assertTrue(probes.size - scanned <= 4, "Playback must not rescan the prefix")
+        assertTrue(extracts.all { it.arguments.contains("-ss") && it.arguments.contains("-copyts") &&
+            it.arguments[it.arguments.indexOf("-vf") + 1].contains("showinfo") && it.timeout == Duration.ofSeconds(30) })
+        preview.closeAndJoin()
+    }
+
+    @Test fun `cold near and far seeks use constant bounded probe work`() {
+        val base = fixture(9000, indexed = true, editMediaTime = 0)
+        for (distance in listOf(1200L, 8997L)) {
+            val request = base.copy(scratchDirectory = root.resolve("cold-$distance"))
+            var scans = 0
+            val decoder = VideoPreviewDecoder(VideoProjectStore(listOf(root.resolve("midi")))) { job, _ ->
+                Files.createDirectory(job.workingDirectory)
+                val text = when {
+                    "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                        VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                    else -> {
+                        scans++
+                        val interval = job.arguments[job.arguments.indexOf("-read_intervals") + 1]
+                        assertFalse(interval.startsWith("%"), "Cold seek must not scan from zero")
+                        val first = ((interval.substringBefore('%').toBigDecimal() * 24.toBigDecimal()).toLong() - 3000)
+                            .coerceAtLeast(0) / 240 * 240
+                        """{"frames":[${(first until minOf(first + 256, 9000)).joinToString { """{"best_effort_timestamp":${3000 + it}}""" }}]}"""
+                    }
+                }
+                fakeResult(job, text)
+            }
+            val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+            assertEquals(3000 + distance, decoder.presentationAt(admitted, distance).pts)
+            assertEquals(1, scans, "Cold probe count must be independent of seek distance")
+        }
+    }
+
+    @Test fun `owned MP4 fixture identity edit has an exact bounded timing index without native tools`() {
+        val media = Path.of("src/test/resources/fixtures/video/owned-motion.mp4").toAbsolutePath()
+        // The checked-in FFmpeg MP4 has mvhd timescale 1000, mdhd timescale
+        // 12288 and one full-duration elst identity edit. No FFprobe is invoked.
+        val facts = VideoTakeMeasurementRecord("a".repeat(64), Files.size(media), "h264", 320, 180,
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(24, 1), 72,
+            VideoTakeRationalRecord(1, 12288), 0, 36864, 1, 0, 0)
+        val probe = VideoMediaProbe { _, _ -> error("Pure MP4 timing lookup must not launch tools") }
+        assertEquals(0L, probe.previewSampleTime(media, facts, 0))
+        assertEquals(40L * 512, probe.previewSampleTime(media, facts, 40))
+        assertEquals(71L * 512, probe.previewSampleTime(media, facts, 71))
+    }
+
+    @Test fun `nonidentity or partial MP4 edit cannot grant random access`() {
+        val request = fixture(9000, indexed = true, editMediaTime = 1)
+        val media = request.projectRoot.resolve("takes/take.mp4")
+        val bytes = Files.readAllBytes(media)
+        fun facts(bytes: ByteArray) = VideoTakeMeasurementRecord(digest(bytes), bytes.size.toLong(), "h264", 320, 180,
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(24, 1), 9000,
+            VideoTakeRationalRecord(1, 24), 3000, 9000, 1, 0, 0)
+        val probe = VideoMediaProbe { _, _ -> error("Unsupported edit must not launch tools") }
+        assertNull(probe.previewSampleTime(media, facts(bytes), 8997))
+        val partial = sampleTable(9000, editMediaTime = 0, editDuration = 8999)
+        Files.write(media, partial)
+        assertNull(probe.previewSampleTime(media, facts(partial), 8997))
+    }
+
+    @Test fun `indexed timestamp missing from bounded decode window is rejected`() {
+        val request = fixture(9000, indexed = true)
+        var scans = 0
+        val decoder = VideoPreviewDecoder(VideoProjectStore(listOf(root.resolve("midi")))) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = if ("-version" in job.arguments) "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ") else {
+                scans++
+                """{"frames":[{"best_effort_timestamp":8996},{"best_effort_timestamp":8998}]}"""
+            }
+            fakeResult(job, text)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        assertEquals(VideoMediaProbeFailure.INVALID_MEDIA, assertFailsWith<VideoMediaProbeException> {
+            decoder.presentationAt(admitted, 5997) // expected 8997
+        }.failure)
+        assertEquals(1, scans)
+    }
+
+    @Test fun `composition offsets map a reordered cold decoded ordinal without scanning the prefix`() {
+        val request = fixture(9000, indexed = true, withOffsets = true)
+        var metadataCalls = 0
+        val decoder = VideoPreviewDecoder(VideoProjectStore(listOf(root.resolve("midi")))) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = if ("-read_intervals" in job.arguments) {
+                metadataCalls++
+                """{"frames":[{"best_effort_timestamp":11996},{"best_effort_timestamp":11997},{"best_effort_timestamp":11998}]}"""
+            } else "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+            fakeResult(job, text)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        assertEquals(11997L, decoder.presentationAt(admitted, 8997).pts)
+        assertEquals(1, metadataCalls)
+    }
 
     @Test fun `rapid seeks coalesce and delayed cancelled extraction cannot publish stale pixels or failure`() = runBlocking {
         val request = fixture()
@@ -113,7 +287,7 @@ class VideoPreviewSessionTest {
                     VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
                 "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":3000},{"best_effort_timestamp":3002},{"best_effort_timestamp":3007}]}"""
                 else -> {
-                    val index = job.arguments[job.arguments.indexOf("-vf") + 1].substringAfter("n\\,").substringBefore("\\,").toLong()
+                    val index = requestedIndex(job)
                     synchronized(extracted) { extracted += index }
                     if (index == 1L) {
                         entered.countDown()
@@ -127,8 +301,7 @@ class VideoPreviewSessionTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val preview = VideoPreviewSession(decoder, Dispatchers.IO)
         preview.open(request)
@@ -205,15 +378,14 @@ class VideoPreviewSessionTest {
                 }
                 "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":3000},{"best_effort_timestamp":3002},{"best_effort_timestamp":3007}]}"""
                 else -> {
-                    val index = job.arguments[job.arguments.indexOf("-vf") + 1].substringAfter("n\\,").substringBefore("\\,").toLong()
+                    val index = requestedIndex(job)
                     extracted += index
                     assertTrue(ImageIO.write(BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB), "png",
                         job.workingDirectory.resolve("frame-001.png").toFile()))
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val preview = VideoPreviewSession(decoder, Dispatchers.IO)
         preview.open(request)
@@ -227,7 +399,7 @@ class VideoPreviewSessionTest {
         preview.closeAndJoin()
     }
 
-    @Test fun `cancelled playback timing handles pause or seek before starting another probe`() = runBlocking {
+    @Test fun `cached playback timing cancels in flight decode on pause or seek`() = runBlocking {
         val request = fixture()
         for (seekInsteadOfPause in listOf(false, true)) {
             val entered = CountDownLatch(1)
@@ -240,24 +412,24 @@ class VideoPreviewSessionTest {
                     "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " +
                         VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
                     "-read_intervals" in job.arguments -> {
-                        if (timingCalls.incrementAndGet() == 2) {
-                            entered.countDown()
-                            check(release.await(5, TimeUnit.SECONDS))
-                            check(cancellation.isCancelled())
-                            throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "cancelled playback timing")
-                        }
+                        timingCalls.incrementAndGet()
                         """{"frames":[{"best_effort_timestamp":3000},{"best_effort_timestamp":3002},{"best_effort_timestamp":3007}]}"""
                     }
                     else -> {
-                        val index = job.arguments[job.arguments.indexOf("-vf") + 1].substringAfter("n\\,").substringBefore("\\,").toLong()
+                        val index = requestedIndex(job)
                         synchronized(extracted) { extracted += index }
+                        if (index == 1L) {
+                            entered.countDown()
+                            check(release.await(5, TimeUnit.SECONDS))
+                            check(cancellation.isCancelled())
+                            throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "cancelled playback decode")
+                        }
                         assertTrue(ImageIO.write(BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB), "png",
                             job.workingDirectory.resolve("frame-001.png").toFile()))
                         ""
                     }
                 }
-                VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                    VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+                fakeResult(job, text)
             }
             val preview = VideoPreviewSession(decoder, Dispatchers.IO)
             preview.open(request.copy(scratchDirectory = root.resolve("scratch-$seekInsteadOfPause")))
@@ -274,8 +446,8 @@ class VideoPreviewSessionTest {
             val paused = assertIs<VideoPreviewState.Paused>(preview.state.value)
             assertEquals(if (seekInsteadOfPause) 2L else 0L, paused.frame.presentation.frameIndex)
             preview.closeAndJoin() // wait for the worker before inspecting invocation counts
-            assertEquals(if (seekInsteadOfPause) 3 else 2, timingCalls.get())
-            assertEquals(if (seekInsteadOfPause) listOf(0L, 2L) else listOf(0L), synchronized(extracted) { extracted.toList() })
+            assertEquals(1, timingCalls.get(), "Playback must reuse the verified timing window")
+            assertEquals(if (seekInsteadOfPause) listOf(0L, 1L, 2L) else listOf(0L, 1L), synchronized(extracted) { extracted.toList() })
         }
     }
 
@@ -346,8 +518,7 @@ class VideoPreviewSessionTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val preview = VideoPreviewSession(decoder, Dispatchers.IO)
         preview.open(request)
@@ -382,8 +553,7 @@ class VideoPreviewSessionTest {
                     throw VideoMediaProcessException(VideoMediaProcessFailure.CANCELLED, "confirmed native teardown")
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val preview = VideoPreviewSession(decoder, Dispatchers.IO)
         preview.open(request)

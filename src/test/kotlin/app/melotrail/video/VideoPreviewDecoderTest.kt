@@ -136,6 +136,18 @@ class VideoPreviewDecoderTest {
         }
         decoder.decodeExtractedPng(input).close()
     }
+    private fun requestedPts(job: VideoMediaProcessRequest): List<Long> =
+        Regex("eq\\(pts\\\\,(-?\\d+)\\)").findAll(job.arguments[job.arguments.indexOf("-vf") + 1])
+            .map { it.groupValues[1].toLong() }.toList()
+
+    private fun fakeResult(job: VideoMediaProcessRequest, text: String): VideoMediaProcessResult {
+        val diagnostic = if ("-vf" in job.arguments) requestedPts(job).mapIndexed { n, pts ->
+            "[Parsed_showinfo_1] n: $n pts: $pts pts_time: 0"
+        }.joinToString("\n") else ""
+        return VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+            VideoMediaProcessOutput(diagnostic, diagnostic.length.toLong(), false), Duration.ZERO, job.workingDirectory)
+    }
+
     private fun digest(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString("") { "%02x".format(it) }
     private fun store() = VideoProjectStore(listOf(root.resolve("midi")))
@@ -194,8 +206,7 @@ class VideoPreviewDecoderTest {
                 assertEquals("%+#256", job.arguments[job.arguments.indexOf("-read_intervals") + 1])
                 """{"frames":[${timestamps.joinToString { """{"best_effort_timestamp":$it}""" }}]}"""
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         for (i in listOf(0L, 2L, 4L)) {
@@ -229,8 +240,7 @@ class VideoPreviewDecoderTest {
                 assertEquals(1_048_576, job.maxStdoutBytes)
                 """{"frames":[${(3000L until 3256L).joinToString { """{"best_effort_timestamp":$it}""" }}]}"""
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         val last = decoder.presentationAt(admitted, 255)
@@ -257,8 +267,7 @@ class VideoPreviewDecoderTest {
                 val pts = (first until minOf(first + 255, 520)).map { 3000L + it + it / 7 }
                 """{"frames":[${pts.joinToString { """{"best_effort_timestamp":$it}""" }}]}"""
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         assertEquals(3000L + 519 + 519 / 7, decoder.presentationAt(admitted, 519).pts)
@@ -282,8 +291,7 @@ class VideoPreviewDecoderTest {
                 Files.createDirectory(job.workingDirectory)
                 val text = if ("-version" in job.arguments) "${job.executable.fileName} version 9.0.1\nconfiguration: " +
                     VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ") else response
-                VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                    VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+                fakeResult(job, text)
             }
             val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request.copy(scratchDirectory = root.resolve("scratch-$i"))))
             assertEquals(VideoMediaProbeFailure.INVALID_MEDIA, assertFailsWith<VideoMediaProbeException> {
@@ -315,20 +323,17 @@ class VideoPreviewDecoderTest {
                     val windowSize = job.arguments[job.arguments.indexOf("-frames:v") + 1].toInt()
                     assertEquals((VideoPreviewBufferBudget.MAX_ENCODED_BYTES / windowSize).toString(),
                         job.arguments[job.arguments.indexOf("-fs") + 1], "Each image2 file must have a share of the window allowance")
-                    val select = job.arguments[job.arguments.indexOf("-vf") + 1]
-                    val first = select.substringAfter("n\\,").substringBefore("\\,").toInt()
-                    val last = select.substringAfterLast("\\,").substringBefore(')').toInt()
-                    for (i in first..last) {
-                        val path = job.workingDirectory.resolve("frame-%03d.png".format(i - first + 1))
+                    val pts = requestedPts(job)
+                    for ((number, i) in pts.withIndex()) {
+                        val path = job.workingDirectory.resolve("frame-%03d.png".format(number + 1))
                         val image = BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB)
-                        image.setRGB(0, 0, i)
+                        image.setRGB(0, 0, i.toInt())
                         assertTrue(ImageIO.write(image, "png", path.toFile()))
                     }
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         for ((first, length) in listOf(0L to 2, 518L to 2, 261L to 3, 5L to 1)) {
@@ -351,6 +356,32 @@ class VideoPreviewDecoderTest {
     private inline fun <T> List<VideoPreviewDecoder.Frame>.useFrames(block: (List<VideoPreviewDecoder.Frame>) -> T): T =
         try { block(this) } finally { forEach { it.close() } }
 
+    @Test fun `seeked PNG without matching decoded timestamp never becomes the requested frame`() {
+        val request = persisted(2, 3000, 3)
+        tools(request.toolsDirectory)
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = when {
+                "-version" in job.arguments -> "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                    VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+                "-read_intervals" in job.arguments -> """{"frames":[{"best_effort_timestamp":3000},{"best_effort_timestamp":3002}]}"""
+                else -> {
+                    assertTrue(job.arguments.contains("-ss"), "Extraction must seek before input")
+                    ImageIO.write(BufferedImage(320, 180, BufferedImage.TYPE_INT_ARGB), "png",
+                        job.workingDirectory.resolve("frame-001.png").toFile())
+                    ""
+                }
+            }
+            val wrong = if ("-vf" in job.arguments) "[Parsed_showinfo_1] n: 0 pts: 3000 pts_time: 0" else ""
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput(wrong, wrong.length.toLong(), false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        val failure = assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 1) }
+        assertTrue(failure.message.orEmpty().contains("timestamps"))
+        assertEquals(0L, Files.list(request.scratchDirectory).use { it.filter { p -> p.fileName.toString().startsWith("preview-frames-") }.count() })
+    }
+
     @Test fun `simultaneous PNG decode cannot spend the extraction staging allowance`() {
         val request = persisted(1, 0, 1)
         tools(request.toolsDirectory)
@@ -369,8 +400,7 @@ class VideoPreviewDecoderTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         val pending = CompletableFuture.supplyAsync { runCatching { decoder.extractWindow(admitted, 0) } }
@@ -408,8 +438,7 @@ class VideoPreviewDecoderTest {
                         ""
                     }
                 }
-                VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                    VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+                fakeResult(job, text)
             } finally { active.decrementAndGet() }
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
@@ -449,8 +478,7 @@ class VideoPreviewDecoderTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         assertTrue(assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }.message.orEmpty().contains("cannot be bounded"))
@@ -481,8 +509,7 @@ class VideoPreviewDecoderTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
@@ -515,8 +542,7 @@ class VideoPreviewDecoderTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         val failure = assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
@@ -550,8 +576,7 @@ class VideoPreviewDecoderTest {
                     ""
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
@@ -583,8 +608,7 @@ class VideoPreviewDecoderTest {
                         stderr = VideoMediaProcessOutput("No space left on device", 23, false))
                 }
             }
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
         val disk = assertFailsWith<VideoPreviewImageException> { decoder.extractWindow(admitted, 0) }
@@ -724,8 +748,7 @@ class VideoPreviewDecoderTest {
             calls++
             Files.createDirectory(job.workingDirectory)
             val text = "${job.executable.fileName} version 9.0.0\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.joinToString(" ")
-            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
-                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            fakeResult(job, text)
         }
         assertEquals(VideoPreviewOpenFailure.TOOLS, assertIs<VideoPreviewOpenResult.Rejected>(decoder.open(request)).failure)
         assertFalse(Files.exists(request.scratchDirectory))

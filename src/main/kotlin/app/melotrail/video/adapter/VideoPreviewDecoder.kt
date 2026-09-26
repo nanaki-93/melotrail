@@ -36,6 +36,7 @@ sealed interface VideoPreviewOpenResult {
         val measurement: VideoTakeMeasurementRecord,
         internal val tools: VideoPreviewToolPins,
         internal val scratch: Path,
+        internal val timing: VideoMediaProbe.PreviewTimingCache = VideoMediaProbe.PreviewTimingCache(),
     ) : VideoPreviewOpenResult
 
     data class Rejected(val failure: VideoPreviewOpenFailure, val message: String, val nextAction: String) : VideoPreviewOpenResult
@@ -164,7 +165,7 @@ class VideoPreviewDecoder internal constructor(
                        cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): VideoPreviewPresentation =
         synchronized(extractionLock) {
             checkOwnership()
-            probe.previewPresentation(admitted.artifact, admitted.measurement, admitted.tools, admitted.scratch, frameIndex, cancellation)
+            probe.previewPresentation(admitted.artifact, admitted.measurement, admitted.tools, admitted.scratch, frameIndex, cancellation, admitted.timing)
         }
     private val imageFiles = VideoImageFiles()
     private val buffers = VideoPreviewBufferBudget()
@@ -202,12 +203,17 @@ class VideoPreviewDecoder internal constructor(
             var operationFailure: Exception? = null
             val frames = mutableListOf<Frame>()
             try {
-                val last = first + requested - 1
+                // Input seek is relative to stream start. Decode only the nearby GOP, then
+                // select exact measured PTS values; never treat a seek's first frame as identity.
+                val seekTicks = times.first().relativePts.subtract(java.math.BigInteger.ONE).max(java.math.BigInteger.ZERO)
+                val seekSeconds = java.math.BigDecimal(seekTicks).multiply(java.math.BigDecimal.valueOf(times.first().timeBase.numerator))
+                    .divide(java.math.BigDecimal.valueOf(times.first().timeBase.denominator), 24, java.math.RoundingMode.FLOOR).toPlainString()
+                val selection = times.joinToString("+") { "eq(pts\\,${it.pts})" }
                 val result = ownedProcess(VideoMediaProcessRequest(
                     admitted.tools.ffmpeg, admitted.tools.ffmpegSha256,
-                    listOf("-hide_banner", "-nostdin", "-v", "error", "-protocol_whitelist", "file,pipe",
-                        "-i", admitted.artifact.toString(), "-map", "0:v:0", "-an", "-sn", "-dn",
-                        "-vf", "select=between(n\\,$first\\,$last)", "-vsync", "0",
+                    listOf("-hide_banner", "-nostdin", "-v", "info", "-protocol_whitelist", "file,pipe",
+                        "-ss", seekSeconds, "-copyts", "-i", admitted.artifact.toString(), "-map", "0:v:0", "-an", "-sn", "-dn",
+                        "-vf", "select='$selection',showinfo", "-vsync", "0",
                         "-frames:v", requested.toString(), "-c:v", "png", "-f", "image2",
                         // image2 may apply -fs to each output file, not the aggregate window.
                         "-fs", (VideoPreviewBufferBudget.MAX_ENCODED_BYTES / requested).toString(),
@@ -219,6 +225,11 @@ class VideoPreviewDecoder internal constructor(
                 processConfirmed = true
                 if (result.stdout.truncated || result.stdout.totalBytes > 8192 || result.stderr.truncated) {
                     throw VideoPreviewImageException("Preview process diagnostics exceeded their bound.")
+                }
+                val observed = result.stderr.text.lineSequence().filter { "Parsed_showinfo" in it && " pts:" in it }
+                    .map { line -> Regex("\\bpts:\\s*(-?\\d+)").find(line)?.groupValues?.get(1)?.toLongOrNull() }.toList()
+                if (observed != times.map { it.pts }) {
+                    throw VideoPreviewImageException("Preview decoded-frame timestamps differ from the requested verified frame window.")
                 }
                 // Do not follow unexpected links or read files outside this fresh owned job.
                 val expected = (1..requested).map { "frame-%03d.png".format(it) }.toSet()

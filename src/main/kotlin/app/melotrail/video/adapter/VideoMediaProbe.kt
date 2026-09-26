@@ -22,6 +22,8 @@ import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.BasicFileAttributes
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.security.MessageDigest
 import java.time.Duration
 import java.util.Locale
@@ -129,21 +131,71 @@ class VideoMediaProbe internal constructor(
 
     private val previewTimingJob = java.util.concurrent.atomic.AtomicLong()
 
+    /** Sparse, session-local decoded-order anchors. Never retain a clip-length timeline. */
+    internal class PreviewTimingCache {
+        val anchors = java.util.TreeMap<Long, Long>()
+        var recent = emptyMap<Long, Long>()
+        var highIndex = -1L
+        var highPts: Long? = null
+    }
+
     /** FFprobe's interval start can seek backwards to a keyframe. Require an overlapping
      * anchor before extending the decoded-order index; never equate an approximate seek
      * position with a frame number. Each job captures at most 1 MiB of text and 256 frames.
      * Long GOPs that cannot fit in one window fail closed instead of skipping frames. */
     internal fun previewPresentation(input: Path, measurement: VideoTakeMeasurementRecord,
                                      pins: VideoPreviewToolPins, scratch: Path, index: Long,
-                                     cancellation: VideoMediaProcessCancellation): VideoPreviewPresentation {
+                                     cancellation: VideoMediaProcessCancellation, cache: PreviewTimingCache = PreviewTimingCache()): VideoPreviewPresentation {
         val count = measurement.decodedFrameCount
         if (index < 0 || index >= count) invalidRequest("Preview frame index $index is outside 0..${count - 1}.")
         val base = VideoMediaRational(measurement.videoTimeBase.numerator, measurement.videoTimeBase.denominator)
         if (base.numerator <= 0 || measurement.videoDurationPts <= 0 || count <= 0) invalidMedia("Preview has invalid measured timing.")
         val end = BigInteger.valueOf(measurement.videoStartPts).add(BigInteger.valueOf(measurement.videoDurationPts))
-        var accepted = 0L
-        var last: Long? = null
-        var target: Long? = null
+        if (count > 131_072L) invalidMedia("Preview frame count exceeds the bounded sparse-index capacity.")
+        cache.recent[index]?.let { return VideoPreviewPresentation(index, it, base, measurement.videoStartPts) }
+        // An empty (or distant) sparse cache has no decoded-order anchor. MP4's stts
+        // sample table supplies an exact ordinal for presentation-order tracks. Do not
+        // infer an ordinal from FPS or from a seek's first decoded frame. Unsupported
+        // composition offsets/edit lists fall back only to the bounded prefix path.
+        if (count > 1024 && index > cache.highIndex + 256 && index >= 256) {
+            val tablePts = previewSampleTime(input, measurement, index)
+                ?: invalidMedia("This take has no bounded random-access timing index; preview a shorter take or use a supported presentation-order MP4.")
+            val seconds = BigDecimal.valueOf(tablePts - 1).multiply(BigDecimal.valueOf(base.numerator))
+                .divide(BigDecimal.valueOf(base.denominator), 24, RoundingMode.FLOOR).toPlainString()
+            val result = runProcess(VideoMediaProcessRequest(
+                pins.ffprobe, pins.ffprobeSha256,
+                listOf("-v", "error", "-protocol_whitelist", "file,pipe", "-select_streams", "v:0",
+                    "-read_intervals", "$seconds%+#256", "-show_frames", "-show_entries", "frame=best_effort_timestamp",
+                    "-of", "json", input.toString()),
+                scratch.resolve("preview-timing-${previewTimingJob.getAndIncrement()}"), Duration.ofSeconds(30),
+                maxStdoutBytes = 1_048_576, maxStderrBytes = 8192,
+                environment = mapOf("LC_ALL" to "C", "LANG" to "C"), memoryLimitBytes = 512L * 1024 * 1024,
+            ), cancellation).stdout
+            if (result.truncated || result.totalBytes > 1_048_576) invalidMedia("Preview timing metadata exceeds 1 MiB per window.")
+            val frames = try { MANIFEST_JSON.parseToJsonElement(result.text).jsonObject["frames"]?.jsonArray }
+                catch (error: Exception) { invalidMedia("Preview timing metadata is malformed.", cause = error) }
+                ?: invalidMedia("Preview timing metadata has no frame list.")
+            if (frames.size > 256 || frames.isEmpty()) invalidMedia("Preview timing window is empty or exceeds 256 frames.")
+            var previous: Long? = null
+            var found = false
+            for (frame in frames) {
+                checkCancelled(cancellation)
+                val pts = try { (frame.jsonObject["best_effort_timestamp"] as? JsonPrimitive)?.content?.toLongOrNull() }
+                    catch (_: Exception) { null } ?: invalidMedia("Preview frame has no valid presentation timestamp.")
+                if (previous != null && pts <= previous) invalidMedia("Preview has non-increasing presentation timestamps.")
+                if (pts < measurement.videoStartPts || BigInteger.valueOf(pts) >= end) invalidMedia("Preview timestamp contradicts measured duration.")
+                if (pts == tablePts) found = true
+                previous = pts
+            }
+            if (!found) invalidMedia("Preview timing index disagrees with the decoded frame window; no frame was published.")
+            cache.recent = mapOf(index to tablePts)
+            return VideoPreviewPresentation(index, tablePts, base, measurement.videoStartPts)
+        }
+        val anchor = if (index > cache.highIndex) cache.highIndex.takeIf { it >= 0 }?.let { it to cache.highPts!! }
+            else cache.anchors.floorEntry(index)?.let { it.key to it.value }
+        var accepted = anchor?.first?.plus(1) ?: 0L
+        var last: Long? = anchor?.second
+        var target: Long? = if (anchor?.first == index) anchor.second else null
         while (true) {
             checkCancelled(cancellation)
             val interval = if (last == null) "%+#256" else {
@@ -170,6 +222,7 @@ class VideoMediaProbe internal constructor(
             var preceding: Long? = null
             var anchored = last == null
             var newFrames = 0
+            val recent = mutableMapOf<Long, Long>()
             for (frame in frames) {
                 checkCancelled(cancellation)
                 val pts = try { (frame.jsonObject["best_effort_timestamp"] as? JsonPrimitive)?.content?.toLongOrNull() }
@@ -182,22 +235,179 @@ class VideoMediaProbe internal constructor(
                 if (last != null && !anchored && pts > last) invalidMedia("Preview timing window skipped its decoded-frame anchor.")
                 if (last != null && pts <= last) continue
                 if (accepted == index) target = pts
+                recent[accepted] = pts
                 accepted++
                 newFrames++
                 if (accepted > count) invalidMedia("Preview timestamps exceed measured decoded-frame count.")
                 last = pts
             }
             if (!anchored) invalidMedia("Preview timing window lost its decoded-frame anchor.")
+            cache.recent = recent
+            if (last != null && accepted - 1 > cache.highIndex) {
+                cache.highIndex = accepted - 1
+                cache.highPts = last
+                if (cache.anchors.size >= 512) invalidMedia("Preview sparse timing index exceeds 512 anchors; the GOPs are too long for bounded playback.")
+                cache.anchors[cache.highIndex] = last
+            }
             // The interval limit counts packets, not decoded frames. B-frame delay can
             // make a nonterminal window shorter than 256 frames; keep advancing until
             // the measured count, never infer end-of-stream from the window length.
             // A full 256-frame window can itself contain the measured final frame.
-            if (accepted == count) {
+            if (accepted == count || (target != null && count > 256)) {
                 return VideoPreviewPresentation(index, target ?: invalidMedia("Preview target timestamp is absent."), base, measurement.videoStartPts)
             }
             if (newFrames == 0) invalidMedia("Preview timing window cannot advance to the measured decoded-frame count ($accepted/$count).")
         }
     }
+
+    /** Inspect bounded MP4 timing runs, not a clip-length frame list. A seek is admitted
+     * only if a bounded sample neighborhood isolates its presentation ordinal; the
+     * decoded probe window must independently contain the selected timestamp. */
+    internal fun previewSampleTime(input: Path, measurement: VideoTakeMeasurementRecord, index: Long): Long? =
+        try {
+            java.nio.channels.FileChannel.open(input).use { channel ->
+                val size = channel.size()
+                fun read(position: Long, length: Int): ByteBuffer? {
+                    if (position < 0 || length < 0 || position > size - length) return null
+                    val bytes = ByteBuffer.allocate(length).order(ByteOrder.BIG_ENDIAN)
+                    while (bytes.hasRemaining()) if (channel.read(bytes, position + bytes.position()) < 0) return null
+                    return bytes.flip() as ByteBuffer
+                }
+                fun boxes(start: Long, end: Long): List<Triple<String, Long, Long>>? {
+                    val found = mutableListOf<Triple<String, Long, Long>>()
+                    var pos = start
+                    while (pos < end) {
+                        val header = read(pos, 8) ?: return null
+                        val length = header.int.toLong() and 0xffffffffL
+                        val type = ByteArray(4).also { header.get(it) }.toString(Charsets.US_ASCII)
+                        if (length < 8 || length > end - pos || found.size >= 128) return null
+                        found += Triple(type, pos + 8, pos + length)
+                        pos += length
+                    }
+                    return found
+                }
+                val moov = boxes(0, size)?.singleOrNull { it.first == "moov" } ?: return@use null
+                if (moov.third - moov.second > 1_048_576) return@use null
+                val tracks = boxes(moov.second, moov.third)?.filter { it.first == "trak" } ?: return@use null
+                val track = tracks.singleOrNull { trak ->
+                    val mdia = boxes(trak.second, trak.third)?.singleOrNull { it.first == "mdia" } ?: return@singleOrNull false
+                    val handler = boxes(mdia.second, mdia.third)?.singleOrNull { it.first == "hdlr" } ?: return@singleOrNull false
+                    read(handler.second, 12)?.let { buf -> buf.position(8); buf.int == 0x76696465 } == true
+                } ?: return@use null
+                // An identity edit is common in FFmpeg MP4s (including the owned
+                // motion fixture). Accept only one full-length, rate-one edit from
+                // media time zero. Trims, empty edits and time shifts change sample
+                // ordinals and must not be mistaken for the indexed timeline.
+                val edits = boxes(track.second, track.third)?.filter { it.first == "edts" } ?: return@use null
+                val editDuration = if (edits.isEmpty()) null else {
+                    val edts = edits.singleOrNull() ?: return@use null
+                    val elst = boxes(edts.second, edts.third)?.singleOrNull() ?: return@use null
+                    if (elst.first != "elst") return@use null
+                    val length = (elst.third - elst.second).toInt()
+                    if (length != 20 && length != 28) return@use null
+                    val edit = read(elst.second, length) ?: return@use null
+                    val editVersion = edit.get().toInt()
+                    if (edit.get().toInt() != 0 || edit.get().toInt() != 0 || edit.get().toInt() != 0 || edit.int != 1) return@use null
+                    val duration = when (editVersion) {
+                        0 -> edit.int.toLong() and 0xffffffffL
+                        1 -> edit.long.takeIf { it > 0 } ?: return@use null
+                        else -> return@use null
+                    }
+                    val mediaTime = if (editVersion == 0) edit.int.toLong() else edit.long
+                    if (mediaTime != 0L || edit.short.toInt() != 1 || edit.short.toInt() != 0 || duration == 0L) return@use null
+                    val movieHeader = boxes(moov.second, moov.third)?.singleOrNull { it.first == "mvhd" } ?: return@use null
+                    val version = read(movieHeader.second, 1)?.get()?.toInt() ?: return@use null
+                    val scaleOffset = if (version == 0) 12 else if (version == 1) 20 else return@use null
+                    if (movieHeader.third - movieHeader.second < scaleOffset + 4) return@use null
+                    val movieScale = read(movieHeader.second + scaleOffset, 4)?.int?.toLong()?.and(0xffffffffL) ?: return@use null
+                    if (movieScale == 0L) return@use null
+                    duration to movieScale
+                }
+                val mdia = boxes(track.second, track.third)?.singleOrNull { it.first == "mdia" } ?: return@use null
+                val mdhd = boxes(mdia.second, mdia.third)?.singleOrNull { it.first == "mdhd" } ?: return@use null
+                val head = read(mdhd.second, 32) ?: return@use null
+                val version = head.get(0).toInt()
+                val scale = head.getInt(if (version == 0) 12 else if (version == 1) 20 else return@use null).toLong() and 0xffffffffL
+                if (scale <= 0 || BigInteger.valueOf(measurement.videoTimeBase.numerator).multiply(BigInteger.valueOf(scale)) !=
+                    BigInteger.valueOf(measurement.videoTimeBase.denominator)) return@use null
+                val minf = boxes(mdia.second, mdia.third)?.singleOrNull { it.first == "minf" } ?: return@use null
+                val stbl = boxes(minf.second, minf.third)?.singleOrNull { it.first == "stbl" } ?: return@use null
+                val entries = boxes(stbl.second, stbl.third) ?: return@use null
+                val ctts = entries.singleOrNull { it.first == "ctts" }
+                val stts = entries.singleOrNull { it.first == "stts" } ?: return@use null
+                val bytes = (stts.third - stts.second).toInt()
+                if (bytes < 16 || bytes > 1_048_576) return@use null
+                val table = read(stts.second, bytes) ?: return@use null
+                if (table.int != 0) return@use null // version and flags
+                val runs = table.int
+                if (runs <= 0 || runs > 131_072 || bytes.toLong() != 8L + runs * 8L) return@use null
+                val decodeStarts = LongArray(runs)
+                val clockStarts = LongArray(runs)
+                val decodeDeltas = LongArray(runs)
+                var ordinal = 0L
+                var clock = 0L
+                repeat(runs) { r ->
+                    val samples = table.int.toLong() and 0xffffffffL
+                    val delta = table.int.toLong() and 0xffffffffL
+                    if (samples == 0L || delta == 0L || samples > 131_072 - ordinal || delta > Long.MAX_VALUE / samples) return@use null
+                    decodeStarts[r] = ordinal
+                    clockStarts[r] = clock
+                    decodeDeltas[r] = delta
+                    clock = Math.addExact(clock, Math.multiplyExact(samples, delta))
+                    ordinal += samples
+                }
+                if (ordinal != measurement.decodedFrameCount || clock != measurement.videoDurationPts) return@use null
+                if (editDuration != null && BigInteger.valueOf(editDuration.first).multiply(BigInteger.valueOf(scale)) !=
+                    BigInteger.valueOf(clock).multiply(BigInteger.valueOf(editDuration.second))) return@use null
+                fun runAt(starts: LongArray, sample: Long): Int {
+                    val found = java.util.Arrays.binarySearch(starts, sample)
+                    return if (found >= 0) found else -found - 2
+                }
+                fun dts(sample: Long): Long {
+                    val r = runAt(decodeStarts, sample)
+                    return Math.addExact(clockStarts[r], Math.multiplyExact(sample - decodeStarts[r], decodeDeltas[r]))
+                }
+                if (ctts == null) return@use Math.addExact(measurement.videoStartPts, dts(index))
+                val compositionBytes = (ctts.third - ctts.second).toInt()
+                if (compositionBytes < 16 || compositionBytes > 1_048_576 - bytes) return@use null
+                val composition = read(ctts.second, compositionBytes) ?: return@use null
+                val flags = composition.int
+                if (flags != 0 && flags != 0x01000000) return@use null
+                val compositionRuns = composition.int
+                if (compositionRuns <= 0 || compositionRuns > 131_072 ||
+                    compositionBytes.toLong() != 8L + compositionRuns * 8L) return@use null
+                val compositionStarts = LongArray(compositionRuns)
+                val compositionOffsets = LongArray(compositionRuns)
+                var composed = 0L
+                var minOffset = Long.MAX_VALUE
+                var maxOffset = Long.MIN_VALUE
+                var earliest = Long.MAX_VALUE
+                repeat(compositionRuns) { r ->
+                    val samples = composition.int.toLong() and 0xffffffffL
+                    val offset = if (flags == 0) composition.int.toLong() and 0xffffffffL else composition.int.toLong()
+                    if (samples == 0L || samples > ordinal - composed) return@use null
+                    compositionStarts[r] = composed
+                    compositionOffsets[r] = offset
+                    minOffset = minOf(minOffset, offset)
+                    maxOffset = maxOf(maxOffset, offset)
+                    earliest = minOf(earliest, Math.addExact(dts(composed), offset))
+                    composed += samples
+                }
+                if (composed != ordinal) return@use null
+                fun pts(sample: Long): Long = Math.addExact(dts(sample), compositionOffsets[runAt(compositionStarts, sample)])
+                // A 513-sample neighborhood is a fixed memory/work bound. The global
+                // offset extrema bound every sample outside it, regardless of GOP size.
+                // Admit only if neither side can cross the selected presentation rank.
+                val first = maxOf(0, index - 256)
+                val last = minOf(ordinal - 1, index + 256)
+                val neighborhood = (first..last).map(::pts).sorted()
+                if (neighborhood.zipWithNext().any { (a, b) -> a >= b }) return@use null
+                val rawPts = neighborhood[(index - first).toInt()]
+                if (first > 0 && Math.addExact(dts(first - 1), maxOffset) >= rawPts) return@use null
+                if (last + 1 < ordinal && Math.addExact(dts(last + 1), minOffset) <= rawPts) return@use null
+                Math.addExact(measurement.videoStartPts, Math.subtractExact(rawPts, earliest))
+            }
+        } catch (_: Exception) { null }
 
     /** Full probe/decode for a candidate take without creating an encoded derivative. */
     fun inspectTake(
