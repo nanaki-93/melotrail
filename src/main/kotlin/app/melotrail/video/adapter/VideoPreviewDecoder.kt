@@ -31,6 +31,7 @@ sealed interface VideoPreviewOpenResult {
         val artifact: Path,
         val measurement: VideoTakeMeasurementRecord,
         internal val tools: VideoPreviewToolPins,
+        internal val scratch: Path,
     ) : VideoPreviewOpenResult
 
     data class Rejected(val failure: VideoPreviewOpenFailure, val message: String, val nextAction: String) : VideoPreviewOpenResult
@@ -111,6 +112,12 @@ class VideoPreviewDecoder internal constructor(
     constructor(projects: VideoProjectStore) : this(projects, { request, cancellation -> VideoMediaProcess().run(request, cancellation) })
 
     private val probe = VideoMediaProbe(runProcess)
+
+    /** Exact timestamp of a zero-based decoded frame. This scans bounded probe windows rather
+     * than guessing a seek position from average FPS. No pixel buffer is allocated here. */
+    fun presentationAt(admitted: VideoPreviewOpenResult.Admitted, frameIndex: Long,
+                       cancellation: VideoMediaProcessCancellation = VideoMediaProcessCancellation()): VideoPreviewPresentation =
+        probe.previewPresentation(admitted.artifact, admitted.measurement, admitted.tools, admitted.scratch, frameIndex, cancellation)
     private val imageFiles = VideoImageFiles()
     private val buffers = VideoPreviewBufferBudget()
 
@@ -203,6 +210,6 @@ class VideoPreviewDecoder internal constructor(
         }
         if (recheckedArtifact != artifact) return reject(VideoPreviewOpenFailure.UNSAFE_TAKE,
             "Video project artifact location changed during preview admission.", "Reopen the original Video project and take.")
-        return VideoPreviewOpenResult.Admitted(project.id, project.revision, take.id, artifact, measurement, pins)
+        return VideoPreviewOpenResult.Admitted(project.id, project.revision, take.id, artifact, measurement, pins, scratchPath)
     }
 }

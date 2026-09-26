@@ -13,6 +13,8 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import app.melotrail.video.domain.VideoTakeMeasurementRecord
+import java.math.RoundingMode
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
@@ -23,6 +25,11 @@ import java.math.BigInteger
 import java.security.MessageDigest
 import java.time.Duration
 import java.util.Locale
+
+data class VideoPreviewPresentation(val frameIndex: Long, val pts: Long, val timeBase: VideoMediaRational, val streamStartPts: Long) {
+    /** Presentation relative to the measured stream start, without rounding to a frame rate. */
+    val relativePts: java.math.BigInteger get() = BigInteger.valueOf(pts).subtract(BigInteger.valueOf(streamStartPts))
+}
 
 internal data class VideoPreviewToolPins(
     val ffmpeg: Path, val ffmpegSha256: String,
@@ -119,6 +126,78 @@ class VideoMediaProbe internal constructor(
     private val runProcess: (VideoMediaProcessRequest, VideoMediaProcessCancellation) -> VideoMediaProcessResult,
 ) {
     constructor() : this({ request, cancellation -> VideoMediaProcess().run(request, cancellation) })
+
+    private val previewTimingJob = java.util.concurrent.atomic.AtomicLong()
+
+    /** FFprobe's interval start can seek backwards to a keyframe. Require an overlapping
+     * anchor before extending the decoded-order index; never equate an approximate seek
+     * position with a frame number. Each job captures at most 1 MiB of text and 256 frames.
+     * Long GOPs that cannot fit in one window fail closed instead of skipping frames. */
+    internal fun previewPresentation(input: Path, measurement: VideoTakeMeasurementRecord,
+                                     pins: VideoPreviewToolPins, scratch: Path, index: Long,
+                                     cancellation: VideoMediaProcessCancellation): VideoPreviewPresentation {
+        val count = measurement.decodedFrameCount
+        if (index < 0 || index >= count) invalidRequest("Preview frame index $index is outside 0..${count - 1}.")
+        val base = VideoMediaRational(measurement.videoTimeBase.numerator, measurement.videoTimeBase.denominator)
+        if (base.numerator <= 0 || measurement.videoDurationPts <= 0 || count <= 0) invalidMedia("Preview has invalid measured timing.")
+        val end = BigInteger.valueOf(measurement.videoStartPts).add(BigInteger.valueOf(measurement.videoDurationPts))
+        var accepted = 0L
+        var last: Long? = null
+        var target: Long? = null
+        while (true) {
+            checkCancelled(cancellation)
+            val interval = if (last == null) "%+#256" else {
+                // One tick before the anchor prevents decimal rounding from seeking past it.
+                val tick = BigDecimal.valueOf(last).subtract(BigDecimal.ONE)
+                val seconds = tick.multiply(BigDecimal.valueOf(base.numerator))
+                    .divide(BigDecimal.valueOf(base.denominator), 24, RoundingMode.FLOOR)
+                "${seconds.toPlainString()}%+#256"
+            }
+            val result = runProcess(VideoMediaProcessRequest(
+                pins.ffprobe, pins.ffprobeSha256,
+                listOf("-v", "error", "-protocol_whitelist", "file,pipe", "-select_streams", "v:0",
+                    "-read_intervals", interval, "-show_frames", "-show_entries", "frame=best_effort_timestamp",
+                    "-of", "json", input.toString()),
+                scratch.resolve("preview-timing-${previewTimingJob.getAndIncrement()}"), Duration.ofSeconds(30),
+                maxStdoutBytes = 1_048_576, maxStderrBytes = 8192,
+                environment = mapOf("LC_ALL" to "C", "LANG" to "C"), memoryLimitBytes = 512L * 1024 * 1024,
+            ), cancellation).stdout
+            if (result.truncated || result.totalBytes > 1_048_576) invalidMedia("Preview timing metadata exceeds 1 MiB per window.")
+            val frames = try { MANIFEST_JSON.parseToJsonElement(result.text).jsonObject["frames"]?.jsonArray }
+                catch (error: Exception) { invalidMedia("Preview timing metadata is malformed.", cause = error) }
+                ?: invalidMedia("Preview timing metadata has no frame list.")
+            if (frames.size > 256) invalidMedia("Preview timing window exceeds 256 frames.")
+            var preceding: Long? = null
+            var anchored = last == null
+            var newFrames = 0
+            for (frame in frames) {
+                checkCancelled(cancellation)
+                val pts = try { (frame.jsonObject["best_effort_timestamp"] as? JsonPrimitive)?.content?.toLongOrNull() }
+                    catch (_: Exception) { null } ?: invalidMedia("Preview frame has no valid presentation timestamp.")
+                if (preceding != null && pts <= preceding) invalidMedia("Preview has non-increasing presentation timestamps.")
+                preceding = pts
+                if (last == null && accepted == 0L && pts != measurement.videoStartPts) invalidMedia("Preview first timestamp contradicts measured stream start.")
+                if (BigInteger.valueOf(pts) >= end || pts < measurement.videoStartPts) invalidMedia("Preview timestamp contradicts measured video duration.")
+                if (last != null && pts == last) anchored = true
+                if (last != null && !anchored && pts > last) invalidMedia("Preview timing window skipped its decoded-frame anchor.")
+                if (last != null && pts <= last) continue
+                if (accepted == index) target = pts
+                accepted++
+                newFrames++
+                if (accepted > count) invalidMedia("Preview timestamps exceed measured decoded-frame count.")
+                last = pts
+            }
+            if (!anchored) invalidMedia("Preview timing window lost its decoded-frame anchor.")
+            // The interval limit counts packets, not decoded frames. B-frame delay can
+            // make a nonterminal window shorter than 256 frames; keep advancing until
+            // the measured count, never infer end-of-stream from the window length.
+            // A full 256-frame window can itself contain the measured final frame.
+            if (accepted == count) {
+                return VideoPreviewPresentation(index, target ?: invalidMedia("Preview target timestamp is absent."), base, measurement.videoStartPts)
+            }
+            if (newFrames == 0) invalidMedia("Preview timing window cannot advance to the measured decoded-frame count ($accepted/$count).")
+        }
+    }
 
     /** Full probe/decode for a candidate take without creating an encoded derivative. */
     fun inspectTake(

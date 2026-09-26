@@ -121,7 +121,7 @@ class VideoPreviewDecoderTest {
     private fun digest(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString("") { "%02x".format(it) }
     private fun store() = VideoProjectStore(listOf(root.resolve("midi")))
-    private fun persisted(): VideoPreviewOpen {
+    private fun persisted(count: Long = 72, start: Long = 0, duration: Long = 72): VideoPreviewOpen {
         val projectRoot = root.resolve("project")
         val projects = store()
         val empty = projects.create(projectRoot, VideoProject("video", "Video", "2026-09-13T00:00:00Z"))
@@ -131,8 +131,8 @@ class VideoPreviewDecoderTest {
         Files.write(media, bytes)
         val hash = digest(bytes)
         val facts = VideoTakeMeasurementRecord(hash, bytes.size.toLong(), "h264", 320, 180,
-            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(24, 1), 72,
-            VideoTakeRationalRecord(1, 24), 0, 72, 1, 0, 0)
+            VideoTakeRationalRecord(1, 1), VideoTakeRationalRecord(24, 1), count,
+            VideoTakeRationalRecord(1, 24), start, duration, 1, 0, 0)
         val take = VideoTakeRecord(id, VideoArtifact("takes/take.mp4", hash), null, "2026-09-13T00:01:00Z",
             facts, facts, "NONE", VideoTakeProvenanceRecord("video", "request", "attempt", "output", "comfyui-local",
                 "a".repeat(64), "b".repeat(64), null, null, null,
@@ -160,6 +160,118 @@ class VideoPreviewDecoderTest {
              "buildOptions":[${VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString { "\"$it\"" }}],
              "notices":["test"]}
         """.trimIndent())
+    }
+
+    @Test fun `bounded timing resolves actual decoded order at first interior and final with irregular rational cadence`() {
+        val timestamps = listOf(3000L, 4001L, 5002L, 7004L, 8005L)
+        val request = persisted(5, 3000, 6006)
+        tools(request.toolsDirectory)
+        val jobs = mutableListOf<VideoMediaProcessRequest>()
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            jobs += job
+            Files.createDirectory(job.workingDirectory)
+            val text = if ("-version" in job.arguments) {
+                "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+            } else {
+                assertEquals("%+#256", job.arguments[job.arguments.indexOf("-read_intervals") + 1])
+                """{"frames":[${timestamps.joinToString { """{"best_effort_timestamp":$it}""" }}]}"""
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        for (i in listOf(0L, 2L, 4L)) {
+            val time = decoder.presentationAt(admitted, i)
+            assertEquals(timestamps[i.toInt()], time.pts)
+            assertEquals(java.math.BigInteger.valueOf(timestamps[i.toInt()] - 3000), time.relativePts)
+            assertEquals(VideoMediaRational(1, 24), time.timeBase)
+            assertEquals(3000, time.streamStartPts)
+        }
+        val before = jobs.size
+        for (i in listOf(-1L, 5L, Long.MAX_VALUE)) {
+            assertEquals(VideoMediaProbeFailure.INVALID_REQUEST, assertFailsWith<VideoMediaProbeException> {
+                decoder.presentationAt(admitted, i)
+            }.failure)
+        }
+        assertEquals(before, jobs.size, "Invalid indices must not start metadata work")
+        assertTrue(jobs.drop(2).all { it.maxStdoutBytes == 1_048_576 && it.memoryLimitBytes == 512L * 1024 * 1024 && it.timeout == Duration.ofSeconds(30) })
+    }
+
+    @Test fun `exactly 256 decoded frames complete at the bounded window edge`() {
+        val request = persisted(256, 3000, 256)
+        tools(request.toolsDirectory)
+        var metadataCalls = 0
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = if ("-version" in job.arguments) {
+                "${job.executable.fileName} version 9.0.1\nconfiguration: " + VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ")
+            } else {
+                metadataCalls++
+                assertEquals("%+#256", job.arguments[job.arguments.indexOf("-read_intervals") + 1])
+                assertEquals(1_048_576, job.maxStdoutBytes)
+                """{"frames":[${(3000L until 3256L).joinToString { """{"best_effort_timestamp":$it}""" }}]}"""
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        val last = decoder.presentationAt(admitted, 255)
+        assertEquals(3255L, last.pts)
+        assertEquals(java.math.BigInteger.valueOf(255), last.relativePts)
+        assertEquals(VideoMediaRational(1, 24), last.timeBase)
+        assertEquals(1, metadataCalls, "A complete window must not request an anchor-only follow-up")
+    }
+
+    @Test fun `long metadata scans overlap keyframe seeks without keeping a whole timeline`() {
+        val request = persisted(520, 3000, 800)
+        tools(request.toolsDirectory)
+        val intervals = mutableListOf<String>()
+        val decoder = VideoPreviewDecoder(store()) { job, _ ->
+            Files.createDirectory(job.workingDirectory)
+            val text = if ("-version" in job.arguments) "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ") else {
+                val interval = job.arguments[job.arguments.indexOf("-read_intervals") + 1]
+                intervals += interval
+                val seek = if (interval.startsWith("%")) 0 else ((interval.substringBefore('%').toBigDecimal() * 24.toBigDecimal()).toLong() - 3000).toInt()
+                val first = (seek.coerceAtLeast(0) / 250) * 250
+                // FFprobe limits packets: delayed B-frames can make nonterminal
+                // decoded-frame windows shorter than the packet limit.
+                val pts = (first until minOf(first + 255, 520)).map { 3000L + it + it / 7 }
+                """{"frames":[${pts.joinToString { """{"best_effort_timestamp":$it}""" }}]}"""
+            }
+            VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request))
+        assertEquals(3000L + 519 + 519 / 7, decoder.presentationAt(admitted, 519).pts)
+        assertEquals(3, intervals.size)
+        assertTrue(intervals.all { it.endsWith("%+#256") })
+    }
+
+    @Test fun `missing non increasing contradictory and oversized timestamps fail closed`() {
+        val request = persisted(3, 10, 10)
+        tools(request.toolsDirectory)
+        val outcomes = listOf(
+            """{"frames":[{"best_effort_timestamp":10},{},{"best_effort_timestamp":13}]}""",
+            """{"frames":[{"best_effort_timestamp":10},{"best_effort_timestamp":10},{"best_effort_timestamp":13}]}""",
+            """{"frames":[{"best_effort_timestamp":10},{"best_effort_timestamp":12},{"best_effort_timestamp":20}]}""",
+            """{"frames":[{"best_effort_timestamp":10},{"best_effort_timestamp":12}]}""",
+            """{"frames":[{"best_effort_timestamp":10},{"best_effort_timestamp":12},{"best_effort_timestamp":13},{"best_effort_timestamp":14}]}""",
+            """{"frames":[{"best_effort_timestamp":11},{"best_effort_timestamp":12},{"best_effort_timestamp":13}]}""",
+        )
+        outcomes.forEachIndexed { i, response ->
+            val decoder = VideoPreviewDecoder(store()) { job, _ ->
+                Files.createDirectory(job.workingDirectory)
+                val text = if ("-version" in job.arguments) "${job.executable.fileName} version 9.0.1\nconfiguration: " +
+                    VideoMediaProbe.REQUIRED_BUILD_OPTIONS.sorted().joinToString(" ") else response
+                VideoMediaProcessResult(0, VideoMediaProcessOutput(text, text.length.toLong(), false),
+                    VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+            }
+            val admitted = assertIs<VideoPreviewOpenResult.Admitted>(decoder.open(request.copy(scratchDirectory = root.resolve("scratch-$i"))))
+            assertEquals(VideoMediaProbeFailure.INVALID_MEDIA, assertFailsWith<VideoMediaProbeException> {
+                decoder.presentationAt(admitted, 1)
+            }.failure)
+        }
     }
 
     @Test fun `open is lazy read only and authenticates persisted silent take before any extraction`() {

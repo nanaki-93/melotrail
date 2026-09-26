@@ -66,6 +66,26 @@ class VideoMediaProbeTest {
             VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
     }
 
+    @Test fun `bounded preview metadata refuses truncated output before parsing`() {
+        val req = request("bounded-preview")
+        val pins = fake().verifyPreviewTools(req.toolsDirectory, root.resolve("preview-scratch"))
+        val jobs = mutableListOf<VideoMediaProcessRequest>()
+        val probe = VideoMediaProbe { job, _ ->
+            jobs += job
+            VideoMediaProcessResult(0, VideoMediaProcessOutput("{", 1_048_577, true),
+                VideoMediaProcessOutput("", 0, false), Duration.ZERO, job.workingDirectory)
+        }
+        val facts = app.melotrail.video.domain.VideoTakeMeasurementRecord("a".repeat(64), 10, "h264", 320, 180,
+            app.melotrail.video.domain.VideoTakeRationalRecord(1, 1), app.melotrail.video.domain.VideoTakeRationalRecord(24, 1), 4,
+            app.melotrail.video.domain.VideoTakeRationalRecord(1, 24), 0, 4, 1, 0, 0)
+        assertEquals(VideoMediaProbeFailure.INVALID_MEDIA, assertFailsWith<VideoMediaProbeException> {
+            probe.previewPresentation(req.input, facts, pins, root.resolve("preview-scratch"), 3, VideoMediaProcessCancellation())
+        }.failure)
+        assertEquals(1, jobs.size)
+        assertEquals(1_048_576, jobs.single().maxStdoutBytes)
+        assertEquals(30, jobs.single().timeout.seconds)
+    }
+
     @Test fun `preview tool admission shares manifest and reported build checks without media work`() {
         val request = request("preview-tools")
         val jobs = mutableListOf<VideoMediaProcessRequest>()
