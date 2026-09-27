@@ -37,6 +37,10 @@ data class VideoAssemblyPlanningRequest(
     /** A preparation snapshot is required for actions; plain text alone grants no capability. */
     val preparedMotion: VideoPreparedSceneMotion? = null,
     val scheduledActions: List<VideoAssemblyScheduledAction> = emptyList(),
+    /** Explicit requested motions that must not disappear when no control could be scheduled. */
+    val requestedMotionIntents: List<VideoSceneMotionIntent> = emptyList(),
+    /** Explicitly confirmed absence of controlled motion; never inferred from free text. */
+    val motionFreeConfirmed: Boolean = false,
 )
 
 data class VideoAssemblyScheduledAction(
@@ -67,11 +71,15 @@ sealed interface VideoAssemblyPlanResult {
         val assembly: VideoAssembly,
         /** Advisory prompt findings remain visible; they never manufacture an action. */
         val findings: List<VideoAssemblyFinding> = emptyList(),
+        /** None of these proposal states is artifact-verified executable readiness. */
+        val motionState: VideoAssemblyProposalMotionState,
     ) : VideoAssemblyPlanResult
     data class Blocked(val findings: List<VideoAssemblyFinding>) : VideoAssemblyPlanResult {
         init { require(findings.isNotEmpty()) { "Blocked assembly needs an actionable finding" } }
     }
 }
+
+enum class VideoAssemblyProposalMotionState { MOTION_FREE, UNSCHEDULED, SCHEDULED_UNVERIFIED }
 
 /** Partitions the full scene, not short clips to be looped or frozen to fill. */
 class VideoAssemblyPlanner {
@@ -145,7 +153,11 @@ class VideoAssemblyPlanner {
                 requestedSupportFrames = support,
                 chunks = chunks,
                 actions = actionResult.actions,
-            ), advisories)
+            ), advisories, when {
+                actionResult.actions.isNotEmpty() -> VideoAssemblyProposalMotionState.SCHEDULED_UNVERIFIED
+                request.motionFreeConfirmed -> VideoAssemblyProposalMotionState.MOTION_FREE
+                else -> VideoAssemblyProposalMotionState.UNSCHEDULED
+            })
         } catch (invalid: IllegalArgumentException) {
             blocked(VideoAssemblyFindingCode.MALFORMED_PLAN, invalid.message ?: "Invalid assembly identity or text.",
                 "Correct the named assembly input and plan again; no media was opened.")
@@ -168,12 +180,54 @@ class VideoAssemblyPlanner {
             return ActionAdmission(emptyList(), listOf(VideoAssemblyFinding(VideoAssemblyFindingCode.ACTION_RANGE,
                 "At most 256 scheduled actions are supported.", "Reduce the action schedule to at most 256 entries.")))
         }
-        if (request.scheduledActions.isEmpty() && motion != null && motion.promptIssues.any { it.blocksInference }) {
-            return ActionAdmission(emptyList(), motion.promptIssues.filter { it.blocksInference }.map { issue ->
-                VideoAssemblyFinding(VideoAssemblyFindingCode.PROMPT_COMPILATION, issue.message,
+        // Prompt blockers apply to the whole proposal, not only to scheduled controls.
+        motion?.promptIssues?.filter { it.blocksInference }?.forEach { issue ->
+            if (request.scheduledActions.isEmpty()) {
+                findings += VideoAssemblyFinding(VideoAssemblyFindingCode.PROMPT_COMPILATION, issue.message,
                     "Resolve the blocking prompt-compilation finding before planning the scene.")
-            })
+            } else request.scheduledActions.forEach { item ->
+                report(VideoAssemblyFindingCode.PROMPT_COMPILATION, item, issue.message,
+                    "Resolve the blocking prompt-compilation finding for this component before scheduling it.")
+            }
         }
+        if (request.motionFreeConfirmed && (request.requestedMotionIntents.isNotEmpty() ||
+                motion?.controls?.isNotEmpty() == true || request.scheduledActions.isNotEmpty())) {
+            findings += VideoAssemblyFinding(VideoAssemblyFindingCode.ACTION_CONFLICT,
+                "Motion-free confirmation conflicts with requested or scheduled controls.",
+                "Remove the motion-free confirmation or explicitly remove the requested motion controls.")
+        }
+        val unsupported = setOf(VideoSceneMotionIntent.CHARACTER_ACTION, VideoSceneMotionIntent.EFFECT,
+            VideoSceneMotionIntent.CAMERA_OR_AMBIENT)
+        (request.requestedMotionIntents + motion?.controls.orEmpty().map { it.intent }).distinct()
+            .filter { it in unsupported }.forEach { intent ->
+                findings += VideoAssemblyFinding(VideoAssemblyFindingCode.ACTION_UNSUPPORTED,
+                    "Requested ${intent.label} has no full-duration controlled assembly operation.",
+                    "${intent.nextAction} For other motions supply prepared artwork and a supported control; " +
+                        "flat I2V is measured only at 129 frames at 25 fps.")
+            }
+        if (motion?.mode == VideoSceneMotionMode.FLAT_IMAGE_TO_VIDEO && request.requestedMotionIntents.isNotEmpty()) {
+            findings += VideoAssemblyFinding(VideoAssemblyFindingCode.ACTION_UNSUPPORTED,
+                "Flat I2V cannot execute requested regional motion as a continuous scene.",
+                "Prepare separate controlled components and schedule supported actions; flat I2V is measured only at 129 frames at 25 fps.")
+        }
+        if (motion != null && (request.requestedMotionIntents.isNotEmpty() || motion.controls.isNotEmpty()) &&
+            (motion.scene.id != request.preparedSceneId || motion.look.id != request.finishedReferenceId ||
+                motion.look.original.artifact != request.finishedReferenceArtifact ||
+                motion.primaryMotionPrompt != request.primaryText)) {
+            findings += VideoAssemblyFinding(VideoAssemblyFindingCode.ACTION_COMPONENT,
+                "Requested motion does not match the prepared scene, finished reference or exact motion prompt.",
+                "Prepare the selected source and exact motion text again; do not infer controls from free text.")
+        }
+        if (request.scheduledActions.isNotEmpty()) {
+            request.requestedMotionIntents.distinct().filter { requested ->
+                requested !in unsupported && request.scheduledActions.none { it.intent == requested }
+            }.forEach { requested ->
+                findings += VideoAssemblyFinding(VideoAssemblyFindingCode.ACTION_UNSUPPORTED,
+                    "Requested ${requested.label} has no scheduled control in this plan.",
+                    "Schedule a prepared ${requested.label} control with an absolute frame range, or remove the request explicitly.")
+            }
+        }
+        if (request.scheduledActions.isEmpty() || findings.isNotEmpty()) return ActionAdmission(emptyList(), findings)
         val duplicates = request.scheduledActions.groupBy { it.id }.filterValues { it.size > 1 }.keys
         val actions = request.scheduledActions.mapNotNull { item ->
             if (!Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,159}").matches(item.id) || item.id in duplicates) {
@@ -251,8 +305,15 @@ class VideoAssemblyPlanner {
                     VideoAssemblyActionKind.SCENERY_TRAVEL -> control.requestedDefaultValue != 0.0 &&
                         kotlin.math.abs(control.requestedDefaultValue) <= 16384.0
                 }
-            val shape = validControl && viewport?.reviewStatus != VideoComponentReviewStatus.REJECTED &&
-                (!needsSubject || cleanPlates.size == 1 && cleanPlates.single().reviewStatus != VideoComponentReviewStatus.REJECTED) && when (kind) {
+            val rejected = { id: String? -> id != null && motion.componentReviews.any {
+                it.componentId == id && it.status == VideoComponentReviewStatus.REJECTED
+            } }
+            val subject = scene.layers.singleOrNull { it.id ==
+                (if (component is app.melotrail.video.domain.VideoPreparedPose) component.subjectLayerId else capability.targetId) }
+            val shape = validControl && viewport != null && viewport.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+                !rejected(motion.look.id.id) && !rejected(viewport.id) && !rejected(capability.id) &&
+                (!needsSubject || cleanPlates.size == 1 && cleanPlates.single().reviewStatus != VideoComponentReviewStatus.REJECTED &&
+                    !rejected(cleanPlates.single().id)) && when (kind) {
                 VideoAssemblyActionKind.BLINK -> capability.targetType == VideoMotionTargetType.POSE && capability.control == VideoMotionControl.POSE_BLEND &&
                     capability.unit == VideoMotionUnit.RATIO &&
                     item.value > 0 && item.value <= 1 &&
@@ -266,36 +327,50 @@ class VideoAssemblyPlanner {
                 VideoAssemblyActionKind.BREATHING -> capability.control == VideoMotionControl.TRANSLATE_Y &&
                     capability.unit == VideoMotionUnit.PIXELS &&
                     capability.targetType == VideoMotionTargetType.LAYER && scene.layers.any { it.id == capability.targetId && it.kind == VideoLayerKind.SUBJECT &&
-                        it.bounds.coordinateSpaceId == viewport?.bounds?.coordinateSpaceId && it.alpha?.isUsableCutout == true } && item.value in 0.0..4.0 &&
+                        it.bounds.coordinateSpaceId == viewport?.bounds?.coordinateSpaceId && it.alpha?.isUsableCutout == true &&
+                        it.reviewStatus != VideoComponentReviewStatus.REJECTED } && item.value in 0.0..4.0 &&
                     -item.value >= capability.minimum && item.value <= capability.maximum
                 VideoAssemblyActionKind.HEAD_GESTURE -> capability.control == VideoMotionControl.ROTATE &&
                     capability.unit == VideoMotionUnit.DEGREES &&
                     capability.targetType == VideoMotionTargetType.LAYER && scene.layers.any { it.id == capability.targetId && it.kind == VideoLayerKind.SUBJECT &&
-                        it.bounds.coordinateSpaceId == viewport?.bounds?.coordinateSpaceId && it.alpha?.isUsableCutout == true } && item.value in 0.0..3.0 &&
+                        it.bounds.coordinateSpaceId == viewport?.bounds?.coordinateSpaceId && it.alpha?.isUsableCutout == true &&
+                        it.reviewStatus != VideoComponentReviewStatus.REJECTED } && item.value in 0.0..3.0 &&
                     -item.value >= capability.minimum && item.value <= capability.maximum &&
                     scene.masks.filter { it.purpose == VideoMaskPurpose.HEAD_REGION && it.layerIds == listOf(capability.targetId) }
-                        .singleOrNull()?.let { it.alpha?.isUsableCutout == true && it.reviewStatus != VideoComponentReviewStatus.REJECTED } == true
+                        .singleOrNull()?.let { it.alpha?.isUsableCutout == true && it.reviewStatus != VideoComponentReviewStatus.REJECTED &&
+                            it.bounds.coordinateSpaceId == subject?.bounds?.coordinateSpaceId && !rejected(it.id) } == true
                 VideoAssemblyActionKind.STEAM -> capability.control == VideoMotionControl.EFFECT_RATE &&
                     capability.unit == VideoMotionUnit.PER_SECOND &&
                     capability.targetType == VideoMotionTargetType.EFFECT_ANCHOR && item.value > 0 && item.value <= 8 &&
                     item.value in capability.minimum..capability.maximum &&
                     scene.effectAnchors.any { anchor -> anchor.id == capability.targetId &&
-                        scene.layers.any { layer -> layer.id == anchor.layerId && layer.reviewStatus != VideoComponentReviewStatus.REJECTED } &&
+                        anchor.reviewStatus != VideoComponentReviewStatus.REJECTED && !rejected(anchor.id) &&
+                        scene.layers.any { layer -> layer.id == anchor.layerId &&
+                            layer.reviewStatus != VideoComponentReviewStatus.REJECTED && !rejected(layer.id) } &&
                         (anchor.position ?: scene.subjectLandmarks.singleOrNull { it.id == anchor.landmarkId &&
-                            it.reviewStatus != VideoComponentReviewStatus.REJECTED }?.position)?.coordinateSpaceId == viewport?.bounds?.coordinateSpaceId }
+                            it.reviewStatus != VideoComponentReviewStatus.REJECTED && !rejected(it.id) }?.position)?.coordinateSpaceId == viewport?.bounds?.coordinateSpaceId }
                 VideoAssemblyActionKind.SCENERY_TRAVEL -> capability.targetType == VideoMotionTargetType.SCENERY_COVERAGE &&
                     capability.unit == VideoMotionUnit.PIXELS &&
                     capability.control in setOf(VideoMotionControl.TRANSLATE_X, VideoMotionControl.TRANSLATE_Y) &&
                     item.value != 0.0 && kotlin.math.abs(item.value) <= 16384 && item.value in capability.minimum..capability.maximum &&
                     item.startFrame == 0L && item.endFrameExclusive == frames &&
                     scene.sceneryCoverage.any { it.id == capability.targetId &&
+                        it.reviewStatus != VideoComponentReviewStatus.REJECTED && !rejected(it.id) &&
                         it.bounds.coordinateSpaceId == viewport?.bounds?.coordinateSpaceId &&
                         scene.layers.any { layer -> layer.id == it.layerId &&
                             layer.kind in setOf(VideoLayerKind.ENVIRONMENT, VideoLayerKind.SCENERY) &&
-                            layer.reviewStatus != VideoComponentReviewStatus.REJECTED } }
+                            layer.reviewStatus != VideoComponentReviewStatus.REJECTED && !rejected(layer.id) } }
+            }
+            val rejectedConsumed = rejectedConsumedComponents(motion, capability, needsSubject)
+            if (rejectedConsumed.isNotEmpty()) {
+                report(VideoAssemblyFindingCode.ACTION_COMPONENT, item,
+                    "Required prepared components ${rejectedConsumed.joinToString()} have rejected reviews.",
+                    "Replace or correct the rejected artwork, masks or composition relationships and prepare this action again.")
+                return@mapNotNull null
             }
             val requestedValue = if (kind == VideoAssemblyActionKind.BLINK) item.value * capability.maximum else item.value
-            if (!shape || control.requestedMinimum > (if (kind in setOf(VideoAssemblyActionKind.BREATHING, VideoAssemblyActionKind.HEAD_GESTURE)) -item.value else requestedValue) ||
+            if (!shape || (needsSubject && (subject?.reviewStatus == VideoComponentReviewStatus.REJECTED ||
+                    rejected(subject?.id))) || control.requestedMinimum > (if (kind in setOf(VideoAssemblyActionKind.BREATHING, VideoAssemblyActionKind.HEAD_GESTURE)) -item.value else requestedValue) ||
                 control.requestedMaximum < requestedValue || capability.reviewStatus == VideoComponentReviewStatus.REJECTED ||
                 motion.componentReviews.any { it.status == VideoComponentReviewStatus.REJECTED &&
                     it.componentId in setOf(capability.targetId, capability.id,
@@ -346,6 +421,79 @@ class VideoAssemblyPlanner {
             }
         }
         return ActionAdmission(actions.sortedWith(compareBy({ it.range.start }, { it.id })), findings)
+    }
+
+    /** Follow the same consumed regional composition graph as scene preparation. A review on
+     * a connected foreground/mask/relation must not be bypassed by selecting another target. */
+    private fun rejectedConsumedComponents(
+        motion: VideoPreparedSceneMotion,
+        capability: app.melotrail.video.domain.VideoMotionCapability,
+        needsSubject: Boolean,
+    ): List<String> {
+        val scene = motion.scene
+        val layers = linkedSetOf<String>()
+        val masks = linkedSetOf<String>()
+        val ids = linkedSetOf(capability.id, capability.targetId,
+            "${motion.look.id.id}-v${motion.look.id.version}")
+        val spaces = linkedSetOf<String>()
+        fun addLayer(id: String) {
+            if (layers.add(id)) scene.layers.singleOrNull { it.id == id }?.let { spaces += it.bounds.coordinateSpaceId }
+        }
+        when (capability.targetType) {
+            VideoMotionTargetType.LAYER -> addLayer(capability.targetId)
+            VideoMotionTargetType.POSE -> scene.poses.singleOrNull { it.id == capability.targetId }?.let {
+                spaces += it.bounds.coordinateSpaceId
+                addLayer(it.subjectLayerId)
+            }
+            VideoMotionTargetType.EFFECT_ANCHOR -> scene.effectAnchors.singleOrNull { it.id == capability.targetId }?.let {
+                addLayer(it.layerId)
+                it.landmarkId?.let(ids::add)
+            }
+            VideoMotionTargetType.SCENERY_COVERAGE -> scene.sceneryCoverage.singleOrNull { it.id == capability.targetId }?.let {
+                addLayer(it.layerId)
+            }
+        }
+        if (needsSubject) scene.layers.filter { it.kind == VideoLayerKind.ENVIRONMENT && it.bounds.coordinateSpaceId in spaces }
+            .forEach { addLayer(it.id) }
+        scene.layers.filter { it.kind == VideoLayerKind.FOREGROUND && it.bounds.coordinateSpaceId in spaces }
+            .forEach { addLayer(it.id) }
+        // The viewport is always consumed; add it after selecting region-local artwork.
+        scene.layers.filter { it.kind == VideoLayerKind.FINISHED_SCENE }.forEach { addLayer(it.id) }
+        do {
+            val previousSize = layers.size
+            scene.masks.filter { mask -> mask.layerIds.any(layers::contains) }.forEach { mask ->
+                masks += mask.id
+                mask.layerIds.forEach(::addLayer)
+            }
+            scene.depthRelations.filter { it.nearerLayerId in layers || it.fartherLayerId in layers }.forEach {
+                addLayer(it.nearerLayerId)
+                addLayer(it.fartherLayerId)
+                ids += "${it.nearerLayerId}:${it.fartherLayerId}"
+            }
+            scene.occlusionRelations.filter { it.occluderLayerId in layers || it.occludedLayerId in layers }.forEach {
+                addLayer(it.occluderLayerId)
+                addLayer(it.occludedLayerId)
+                masks += it.maskId
+                ids += "${it.occluderLayerId}:${it.occludedLayerId}:${it.maskId}"
+            }
+        } while (layers.size != previousSize)
+        ids += layers
+        ids += masks
+        val rejectedInDescriptor = buildList {
+            scene.layers.filter { it.id in layers && it.reviewStatus == VideoComponentReviewStatus.REJECTED }.forEach { add(it.id) }
+            scene.poses.filter { it.id == capability.targetId && it.reviewStatus == VideoComponentReviewStatus.REJECTED }.forEach { add(it.id) }
+            scene.masks.filter { it.id in masks && it.reviewStatus == VideoComponentReviewStatus.REJECTED }.forEach { add(it.id) }
+            scene.effectAnchors.filter { it.id == capability.targetId && it.reviewStatus == VideoComponentReviewStatus.REJECTED }.forEach { add(it.id) }
+            scene.subjectLandmarks.filter { it.id in ids && it.reviewStatus == VideoComponentReviewStatus.REJECTED }.forEach { add(it.id) }
+            scene.sceneryCoverage.filter { it.id == capability.targetId && it.reviewStatus == VideoComponentReviewStatus.REJECTED }.forEach { add(it.id) }
+            scene.depthRelations.filter { "${it.nearerLayerId}:${it.fartherLayerId}" in ids && it.reviewStatus == VideoComponentReviewStatus.REJECTED }
+                .forEach { add("${it.nearerLayerId}:${it.fartherLayerId}") }
+            scene.occlusionRelations.filter { "${it.occluderLayerId}:${it.occludedLayerId}:${it.maskId}" in ids && it.reviewStatus == VideoComponentReviewStatus.REJECTED }
+                .forEach { add("${it.occluderLayerId}:${it.occludedLayerId}:${it.maskId}") }
+        }
+        return (rejectedInDescriptor + motion.componentReviews.filter {
+            it.status == VideoComponentReviewStatus.REJECTED && it.componentId in ids
+        }.map { it.componentId }).distinct().sorted()
     }
 
     private fun blocked(code: VideoAssemblyFindingCode, explanation: String, remedy: String): VideoAssemblyPlanResult.Blocked =

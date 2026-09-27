@@ -70,8 +70,10 @@ data class VideoAssemblyAction(
             VideoAssemblyActionKind.STEAM -> value > 0 && value <= 8
             VideoAssemblyActionKind.SCENERY_TRAVEL -> value != 0.0 && kotlin.math.abs(value) <= 16384
         }) { "Action '$id' value exceeds the supported ${kind.name} parameter bound" }
-        require(channel.startsWith(if (kind == VideoAssemblyActionKind.SCENERY_TRAVEL) "camera" else "${kind.name.lowercase()}:") &&
-            (kind != VideoAssemblyActionKind.SCENERY_TRAVEL || channel == "camera")) {
+        require(if (kind == VideoAssemblyActionKind.SCENERY_TRAVEL) channel == "camera" else {
+            val prefix = "${kind.name.lowercase()}:"
+            channel.startsWith(prefix) && Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,159}").matches(channel.removePrefix(prefix))
+        }) {
             "Action '$id' channel does not match its supported control kind"
         }
         require(kind in setOf(VideoAssemblyActionKind.STEAM, VideoAssemblyActionKind.SCENERY_TRAVEL) || range.size >= 3) {
@@ -172,6 +174,16 @@ class VideoAssembly private constructor(
             require(action.kind != VideoAssemblyActionKind.SCENERY_TRAVEL ||
                 action.range == VideoAssemblyFrameRange(0, totalFrames)) {
                 "Scenery action '${action.id}' must cover the complete camera trajectory"
+            }
+        }
+        val subjects = actions.filter { it.kind in setOf(VideoAssemblyActionKind.BLINK,
+            VideoAssemblyActionKind.BREATHING, VideoAssemblyActionKind.HEAD_GESTURE) }
+        subjects.forEachIndexed { index, a ->
+            subjects.drop(index + 1).forEach { b ->
+                require(a.channel.substringAfter(':') == b.channel.substringAfter(':') ||
+                    a.range.endExclusive <= b.range.start || b.range.endExclusive <= a.range.start) {
+                    "Subject actions '${a.id}' and '${b.id}' overlap on independent subjects; schedule separately"
+                }
             }
         }
         actions.groupBy { it.channel }.forEach { (channel, group) ->

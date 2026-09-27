@@ -5,6 +5,7 @@ import app.melotrail.video.application.VideoAssemblyPlanResult
 import app.melotrail.video.application.VideoAssemblyPlanner
 import app.melotrail.video.application.VideoAssemblyPlanningRequest
 import app.melotrail.video.application.VideoAssemblyScheduledAction
+import app.melotrail.video.application.VideoAssemblyProposalMotionState
 import app.melotrail.video.application.VideoPreparedMotionInput
 import app.melotrail.video.application.VideoPreparedSceneMotion
 import app.melotrail.video.application.VideoSceneLook
@@ -31,6 +32,8 @@ import app.melotrail.video.domain.VideoCoordinateSpace
 import app.melotrail.video.domain.VideoPreparedLayer
 import app.melotrail.video.domain.VideoPreparedPose
 import app.melotrail.video.domain.VideoPreparedMask
+import app.melotrail.video.domain.VideoSubjectLandmark
+import app.melotrail.video.domain.VideoOcclusionRelation
 import app.melotrail.video.domain.VideoMaskPurpose
 import app.melotrail.video.domain.VideoRect
 import app.melotrail.video.domain.VideoLayerKind
@@ -284,6 +287,9 @@ class VideoAssemblyPlannerTest {
         assertFailsWith<IllegalArgumentException> { assembly.copy(actions = assembly.actions + assembly.actions.first()) }
         assertFailsWith<IllegalArgumentException> { assembly.copy(actions = listOf(assembly.actions.first().copy(value = 10.0))) }
         assertFailsWith<IllegalArgumentException> { assembly.copy(actions = listOf(assembly.actions.first().copy(channel = "camera"))) }
+        assertFailsWith<IllegalArgumentException> { assembly.copy(actions = listOf(assembly.actions.first().copy(channel = "blink:"))) }
+        assertFailsWith<IllegalArgumentException> { assembly.copy(actions = assembly.actions +
+            assembly.actions.first().copy(id = "foreign", channel = "blink:foreign", range = VideoAssemblyFrameRange(1, 10))) }
     }
 
     @Test
@@ -365,6 +371,28 @@ class VideoAssemblyPlannerTest {
     }
 
     @Test
+    fun `overlapping independent prepared subjects cannot become a schedule`() {
+        val motion = preparedMotion()
+        val subject = motion.scene.layers.single { it.id == "subject" }
+        val pose = motion.scene.poses.single()
+        val otherSubject = subject.copy(id = "other-subject")
+        val otherPose = pose.copy(id = "other-blink", subjectLayerId = otherSubject.id)
+        val otherCapability = motion.scene.motionCapabilities.first().copy(id = "other-blink-cap", targetId = otherPose.id)
+        val scene = motion.scene.copy(layers = motion.scene.layers + otherSubject,
+            poses = motion.scene.poses + otherPose, motionCapabilities = motion.scene.motionCapabilities + otherCapability)
+        val otherControl = motion.controls.first().copy(id = "other-blink", capability = otherCapability)
+        val blocked = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+            preparedMotion = motion.copy(scene = scene, controls = motion.controls + otherControl),
+            scheduledActions = listOf(action("first", VideoSceneMotionIntent.BLINK, "blink", 20, 50, 0.7),
+                action("second", VideoSceneMotionIntent.BLINK, "other-blink", 30, 60, 0.7)))))
+        val finding = blocked.findings.single()
+        assertEquals(VideoAssemblyFindingCode.ACTION_CONFLICT, finding.code)
+        assertEquals("other-blink", finding.componentId)
+        assertEquals(30L, finding.startFrame)
+        assertEquals(50L, finding.endFrameExclusive)
+    }
+
+    @Test
     fun `blink amount is a fraction of the prepared pose capability maximum`() {
         val original = preparedMotion()
         val reduced = original.scene.motionCapabilities.map { if (it.id == "blink-cap") it.copy(maximum = 0.5) else it }
@@ -389,12 +417,155 @@ class VideoAssemblyPlannerTest {
         val proposal = assertIs<VideoAssemblyPlanResult.Proposed>(planner.plan(request))
         assertEquals(request.actionText, proposal.assembly.actionText)
         assertTrue(proposal.assembly.actions.isEmpty())
+        assertEquals(VideoAssemblyProposalMotionState.UNSCHEDULED, proposal.motionState)
         assertEquals(listOf(VideoAssemblyFindingCode.PROMPT_COMPILATION), proposal.findings.map { it.code })
         assertTrue(proposal.findings.single().explanation.contains(advisory.message))
         val blocking = advisory.copy(code = VideoPromptIssueCode.USER_GUIDANCE_UNSUPPORTED, blocksInference = true)
         val finding = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(request.copy(
             preparedMotion = request.preparedMotion!!.copy(promptIssues = listOf(blocking))))).findings.single()
         assertEquals(VideoAssemblyFindingCode.PROMPT_COMPILATION, finding.code)
+    }
+
+    @Test
+    fun `empty schedule does not erase explicit unsupported motion or prompt blockers`() {
+        assertEquals(VideoAssemblyProposalMotionState.UNSCHEDULED,
+            assertIs<VideoAssemblyPlanResult.Proposed>(planner.plan(input)).motionState)
+        assertEquals(VideoAssemblyProposalMotionState.MOTION_FREE,
+            assertIs<VideoAssemblyPlanResult.Proposed>(planner.plan(input.copy(
+                primaryText = "  Hold the supplied still scene.\r\n", actionText = null,
+                motionFreeConfirmed = true))).motionState)
+        assertEquals(VideoAssemblyFindingCode.ACTION_CONFLICT,
+            assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+                motionFreeConfirmed = true, requestedMotionIntents = listOf(VideoSceneMotionIntent.BLINK)))).findings.single().code)
+        val motion = preparedMotion()
+        val unscheduled = assertIs<VideoAssemblyPlanResult.Proposed>(planner.plan(input.copy(preparedMotion = motion)))
+        assertEquals(VideoAssemblyProposalMotionState.UNSCHEDULED, unscheduled.motionState)
+        assertEquals(VideoAssemblyProposalMotionState.SCHEDULED_UNVERIFIED,
+            assertIs<VideoAssemblyPlanResult.Proposed>(planner.plan(input.copy(preparedMotion = motion,
+                scheduledActions = listOf(action("blink", VideoSceneMotionIntent.BLINK, "blink", 0, 30, 0.7))))).motionState)
+        val unsupported = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+            requestedMotionIntents = listOf(VideoSceneMotionIntent.CAMERA_OR_AMBIENT)))).findings.single()
+        assertEquals(VideoAssemblyFindingCode.ACTION_UNSUPPORTED, unsupported.code)
+        assertTrue(unsupported.remedy.contains("129 frames at 25 fps"))
+        assertTrue(assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+            preparedMotion = motion.copy(mode = VideoSceneMotionMode.FLAT_IMAGE_TO_VIDEO),
+            requestedMotionIntents = listOf(VideoSceneMotionIntent.BLINK)))).findings.any {
+            it.code == VideoAssemblyFindingCode.ACTION_UNSUPPORTED && it.remedy.contains("129 frames at 25 fps")
+        })
+        assertEquals(VideoAssemblyFindingCode.ACTION_UNSUPPORTED,
+            assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(preparedMotion = motion.copy(
+                controls = motion.controls + motion.controls.first().copy(id = "unsupported",
+                    intent = VideoSceneMotionIntent.CHARACTER_ACTION))))).findings.single().code)
+        val partial = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+            preparedMotion = motion, requestedMotionIntents = listOf(VideoSceneMotionIntent.HEAD_GESTURE),
+            scheduledActions = listOf(action("blink", VideoSceneMotionIntent.BLINK, "blink", 0, 30, 0.7)))))
+        assertEquals(VideoAssemblyFindingCode.ACTION_UNSUPPORTED, partial.findings.single().code)
+        val blocked = motion.copy(promptIssues = listOf(VideoPromptIssue(
+            VideoPromptIssueCode.USER_GUIDANCE_UNSUPPORTED, "Missing motion guidance", true)))
+        for (actions in listOf(emptyList(), listOf(action("blink", VideoSceneMotionIntent.BLINK, "blink", 0, 30, 0.7)))) {
+            assertTrue(assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+                preparedMotion = blocked, scheduledActions = actions))).findings.any {
+                it.code == VideoAssemblyFindingCode.PROMPT_COMPILATION && it.explanation.contains("Missing motion guidance") &&
+                    (actions.isEmpty() || it.startFrame == 0L && it.endFrameExclusive == 30L && it.componentId == "blink")
+            })
+        }
+    }
+
+    @Test
+    fun `rejected dependencies and missing semantic components block each supported action with scoped guidance`() {
+        val motion = preparedMotion()
+        fun reject(prepared: VideoPreparedSceneMotion, item: VideoAssemblyScheduledAction) =
+            assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(preparedMotion = prepared,
+                scheduledActions = listOf(item)))).findings.single().also {
+                assertEquals(VideoAssemblyFindingCode.ACTION_COMPONENT, it.code)
+                assertEquals(item.controlId, it.componentId)
+                assertEquals(item.startFrame, it.startFrame)
+                assertEquals(item.endFrameExclusive, it.endFrameExclusive)
+                assertTrue(it.remedy.isNotBlank())
+            }
+        val blink = action("blink", VideoSceneMotionIntent.BLINK, "blink", 11, 30, 0.8)
+        val breath = action("breath", VideoSceneMotionIntent.BREATHING, "breath", 11, 30, 2.0)
+        val head = action("head", VideoSceneMotionIntent.HEAD_GESTURE, "gesture", 11, 30, 2.0)
+        val steam = action("steam", VideoSceneMotionIntent.STEAM, "steam", 11, 30, 2.0)
+        val travel = action("travel", VideoSceneMotionIntent.SCENERY_TRAVEL, "travel", 0, 7200, 100.0)
+        reject(motion.copy(scene = motion.scene.copy(layers = motion.scene.layers.map {
+            if (it.id == "subject") it.copy(reviewStatus = VideoComponentReviewStatus.REJECTED) else it
+        })), breath)
+        reject(motion.copy(scene = motion.scene.copy(layers = motion.scene.layers.map {
+            if (it.id == "clean") it.copy(reviewStatus = VideoComponentReviewStatus.REJECTED) else it
+        })), blink)
+        reject(motion.copy(scene = motion.scene.copy(masks = emptyList())), head)
+        reject(motion.copy(scene = motion.scene.copy(effectAnchors = motion.scene.effectAnchors.map {
+            it.copy(reviewStatus = VideoComponentReviewStatus.REJECTED)
+        })), steam)
+        reject(motion.copy(scene = motion.scene.copy(sceneryCoverage = motion.scene.sceneryCoverage.map {
+            it.copy(reviewStatus = VideoComponentReviewStatus.REJECTED)
+        })), travel)
+        reject(motion.copy(componentReviews = listOf(app.melotrail.video.application.VideoSceneComponentReview(
+            "subject", app.melotrail.video.application.VideoSceneComponentKind.LAYER,
+            VideoComponentReviewStatus.REJECTED))), head)
+        reject(motion.copy(componentReviews = listOf(app.melotrail.video.application.VideoSceneComponentReview(
+            "steam-anchor", app.melotrail.video.application.VideoSceneComponentKind.EFFECT_ANCHOR,
+            VideoComponentReviewStatus.REJECTED))), steam)
+        val outOfBounds = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(preparedMotion = motion,
+            scheduledActions = listOf(head.copy(value = 4.0))))).findings.single()
+        assertEquals(VideoAssemblyFindingCode.ACTION_COMPONENT, outOfBounds.code)
+        assertEquals(11L, outOfBounds.startFrame)
+    }
+
+    @Test
+    fun `action rejects consumed foreground occlusion and anchor landmark reviews without rejecting unrelated art`() {
+        val motion = preparedMotion()
+        val blink = action("blink", VideoSceneMotionIntent.BLINK, "blink", 11, 30, 0.7)
+        val steam = action("steam", VideoSceneMotionIntent.STEAM, "steam", 31, 60, 2.0)
+        fun rejected(prepared: VideoPreparedSceneMotion, item: VideoAssemblyScheduledAction, id: String) {
+            val finding = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+                preparedMotion = prepared, scheduledActions = listOf(item)))).findings.single()
+            assertEquals(VideoAssemblyFindingCode.ACTION_COMPONENT, finding.code)
+            assertEquals(item.controlId, finding.componentId)
+            assertEquals(item.startFrame, finding.startFrame)
+            assertEquals(item.endFrameExclusive, finding.endFrameExclusive)
+            assertTrue(finding.explanation.contains(id), "Missing rejected component $id: ${finding.explanation}")
+            assertTrue(finding.remedy.isNotBlank())
+        }
+        val foreground = motion.scene.layers.single { it.id == "subject" }.copy(id = "foreground", kind = VideoLayerKind.FOREGROUND)
+        val occlusion = motion.scene.masks.single().copy(id = "occlusion", purpose = VideoMaskPurpose.OCCLUSION,
+            layerIds = listOf("subject", "foreground"))
+        val relation = VideoOcclusionRelation("foreground", "subject", "occlusion")
+        val composed = motion.copy(scene = motion.scene.copy(layers = motion.scene.layers + foreground,
+            masks = motion.scene.masks + occlusion, occlusionRelations = listOf(relation)))
+        // The target subject and blink pose remain usable. These are additional consumed inputs.
+        rejected(composed.copy(scene = composed.scene.copy(layers = composed.scene.layers.map {
+            if (it.id == foreground.id) it.copy(reviewStatus = VideoComponentReviewStatus.REJECTED) else it
+        })), blink, "foreground")
+        rejected(composed.copy(componentReviews = listOf(app.melotrail.video.application.VideoSceneComponentReview(
+            foreground.id, app.melotrail.video.application.VideoSceneComponentKind.LAYER,
+            VideoComponentReviewStatus.REJECTED))), blink, "foreground")
+        rejected(composed.copy(scene = composed.scene.copy(masks = composed.scene.masks.map {
+            if (it.id == occlusion.id) it.copy(reviewStatus = VideoComponentReviewStatus.REJECTED) else it
+        })), blink, "occlusion")
+        rejected(composed.copy(scene = composed.scene.copy(occlusionRelations = listOf(
+            relation.copy(reviewStatus = VideoComponentReviewStatus.REJECTED)))), blink, "foreground:subject:occlusion")
+        rejected(composed.copy(componentReviews = listOf(app.melotrail.video.application.VideoSceneComponentReview(
+            "foreground:subject:occlusion", app.melotrail.video.application.VideoSceneComponentKind.OCCLUSION_RELATION,
+            VideoComponentReviewStatus.REJECTED))), blink, "foreground:subject:occlusion")
+        rejected(motion.copy(componentReviews = listOf(app.melotrail.video.application.VideoSceneComponentReview(
+            "finished-1-v1", app.melotrail.video.application.VideoSceneComponentKind.FINISHED_LOOK,
+            VideoComponentReviewStatus.REJECTED))), blink, "finished-1-v1")
+        val landmark = VideoSubjectLandmark("cup", "subject", VideoPlacedPoint("scene", VideoPoint(15.0, 15.0)))
+        val anchored = motion.copy(scene = motion.scene.copy(subjectLandmarks = listOf(landmark),
+            effectAnchors = listOf(motion.scene.effectAnchors.single().copy(landmarkId = landmark.id, position = null))))
+        rejected(anchored.copy(scene = anchored.scene.copy(subjectLandmarks = listOf(
+            landmark.copy(reviewStatus = VideoComponentReviewStatus.REJECTED)))), steam, "cup")
+        rejected(anchored.copy(componentReviews = listOf(app.melotrail.video.application.VideoSceneComponentReview(
+            landmark.id, app.melotrail.video.application.VideoSceneComponentKind.SUBJECT_LANDMARK,
+            VideoComponentReviewStatus.REJECTED))), steam, "cup")
+        // An explicit-position anchor does not consume an unrelated landmark.
+        assertEquals(VideoAssemblyProposalMotionState.SCHEDULED_UNVERIFIED,
+            assertIs<VideoAssemblyPlanResult.Proposed>(planner.plan(input.copy(
+                preparedMotion = motion.copy(scene = motion.scene.copy(subjectLandmarks = listOf(
+                    landmark.copy(reviewStatus = VideoComponentReviewStatus.REJECTED)))),
+                scheduledActions = listOf(steam)))).motionState)
     }
 
     private fun action(id: String, intent: VideoSceneMotionIntent, control: String, start: Long, end: Long, value: Double) =
