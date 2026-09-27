@@ -350,6 +350,34 @@ not a test dependency or permission implied by this planning reset.
 | VG3-07 | Implement bounded off-UI-thread frame decoding and one silent preview session, with accurate seek/frame-step, corrupt-file errors and owned-process teardown. This backend slice can proceed while design review waits. | VG2-02 | TODO |
 | VG3-08 | Expose moving take playback with play/pause/seek/frame-step and resize through that decoder. Prove actual frames in an app-window capture and stop preview on departure without creating a MIDI player. | VG3-06, VG3-07 | TODO |
 
+VG3-07 integration check (2026-09-26, pending independent review): candidate
+`27b670cc94e9d19e23d3913cd4a4ecaa5a18d438` plus uncommitted backend repair and this evidence note;
+unrelated untracked `.venv-transcription-spike/`, `.venv-worker/`, `.venv/` and
+`tools/__pycache__/` remain untouched. The combined decoder/session uses read-only
+project artifact resolution, manifest/hash/build-pinned tools, bounded rational
+presentation scans, PNG staging and pixel budgets, owned cancellation/teardown
+and lazy construction. Focused root preview/media/import/store/architecture/docs
+suites passed with six tasks executed; focused desktop MIDI startup/composition
+passed with one executed and ten up-to-date. The motion fixture selector passed
+(one executed, five up-to-date), and Node motion suites passed 22/22. `make test`
+passed (two executed, twelve up-to-date), `make build` passed (fourteen up-to-date),
+and `git diff --check` passed. Command logs are under ignored
+`build/vg3/step-3.1/`; XML is under `build/test-results/test/` and
+`desktopApp/build/test-results/test/`. This fixture-backed engineering evidence
+is not native decoder proof. Review found prefix timing/decode work on each
+seek/playback frame despite bounded outputs. The repair caches at most 512 sparse
+timing anchors and a 256-frame recent window, seeks before FFmpeg input, selects
+measured PTS and rejects mismatched showinfo timestamps. Fake 9,000-frame
+backward seek/playback and wrong-PTS regressions pass; this is not a native speed
+measurement. Final repair logs: `build/vg3/step-3.1-repair/{focused-final,desktop-final,motion-final,node-final,make-test-final,make-build-final,diff-check-final}.log`. A subsequent review found cold long seeks still rescanned the prefix: 8,997 required 30–60 metadata invocations. The uncommitted cold-seek repair reads a capped MP4 timing table (including bounded composition-offset reorder), identifies the decoded ordinal within a fixed neighborhood, and corroborates its PTS in one bounded local FFprobe window; unsupported/contradictory indexes fail closed. Fixture tests check near/far cold seek count, reordered samples, absent target timestamp and long playback. Current candidate results: `build/vg3/step-3.1-cold-repair/{focused-ctts-final,desktop-final,motion-final,node-final,make-test-final,make-build-final}.log` (root 6 executed; desktop 1 executed/10 up-to-date; motion 1 executed/5 up-to-date; Node 22/22; make test 2 executed/12 up-to-date; make build 14 up-to-date). These synthetic MP4 tables and injected process responses are not a measured native MP4 decoder result. An independent review found that rejecting all edit lists excluded the repository's real owned-motion.mp4 fixture and common identity-edited MP4s from cold seeking. The repair accepts only one full-duration, rate-one edit from media time zero after checking movie/track time scales and duration. Pure parsing of the unchanged owned MP4 fixture now confirms first/interior/last timing; a long synthetic identity-edited take confirms one-probe cold seeks and playback, while shifted/partial edits remain rejected. No native probe was launched. Updated verification logs: `build/vg3/step-3.1-identity-edit/{focused,desktop,motion,node,make-test,make-build,diff-check}.log`. Other unsupported edits and tables beyond 1 MiB fail closed rather than guessing frame identity.
+Focused root passed (6 executed), desktop passed (1 executed/10 up-to-date),
+motion passed (1 executed/5 up-to-date), Node passed (22/22), `make test`
+passed (2 executed/12 up-to-date), `make build` passed (14 up-to-date).
+`:videoMediaProbe` was not run without newly selected pinned tools, fresh output
+and bounded authorization. VG2-03's native ladder,
+VG3 design approval/UI, app-window moving capture, artistic acceptance and overall
+VG3 completion remain open; the queue status awaits review.
+
 **Owners by slice:**
 - Design: proposed `.mockups/flows/video-workspace/` and shared `.mockups/design-system/`,
   following [UI guideline](docs/UI_GUIDELINE.md). Use standalone HTML/CSS/JS,
@@ -374,8 +402,19 @@ No production surface may outrun VG3-03 approval; material changes need renewed 
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
-| VG4-01 | Persist a versioned exact-frame continuous plan with shared clock/seed, action schedule, component reuse and chunk ranges. Replace short-shot/repeat planning after moving required prompt/fingerprint/estimate behavior behind tests; remove exclusive obsolete callers/fields/tests, not historical assets. | VG2-03 | TODO |
+| VG4-01 | Persist a versioned exact-frame continuous plan with shared clock/seed, action schedule, component reuse and chunk ranges. Replace short-shot/repeat planning after moving required prompt/fingerprint/estimate behavior behind tests; remove exclusive obsolete callers/fields/tests, not historical assets. | VG2-02 | TODO |
 | VG4-02 | Validate full-duration camera/depth/occlusion/scenery coverage and compile continuous subject/effect/scenery state across chunks, including resume and boundary support frames. Missing coverage blocks readiness; edits invalidate only affected work. | VG4-01 | TODO |
+
+User decision (2026-09-27): the user reports manually verifying VG2-03 but no
+longer has its native run evidence. At the user's explicit request, VG4-01 now
+depends on the completed VG2-02 backend boundary rather than VG2-03. This waives
+the native-preview *admission dependency for VG4 only*, not its missing proof:
+VG2-03 remains WAITING_USER/unverified, and no 150/600/900-frame native results,
+paths, receipts or artistic approval are claimed. VG4 must still pass its own
+focused/full technical gates; this waiver does not satisfy VG3-06 or other
+VG2-03 dependencies. At the user's request the VG4 workflow plan's admission
+rule is reconciled with this decision; its task checkboxes and validation gates
+remain unchanged.
 
 **Owners:** new `core/video/domain/VideoAssembly.kt`,
 `core/video/application/VideoAssemblyPlanner.kt`; current `VideoBrief.kt`,
