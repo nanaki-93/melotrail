@@ -113,6 +113,29 @@ class VideoAssemblyPlannerTest {
     }
 
     @Test
+    fun `all durations and bounded support profiles cover each delivered frame once`() {
+        for (seconds in 180L..300L) {
+            for ((support, outputLimit) in listOf(0 to 1, 1 to 300, 8 to 284, 149 to 300)) {
+                val assembly = proposed(input.copy(durationSeconds = seconds,
+                    supportFramesPerSide = support, maximumOutputFramesPerChunk = outputLimit))
+                val delivered = BooleanArray(assembly.totalFrames.toInt())
+                assembly.chunks.forEach { chunk ->
+                    assertTrue(chunk.render.size <= MAX_RENDER_FRAMES)
+                    assertTrue(chunk.render.start >= 0 && chunk.render.endExclusive <= assembly.totalFrames)
+                    assertEquals(minOf(support.toLong(), chunk.output.start), chunk.supportBefore.toLong())
+                    assertEquals(minOf(support.toLong(), assembly.totalFrames - chunk.output.endExclusive),
+                        chunk.supportAfter.toLong())
+                    for (frame in chunk.output.start until chunk.output.endExclusive) {
+                        assertTrue(!delivered[frame.toInt()], "Frame $frame delivered more than once")
+                        delivered[frame.toInt()] = true
+                    }
+                }
+                assertTrue(delivered.all { it }, "$seconds seconds with $support support left a delivery gap")
+            }
+        }
+    }
+
+    @Test
     fun `same input replays with exact authored text and versioned pins`() {
         val a = proposed(input)
         assertEquals(a, proposed(input))
@@ -206,6 +229,19 @@ class VideoAssemblyPlannerTest {
         assertFailsWith<IllegalArgumentException> { valid.copy(schemaVersion = 2) }
         assertFailsWith<IllegalArgumentException> { valid.copy(seed = MAX_SAFE_FRAME_INTEGER + 1) }
         assertFailsWith<IllegalArgumentException> { valid.copy(requestedSupportFrames = 0) }
+        // Support may clip only at the outer scene edges, never at an internal chunk edge.
+        assertFailsWith<IllegalArgumentException> {
+            valid.copy(chunks = valid.chunks.toMutableList().also {
+                it[0] = it[0].copy(render = VideoAssemblyFrameRange(0, first.output.endExclusive), supportAfter = 0)
+            })
+        }
+        assertFailsWith<IllegalArgumentException> {
+            valid.copy(chunks = valid.chunks.toMutableList().also {
+                val last = it.lastIndex
+                it[last] = it[last].copy(render = VideoAssemblyFrameRange(it[last].output.start,
+                    it[last].output.endExclusive), supportBefore = 0)
+            })
+        }
         assertFailsWith<IllegalArgumentException> {
             VideoAssemblyChunk(VideoAssemblyFrameRange(0, 300), VideoAssemblyFrameRange(0, 301), 0, 1)
         }
