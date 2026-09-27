@@ -19,6 +19,9 @@ import app.melotrail.video.domain.MAX_RENDER_FRAMES
 import app.melotrail.video.domain.MAX_SAFE_FRAME_INTEGER
 import app.melotrail.video.domain.VideoArtifact
 import app.melotrail.video.domain.VideoAssemblyChunk
+import app.melotrail.video.domain.VideoAssemblyDependency
+import app.melotrail.video.domain.VideoAssemblyActionDependencies
+import app.melotrail.video.domain.VideoAssembly
 import app.melotrail.video.domain.VideoAssemblyFrameRange
 import app.melotrail.video.domain.VideoVersionedId
 import app.melotrail.video.domain.VideoAssemblyActionKind
@@ -68,6 +71,9 @@ class VideoAssemblyPlannerTest {
         actionText = "  Blink once.\n  ", cameraText = "  slow drift\r\n ",
         motionText = "  soft motion  ", styleText = "  preserve ink  ",
         guidelineTexts = listOf("  Retain the linework.\n"), durationSeconds = 240, seed = 73,
+        trajectoryDependencies = listOf(VideoAssemblyDependency("trajectory.camera", "0".repeat(64))),
+        compilerVersion = "assembly-compiler-v1", rendererVersion = "controlled-renderer-v1",
+        runtimeVersion = "motion-runtime-schema3-tool1.1.0",
     )
 
     @Test
@@ -566,6 +572,196 @@ class VideoAssemblyPlannerTest {
                 preparedMotion = motion.copy(scene = motion.scene.copy(subjectLandmarks = listOf(
                     landmark.copy(reviewStatus = VideoComponentReviewStatus.REJECTED)))),
                 scheduledActions = listOf(steam)))).motionState)
+    }
+
+    @Test
+    fun `work identity is canonical and excludes replacement provenance and unused preparation`() {
+        val motion = preparedMotion()
+        val blink = action("blink", VideoSceneMotionIntent.BLINK, "blink", 300, 330, 0.7)
+        val request = input.copy(preparedMotion = motion, scheduledActions = listOf(blink), supportFramesPerSide = 8)
+        val old = proposed(request)
+        val replacement = proposed(request.copy(id = VideoVersionedId("assembly-1", 2),
+            preparedSceneId = VideoVersionedId("prepared-1", 3),
+            preparedMotion = motion.copy(scene = motion.scene.copy(id = VideoVersionedId("prepared-1", 3),
+                createdAt = "2026-09-27T00:00:00Z", layers = motion.scene.layers +
+                    motion.scene.layers.single { it.id == "landscape" }.copy(id = "unused")))))
+        assertTrue(old.provenanceFingerprint != replacement.provenanceFingerprint)
+        assertEquals(old.work.map { it.fingerprint }, replacement.work.map { it.fingerprint })
+        val pending = old.work.map { it.id }.toSet()
+        val completed = listOf(VideoVersionedId("take", 1))
+        val same = planner.invalidatePending(old, replacement, pending, completed)
+        assertEquals(emptyList(), same.invalidatedPendingWorkIds)
+        assertEquals(old.work.map { it.id }, same.unaffectedPendingWorkIds)
+        assertEquals(completed, same.retainedCompletedTakeIds)
+        assertEquals(old.work, Json.decodeFromString<VideoAssembly>(Json.encodeToString(old)).work)
+        assertFailsWith<IllegalArgumentException> { old.copy(seed = 74) }
+        assertFailsWith<IllegalArgumentException> { old.copy(executionDependencies = emptyList()) }
+        assertFailsWith<IllegalArgumentException> { old.copy(executionDependencies =
+            old.executionDependencies.filterNot { it.key == "trajectory.camera" }) }
+        assertFailsWith<UnsupportedOperationException> {
+            (old.actionDependencies.single().dependencies as MutableList).clear()
+        }
+        assertFailsWith<IllegalArgumentException> { planner.invalidatePending(old, replacement, setOf("unknown"), completed) }
+        val changedGlobal = listOf(
+            request.copy(seed = 74), request.copy(runtimeVersion = "motion-runtime-schema4-tool1.2.0"),
+            request.copy(trajectoryDependencies = listOf(VideoAssemblyDependency("trajectory.camera", "1".repeat(64)))),
+            request.copy(cameraText = "different"), request.copy(finishedReferenceArtifact =
+                VideoArtifact("references/finished.png", "2".repeat(64))),
+        )
+        changedGlobal.forEach { changed ->
+            // A changed source requires preparing against that source; use motion-free proposal for pin test below.
+            if (changed.finishedReferenceArtifact != request.finishedReferenceArtifact) return@forEach
+            val next = proposed(changed.copy(id = VideoVersionedId("assembly-1", 2)))
+            assertEquals(old.work.map { it.id }, planner.invalidatePending(old, next, pending, completed).invalidatedPendingWorkIds)
+        }
+        val static = proposed(input)
+        val replacedArt = proposed(input.copy(finishedReferenceArtifact =
+            VideoArtifact("references/finished.png", "2".repeat(64))))
+        assertTrue(static.work.zip(replacedArt.work).all { (a, b) -> a.fingerprint != b.fingerprint })
+    }
+
+    @Test
+    fun `local action changes reach intersecting support and steam tails but not distant chunks`() {
+        val motion = preparedMotion()
+        val request = input.copy(preparedMotion = motion, supportFramesPerSide = 8,
+            scheduledActions = listOf(action("blink", VideoSceneMotionIntent.BLINK, "blink", 300, 330, 0.7),
+                action("steam", VideoSceneMotionIntent.STEAM, "steam", 276, 282, 2.0)))
+        val old = proposed(request)
+        val pending = old.work.map { it.id }.toSet()
+        fun changed(actions: List<VideoAssemblyScheduledAction>) = planner.invalidatePending(old,
+            proposed(request.copy(id = VideoVersionedId("assembly-1", 2), scheduledActions = actions)),
+            pending, listOf(VideoVersionedId("completed", 9))).invalidatedPendingWorkIds
+        val blink = request.scheduledActions.first()
+        val steam = request.scheduledActions.last()
+        assertEquals(listOf(old.work[1].id), changed(listOf(blink.copy(value = 0.5), steam)))
+        // Steam stops birthing at 282, yet its particles are still visible in chunk 1.
+        assertEquals(listOf(old.work[0].id, old.work[1].id), changed(listOf(blink, steam.copy(value = 3.0))))
+        assertEquals(listOf(old.work[0].id, old.work[1].id), changed(listOf(blink, steam.copy(endFrameExclusive = 281))))
+        // Support makes an otherwise local change visible to both adjacent render invocations.
+        val boundary = action("boundary", VideoSceneMotionIntent.BLINK, "blink", 280, 285, 0.7)
+        val first = proposed(request.copy(scheduledActions = listOf(boundary)))
+        val second = proposed(request.copy(scheduledActions = listOf(boundary.copy(value = 0.5))))
+        assertEquals(first.work.take(2).map { it.id }, planner.invalidatePending(first, second,
+            first.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+        val camera = action("travel", VideoSceneMotionIntent.SCENERY_TRAVEL, "travel", 0, 7200, 100.0)
+        val travel = proposed(request.copy(scheduledActions = listOf(camera)))
+        val travelChanged = proposed(request.copy(scheduledActions = listOf(camera.copy(value = 101.0))))
+        assertEquals(travel.work.map { it.id }, planner.invalidatePending(travel, travelChanged,
+            travel.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+    }
+
+    @Test
+    fun `consumed placements and capabilities invalidate only affected work and conflicts reject`() {
+        val motion = preparedMotion()
+        val blink = action("blink", VideoSceneMotionIntent.BLINK, "blink", 310, 340, 0.7)
+        val request = input.copy(preparedMotion = motion, scheduledActions = listOf(blink), supportFramesPerSide = 8)
+        val old = proposed(request)
+        val changedPose = motion.scene.poses.single().copy(image = motion.scene.poses.single().image.copy(
+            artifact = VideoArtifact("images/pose.png", "7".repeat(64))))
+        val changed = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(poses = listOf(changedPose)))))
+        assertEquals(listOf(old.work[1].id), planner.invalidatePending(old, changed,
+            old.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+        val changedCapability = motion.scene.motionCapabilities.map {
+            if (it.id == "blink-cap") it.copy(maximum = 0.9) else it
+        }
+        val capMotion = motion.copy(scene = motion.scene.copy(motionCapabilities = changedCapability),
+            controls = motion.controls.map { if (it.id == "blink") it.copy(capability = changedCapability.first(),
+                requestedMaximum = 0.9) else it })
+        val cap = proposed(request.copy(preparedMotion = capMotion))
+        assertEquals(listOf(old.work[1].id), planner.invalidatePending(old, cap,
+            old.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+        val conflict = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(request.copy(
+            trajectoryDependencies = input.trajectoryDependencies + VideoAssemblyDependency("seed", "0".repeat(64)))))
+        assertEquals(VideoAssemblyFindingCode.MALFORMED_PLAN, conflict.findings.single().code)
+        assertTrue(conflict.findings.single().explanation.contains("seed"))
+        val duplicated = proposed(request.copy(trajectoryDependencies = input.trajectoryDependencies + listOf(
+            VideoAssemblyDependency("camera-extra", "1".repeat(64)), VideoAssemblyDependency("camera-extra", "1".repeat(64)))))
+        assertEquals(1, duplicated.executionDependencies.count { it.key == "camera-extra" })
+        assertFailsWith<IllegalArgumentException> { old.copy(actionDependencies = listOf(
+            VideoAssemblyActionDependencies("blink", listOf(VideoAssemblyDependency("x", "0".repeat(64)),
+                VideoAssemblyDependency("x", "1".repeat(64))))) + old.actionDependencies.drop(1)) }
+    }
+
+    @Test
+    fun `synthesized action keys cannot conflict with supplied or scoped dependencies`() {
+        val request = input.copy(preparedMotion = preparedMotion(), scheduledActions = listOf(
+            action("blink", VideoSceneMotionIntent.BLINK, "blink", 310, 340, 0.7)))
+        val supplied = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(request.copy(
+            trajectoryDependencies = request.trajectoryDependencies +
+                VideoAssemblyDependency("action.blink", "0".repeat(64)))))
+        assertEquals(VideoAssemblyFindingCode.MALFORMED_PLAN, supplied.findings.single().code)
+        assertTrue(supplied.findings.single().explanation.contains("action.blink"))
+        assertTrue(supplied.findings.single().remedy.isNotBlank())
+
+        val valid = proposed(request)
+        assertTrue(valid.work.any { chunk -> chunk.dependencies.any { it.key == "action.blink" } })
+        assertFailsWith<IllegalArgumentException> {
+            valid.copy(actionDependencies = valid.actionDependencies.map { binding ->
+                binding.copy(dependencies = binding.dependencies +
+                    VideoAssemblyDependency("action.blink", "0".repeat(64)))
+            })
+        }
+    }
+
+    @Test
+    fun `rendered plate changes stale chunks outside the action while unselected scenery does not`() {
+        val motion = preparedMotion()
+        val request = input.copy(preparedMotion = motion, scheduledActions = listOf(
+            action("blink", VideoSceneMotionIntent.BLINK, "blink", 310, 340, 0.7)))
+        val old = proposed(request)
+        val plate = motion.scene.layers.single { it.id == "clean" }
+        val changedPlate = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+            layers = motion.scene.layers.map { if (it.id == plate.id) it.copy(image = it.image.copy(
+                artifact = VideoArtifact("images/clean.png", "9".repeat(64)))) else it }))))
+        assertEquals(old.work.map { it.id }, planner.invalidatePending(old, changedPlate,
+            old.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+        assertTrue(old.work.first().dependencies.any { it.key == "layer.clean" })
+        val landscape = motion.scene.layers.single { it.id == "landscape" }
+        val changedScenery = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+            layers = motion.scene.layers.map { if (it.id == landscape.id) it.copy(image = it.image.copy(
+                artifact = VideoArtifact("images/landscape.png", "8".repeat(64)))) else it }))))
+        assertEquals(old.work.map { it.id }, planner.invalidatePending(old, changedScenery,
+            old.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+        assertTrue(old.work.first().dependencies.any { it.key == "coverage.coverage" })
+        val unused = motion.scene.layers.single { it.id == "landscape" }.copy(id = "unselected-scenery")
+        val extra = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+            layers = motion.scene.layers + unused))))
+        assertEquals(old.work.map { it.fingerprint }, extra.work.map { it.fingerprint })
+    }
+
+    @Test
+    fun `missing trajectory rejects and changing its consumed pin stales every chunk`() {
+        val missing = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(trajectoryDependencies = emptyList())))
+        assertEquals(VideoAssemblyFindingCode.MALFORMED_PLAN, missing.findings.single().code)
+        assertTrue(missing.findings.single().explanation.contains("trajectory.camera"))
+        val old = proposed(input)
+        val changed = proposed(input.copy(trajectoryDependencies = listOf(
+            VideoAssemblyDependency("trajectory.camera", "1".repeat(64)))))
+        assertEquals(old.work.map { it.id }, planner.invalidatePending(old, changed,
+            old.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+    }
+
+    @Test
+    fun `selected control ID disambiguates controls with the same intent target and capability`() {
+        val motion = preparedMotion()
+        val alternative = motion.controls.single { it.id == "blink" }.copy(id = "blink-alternative",
+            requestedMaximum = 0.8, fingerprint = "1".repeat(64))
+        val both = motion.copy(controls = motion.controls + alternative)
+        val selected = action("blink", VideoSceneMotionIntent.BLINK, alternative.id, 310, 340, 0.7)
+        val request = input.copy(preparedMotion = both, scheduledActions = listOf(selected))
+        val old = proposed(request)
+        assertTrue(old.actionDependencies.single().dependencies.any { it.key == "control.blink" &&
+            it.sha256 == app.melotrail.video.domain.assemblyDigest(listOf(alternative.id, alternative.intent.name,
+                alternative.requestedMinimum, alternative.requestedMaximum, alternative.requestedDefaultValue).joinToString(":")) })
+        val changedOther = proposed(request.copy(preparedMotion = both.copy(controls = both.controls.map {
+            if (it.id == "blink") it.copy(requestedMaximum = 0.9) else it
+        })))
+        assertEquals(old.work.map { it.fingerprint }, changedOther.work.map { it.fingerprint })
+        val changedSelected = proposed(request.copy(preparedMotion = both.copy(controls = both.controls.map {
+            if (it.id == alternative.id) it.copy(requestedMaximum = 0.9) else it
+        })))
+        assertEquals(listOf(old.work[1].id), planner.invalidatePending(old, changedSelected,
+            old.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
     }
 
     private fun action(id: String, intent: VideoSceneMotionIntent, control: String, start: Long, end: Long, value: Double) =

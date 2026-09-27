@@ -194,7 +194,7 @@ or compact upload JPEG (`tabi-banner-step-2-funky-tabi-upload.jpg`)
 for review. This variant remains proposed pending explicit approval.
 
 The supplied visual references are preserved under
-`pictures/video/inspiration/` (`inspiration`) as inspiration-only
+`pictures/video/ideas` (`inspiration`) as inspiration-only
 material. Borrow only broad fashion attitude, tangible beatnik/pop accessories,
 flat palette and minimal-shading principles; do not reproduce their artwork,
 embedded text or watermarks.
@@ -232,7 +232,7 @@ uses rounded stacked bubble letters and a three-quarter headphone portrait; and
 D — Liquid Station (`tabi-eki-signature-d-liquid-station.png`)
 uses dense liquid lettering with Tabi nested in a vinyl-record badge. These are
 raster direction studies, not approved logos or font identifications. The four
-supplied typography images are preserved under `pictures/video/inspiration/`
+supplied typography images are preserved under `pictures/video/ideas`
 and contribute only broad period traits; their phrases, glyph drawings, layouts
 and watermark are not to be reproduced.
 

@@ -15,6 +15,13 @@ import app.melotrail.video.domain.VideoMotionTargetType
 import app.melotrail.video.domain.VideoMotionUnit
 import app.melotrail.video.domain.VideoAssemblyFrameRange
 import app.melotrail.video.domain.VideoVersionedId
+import app.melotrail.video.domain.VideoAssemblyDependency
+import app.melotrail.video.domain.VideoAssemblyActionDependencies
+import app.melotrail.video.domain.VideoAssemblyWork
+import app.melotrail.video.domain.assemblyDigest
+import app.melotrail.video.domain.canonicalAssemblyDependencies
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /** Inputs are values only: planning never opens source artwork or starts a media process. */
 data class VideoAssemblyPlanningRequest(
@@ -41,6 +48,11 @@ data class VideoAssemblyPlanningRequest(
     val requestedMotionIntents: List<VideoSceneMotionIntent> = emptyList(),
     /** Explicitly confirmed absence of controlled motion; never inferred from free text. */
     val motionFreeConfirmed: Boolean = false,
+    /** Must include trajectory.camera, the digest of the consumed full-scene camera path. */
+    val trajectoryDependencies: List<VideoAssemblyDependency>,
+    val compilerVersion: String,
+    val rendererVersion: String,
+    val runtimeVersion: String,
 )
 
 data class VideoAssemblyScheduledAction(
@@ -80,6 +92,12 @@ sealed interface VideoAssemblyPlanResult {
 }
 
 enum class VideoAssemblyProposalMotionState { MOTION_FREE, UNSCHEDULED, SCHEDULED_UNVERIFIED }
+
+data class VideoAssemblyInvalidation(
+    val invalidatedPendingWorkIds: List<String>,
+    val unaffectedPendingWorkIds: List<String>,
+    val retainedCompletedTakeIds: List<VideoVersionedId>,
+)
 
 /** Partitions the full scene, not short clips to be looped or frozen to fill. */
 class VideoAssemblyPlanner {
@@ -153,6 +171,11 @@ class VideoAssemblyPlanner {
                 requestedSupportFrames = support,
                 chunks = chunks,
                 actions = actionResult.actions,
+                executionDependencies = globalDependencies(request),
+                actionDependencies = actionResult.actions.map { action ->
+                    VideoAssemblyActionDependencies(action.id, consumedActionDependencies(request, action,
+                        actionResult.controlIds.getValue(action.id)))
+                },
             ), advisories, when {
                 actionResult.actions.isNotEmpty() -> VideoAssemblyProposalMotionState.SCHEDULED_UNVERIFIED
                 request.motionFreeConfirmed -> VideoAssemblyProposalMotionState.MOTION_FREE
@@ -164,9 +187,164 @@ class VideoAssemblyPlanner {
         }
     }
 
+    /** Compare only pending chunks from the previous plan. Completed takes retain their original identity
+     * and continuation; a matching work hash alone never changes the take's assembly binding. */
+    fun invalidatePending(
+        previous: VideoAssembly,
+        current: VideoAssembly,
+        pendingWorkIds: Set<String>,
+        completedTakeIds: List<VideoVersionedId>,
+    ): VideoAssemblyInvalidation {
+        require(previous.projectId == current.projectId) { "Cannot compare work from different projects" }
+        val before = previous.work.associateBy(VideoAssemblyWork::id)
+        val after = current.work.associateBy(VideoAssemblyWork::id)
+        require(pendingWorkIds.all(before::containsKey)) { "Pending work IDs must belong to the previous assembly" }
+        val pending = previous.work.map { it.id }.filter(pendingWorkIds::contains)
+        val stale = pending.filter { after[it]?.fingerprint != before.getValue(it).fingerprint }
+        return VideoAssemblyInvalidation(stale, pending.filterNot(stale::contains), completedTakeIds.toList())
+    }
+
+    private fun globalDependencies(request: VideoAssemblyPlanningRequest): List<VideoAssemblyDependency> =
+        canonicalAssemblyDependencies(buildList {
+            fun addValue(key: String, value: String) { add(VideoAssemblyDependency(key, assemblyDigest(value))) }
+            addValue("project", request.projectId)
+            addValue("source.finished", Json.encodeToString(request.finishedReferenceArtifact))
+            request.preparedMotion?.let { motion ->
+                addValue("source.look-descriptor", Json.encodeToString(motion.look.sourceDescriptor))
+                addValue("source.appearance-policy", motion.look.appearancePolicy.name)
+                addValue("source.identity-review", motion.look.identityReview.name)
+            }
+            addValue("text.primary", request.primaryText)
+            listOf("action" to request.actionText, "camera" to request.cameraText,
+                "motion" to request.motionText, "style" to request.styleText).forEach { (key, value) ->
+                addValue("text.$key", Json.encodeToString(value))
+            }
+            addValue("text.guidelines", Json.encodeToString(request.guidelineTexts))
+            addValue("seed", request.seed.toString())
+            addValue("output", "1920x1080:1/1:30:zero:0:${request.durationSeconds}:support:${request.supportFramesPerSide}")
+            addValue("version.schema", app.melotrail.video.domain.CURRENT_ASSEMBLY_SCHEMA.toString())
+            addValue("version.planner", app.melotrail.video.domain.CURRENT_ASSEMBLY_PLANNER.toString())
+            listOf("compiler" to request.compilerVersion, "renderer" to request.rendererVersion,
+                "runtime" to request.runtimeVersion).forEach { (key, version) ->
+                require(version.isNotBlank() && version.length <= 160 && version.none(Char::isISOControl)) {
+                    "Supply an explicit valid $key version"
+                }
+                addValue("version.$key", version)
+            }
+            require(request.trajectoryDependencies.any { it.key == "trajectory.camera" }) {
+                "Supply the consumed full-scene trajectory.camera SHA-256 pin"
+            }
+            addAll(request.trajectoryDependencies)
+            request.preparedMotion?.let { motion ->
+                val scene = motion.scene
+                // The base composition is rendered even when no action intersects a chunk. A
+                // scenery layer without supplied coverage is not selected for rendering.
+                val coverageLayers = scene.sceneryCoverage.map { it.layerId }.toSet()
+                val renderedLayers = scene.layers.filter { it.kind != VideoLayerKind.SCENERY || it.id in coverageLayers }
+                    .map { it.id }.toSet()
+                val renderedMasks = scene.masks.filter { mask ->
+                    mask.purpose == VideoMaskPurpose.OCCLUSION && mask.layerIds.any(renderedLayers::contains)
+                }.map { it.id }.toSet()
+                scene.layers.filter { it.id in renderedLayers }.forEach { addValue("layer.${it.id}", Json.encodeToString(it)) }
+                scene.sceneryCoverage.filter { it.layerId in renderedLayers }.forEach {
+                    addValue("coverage.${it.id}", Json.encodeToString(it))
+                }
+                scene.masks.filter { it.id in renderedMasks }.forEach { addValue("mask.${it.id}", Json.encodeToString(it)) }
+                scene.coordinateSpaces.filter { space -> renderedLayers.any { id ->
+                    scene.layers.any { it.id == id && it.bounds.coordinateSpaceId == space.id }
+                } }.forEach { addValue("space.${it.id}", Json.encodeToString(it)) }
+                scene.depthRelations.filter { it.nearerLayerId in renderedLayers && it.fartherLayerId in renderedLayers }
+                    .forEach { addValue("depth.${it.nearerLayerId}.${it.fartherLayerId}", Json.encodeToString(it)) }
+                scene.occlusionRelations.filter { it.occluderLayerId in renderedLayers &&
+                    it.occludedLayerId in renderedLayers }.forEach {
+                    addValue("occlusion.${it.occluderLayerId}.${it.occludedLayerId}.${it.maskId}", Json.encodeToString(it))
+                }
+                motion.componentReviews.filter { it.componentId in renderedLayers || it.componentId in renderedMasks ||
+                    scene.sceneryCoverage.any { coverage -> coverage.id == it.componentId && coverage.layerId in renderedLayers }
+                }.forEach { addValue("review.${it.kind}.${it.componentId}", it.status.name) }
+                scene.dependencies.forEach { addValue("preparation.${it.id}", Json.encodeToString(it)) }
+            }
+        })
+
+    private fun consumedActionDependencies(request: VideoAssemblyPlanningRequest, action: VideoAssemblyAction,
+        controlId: String): List<VideoAssemblyDependency> {
+        val motion = requireNotNull(request.preparedMotion)
+        val scene = motion.scene
+        val control = motion.controls.single { it.id == controlId }
+        require(control.capability.id == action.capabilityId && control.capability.targetId == action.componentId &&
+            control.intent.name == action.kind.name) { "Selected control '$controlId' does not match action '${action.id}'" }
+        val capability = control.capability
+        val layers = linkedSetOf<String>()
+        val masks = linkedSetOf<String>()
+        fun layer(id: String) { layers += id }
+        when (capability.targetType) {
+            VideoMotionTargetType.LAYER -> layer(capability.targetId)
+            VideoMotionTargetType.POSE -> layer(scene.poses.single { it.id == capability.targetId }.subjectLayerId)
+            VideoMotionTargetType.EFFECT_ANCHOR -> layer(scene.effectAnchors.single { it.id == capability.targetId }.layerId)
+            VideoMotionTargetType.SCENERY_COVERAGE -> layer(scene.sceneryCoverage.single { it.id == capability.targetId }.layerId)
+        }
+        val subject = action.kind in setOf(VideoAssemblyActionKind.BLINK, VideoAssemblyActionKind.BREATHING,
+            VideoAssemblyActionKind.HEAD_GESTURE)
+        val spaces = scene.layers.filter { it.id in layers }.map { it.bounds.coordinateSpaceId }.toSet()
+        if (subject) layers += scene.layers.filter { it.kind == VideoLayerKind.ENVIRONMENT &&
+            it.bounds.coordinateSpaceId in spaces }.map { it.id }
+        layers += scene.layers.filter { it.kind == VideoLayerKind.FINISHED_SCENE ||
+            it.kind == VideoLayerKind.FOREGROUND && it.bounds.coordinateSpaceId in spaces }.map { it.id }
+        do {
+            val old = layers.size + masks.size
+            scene.masks.filter { it.layerIds.any(layers::contains) }.forEach {
+                masks += it.id; layers += it.layerIds
+            }
+            scene.occlusionRelations.filter { it.occluderLayerId in layers || it.occludedLayerId in layers }.forEach {
+                layers += it.occluderLayerId; layers += it.occludedLayerId; masks += it.maskId
+            }
+            scene.depthRelations.filter { it.nearerLayerId in layers || it.fartherLayerId in layers }.forEach {
+                layers += it.nearerLayerId; layers += it.fartherLayerId
+            }
+        } while (old != layers.size + masks.size)
+        val pins = buildList {
+            fun pin(key: String, value: String) { add(VideoAssemblyDependency(key, assemblyDigest(value))) }
+            pin("control.${action.id}", listOf(control.id, control.intent.name, control.requestedMinimum,
+                control.requestedMaximum, control.requestedDefaultValue).joinToString(":"))
+            pin("capability.${capability.id}", Json.encodeToString(capability))
+            scene.layers.filter { it.id in layers }.forEach { pin("layer.${it.id}", Json.encodeToString(it)) }
+            scene.poses.filter { it.id == capability.targetId }.forEach { pin("pose.${it.id}", Json.encodeToString(it)) }
+            scene.masks.filter { it.id in masks }.forEach { pin("mask.${it.id}", Json.encodeToString(it)) }
+            scene.effectAnchors.filter { it.id == capability.targetId }.forEach { anchor ->
+                pin("anchor.${anchor.id}", Json.encodeToString(anchor))
+                scene.subjectLandmarks.filter { it.id == anchor.landmarkId }.forEach {
+                    pin("landmark.${it.id}", Json.encodeToString(it))
+                }
+            }
+            scene.sceneryCoverage.filter { it.id == capability.targetId }.forEach {
+                pin("coverage.${it.id}", Json.encodeToString(it))
+            }
+            scene.coordinateSpaces.filter { space -> scene.layers.any { it.id in layers && it.bounds.coordinateSpaceId == space.id } }
+                .forEach { pin("space.${it.id}", Json.encodeToString(it)) }
+            scene.depthRelations.filter { it.nearerLayerId in layers && it.fartherLayerId in layers }.forEach {
+                pin("depth.${it.nearerLayerId}.${it.fartherLayerId}", Json.encodeToString(it))
+            }
+            scene.occlusionRelations.filter { it.occluderLayerId in layers && it.occludedLayerId in layers }.forEach {
+                pin("occlusion.${it.occluderLayerId}.${it.occludedLayerId}.${it.maskId}", Json.encodeToString(it))
+            }
+            motion.componentReviews.filter { it.componentId in layers || it.componentId in masks ||
+                it.componentId == capability.id || it.componentId == capability.targetId ||
+                it.componentId == "${motion.look.id.id}-v${motion.look.id.version}" }.forEach {
+                pin("review.${it.kind}.${it.componentId}", it.status.name)
+            }
+            // Preparation/tool pins are needed only for work consuming this control.
+            scene.dependencies.forEach { pin("preparation.${it.id}", Json.encodeToString(it)) }
+            control.dependencies.filter { it.key.startsWith("control.${control.id}.") }.forEach {
+                add(VideoAssemblyDependency("prepared.${it.key}", it.sha256))
+            }
+        }
+        return canonicalAssemblyDependencies(pins)
+    }
+
     private data class ActionAdmission(
         val actions: List<VideoAssemblyAction>,
         val findings: List<VideoAssemblyFinding>,
+        val controlIds: Map<String, String> = emptyMap(),
     )
 
     private fun admitActions(request: VideoAssemblyPlanningRequest, frames: Long): ActionAdmission {
@@ -229,6 +407,7 @@ class VideoAssemblyPlanner {
         }
         if (request.scheduledActions.isEmpty() || findings.isNotEmpty()) return ActionAdmission(emptyList(), findings)
         val duplicates = request.scheduledActions.groupBy { it.id }.filterValues { it.size > 1 }.keys
+        val selectedControls = mutableMapOf<String, String>()
         val actions = request.scheduledActions.mapNotNull { item ->
             if (!Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,159}").matches(item.id) || item.id in duplicates) {
                 report(VideoAssemblyFindingCode.ACTION_ID, item, "ID is invalid or duplicated.", "Supply one unique stable ID per action.")
@@ -393,6 +572,7 @@ class VideoAssemblyPlanner {
             }
             val channel = if (kind == VideoAssemblyActionKind.SCENERY_TRAVEL) "camera" else
                 "${kind.name.lowercase()}:${if (component is app.melotrail.video.domain.VideoPreparedPose) component.subjectLayerId else capability.targetId}"
+            selectedControls[item.id] = control.id
             VideoAssemblyAction(item.id, kind, VideoAssemblyFrameRange(item.startFrame, item.endFrameExclusive),
                 channel, capability.targetId, capability.id, item.value)
         }
@@ -420,7 +600,7 @@ class VideoAssemblyPlanner {
                 }
             }
         }
-        return ActionAdmission(actions.sortedWith(compareBy({ it.range.start }, { it.id })), findings)
+        return ActionAdmission(actions.sortedWith(compareBy({ it.range.start }, { it.id })), findings, selectedControls)
     }
 
     /** Follow the same consumed regional composition graph as scene preparation. A review on

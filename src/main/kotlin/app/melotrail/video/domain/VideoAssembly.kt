@@ -1,6 +1,10 @@
 package app.melotrail.video.domain
 
 import java.util.Collections
+import java.nio.charset.StandardCharsets.UTF_8
+import java.security.MessageDigest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -95,6 +99,25 @@ data class VideoAssemblyAction(
 @Serializable
 enum class VideoAssemblyActionBoundary { ABSOLUTE_CLIPPED_V1 }
 
+/** A named executable input. Identical repeated keys collapse; conflicting values are never silently selected. */
+@Serializable
+data class VideoAssemblyDependency(val key: String, val sha256: String) {
+    init {
+        require(key.isNotBlank() && key.length <= 512 && key.none(Char::isISOControl)) { "Invalid assembly dependency key" }
+        require(Regex("[0-9a-f]{64}").matches(sha256)) { "Assembly dependency needs a lowercase SHA-256" }
+    }
+}
+
+@Serializable
+data class VideoAssemblyActionDependencies(val actionId: String, val dependencies: List<VideoAssemblyDependency>)
+
+data class VideoAssemblyWork(
+    val id: String,
+    val chunk: VideoAssemblyChunk,
+    val dependencies: List<VideoAssemblyDependency>,
+    val fingerprint: String,
+)
+
 /** Versioned immutable proposal; publication and execution binding follow in later slices. */
 @Serializable
 class VideoAssembly private constructor(
@@ -116,6 +139,8 @@ class VideoAssembly private constructor(
     val requestedSupportFrames: Int,
     @SerialName("chunks") private val storedChunks: List<VideoAssemblyChunk>,
     @SerialName("actions") private val storedActions: List<VideoAssemblyAction>,
+    @SerialName("executionDependencies") private val storedExecutionDependencies: List<VideoAssemblyDependency> = emptyList(),
+    @SerialName("actionDependencies") private val storedActionDependencies: List<VideoAssemblyActionDependencies> = emptyList(),
     val schemaVersion: Int = CURRENT_ASSEMBLY_SCHEMA,
     val plannerVersion: Int = CURRENT_ASSEMBLY_PLANNER,
     val width: Int = 1920,
@@ -129,6 +154,27 @@ class VideoAssembly private constructor(
     val guidelineTexts: List<String> get() = Collections.unmodifiableList(storedGuidelineTexts)
     val chunks: List<VideoAssemblyChunk> get() = Collections.unmodifiableList(storedChunks)
     val actions: List<VideoAssemblyAction> get() = Collections.unmodifiableList(storedActions)
+    val executionDependencies: List<VideoAssemblyDependency> get() = Collections.unmodifiableList(storedExecutionDependencies)
+    val actionDependencies: List<VideoAssemblyActionDependencies> get() = Collections.unmodifiableList(storedActionDependencies)
+
+    /** Whole-plan provenance includes the immutable proposal ID and every declared input. */
+    val provenanceFingerprint: String get() = assemblyDigest(Json.encodeToString(this))
+
+    /** Execution identity excludes the proposal ID, unrelated actions and non-consuming components. */
+    val work: List<VideoAssemblyWork> get() = chunks.map { chunk ->
+        val relevant = actions.filter { it.affects(chunk.render) }
+        val pins = canonicalAssemblyDependencies(executionDependencies + relevant.flatMap { action ->
+            actionDependencies.single { it.actionId == action.id }.dependencies +
+                VideoAssemblyDependency("action.${action.id}", assemblyDigest(Json.encodeToString(action)))
+        })
+        val identity = assemblyDigest(projectId, Json.encodeToString(chunk), seed.toString(),
+            Json.encodeToString(finishedReferenceArtifact), primaryText, Json.encodeToString(actionText),
+            Json.encodeToString(cameraText), Json.encodeToString(motionText), Json.encodeToString(styleText),
+            Json.encodeToString(guidelineTexts),
+            "$width:$height:$pixelAspectNumerator:$pixelAspectDenominator:$framesPerSecond:$frameZero:$durationSeconds",
+            Json.encodeToString(pins))
+        VideoAssemblyWork("chunk-${chunk.output.start}", chunk, pins, identity)
+    }
 
     val totalFrames: Long get() = Math.multiplyExact(durationSeconds, framesPerSecond.toLong())
 
@@ -186,6 +232,40 @@ class VideoAssembly private constructor(
                 }
             }
         }
+        canonicalAssemblyDependencies(executionDependencies)
+        require(setOf("project", "source.finished", "text.primary", "text.action", "text.camera",
+            "text.motion", "text.style", "text.guidelines", "seed", "output", "version.schema",
+            "version.planner", "version.compiler", "version.renderer", "version.runtime", "trajectory.camera")
+            .all { key -> executionDependencies.any { it.key == key } }) {
+            "Assembly needs all executable source, text, output and runtime pins"
+        }
+        mapOf(
+            "project" to projectId,
+            "source.finished" to Json.encodeToString(finishedReferenceArtifact),
+            "text.primary" to primaryText,
+            "text.action" to Json.encodeToString(actionText),
+            "text.camera" to Json.encodeToString(cameraText),
+            "text.motion" to Json.encodeToString(motionText),
+            "text.style" to Json.encodeToString(styleText),
+            "text.guidelines" to Json.encodeToString(guidelineTexts),
+            "seed" to seed.toString(),
+            "output" to "$width" + "x$height:$pixelAspectNumerator/$pixelAspectDenominator:$framesPerSecond:" +
+                "zero:$frameZero:$durationSeconds:support:$requestedSupportFrames",
+            "version.schema" to schemaVersion.toString(),
+            "version.planner" to plannerVersion.toString(),
+        ).forEach { (key, value) ->
+            require(executionDependencies.first { it.key == key }.sha256 == assemblyDigest(value)) {
+                "Assembly dependency '$key' does not match its executable value"
+            }
+        }
+        require(actionDependencies.map { it.actionId }.toSet() == actions.map { it.id }.toSet() &&
+            actionDependencies.size == actions.size) { "Every action needs one scoped dependency binding" }
+        actionDependencies.forEach { canonicalAssemblyDependencies(it.dependencies) }
+        // Validate even cross-scope collisions that do not meet in a particular chunk.
+        // Work synthesizes an action pin for each admitted action; it must share this
+        // same admission check rather than discovering a conflict when work is read.
+        canonicalAssemblyDependencies(executionDependencies + actionDependencies.flatMap { it.dependencies } +
+            actions.map { VideoAssemblyDependency("action.${it.id}", assemblyDigest(Json.encodeToString(it))) })
         actions.groupBy { it.channel }.forEach { (channel, group) ->
             group.sortedBy { it.range.start }.zipWithNext().forEach { (a, b) ->
                 require(a.range.endExclusive <= b.range.start) {
@@ -214,6 +294,8 @@ class VideoAssembly private constructor(
             requestedSupportFrames: Int,
             chunks: List<VideoAssemblyChunk>,
             actions: List<VideoAssemblyAction> = emptyList(),
+            executionDependencies: List<VideoAssemblyDependency> = emptyList(),
+            actionDependencies: List<VideoAssemblyActionDependencies> = emptyList(),
             schemaVersion: Int = CURRENT_ASSEMBLY_SCHEMA,
             plannerVersion: Int = CURRENT_ASSEMBLY_PLANNER,
             width: Int = 1920,
@@ -225,7 +307,9 @@ class VideoAssembly private constructor(
         ): VideoAssembly = VideoAssembly(id, projectId, preparedSceneId, preparedSceneArtifact,
             finishedReferenceId, finishedReferenceArtifact, primaryText, actionText, cameraText, motionText,
             styleText, ArrayList(guidelineTexts), durationSeconds, seed, requestedSupportFrames,
-            ArrayList(chunks), ArrayList(actions), schemaVersion, plannerVersion, width, height, pixelAspectNumerator,
+            ArrayList(chunks), ArrayList(actions), ArrayList(executionDependencies),
+            actionDependencies.map { it.copy(dependencies = Collections.unmodifiableList(ArrayList(it.dependencies))) },
+            schemaVersion, plannerVersion, width, height, pixelAspectNumerator,
             pixelAspectDenominator, framesPerSecond, frameZero)
     }
 
@@ -247,6 +331,8 @@ class VideoAssembly private constructor(
         requestedSupportFrames: Int = this.requestedSupportFrames,
         chunks: List<VideoAssemblyChunk> = this.chunks,
         actions: List<VideoAssemblyAction> = this.actions,
+        executionDependencies: List<VideoAssemblyDependency> = this.executionDependencies,
+        actionDependencies: List<VideoAssemblyActionDependencies> = this.actionDependencies,
         schemaVersion: Int = this.schemaVersion,
         plannerVersion: Int = this.plannerVersion,
         width: Int = this.width,
@@ -257,17 +343,43 @@ class VideoAssembly private constructor(
         frameZero: Long = this.frameZero,
     ) = Companion.invoke(id, projectId, preparedSceneId, preparedSceneArtifact, finishedReferenceId,
         finishedReferenceArtifact, primaryText, actionText, cameraText, motionText, styleText, guidelineTexts,
-        durationSeconds, seed, requestedSupportFrames, chunks, actions, schemaVersion, plannerVersion, width, height,
+        durationSeconds, seed, requestedSupportFrames, chunks, actions, executionDependencies, actionDependencies,
+        schemaVersion, plannerVersion, width, height,
         pixelAspectNumerator, pixelAspectDenominator, framesPerSecond, frameZero)
 
     private fun values(): List<Any?> = listOf(id, projectId, preparedSceneId, preparedSceneArtifact,
         finishedReferenceId, finishedReferenceArtifact, primaryText, actionText, cameraText, motionText, styleText,
-        guidelineTexts, durationSeconds, seed, requestedSupportFrames, chunks, actions, schemaVersion, plannerVersion,
+        guidelineTexts, durationSeconds, seed, requestedSupportFrames, chunks, actions, executionDependencies,
+        actionDependencies, schemaVersion, plannerVersion,
         width, height, pixelAspectNumerator, pixelAspectDenominator, framesPerSecond, frameZero)
 
     override fun equals(other: Any?): Boolean = this === other || other is VideoAssembly && values() == other.values()
     override fun hashCode(): Int = values().hashCode()
     override fun toString(): String = "VideoAssembly(${values()})"
+}
+
+private fun VideoAssemblyAction.affects(render: VideoAssemblyFrameRange): Boolean {
+    // Steam births stop at endExclusive, but the last particle may survive another 2.6s at 30fps.
+    val tail = if (kind == VideoAssemblyActionKind.STEAM) 78L else 0L
+    return range.start < render.endExclusive && range.endExclusive + tail > render.start
+}
+
+fun canonicalAssemblyDependencies(items: List<VideoAssemblyDependency>): List<VideoAssemblyDependency> {
+    items.groupBy { it.key }.forEach { (key, values) ->
+        require(values.map { it.sha256 }.distinct().size == 1) { "Conflicting assembly dependency key '$key'" }
+    }
+    return items.distinct().sortedBy { it.key }
+}
+
+fun assemblyDigest(vararg parts: String): String {
+    val hash = MessageDigest.getInstance("SHA-256")
+    parts.forEach { part ->
+        val bytes = part.toByteArray(UTF_8)
+        hash.update(bytes.size.toString().toByteArray(UTF_8))
+        hash.update(':'.code.toByte())
+        hash.update(bytes)
+    }
+    return hash.digest().joinToString("") { "%02x".format(it) }
 }
 
 const val MAX_SAFE_FRAME_INTEGER: Long = 9_007_199_254_740_991L
