@@ -350,6 +350,25 @@ blink, with its own output and review.
 | VG2-06 | Prepare the smallest scene-matched character inputs and produce one separately admitted 5–10-second isolated movement beyond blinking, with the rest of the scene fixed. Preserve identity, clothes, props and aligned entry/return poses; retain the approved blink. Report missing layers/control support rather than substituting a pan or unrelated pose. | VG1-03, VG2-02 | TODO |
 | VG2-07 | User reviews the exact character test at normal speed for identity, eyes/gills, prop consistency, matte edges, action readability and clean return. Record accept or specific repairs; no automatic take selection or inferred full-video approval. | VG2-06 | WAITING_USER |
 
+VG2-06 Step 1.1 candidate (2026-09-28; inspection only): gentle seated inhale/exhale
+using the existing ≤2-pixel subject `breathing` control, **not yet motion-ready**.
+Keep cheek and supporting hand in the same moving cutout; cabin, seat, table,
+notebook, pen, lidded paper cup, window and scenery stay fixed. The intended support
+is the union of that subject's neutral and vertically shifted silhouettes (including
+filter/shutter fringe), excluding stationary props; entry and final pose must match
+the fixed baseline within a declared pixel tolerance, with an actual interior
+non-blink displacement. The accepted leaf/window bundle is a fixed composition,
+not a separated subject or clean plate. A scene-aligned transparent whole-subject
+cutout, opaque clean backing across its swept support and table/seat/window
+foreground occlusion need preparation and measured alignment; foot/seat contact
+must be checked. Seeded periodic breathing has no guaranteed neutral endpoints:
+verify the exact seed/frame range before execution or scope a timing prerequisite.
+The different drinking pose/handled mug and a camera pan are rejected. Pinned
+source `01e4db85…2473e`, accepted preparation `d63fa5d9…d37b99f`, approved
+blink `e5d3376c…5582c2` and four review MP4 hashes are recorded in
+[TABI evidence](docs/TABI_VIDEO.md#vg2-06-protected-movement-candidate-2026-09-28).
+No new take, selection or live job; Step 1.2 must measure the missing inputs.
+
 VG2-06/07 scope: start with one compatible gentle movement/glance before cup or
 hand choreography; a broad pose library is not required. Inspect supplied art
 first. The drinking reference's handled mug and pose do not match the scene's

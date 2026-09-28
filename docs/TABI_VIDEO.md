@@ -55,6 +55,64 @@ Do not make whole-scene I2V the long-video engine: earlier native footage alread
 showed eye/architecture deformation. No hosted fallback, model/node installation
 or new in-app image-generation feature is implied.
 
+### VG2-06 protected movement candidate (2026-09-28)
+
+Read-only Step 1.1 inspection selected a **gentle seated inhale/exhale**, using
+bounded whole-subject breathing at no more than 2 px vertical displacement in the
+1920×1080 prepared viewport. TABI's hand remains against the cheek, moving with
+head/body as one cutout; the paper cup remains on the table. This is a candidate,
+**not** a prepared motion, reviewed artwork, rendered clip or authorized live job.
+The moving support is the union of neutral and displaced subject alpha including
+resampling/shutter fringe; cabin, seat, window, scenery, tabletop, cup, notebook and
+pen must remain fixed outside it. Declare pixel tolerance for entry/end alignment
+before testing; first and last frames must return to the neutral fixed composition
+while intermediate frames show non-blink subject displacement. Verify contact at
+cheek/hand, feet/seat and table occlusion throughout. Reject a whole-scene pan and
+`train-actions/01-drinking-coffee.png` (different pose and handled mug).
+
+Missing: the accepted corrected bundle has no scene-registered **transparent
+whole-subject cutout** or opaque **clean cabin/seat/window plate** behind every
+exposed pixel in the swept support. A corresponding fixed table/seat/window
+foreground/occlusion matte is needed where the moving cutout passes behind them;
+existing window/eye masks are not subject mattes. Step 1.2 must derive and measure
+these on a *new* bundle; the existing importer checks opaque coverage and alpha,
+not artistic correctness or clean erased-subject pixels. Current compositor
+breathing translates the entire subject including the hand and seated lower body;
+if the foot or tabletop edges slip, a narrower control/kit is a prerequisite, not
+permission to hide changed pixels. Its seeded periodic phase does not guarantee a
+neutral first or last frame; verify the exact seed and range in Step 2.1, or scope
+a timing-control prerequisite. Do not submit a native render on these inputs.
+
+SHA-256 input/protection pins (paths relative to repository root; the accepted
+bundle's PNGs and preparation receipt are individually pinned, not a directory
+name or mutable metadata such as `.DS_Store`):
+
+| Path | SHA-256 |
+| --- | --- |
+| `docs/pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png` | `01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/preparation.json` | `d63fa5d92d9d2ff8276287373a7f911b91d09265c480e15655def9eabd37b99f` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/cabin-foreground.png` | `e85e3d7fa1a4bddff409affbf3fec1c2a926f893adc19d0e0dba04c06713c7e4` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/cabin-occlusion.png` | `94e4e61205ee9795d69acdfd8880cd1c517c94f17345b23b7e4c82949739d954` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/eye-support.png` | `959235c93249ef29493514c8f2fa858a2c0ec1a7db6ef0848533add67df7f6d8` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/eyes-closed.png` | `988bb0ead1c49a989111594c23653671adef89e6bc0d797e53ca0527f58b5df1` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/eyes-open.png` | `e61431efbd3d410678b921f759ef4dca197f10df0bea8ecc17325e41e5633aed` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/far-plane.png` | `b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/finished-scene.png` | `23d3ff7ef3a1f9a19fc5ba6ee3557bfd0e0fd8d389837b40078ef9fc662c041a` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/fixed-scene-1080p.png` | `82077aa0f594baca3190a724a3f99828f22ded059d5b4e4bcb2df652f6205d16` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/middle-plane.png` | `37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/near-plane.png` | `f26a6c3de329e80338d60779ce58a436cd9363600d66f0d20db4269a5d6c8cee` |
+| `build/tabi-leaf-mask.ey9rmD/prepared/window-mask-1080p.png` | `a85f21cb5687b9f1e9f1b4b90102e89de97bf683076de500108af3a2b03e971f` |
+| `build/tabi-blink-retry.gc18u7/prepared/eyes-open.png` | `e61431efbd3d410678b921f759ef4dca197f10df0bea8ecc17325e41e5633aed` |
+| `build/tabi-blink-retry.gc18u7/prepared/eyes-closed.png` | `988bb0ead1c49a989111594c23653671adef89e6bc0d797e53ca0527f58b5df1` |
+| `build/tabi-blink-retry.gc18u7/prepared/eye-support.png` | `959235c93249ef29493514c8f2fa858a2c0ec1a7db6ef0848533add67df7f6d8` |
+| `docs/pictures/video/tests/tabi-blink-8s-1080p.mp4` | `e5d3376c9abf01ee820ccf93176a7e28b6db586acdacca8ab02f6cc34b5582c2` |
+| `docs/pictures/video/tests/tabi-tokyo-blink-parallax-20s-1080p.mp4` | `7136e45800aebc577e4529a36cc3007b05117199db611e6a3a76a7edb686970f` |
+| `docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4` | `abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea` |
+| `docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4` | `30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7` |
+
+No files in these input/protection paths were edited, no existing take or selection
+was changed, and no new generation/encode/decode was attempted in this inspection.
+
 ### Background corridor and layered composition
 
 Compose fixed cabin/table, rigid far/middle/near scenery, separately validated TABI
