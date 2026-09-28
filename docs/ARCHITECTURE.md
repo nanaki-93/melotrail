@@ -139,6 +139,25 @@ Audition timbre is not authoritative and does not render audio files.
 
 ## Video isolation and remaining integration
 
+Production order is now pilot-first: character test, scenery join, combined
+60-second proof, full 240-second pilot and user/editor review precede reusable
+app integration. See [PLAN](../PLAN.md#7-step-by-step-delivery-order) and the
+[TABI production recipe](TABI_VIDEO.md#production-first-workflow-2026-09-28).
+A thin, supervised harness may call the existing Kotlin project/job/media owners;
+it must not introduce a second ledger, scheduler, persistence schema, permanent
+alternate rendering backend or MIDI dependency. Limit pre-pilot engineering to
+required executable bindings, completed-chunk continuation and bounded encoding.
+Preserve existing planner/store/decoder work; defer app caller cleanup and UI.
+
+The initial full-film assembly route is verified absolute chunk PNGs followed by
+one immutable numbered image sequence and a pinned FFmpeg image2/H.264 encode.
+It is a proposed production route, not completed full-output delivery. The current
+FFmpeg distribution lacks concat support; a tool/assembly change requires its own
+scope and tests. Frame chunking does not bound all decoded assets or accumulated
+staging. Enforce separately admitted stage and cumulative budgets through existing
+native supervision; never reset a whole-attempt deadline per chunk. Pilot success
+establishes a recipe, not installed/app/rights/release acceptance.
+
 [TABI_VIDEO](TABI_VIDEO.md) specifies an independent Video tab in the same
 Kotlin/Compose application. It takes an externally finished scene image, optional
 ready character/background layers and a motion prompt, then exports a complete

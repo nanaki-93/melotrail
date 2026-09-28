@@ -9,6 +9,27 @@ Historical evidence stays in the owning references and Git; it is not a second q
 because of this document. No commits, model downloads, inference or paid requests
 are authorized by the reset.
 
+## Production-first priority (2026-09-28)
+
+User decision: update the production order to prioritize character tests and a
+complete video, then implement the app function for future videos. **Next task to
+scope and admit: VG2-06**, not VG4-01 or Video UI. This is a documentation decision,
+not a new artwork/render budget or approval of unseen motion.
+
+Use the rows below in this order: VG2-06/07 character proof/review → VG4-05 scenery
+join → VG4-02 and VG5-01/02 minimal execution/encoding → VG5-03/05 combined 60-second
+proof/review → VG4-06 full corridor → VG5-06/07 full pilot/review. Only then resume
+VG4-01 app integration, VG2-03 integration assessment and VG3/VG5 app controls.
+VG6 still requires fresh app/installed/full-video evidence; a harness pilot does
+not close those gates. The earlier evidence's “next VG4-01” and app-first sequencing
+statements are superseded only as scheduling instructions, not rewritten results.
+
+Existing DONE rows stay DONE; no new proof or human gate is completed by this
+update. Keep the four MP4s, accepted corrected mask, original art and sealed
+receipts unchanged. Use new current-schema private projects/identities, never
+migrate historical projects. No implementation, native/model job, download,
+hosted request, resource-limit change or commit is authorized here.
+
 ## How to use this queue
 
 - Feature IDs match PLAN: CORE, AC1–AC5 (audio composition via MIDI) and VG1–VG6
@@ -19,12 +40,14 @@ are authorized by the reset.
 - A task is ready only when every listed dependency is DONE and its required
   inputs/authorization exist. `—` means no task dependency. WAITING_USER tasks
   require a real decision/input; never retry them merely to rediscover its absence.
-- On an authorized run, start with CORE-01. Then prefer VG1-01 and VG2-01/02/03 to
-  finish the existing backend WIP. AC1–AC4 checks and AC5 preparation are independent
-  useful work while design or real-video inputs wait. Within either track, take the
-  first ready mandatory row. Human waits do not block unrelated ready tasks.
-- Request VG3-01 design-process confirmation separately. Do not create mockups or
-  production Video UI until the corresponding permission/approval dependencies pass.
+- On an authorized run, recheck the current CORE baseline without replaying completed
+  native experiments. Prefer the production-first sequence above, starting with
+  VG2-06. Take the first ready row within that sequence, not the lowest task number.
+  AC1–AC4 checks, AC5 preparation and independent bounded pilot-support fixtures
+  remain useful during human waits; deferred app tasks do not bypass their new gates.
+- After full-pilot review, request VG3-01 design-process confirmation separately.
+  Do not create mockups or production Video UI until its permission/approval gates
+  pass. Approval of this production order is not design permission.
 - AC1–AC4 reuse implemented features. First run their focused checks and inspect
   current callers. If no defect exists, record verification; do not invent a rewrite
   or force a code commit. Split any real defect into a bounded task under its feature.
@@ -311,16 +334,41 @@ Fresh verification passed: full selectors `./gradlew :test --no-build-cache --re
 
 ## Feature VG2 — Durable previews and immutable takes
 
-Backend technical gates are verified below. Native preview delivery remains
-open; fixture-backed service tests do not prove a real native preview ladder.
+Backend technical gates and the controlled 5/20/30-second ladder are recorded
+below. VG2-03 remains REVIEW for integration assessment after the full pilot;
+its older WAITING_USER paragraphs are historical, not requests to repeat those
+videos. The new priority is scene-compatible character motion beyond the approved
+blink, with its own output and review.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
 | VG2-01 | Finish the durable controlled-render bridge: persisted intent/claim precedes the real media stage, with pinned dependencies and frame ranges, owned cancellation and restart reconciliation. No bypass of admission or second ledger; ComfyUI must not claim compositor support. | VG1-01 | DONE |
 | VG2-02 | Finish fully decoded result import and persisted take review/selection. Bind output to the successful current attempt, scene and measured media facts; strip incidental audio and reject stale/corrupt/mismatched results. New/rejected takes never overwrite or silently replace selected ones. | VG2-01 | DONE |
-| VG2-03 | Route flat-image I2V and prepared controlled motion through production services with honest capability/limit reporting. Prove five-second and 20–30-second controlled previews use the full-output renderer; keep the measured short I2V limit explicit, not a promise of long generative coherence. | VG2-02 | REVIEW |
+| VG2-03 | Complete integration assessment of flat-I2V and controlled production routing after the full pilot. Reuse the recorded native ladder; close actual caller/capability gaps, not another copy of the same videos. Keep the short I2V limit explicit. | VG2-02, VG5-07 | REVIEW |
 | VG2-04 | Fix ComfyUI node-local progress being persisted as whole-job progress. Keep running work indeterminate until verified completion; cover node resets, reconnect and single immutable publication without weakening store invariants. | VG2-02 | DONE |
 | VG2-05 | Bound controlled renderer resource lifetime between frames without changing pixels, cadence, shutter sampling or native limits; prove event-loop cancellation and a fresh five-second native run. | VG1-02, VG2-02 | DONE |
+| VG2-06 | Prepare the smallest scene-matched character inputs and produce one separately admitted 5–10-second isolated movement beyond blinking, with the rest of the scene fixed. Preserve identity, clothes, props and aligned entry/return poses; retain the approved blink. Report missing layers/control support rather than substituting a pan or unrelated pose. | VG1-03, VG2-02 | TODO |
+| VG2-07 | User reviews the exact character test at normal speed for identity, eyes/gills, prop consistency, matte edges, action readability and clean return. Record accept or specific repairs; no automatic take selection or inferred full-video approval. | VG2-06 | WAITING_USER |
+
+VG2-06/07 scope: start with one compatible gentle movement/glance before cup or
+hand choreography; a broad pose library is not required. Inspect supplied art
+first. The drinking reference's handled mug and pose do not match the scene's
+paper cup and hand-on-cheek pose. Moving head/body/gills need suitable clean cabin
+pixels, aligned subject/pose layers and moving eye/foreground occlusion; the
+accepted fixed-head mask alone is insufficient. Prepare only what the chosen
+movement needs, outside the app, in a new derived bundle. ComfyUI and one-time
+RealESRGAN asset finishing remain selected where separately authorized; do not
+redraw the entire video with I2V or regenerate the approved 30-second result.
+
+Owners: new ignored preparation/test harness and review artifact; current import,
+prepared-scene, compositor and supervised job/media services are reused. A required
+new control or reproduced defect must become a narrowly owned prerequisite here
+before production edits; no generic app functionality or parallel job ledger.
+Proof: input/alpha/alignment and unchanged-region checks, actual decoded movement
+and source/encoded geometry/cadence, protected hashes, bounded resource receipts,
+then VG2-07's artifact-specific human decision. Before live work, admit exact files,
+job/correction counts, paths and cumulative/per-stage budgets; this row alone starts
+no inference or render. Apply focused/full/build/diff and applicable motion checks.
 
 VG2-03 bounded continuation (2026-09-28): the user likes the five-second parallax
 (`3e104ea878eee9b4f4afbe76bb5c5b182495b44b4cb3dce156da33730a241aa9`) but finds it
@@ -752,13 +800,13 @@ not a test dependency or permission implied by this planning reset.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
-| VG3-01 | Obtain confirmation of Video-only design scope/process and permission to create flow artifacts. Do not redesign the six MIDI pages or change agent instructions without permission. | — | WAITING_USER |
+| VG3-01 | After full-pilot review, obtain confirmation of Video-only design scope/process and permission to create flow artifacts. Do not redesign the six MIDI pages or change agent instructions without permission. | VG5-07 | WAITING_USER |
 | VG3-02 | Prepare a reviewable feature flow covering empty/setup/create/open, finished-artwork import and motion setup, prompt/duration, generation/recovery, moving review and full-cut export at supported sizes. Reuse current visual primitives. | VG3-01, VG1-01 | TODO |
 | VG3-03 | Record explicit approval naming the mockup revision/digest, reviewer/date, covered surfaces and deviations. Agent recommendation, browser rendering and old reference art are not approval. | VG3-02 | WAITING_USER |
-| VG3-04 | Add the lazy app-level MIDI/Video shell, independent create/open and `--video` startup. Keep six MIDI destinations, retained tab state and one MIDI player; entering Video pauses it without losing position. Missing video setup leaves MIDI usable. | CORE-01, VG3-03 | TODO |
+| VG3-04 | Add the lazy app-level MIDI/Video shell, independent create/open and `--video` startup. Keep six MIDI destinations, retained tab state and one MIDI player; entering Video pauses it without losing position. Missing video setup leaves MIDI usable. | CORE-01, VG3-03, VG4-01 | TODO |
 | VG3-05 | Wire finished-scene/optional-layer import, thumbnails, visible placement/anchors, motion prompt, duration and setup/capability guidance. Replacements/reopen preserve originals and unaffected selections; no JSON, outfit-transfer or Generate look UI. | VG1-01, VG3-04 | TODO |
 | VG3-06 | Wire production Generate/Cancel/Retry/recovery and take review/selection. Show real stage/progress or unknown state; duplicate clicks, tab changes, late results and restart cannot lose selections or start duplicate work. | VG2-03, VG3-05 | TODO |
-| VG3-07 | Implement bounded off-UI-thread frame decoding and one silent preview session, with accurate seek/frame-step, corrupt-file errors and owned-process teardown. This backend slice can proceed while design review waits. | VG2-02 | TODO |
+| VG3-07 | After the production pilot, finish review/integration of the existing bounded off-UI-thread decoder and one silent preview session. Preserve its WIP; verify accurate seek/frame-step, corrupt-file errors and owned-process teardown. | VG2-02, VG5-07 | TODO |
 | VG3-08 | Expose moving take playback with play/pause/seek/frame-step and resize through that decoder. Prove actual frames in an app-window capture and stop preview on departure without creating a MIDI player. | VG3-06, VG3-07 | TODO |
 
 VG3-07 integration check (2026-09-26, pending independent review): candidate
@@ -815,8 +863,31 @@ No production surface may outrun VG3-03 approval; material changes need renewed 
 | --- | --- | --- | --- |
 | VG4-03 | Scope preparation dependencies to their declared consumed components; keep shared/unspecified dependencies global, reject incomplete or invalid declarations and preserve unaffected pending chunks and completed takes. Bounded prerequisite split from VG4-01. | VG2-02 | DONE |
 | VG4-04 | Persist immutable continuous-plan proposals under the existing Video project lock, with exact source/descriptor pins, append-only versions, revision guards, confined publication and verified reopen. A saved proposal is not executable readiness or a render checkpoint. | VG2-02, VG4-03 | DONE |
-| VG4-01 | Integrate the persisted exact-frame continuous plan with shared clock/seed, action schedule, component reuse and chunk ranges. Replace short-shot/repeat planning after moving required prompt/fingerprint/estimate behavior behind tests; remove exclusive obsolete callers/fields/tests, not historical assets. | VG2-02, VG4-03, VG4-04 | TODO |
-| VG4-02 | Validate full-duration camera/depth/occlusion/scenery coverage and compile continuous subject/effect/scenery state across chunks, including resume and boundary support frames. Missing coverage blocks readiness; edits invalidate only affected work. | VG4-01 | TODO |
+| VG4-05 | Prepare a coherent scenery extension and prove one offscreen join in a short separately admitted moving test. Establish at least 60-second supplied coverage at the approved speed/scale, with matching overlap pixels, measured alpha and shutter margins. Record user seam review before DONE. | VG2-07, VG1-02 | TODO |
+| VG4-02 | Bind the existing continuous plan/clock to executable camera, depth, occlusion, subject and effect state for the production runner, without app callers. Validate every frame/shutter of the requested proof range and full-duration coverage before any full render; carry support/continuation state and reject changed inputs. A short-range pass is not full-plan readiness. | VG4-03, VG4-04, VG4-05 | TODO |
+| VG4-06 | After the combined 60-second review, extend the proven scenery method to the full 240-second corridor. Pin all selected tiles/joins and verify complete alpha/trajectory/shutter/occlusion coverage and bounded decoded-asset memory; do not count padding as scenery. | VG4-05, VG5-05 | TODO |
+| VG4-01 | After full-pilot review, integrate the proven exact-frame workflow into app callers. Retain shared clock/seed, action schedule, component reuse and chunks; move required prompt/fingerprint/estimate behavior behind tests before retiring exclusive short-shot/repeat callers/fields/tests. Preserve historical assets. | VG2-02, VG4-03, VG4-04, VG5-07 | TODO |
+
+Current scheduling: VG4-02 no longer waits for VG4-01's app integration. It is the
+minimal executable binding required by the production pilot, reusing the existing
+planner/store/renderer rather than creating another planner or persistence schema.
+All target-duration fixture checks remain required. The 60-second probe has its
+own exact range and pins; it neither changes the 180–300-second product contract
+nor grants readiness to uncovered parts of a full plan. VG4-01 remains deferred
+until VG5-07; its earlier “next” statements below describe prior scheduling.
+
+VG4-05/06 owners: selected derived scenery and an ignored production-service test
+harness; current `VideoAnimationAssets`, `VideoScenePreparation`, prepared-scene
+store, `VideoMotionRenderer` and `tools/video-motion/` are inspection/reuse owners.
+Scope any needed code change here before editing. Start with a single coherent
+join, not a speculative panorama library. Inspect unused supplied artwork first;
+separately admit any ComfyUI preparation/RealESRGAN finishing. Do not infer seamless
+joins from similar prompts. Keep exact shared overlap pixels, depth ordering,
+opaque backing and approved travel; no visible wrap, stretch, reverse or slowdown.
+Test newly exposed regions around the corrected silhouette. Frame chunking does
+not itself bound asset memory: the current renderer loads all supplied images.
+Use bounded tiles/selected assets and verify actual memory before native admission.
+The selected input paths, counts and budgets are not yet admitted by these rows.
 
 VG4-04 admission (2026-09-28): “go for it” authorizes the next persistence slice.
 Reuse `VideoProjectStore`'s lock, CAS and descriptor publication, first extracting
@@ -919,12 +990,12 @@ VG2-03 dependencies. At the user's request the VG4 workflow plan's admission
 rule is reconciled with this decision; its task checkboxes and validation gates
 remain unchanged.
 
-**Owners:** new `core/video/domain/VideoAssembly.kt`,
+**Owners:** existing `core/video/domain/VideoAssembly.kt`,
 `core/video/application/VideoAssemblyPlanner.kt`; current `VideoBrief.kt`,
 `VideoPromptCompiler.kt`, project persistence, prepared-scene contracts,
 `VideoMotionRenderer.kt`, `tools/video-motion/render.cjs`, `scenery.cjs`.
 Replace `VideoShotPlanner.kt` and exclusive tests only after consumer analysis.
-**Focused proof:** new `VideoAssemblyPlannerTest`, existing
+**Focused proof:** existing `VideoAssemblyPlannerTest`,
 `VideoPromptCompilerTest`, `VideoMotionDescriptorFixtureTest`,
 `VideoMotionRendererTest` and Node tests. Assert exact 5,400/7,200/9,000 frames,
 rigid depth motion and offscreen scenery joins, no resets/wrap/reverse/freeze,
@@ -936,14 +1007,40 @@ No full-render proof is claimed by planning 9,000 frames.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
-| VG5-01 | Add bounded chunk rendering/encoding and durable checkpoint/resume over the resolved plan. Use explicit tool paths, continuous timestamps and exact trim ranges; handle cancel, restart, disk/time limits and changed inputs without retaining all frames in RAM. | VG4-02 | TODO |
-| VG5-02 | Validate and atomically publish a complete silent MP4 plus provenance to a new destination. Full decode checks 1920×1080, H.264, square pixels, 30 fps, exact duration, stream count and every boundary; collisions/failures preserve previous output. | VG5-01 | TODO |
-| VG5-03 | Run real 60-second continuity/resource proof, then a complete owned 180–300-second encode. Retain native/output geometry/cadence, chunk/scenery-seam evidence and separate stage timings/disk/memory; update estimates from measurement. | VG5-02 | TODO |
-| VG5-04 | Wire full-cut review, duration/coverage/reuse/estimate facts, join inspection, destination, export result and reveal. Preview/output consume the same resolved plan; changes stale readiness without deleting old cuts. | VG3-08, VG5-03 | TODO |
+| VG5-01 | Finish the smallest supervised production runner over existing jobs/media services: absolute chunks of at most 300 frames, verified completion checkpoints, state/support continuity and restart without redoing completed chunks. Retain incomplete evidence, reconcile uncertain work, enforce cancellation and per-stage/cumulative budgets; no second ledger or UI. | VG4-02 | TODO |
+| VG5-02 | Verify chunk PNGs and one final numbered-image-sequence encode using the pinned FFmpeg build; validate and atomically publish a new silent MP4 plus provenance. Full decode checks 1080p, H.264, square pixels, 30 fps, exact frames/timestamps and every boundary. Cover all product durations with owned fixtures; collisions/failures preserve old output. | VG5-01 | TODO |
+| VG5-03 | Run one separately admitted real combined 60-second proof with the corrected mask, reviewed character motion and extended scenery. Demonstrate restart after a verified completed chunk while later work remains; measure each stage, memory and aggregate disk, inspect every join and preserve prior artifacts. | VG5-02 | TODO |
+| VG5-05 | User reviews the exact 60-second combination at normal speed for character fidelity, corrected edges, scenery seams, motion and repetition. Record accept or specific repairs before expanding to a full production run. | VG5-03 | WAITING_USER |
+| VG5-06 | With full corridor coverage and a newly bounded batch admission, produce one real continuous 240-second/7,200-frame silent 1080p30 pilot through the supervised runner. Fully decode/verify it, retain native/output facts and honest component reuse, and publish only to a new destination. Not an app-delivery claim. | VG4-06, VG5-05, VG5-02 | TODO |
+| VG5-07 | User watches the entire pilot and joins, then imports/plays it in the chosen Apple editor. Record artifact-specific acceptance of the production recipe or repairs. This unlocks reusable app work, not VG6 completion, rights clearance or release. | VG5-06 | WAITING_USER |
+| VG5-04 | After pilot review and app integration, wire full-cut review, duration/coverage/reuse/estimate facts, join inspection, destination, export result and reveal. Preview/output consume the same resolved plan; changes stale readiness without deleting old cuts. | VG3-08, VG4-01, VG5-07 | TODO |
 
-**Owners:** new `core/video/adapter/VideoEncoder.kt`,
-`core/video/application/VideoExport.kt`; current motion/media/job/project owners;
-new `ui/video/VideoAssemblyPanel.kt`, `VideoExportPanel.kt`, composition/workspace.
+**Production-first boundary:** VG5-01/02 are direct pilot enablers, not permission
+to implement the whole app. Reuse current project/job/coordinator/media ownership,
+including persisted intent, pins, native supervision and no-overwrite publication;
+use a thin ignored harness, not a permanent second scheduler or rendering backend.
+The first assembly route retains verified chunk PNGs and encodes one immutable
+numbered sequence. The pinned FFmpeg build lacks concat support. Do not silently
+substitute a PATH binary, new distribution or repeated MP4 clips. Alternative
+assembly needs a separately scoped, tested change. Keep the input/source copies
+and encoder staging inside the aggregate disk budget, not just one active chunk.
+
+The old 900-second ceiling is for a whole preview attempt, not each 300-frame
+invocation. A longer batch must have newly authorized finite stage and cumulative
+time/storage limits; this queue update raises none. Preserve the 2-GiB native
+memory safeguard and 10-GiB free-disk reserve. Stop on resource failure without
+automatic retry, quality substitution, cleanup or unrelated process termination.
+Completed-output recovery is already proven; VG5-03 must establish the distinct
+completed-chunk restart boundary. Partial-chunk and abrupt-crash recovery may be
+claimed only when actually tested. Full-pilot scope formerly included in VG5-03
+is now VG5-06/07, with an intervening 60-second user decision and full-artwork gate.
+
+**Owners:** current motion/media/job/project owners; narrowly needed
+`core/video/adapter/VideoEncoder.kt` / `core/video/application/VideoExport.kt`
+helpers if existing owners cannot supply the boundary, plus an ignored supervised
+pilot harness. Split oversized implementation slices before admission. New
+`ui/video/VideoAssemblyPanel.kt`, `VideoExportPanel.kt` and app composition belong
+only to deferred VG5-04. Human decisions/evidence: TABI video and Validation.
 **Focused proof:** new `VideoEncoderTest`, `VideoExportTest`, `VideoExportFlowTest`;
 extend `VideoMediaHostCheck` for the full-output proof. The existing
 `:videoMediaProbe -PvideoToolsDirectory=<absolute-tools-directory>` proves only its
@@ -973,6 +1070,12 @@ production change, limit increase or commit occurred in this read-only inspectio
 The corrected source bundle remains available for future newly fingerprinted jobs.
 
 ## Feature VG6 — Installed delivery and real-video acceptance
+
+These are later **app** gates. VG5-07 approves the preliminary production recipe,
+not these app clips, installed behavior or release. Preserve all existing review
+requirements; run them through the integrated app after the pilot-led workflow
+has been implemented. TABI/Tokyo remains the chosen pilot, not a mandatory preset
+or the only scenario the eventual app supports.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |

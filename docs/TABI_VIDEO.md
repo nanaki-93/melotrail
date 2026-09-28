@@ -8,18 +8,131 @@ and complete generation flow remain planned.
 This document preserves supplied artwork, scoped artistic decisions and runtime
 measurements. Older task IDs, commands and dated status statements below identify
 their original evidence; they are not active queue dependencies or authorization
-to resume an experiment. TASKS alone owns current work. The current early visual
-gate is **VG6-02** and full-video/editor acceptance is **VG6-06**; neither is passed.
-Video-flow design permission/approval is separately required by VG3.
+to resume an experiment. TASKS alone owns current work. Production-pilot reviews
+now precede app development: **VG2-07** character, **VG5-05** combined 60 seconds,
+and **VG5-07** full pilot/editor handoff. Later **app** gates remain VG6-02 and
+VG6-06; none of these new/later gates is passed. VG3 design permission/approval is
+still separate. Earlier “next VG4-01” or app-first statements are historical.
+
+## Production-first workflow (2026-09-28)
+
+The user selected this order: **character tests → scenery join → combined
+60-second proof → full 240-second pilot → review/editor handoff → reusable app
+functionality**. This section defines the production recipe; PLAN owns the roadmap
+and TASKS owns executable rows, dependencies and status. Updating these documents
+does not authorize a live run, new artwork, downloads, spending or limit changes.
+
+### Starting point and next creative proof
+
+Retain the positively reviewed 30-second blink/parallax MP4 without regenerating
+or overwriting it. Its full decoded review is complete. The corrected leaf/window
+source bundle is accepted for future work, but no moving video uses it yet.
+The approved blink is the existing open/closed crossfade, not articulated three-pose
+lids. Dependency scoping and proposal persistence are implemented; they neither
+add character motion nor prove interrupted-render recovery. No full video or
+integrated Video UI exists.
+
+Next is a **new 5–10-second isolated TABI movement beyond blinking**, with the rest
+of the scene fixed. Keep a deliberately small kit: retain the blink, prove one
+compatible gentle movement/glance and its clean return before expanding to more
+idle/action variants. Do not make drinking/eating or a 24-pose library prerequisites.
+A pan is not character action. If the needed artwork/control is missing, expose
+that gap and scope its preparation or narrow implementation, not a fake result.
+
+The scene has a hand-on-cheek pose and a lidded paper cup; the supplied drinking
+reference has a different pose and handled mug. Action references are not registered
+frames that can simply be pasted/crossfaded into the scene. Match the actual
+perspective, scale, clothes, props and entry/exit pose. Head/body/gill motion may
+reveal previously hidden cabin/window pixels and needs compatible clean plates,
+subject/pose layers, moving eye masks and foreground occlusion. The accepted
+fixed-head leaf mask is not automatically a moving-head matte. Keep originals and
+accepted preparations unchanged; review new derivatives and new exposed edges.
+
+Use the selected local ComfyUI route for separately authorized external artwork
+preparation or bounded isolated action experiments. Retain preferred RealESRGAN
+finishing once per selected static asset, not a new per-frame repainting pass.
+Do not make whole-scene I2V the long-video engine: earlier native footage already
+showed eye/architecture deformation. No hosted fallback, model/node installation
+or new in-app image-generation feature is implied.
+
+### Background corridor and layered composition
+
+Compose fixed cabin/table, rigid far/middle/near scenery, separately validated TABI
+motion and explicit foreground occlusion on one shared clock. Keep the approved
+scenery speed/scale/style. Inspect unused supplied pixels first, then prepare only
+the first coherent extension. Prove one offscreen handoff in a moving test before
+expanding the library. Independently generated images are not inherently tileable:
+retain exact shared overlap pixels and validate them in the actual viewport/shutter
+samples, along with opaque backing and measured alpha. No wrap, stretching,
+reversal, transparent-padding coverage or silent slowdown.
+
+First establish 60-second coverage; after combined review, extend the same method
+to the full corridor. Read-only horizontal lower bounds at the current placement,
+window right edge 1920 and camera speed `480/599` pixels/frame are:
+
+| Plane | Current x / depth | Minimum total extent for 240s |
+| --- | --- | ---: |
+| Far | 780 / 1 | 6,909 px |
+| Middle | 400 / 2 | 13,058 px |
+| Near | 480 / 3 | 18,747 px |
+
+Calculation: `ceil(1920 - x + depth * 480 * (7200 - 1) / 599)`. These are not
+additional-pixel counts or full coverage admission. Add overlap/filter margins
+and verify every trajectory/shutter position. Use bounded tiles rather than
+raising image-size limits. The renderer currently loads all supplied images;
+300-frame chunks alone do not bound asset memory. Measure the selected kit and
+scope loading changes only if necessary, without dropping consumed pins.
+
+### Supervised production runner, then the app
+
+Reuse current project/job/media services through a thin owned harness, not a
+second ledger, scheduler or permanent alternate product. Finish only the execution
+binding, continuation/checkpoint and encoding boundaries needed for this film.
+Defer app caller integration/short-shot retirement, Video UI and general workflow
+work until the full pilot has been reviewed. Preserve existing implementations.
+
+The preferred first assembly route is verified absolute chunks of at most 300
+frames → retained PNGs → one immutable numbered sequence → one final silent
+H.264 encode. The pinned FFmpeg build supports image2 but not concat; joining MP4s
+or switching tools is not an assumed capability. Prove any alternate path separately.
+Keep exact trim/support ranges, continuous timestamps and shared blink/effect/random
+state. Resume only from verified completed-chunk evidence without rerendering those
+chunks; reconcile uncertain work and retain incomplete attempts. Current completed-
+output recovery does not already supply this boundary or abrupt-crash recovery.
+
+The recorded 30-second run took 504.265s and retained 2,802,271,515 source-PNG bytes.
+Straight-line four-minute extrapolations are about **67 minutes and 22.4 GB of
+source PNGs**, not measured full-run costs. Encoder copies, assets, decoded review,
+outputs and the free reserve are extra. Measure composition, encode and review
+separately at 60 seconds; bound disk as well as RAM. Do not retain all decoded
+review frames merely to inspect every frame when bounded streaming can be verified.
+
+The existing preview attempt has a shared **900-second** deadline, not 900 seconds
+per chunk. Full production needs a newly admitted finite batch budget with stage
+and cumulative time/storage limits; this document grants no increase. Retain
+2-GiB native memory enforcement and the 10-GiB free-disk reserve. No automatic
+resource retries, unrelated process termination, cache purges or quality reduction.
+
+After the character and seam decisions, produce the combined 60-second proof with
+corrected source masks, approved character motion and extended scenery. Verify
+full decoding, joins/resources and restart after a completed chunk while further
+work remains. Obtain normal-speed user review before full corridor preparation
+and the separately admitted 240-second/7,200-frame silent 1080p30 pilot. Watch the
+entire film and test editor import/playback. Only then implement the reusable app
+workflow around this proven recipe. This is production-method acceptance, not
+rights clearance, monetization, color certification or VG6 app/release approval.
+The eventual app remains generic; TABI/Tokyo is this pilot, not a required preset.
 
 ## Outcome and scope
 
 **Current scope, 2026-09-16:** the user creates all finished picture assets outside
 Melotrail. The app accepts a **finished scene image, with optional separate
 character/background layers**, then generates motion and a complete continuous
-180–300 second silent video (default 240s), 1920×1080 H.264 MP4 at 30 fps. No image
-generation, outfit/style transfer, inpainting or new background artwork is required
-or offered in this delivery. Audio editing and public upload remain external.
+180–300 second silent video (default 240s), 1920×1080 H.264 MP4 at 30 fps. No in-app
+image generation, outfit/style transfer, inpainting or new-background creation is
+offered in this delivery. Missing motion-ready artwork is supplied externally;
+separately authorized pilot preparation does not add those app features. Audio
+editing and public upload remain external.
 
 The planned Video tab needs no MIDI project or soundtrack. It owns separate
 projects, assets, jobs, models and media outputs, loaded lazily. Missing video
@@ -1356,36 +1469,26 @@ required; do not rely on a model reproducing readable route labels every frame.
 
 ## Current continuous-animation strategy
 
-Use the selected owned ComfyUI/LTX API for measured short image-to-video/action
-takes and the external Node/Canvas compositor for supported continuous motion.
-They share Kotlin project/job orchestration, but remain different execution stages.
-The measured I2V route consumes one composed image, not independent inspiration
-roles. Missing setup is explicit; no model download or hosted upload is automatic.
+Follow the [production-first workflow](#production-first-workflow-2026-09-28):
+validate scene-compatible character motion and rigid scenery separately, combine
+at 60 seconds, then produce/review the full pilot before general app integration.
+Use the external Node/Canvas compositor for supported continuous motion. The
+selected ComfyUI/LTX route remains a separate measured short-I2V option consuming
+one composed image, not independent layers or proven long-form action control.
+No model download, provider switch or hosted upload is automatic.
 
-The primary output is one continuous 180–300-second scene at 30 fps, with evolving
-scenery and supported occasional character actions. Reuse of small motion patterns
-is allowed; repeating a complete short clip to fill the duration is not. The old
-short-shot/whole-footage reuse planner is being replaced in VG4, not offered as
-another primary mode. Record fresh action footage, procedural motion and reused
-components honestly without summing overlapping layers into false unique seconds.
+The product remains one continuous 180–300-second scene at 30 fps, default 240.
+Reuse of small motion patterns is allowed; whole-clip repeat-to-fill is not.
+Validate complete trajectory/shutter coverage before a full render and carry
+absolute state/seed through bounded chunks. Record fresh action footage,
+procedural motion and reused components without summing overlapping layers into
+false unique seconds. Short success never proves full-length quality.
 
-Validate scenery coverage for the complete trajectory before render. Derive rigid
-depth-layer motion and occlusion from a shared camera path; join supplied scenery
-outside the visible area. Missing clean plates, poses or travel coverage require
-external artwork. Never silently stretch, freeze, wrap or reverse the scene.
-
-Render bounded chunks with absolute frames and shared state/seed, preserving
-blink phase, particle age, scenery position and random sequence on resume. Include
-and trim temporal boundary support explicitly. Do not hold a whole 1080p cut in
-RAM. Follow the measured ladder: retained five-second reference, fresh 20–30-second
-previews, 60-second continuity/resource check, then actual 180–300-second output.
-Short success does not prove full-length quality or a four-minute inference estimate.
-
-Quality review checks actual moving output against the supplied appearance and
-motion request: coherent objects, requested actions/effects, temporal stability,
-continuity and joins. Look/take review is optional before a draft; unreviewed is
-not approved, and rejected takes cannot silently become selected production work.
-AI seeds are traceability inputs, not promises of deterministic model output.
+The existing 5/20/30-second evidence is retained, not automatically rerun. New
+character/scenery changes receive scoped moving tests and the pilot's explicit
+human gates. Optional look/take refinement in the eventual app is unchanged;
+unreviewed is not approved, rejected work is not silently selected, and AI seeds
+are traceability inputs rather than promises of deterministic model output.
 
 ## Local profile and bounded probe preparation (V11a)
 
@@ -2304,7 +2407,14 @@ publication stays under user control.
 
 ## Pilot acceptance
 
-A real user first reviews three real 20–30-second clips from externally finished
+First establish the production recipe outside the unfinished app: VG2-07 reviews
+the isolated character test, VG4-05 records the scenery-join decision, VG5-05
+reviews the combined 60-second proof, and VG5-07 reviews the full 240-second pilot
+and editor handoff. Record exact artifacts, reviewer/date, normal-speed observations
+and unresolved defects. These decisions unlock later app work, not release, rights
+or new unseen clips. None is inferred from the existing blink/parallax approvals.
+
+For the later **app** gate, a real user reviews three real 20–30-second clips from externally finished
 artwork at VG6-02: a base motion request, a materially different motion prompt with the same
 artwork and a replaced finished scene/layer. No generated-look gate is required. Review reference fidelity, prompt adherence, requested
 motion/style, object coherence and temporal stability. The chosen content has no

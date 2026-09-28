@@ -6,11 +6,51 @@ VG1–VG6. Older task IDs and dated status statements below label retained evide
 not executable queue rows or current-build approval. Do not replay them. The old
 participant/holdout queues are superseded; incomplete gates are not passes.
 
+## Production-first video gates (2026-09-28)
+
+The user approved a documentation/prioritization change: prove character motion
+and a complete video before implementing reusable app functionality. The roadmap
+is [PLAN](../PLAN.md#7-step-by-step-delivery-order); exact dependencies/status are
+in [TASKS](../TASKS.md#production-first-priority-2026-09-28), with the
+[production recipe](TABI_VIDEO.md#production-first-workflow-2026-09-28) in TABI video.
+This is not approval of unseen artwork/motion, a budget increase or live-run admission.
+All new review decisions below remain pending.
+
+| Production gate | Required evidence and real decision |
+| --- | --- |
+| VG2-06/07 · Character first | New 5–10-second isolated scene-matched movement beyond the retained blink; decoded actual motion, aligned entry/return, stable identity/clothing/props, correct eye/gill/foreground masks and unchanged pixels outside the declared support. User reviews at normal speed. Do not substitute a camera pan, unrelated drinking pose or static comparison. |
+| VG4-05 · Scenery join | One new moving offscreen handoff with matching overlap pixels, rigid depth travel and no visible seam/hole/wrap; full requested-range/shutter coverage and sufficient supplied 60-second extents. Record the user's seam decision before DONE; a geometric width calculation alone is insufficient. |
+| VG5-03/05 · Combined 60 seconds | Corrected source mask, accepted character motion and extended scenery in one silent 1080p30 result. Fully decode and verify exact timing/frames/joins, measure stages and aggregate resources, then record normal-speed user review. Prove restart after a verified completed chunk while later work remains, not just reconciliation of a finished MP4. |
+| VG4-06, VG5-06/07 · Full pilot | Full supplied corridor/alpha/shutter coverage and a newly admitted 240-second/7,200-frame production batch. Verify complete decode, timestamps, first/last/action/chunk/scenery boundaries and disclosed reuse. User watches the whole cut and imports/plays it in the chosen Apple editor, accepting the production recipe or identifying repairs. Not an app/release pass. |
+
+Keep source, rendered lossless PNG and decoded H.264 claims distinct. New motion
+may require new support/mattes and clean plates; declare those regions rather than
+weakening the old fixed-pixel checks or claiming the old mask follows a moving head.
+Bind new derivatives to new descriptors/requests in a fresh current-schema project.
+Never regenerate/overwrite the approved 30-second video, replace historical inputs,
+migrate old projects or rewrite sealed review/timeout receipts.
+
+The minimal runner must reuse existing intent/claim/job/process ownership and
+verify completed chunk hashes/state before reuse. Retain incomplete/uncertain work;
+no automatic retry or partial-chunk/abrupt-crash recovery claim without proof.
+The pinned FFmpeg has image2/H.264, not concat. Validate the numbered PNG sequence
+and final output; a different assembly/tool route requires separate testing.
+
+The existing 900-second preview deadline is shared across invocations. A full
+production batch needs explicit finite per-stage and cumulative time/storage
+admission; this update changes none. Keep 2-GiB native memory and 10-GiB free-disk
+reserve safeguards, counting retained outputs and encode/decode staging together.
+Source-PNG/time extrapolations in TABI video are planning arithmetic, not measured
+full-run budgets. No native/model job, download or paid request starts from this
+schedule. Rights, color, monetization and final release remain separate decisions.
+
 ## Final manual review
 
 The implemented MIDI workflow still needs manual acceptance. AC4–AC5 refresh and
-review its evidence against the current build; VG6 owns separate early/full-video
-review, and VG3 owns design approval before Video UI implementation.
+review its evidence against the current build. After the production gates above,
+VG3 still requires design permission/approval before UI, and VG6 owns separate
+app-based early/full-video, installed and release review. Harness results cannot
+substitute for those later app gates.
 
 **Retained MIDI handoff · 2026-09-13 (original label Q03b).** This packet used
 implementation `c20aecf583`; it does not establish current-build success or the
@@ -43,9 +83,9 @@ The final packet retains 66 unchanged pinned image comparisons, 28 real-window
 frame replays, 20-sample timing records, source/build/runtime identities and
 hash-verified MIDI/video artifacts. Automated checks do not establish acoustic
 onset, musical scores, foreground screen capture or human artistic approval.
-Historical packets and failed checks remain preserved. Current AC4/AC5/VG3/VG6
-human gates are listed in TASKS; automated agents cannot complete them or retry
-absent human evidence as an implementation failure.
+Historical packets and failed checks remain preserved. Current MIDI, production-
+pilot and later VG3/VG6 human gates are listed in TASKS; automated agents cannot
+complete them or retry absent human evidence as an implementation failure.
 
 ## Scoped Tokyo motion-direction review (2026-09-27)
 

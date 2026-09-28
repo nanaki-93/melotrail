@@ -18,9 +18,19 @@ Logic checks, visual acceptance and release approval remain pending. The origina
 
 Video has independent project/asset/job storage, prepared-scene validation, an
 owned ComfyUI adapter, pinned media supervision and bounded controlled-motion
-rendering. Preview orchestration/result import includes unfinished local work.
-The Video tab, in-app moving playback, continuous full-duration planning and
-complete silent export are **not yet delivered**.
+rendering. Controlled blink/parallax has reached a reviewed 30-second pilot;
+continuous-plan proposals and guarded persistence exist. The Video tab, in-app
+moving playback, executable full-duration workflow and complete silent export
+are **not yet delivered**.
+
+**Current priority: produce the video before building the app flow.** Next is a
+scene-compatible 5–10-second TABI character test, then a scenery-join test, a
+combined 60-second proof and one complete 240-second pilot. Review the full film
+and editor handoff before implementing reusable future-video functionality.
+Reuse current services through bounded production tooling; preserve existing
+videos and the accepted corrected mask. This documentation update starts no
+model/render job or implementation. See [production order](PLAN.md#7-step-by-step-delivery-order)
+and [production recipe](docs/TABI_VIDEO.md#production-first-workflow-2026-09-28).
 
 [PLAN](PLAN.md) describes features CORE, AC1–AC5 and VG1–VG6.
 [TASKS](TASKS.md) is the fresh dependency/status queue. Existing code is reused;
@@ -83,8 +93,10 @@ character/background layers, poses, masks and scenery. Motion capabilities are
 validated rather than invented. The target is one continuous 180–300-second
 1920×1080 H.264 MP4 at 30 fps, with zero audio streams. Local ComfyUI and controlled
 motion are selected; hosted fallback is optional and needs explicit authorization.
-No image generation, outfit transfer, whole-clip repeat-to-fill, MIDI dependency,
-soundtrack synchronization or public upload is part of this delivery.
+No in-app image generation, outfit transfer, whole-clip repeat-to-fill, MIDI
+dependency, soundtrack synchronization or public upload is part of this delivery.
+Separately authorized external artwork preparation for the pilot does not change
+that app boundary. A successful production harness is not VG6 app/release proof.
 
 ## Documentation
 

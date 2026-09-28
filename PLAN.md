@@ -38,10 +38,20 @@ Create/open Video project → import finished artwork → enter motion prompt
 Neither workstream waits for the other's artistic acceptance. They share one
 Kotlin/Compose application, not projects, musical timing or generation state.
 
+**Production-first priority (2026-09-28):** prove the creative workflow with a
+scene-compatible TABI character test, a scenery-join test, a combined 60-second
+proof and one complete 240-second pilot before implementing the reusable app flow.
+A supervised harness may reuse the existing video services for these proofs;
+it is not an app feature or a replacement job system. Only narrowly necessary
+rendering/continuation/encoding work precedes the pilot. The product flow above
+and its later app/installed/release evidence remain required.
+
 ## 2. Current implementation baseline
 
-The repository was inspected at `32cc13746`, including the existing uncommitted
-video work. These are code observations, not new release or artistic approvals.
+The original repository inspection was at `32cc13746`. The video baseline below
+also reflects the subsequent evidence recorded in TASKS and TABI video, reviewed
+at `3ba34e0fb` for the production-first ordering. These are implementation/evidence
+observations, not new release or artistic approvals.
 
 | Area | Present in the current tree | Remaining gap |
 | --- | --- | --- |
@@ -50,9 +60,10 @@ video work. These are code observations, not new release or artistic approvals.
 | MIDI workspace | Six pages, verified note lanes, style preview, full-draft playback, targeted repair, atomic Use/Undo and one player | Current foreground capture, usability and listening decisions |
 | MIDI export | Immutable accepted-only complete/role files, semantic re-import and evaluation/Logic preparation commands | Current human Logic import/play/save/reopen and release decision |
 | Video assets/runtime | Independent project/asset/prepared-scene/job stores, ready-artwork admission, owned ComfyUI API/runtime and pinned media supervision | Application integration and current end-to-end proof |
-| Controlled motion | `VideoMotionRenderer.kt` and `tools/video-motion/` render bounded absolute-frame ranges; trajectories support up to 9,000 frames, invocations up to 300 | Durable preview orchestration, encoding/publication and restartable full output |
-| Preview work in progress | Local changes include `VideoClipGeneration.kt`, `VideoResultImport.kt`, media facts/store changes and tests | Preserve and review these changes; passing focused tests alone does not complete the production path |
-| Video UI and full output | No `desktop/video` workspace, continuous assembly/export service or in-app moving preview | Implement these features; `make video` passes an unsupported `--video` option today |
+| Controlled motion | Durable controlled-media bridge/result import and a reviewed 30-second blink/parallax pilot; bounded invocations up to 300 frames | Scene-matched character actions, longer scenery and restart from verified completed chunks |
+| Continuous planning | Exact-frame proposals, scoped dependencies and guarded proposal persistence | Executable continuity/coverage binding; app caller integration and short-shot retirement after the production pilot |
+| Production inputs | Approved blink method and parallax direction; accepted corrected source mask | Corrected-motion proof, compatible additional character motion and coherent full-duration scenery |
+| Video UI and full output | No delivered `desktop/video` workspace, in-app moving preview or full-video export | Prove the production recipe first, then integrate it; `make video` still passes an unsupported `--video` option |
 | Removed runtime | No active audio-production/worker or Swift companion application | Do not rebuild them; preserve external evidence and unrelated local data |
 
 Important planning corrections:
@@ -62,10 +73,13 @@ Important planning corrections:
 - ComfyUI accepts one composed image for the measured I2V route. It does not prove
   independently controllable layers, complex actions or four-minute coherence.
 - `VideoShotPlanner` still models short unique/repeated shots. Replace its primary
-  flow with a continuous-scene plan; do not expose whole-clip repeat-to-fill.
-- ComfyUI and the controlled compositor are different execution stages. The
-  existing local backend rejects controlled-motion requests; the durable media
-  bridge must be completed rather than merely advertising a capability.
+  app flow with the persisted continuous-scene plan after the production workflow
+  is proven; that caller cleanup is not a prerequisite for character experiments.
+  Never expose whole-clip repeat-to-fill.
+- ComfyUI and the controlled compositor are different execution stages. Reuse
+  the verified durable media bridge rather than making ComfyUI claim compositor
+  support. Whole-scene I2V distorted buildings/eyes; prefer stable supplied pixels,
+  rigid scenery and separately validated character motion for the full pilot.
 - Asset presence is not proof of alpha, pose alignment, scenery coverage, rights
   or approval. Inspect selected inputs from `docs/pictures/video/` recursively.
 - Old build receipts do not certify the current dirty tree. Recheck the selected
@@ -242,9 +256,17 @@ synthetic preview, fictional progress, soundtrack prerequisite or image-generati
 
 ### Feature VG4 — One continuous scene, exact duration
 
-1. Replace the primary short-shot planner with a versioned continuous motion plan:
-   exact frames, shared clock/seed, component reuse, supported occasional actions
-   and bounded chunks. Retain useful prompt/fingerprint/estimate behavior once.
+The first creative proof is one coherent offscreen scenery join, after the
+character test is reviewed. Establish 60-second coverage before extending the
+same method to the full 240-second corridor. Do not generate a large untested
+asset library. Missing full-length coverage blocks a full render, not an honestly
+bounded shorter probe with its own validated inputs and identity.
+
+1. Reuse the versioned continuous plan for exact frames, shared clock/seed,
+   component reuse, supported occasional actions and bounded chunks. Bind it to
+   executable inputs for the production runner. After full-pilot review, integrate
+   app callers and retire short-shot/repeat planning, retaining required prompt,
+   fingerprint and estimate behavior once.
 2. Validate externally prepared scenery against the complete camera trajectory;
    derive rigid depth-layer movement and occlusion from that trajectory.
 3. Join scenery outside the visible region and carry subject/effect/scenery state
@@ -258,15 +280,20 @@ or whole-clip loops. Missing coverage requests more external artwork.
 
 ### Feature VG5 — Full-length rendering, review and silent export
 
-1. Render/encode bounded chunks from the resolved plan, with durable checkpoints,
-   temporal support frames where needed and exact trimming/continuous timestamps.
-2. Validate the full silent H.264 output: decode, stream count, codec, square pixels,
-   dimensions, cadence, duration and first/last/chunk/scenery-join frames.
-3. Measure a 60-second continuity/resource run before a complete 180–300-second
-   owned-fixture export. Estimate setup, action generation, composition and encoding
-   separately; never hold all 1080p frames in RAM or extrapolate artistic quality.
-4. Expose the same full-cut plan in the existing preview, highlight joins and export
-   atomically to a new filename with credential-free provenance and Finder reveal.
+1. Build only the bounded production runner needed by the pilot, reusing existing
+   project/job/media ownership. Preserve absolute frames, shared state, temporal
+   support and verified completed chunks across restart. No second ledger.
+2. Start with verified chunk PNGs and one final numbered-image-sequence H.264
+   encode. The pinned FFmpeg build lacks concat support; alternate assembly or
+   tool changes require separate proof. Bound disk as well as memory, validate
+   every frame/timestamp/join and atomically publish to a new filename.
+3. Measure and review a real combined 60-second proof, then extend coverage and
+   produce one complete 240-second pilot (7,200 frames). Fixture checks remain
+   mandatory but cannot substitute for the real film. Estimate preparation,
+   composition, encoding and review separately; never extrapolate artistic quality.
+4. After full-pilot viewing and editor handoff establish the production recipe,
+   expose it through the approved app flow with full-cut review, join inspection,
+   immutable export, credential-free provenance and Finder reveal.
 
 **Exit:** the app reviews and exports a complete validated file. Changing the plan
 invalidates readiness, not previous outputs. Native versus upscaled resolution
@@ -293,22 +320,32 @@ coffee are examples, never mandatory content or presets.
 
 ## 7. Step-by-step delivery order
 
+**Current production order (2026-09-28): character tests and a finished pilot
+first; reusable app functionality afterward.** This supersedes earlier next-task
+suggestions in dated evidence, without changing that evidence or its review states.
+
 | Step | Feature delivery | What unlocks next |
 | --- | --- | --- |
-| 1 | CORE baseline | An identified current candidate for both workstreams |
-| 2 | VG1 → VG2; request VG3 design decisions independently | Finish preserved preview WIP first; backend work need not wait for UI approval |
-| 3 | AC1 → AC2 → AC3 → AC4 technical verification | Current usable MIDI workflow and fresh Logic packet; useful independent work during video/design waits, not a rebuild |
-| 4 | AC5 evidence preparation | Frozen songs when supplied, current UI/performance/install evidence; human gates stay separate |
-| 5 | VG3 application flow and early VG6 review | Real asset-and-prompt app clips; expose failures early |
-| 6 | VG4 → VG5 | Exact continuous plans and complete silent app exports; independent of early artistic waiting |
-| 7 | VG6 installed/UI proof and full real-video review | Accepted video workflow and editor handoff |
-| 8 | AC5 MIDI release / VG6 video release | Independent decisions tied to the tested final versions |
+| 1 | CORE / preserve the current VG1–VG2 baseline | Identify current inputs/tools; retain all existing videos, accepted mask and failed evidence |
+| 2 | VG2 scene-compatible character test and user review | A new 5–10-second isolated action, preserving identity/props and returning cleanly; retain the approved blink |
+| 3 | VG4 scenery-extension/join test | A reviewed rigid-motion join and sufficient supplied coverage for the 60-second proof, without wrap/stretch/slowdown |
+| 4 | VG4–VG5 minimal supervised production runner | Exact range/coverage/state binding, verified completed-chunk restart, bounded encoding and immutable publication; no UI prerequisite |
+| 5 | VG5 combined 60-second proof and user review | Corrected mask, approved character motion, moving scenery, joins and measured runtime/storage/memory |
+| 6 | VG4–VG5 full corridor and complete 240-second pilot | One continuous 7,200-frame silent 1080p30 MP4, not repeated short footage |
+| 7 | VG5 full-pilot viewing and editor handoff | User accepts the production recipe or identifies specific repairs; not app/release acceptance |
+| 8 | VG4 app caller integration → VG3 workflow → VG5 app review/export | Implement future-video functionality from the proven recipe; preserve generic scenario support and obtain UI design permission/approval |
+| 9 | VG6 app clips, installed/UI proof and real full app export | Separate artifact-specific app and release decisions; the harness pilot cannot substitute |
 
-This is a dependency order, not permission for parallel agents. Video backend
-work can start after CORE while MIDI inputs/reviews or UI decisions are pending.
-The unfinished preview work is the first video implementation priority. TASKS
-owns exact admission order and all blocking dependencies; no calendar estimates
-are invented before current rendering and review costs are measured.
+AC1 → AC4 technical verification and AC5 evidence/release remain independent MIDI
+work; they do not block the video pilot. Human waits permit independent bounded
+backend fixture work or MIDI work, not automatic promotion of deferred app tasks.
+This order is not permission for parallel agents, inference or native rendering.
+TASKS owns exact dependencies and current status. Every live experiment needs an
+explicit bounded admission; the existing 900-second preview deadline is shared
+across its chunks, never silently renewed. A full-production batch needs separately
+authorized per-stage and cumulative time/storage limits, retaining native memory
+and free-disk safeguards. External artwork preparation for this pilot does not add
+in-app picture generation, change the provider or authorize new models.
 
 ## 8. Explicitly outside this delivery
 
@@ -334,6 +371,7 @@ tests; add regression tests for every fixed bug. Run focused checks, `make test`
 applicable explicitly admitted native/media probes. Keep artifacts in ignored build
 output or selected external evidence storage, not new planning/history documents.
 
-The reset authorizes documentation only. It starts no automation, agent run,
-model setup, inference, spending or implementation commit. Future runs select
+The reset and production-order update authorize documentation only. They start
+no automation, agent run, model setup, inference, rendering, spending or
+implementation commit. Future runs select
 current task IDs explicitly; old scheduler state cannot choose or complete them.
