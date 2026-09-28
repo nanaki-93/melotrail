@@ -401,6 +401,35 @@ class VideoAnimationAssetsTest {
     }
 
     @Test
+    fun `transparent scenery overlay imports only with measured opaque backing`() {
+        val fixture = fixture()
+        val finished = fixture.import("room", rgbImage(root.resolve("outside/room.png"), 80, 50, Color.GRAY), VideoReferenceRole.COMPLETE_SCENE)
+        val far = fixture.import("far", rgbImage(root.resolve("outside/far.png"), 180, 50, Color.BLUE), VideoReferenceRole.ENVIRONMENT)
+        val near = fixture.import("near", cutout(root.resolve("outside/near.png"), 180, 50, Color.RED), VideoReferenceRole.ENVIRONMENT)
+        val bounds = VideoRect("scene", 0.0, 0.0, 180.0, 50.0)
+        fun scenery(id: String, asset: VideoAssetImportResult.Imported) = VideoSceneryAnimationAsset(
+            VideoPlacedAnimationAsset(id, asset.asset.id, bounds), bounds, "$id-coverage",
+        )
+        val request = PrepareVideoAnimationAssets(
+            VideoVersionedId("transparent-depth", 1), finished.asset.id,
+            scenery = listOf(scenery("far", far), scenery("near", near)),
+            depthRelations = listOf(VideoDepthRelation("near", "far")),
+        )
+        val before = Files.readAllBytes(fixture.projectRoot.resolve(VideoProjectStore.PROJECT_FILE))
+        assertIs<VideoPreparedSceneImportResult.Rejected>(fixture.importer.import(
+            fixture.projectRoot, near.session.project.revision, request.copy(scenery = listOf(scenery("near", near)), depthRelations = emptyList()),
+        ))
+        assertContentEquals(before, Files.readAllBytes(fixture.projectRoot.resolve(VideoProjectStore.PROJECT_FILE)))
+        val saved = assertIs<VideoPreparedSceneImportResult.Saved>(fixture.importer.import(
+            fixture.projectRoot, near.session.project.revision, request,
+        ))
+        assertTrue(saved.scene.layers.single { it.id == "near" }.alpha!!.isUsableCutout)
+        assertTrue(!saved.scene.layers.single { it.id == "far" }.alpha!!.hasNonOpaquePixels)
+        assertEquals(saved.scene, fixture.scenes.load(fixture.projectRoot, saved.scene.id))
+        assertTrue(saved.scene.motionCapabilities.any { it.targetId == "near-coverage" && it.control == VideoMotionControl.TRANSLATE_X })
+    }
+
+    @Test
     fun `clean backgrounds and scenery reject translucent pixels and transparent holes without writes`() {
         val fixture = fixture()
         val finished = fixture.import("room", rgbImage(root.resolve("outside/room.png"), 80, 50, Color.GRAY), VideoReferenceRole.COMPLETE_SCENE)

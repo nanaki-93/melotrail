@@ -758,10 +758,13 @@ private fun validateExecutableScenery(
     val evaluationEnd = if (mode == "moving") last else renderEnd
     for (frame in evaluationStart until evaluationEnd) for (offset in samples()) {
         val sample = frame + offset
-        val visible = planes.map { plane ->
+        val visible = planes.mapNotNull { plane ->
             val section = plane.sections.firstOrNull { sample >= it.start && sample < it.end }
                 ?: if (sample < plane.sections.first().start) plane.sections.first() else plane.sections.last()
-            rectangle(plane, section, sample)
+            // An overlay's bounding rectangle says nothing about its holes.
+            // Missing alpha measurements cannot establish opaque coverage either.
+            section.layer.alpha?.takeIf { !it.hasNonOpaquePixels && it.opaquePixels > 0L }
+                ?.let { rectangle(plane, section, sample) }
         }
         require(covers(visible)) { "Scenery coverage leaves a visible hole at frame $frame" }
     }

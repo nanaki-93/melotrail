@@ -235,6 +235,10 @@ function validatePlaneSections(rawPlanes, coverageById, layerById, evaluationSta
       }
       return {
         index, coverageId: coverage.id, layerId: coverage.layerId, coverage: bounds,
+        // Only measured fully opaque pixels establish rectangular coverage.
+        // Transparent overlays still move/paint, but cannot conceal a hole.
+        opaque: Number.isSafeInteger(layer.alpha?.opaquePixels) && layer.alpha.opaquePixels > 0 &&
+          layer.alpha.translucentPixels === 0 && layer.alpha.transparentPixels === 0,
         worldX: number(rawSection.worldX, `Scenery section '${coverage.id}'.worldX`, -LIMITS.maximumTravelPixels, LIMITS.maximumTravelPixels),
         worldY: number(rawSection.worldY, `Scenery section '${coverage.id}'.worldY`, -LIMITS.maximumTravelPixels, LIMITS.maximumTravelPixels),
         startFrame, endFrameExclusive,
@@ -373,7 +377,7 @@ function validateScenery(scene, canvas, fps, frameRange, raw, seed, initialState
     for (const plane of planes) {
       const section = activeSection(plane, sampleFrame);
       if (!section) throw new SceneryInputError(`Scenery plane '${plane.id}' has no active supplied section at absolute frame ${frame}.`);
-      visible.push(sectionRectangle(scenery, plane, section, sampleFrame));
+      if (section.opaque) visible.push(sectionRectangle(scenery, plane, section, sampleFrame));
     }
     if (!coversViewport(visible, viewport)) throw new SceneryInputError(`Declared scenery coverage leaves a visible hole at absolute frame ${frame}; supply wider coherent source pixels or reduce camera travel.`);
   }

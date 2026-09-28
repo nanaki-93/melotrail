@@ -64,6 +64,906 @@ context only. Unsupported actions stay visible. Tokyo, trains, coffee and TABI
 are examples, never required presets. Preserve the approved motion/steam checkpoint
 and latest charcoal/stone v6 artistic choice without inferring new visual approval.
 
+## User-reviewed Tokyo feasibility clip (2026-09-27)
+
+The project user reviewed the exact pilot below in the current conversation:
+“I like this direction, aside the quality that should be more high for youtube,
+the animation is quite good.” This accepts its **creative/motion direction only**;
+resolution/detail and publication quality remain unaccepted. The user requests
+better ComfyUI quality and a reusable workflow for different TABI scenarios.
+
+- Artifact: `build/tabi-tokyo-lowres.DR8zjZ/tabi-tokyo-reading-pilot-768x448.mp4`;
+  SHA-256 `f905254ccc3c85769f6591031a6336ec78bed2345285db8d869003b96f366536`.
+- Source: [Tokyo train scenario](pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png),
+  SHA-256 `01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e`.
+  TABI action images and [Tokyo inspiration](pictures/video/tabi-assets/scenario/inspiration-tokyo/)
+  informed the prompt; they were **not additional model image inputs**.
+- Candidate: `b208cc700`, with an ignored scratch host wrapper around the production
+  setup, runtime, job coordinator/store, backend and media probe. No product source
+  or model/runtime pins changed. This was not an in-app Video workspace run.
+- Profile: `comfyui-ltx23-v1`, LTX-2.3 distilled 1.1 Q4, Gemma 3;
+  bundled graph SHA-256 `c1d27b28313ba882659c0a7f52d94e666cabce45bfa5ce0fa3d256cc58b79bc7`.
+  One attempt produced native 768×448 H.264, 129 frames at 25 fps, 5.16 seconds,
+  zero audio streams, with full decode checks. Runtime elapsed: 242,982 ms.
+- Receipts: `build/tabi-tokyo-lowres.DR8zjZ/pilot-result.json` and
+  `output/media-proof/video-media-probe-report.json` beneath that same run root.
+  Existing memory-pressure, swap and time safeguards remained enabled; owned
+  processes stopped and original inputs stayed unchanged. An earlier 1024×576
+  attempt stopped on critical host memory pressure and produced no clip; its
+  failure remains in `build/tabi-tokyo-pilot.wXLu35/segment-01/failure.json`.
+
+A 20–30-second pilot remains the next user-desired visual target, not an existing
+result. This short directional approval does not pass VG2-03's controlled-preview
+proof, VG6-02's three app clips, full-length continuity, other-scenario quality,
+asset/model rights, YouTube monetization, or any release gate. It does not authorize
+new model downloads, runtime changes or unbounded inference. Upscaled footage must
+remain labeled as upscaled; increasing export dimensions alone proves no new detail.
+
+### Authorized finishing comparison (2026-09-27)
+
+At the user's request, the same approved-direction clip was processed into two
+[review videos](../build/video-test-archive-2026-09-28/previous-tests/quality-ab-2026-09-27): **A**, ordinary Lanczos
+resizing; **B**, the installed RealESRGAN x2plus through a finishing-only ComfyUI
+graph, followed by Lanczos resizing. Both decode completely as silent 1920×1080
+H.264, 129 frames, 25 fps, 5.16 seconds, with the original frame timestamps. The
+matched 16:9 crop removes eight source pixels from each of the top and bottom;
+neither version stretches the picture. Originals remain hash-identical.
+
+B processed each source frame once, separately, into 1536×896 before cropping
+and final resizing; this is **upscaled footage, not native 1080p generation**.
+The finishing run took 199,837 ms, with existing runtime safeguards unchanged,
+normal recorded memory pressure, no recorded swap growth and owned runtime
+stopped afterward. No LTX/Gemma inference, downloads or hosted services ran.
+[Comparison receipt](../build/video-test-archive-2026-09-28/previous-tests/quality-ab-2026-09-27/comparison.json)
+records output hashes, model/graph pins, crop/encoding settings and limitations;
+the same directory contains three labeled 1:1 detail comparisons and decode
+receipts. Scratch job ledgers/wrappers remain in `build/tabi-upscale-ab.vJICSz/`.
+
+The initial agent still review found sharper character outlines and clothing
+detail in B, with changed fine texture; existing city geometry was not repaired.
+Both files report a BT.709 matrix and limited range but unspecified
+transfer/primaries tags, so these are review experiments, not publication masters.
+No visual gate, longer continuity, other-scenario proof or product integration is
+claimed.
+
+**Subsequent user review, 2026-09-27:** “the B is sharper and better quality”, but
+the user reports background flickering and wrong/sloppy movement of exterior
+objects. This identifies B as the preferred finishing treatment, **not acceptance
+of background motion or final publication quality**. Reviewed artifact:
+`build/video-test-archive-2026-09-28/previous-tests/quality-ab-2026-09-27/B-realesrgan-x2-1080p.mp4`, SHA-256
+`49f352ac5382e844e7b59677e7c6b30348d6f5e371bd64f4d739399ec7a5b874`.
+The historical comparison receipt retains its pre-review state.
+
+Read-only inspection of the original decoded frames confirms malformed passing
+pole/support geometry at 2.00 seconds (frame 51, one-based) and a smeared pole and
+crossarm at 5.12 seconds (frame 129), before enhancement. Source frames remain in
+`build/tabi-upscale-ab.vJICSz/source-frames/`. The whole-scene I2V graph consumes
+one starting image and text; its prompt already asks for rigid buildings, but it
+has no window mask, explicit depth planes or rigid-object trajectories. The
+per-frame upscaler may accentuate fine-detail shimmer; its incremental temporal
+contribution has not been measured. This inspection launched no new inference,
+download, upload or media modification. Background correction remains unproven.
+
+### User-requested exterior style studies (2026-09-27)
+
+Five still-image alternatives and the original reference are in
+[Tokyo background styles](../build/video-test-archive-2026-09-28/previous-tests/tokyo-background-styles-2026-09-27/00-comparison.jpg),
+with a separate [exterior closeup comparison](../build/video-test-archive-2026-09-28/previous-tests/tokyo-background-styles-2026-09-27/00-exterior-comparison.jpg).
+Full-size PNGs retain the source's 1664×936 dimensions and sRGB profile. A static
+main-window selection protects TABI, the cup and cabin; pixels outside that
+selection are verified unchanged. Smaller left windows remain original.
+
+Options are posterized pastel, soft painted wash, minimal geometric Tokyo,
+ink/warm-paper wash and retro pixel. Four are local image-processing studies;
+**03 is a procedurally drawn, simplified Tokyo interpretation**, retaining the
+Skytree motif but reinterpreting secondary buildings and omitting wire/pole clutter.
+These are not model-generated restyles. The directory's `comparison.json` records
+methods, hashes and limitations. Original artwork and A/B videos are untouched;
+no model, download or hosted service was used. This user-requested artwork
+exploration adds no in-app synthesis feature. The still studies alone do not
+establish reduced flicker, rigid movement, independent depth layers or offscreen
+scenery coverage. Their original machine receipt retains its pre-selection state.
+
+### Selected geometric-Tokyo motion pilot (2026-09-28)
+
+The user selected **03 — Minimal geometric Tokyo**: “i want to go with Minimal
+geometric Tokyo, try with that”. Selected PNG SHA-256:
+`eb1a779ff6b93ff83d05d0186d8bd3c06aadc786989bb6a086230f7be1d658d5`.
+This authorizes the bounded style/motion trial, not approval of its generated video.
+
+One local I2V submission produced a new 768×448, 129-frame, 25-fps, 5.16-second
+silent H.264 clip. The pinned LTX-2.3 distilled Q4/Gemma profile, seed `20260914`,
+eight-step sampler and native dimensions/cadence match the earlier pilot. Both
+the starting exterior artwork and exterior prompt changed: slow, steady travel,
+flat fills, rigid simple architecture and no added poles/wires or realistic detail.
+This is not a single-variable comparison or a masked/controlled-scenery render.
+
+After stopping the generation runtime, 129 separate RealESRGAN x2 frame jobs
+applied the preferred B treatment. The final derivative crops 16 pixels from
+each top/bottom edge at x2, then uses Lanczos to 1920×1080, with explicit square
+pixels/16:9. There is no interpolation, looping or speed change. Generation-wrapper
+elapsed time was 229,961 ms; finishing-wrapper elapsed time was 195,380 ms.
+Recorded pressure stayed normal; maximum sampled host swap during generation was
+78.19 MiB. Existing safeguards remained active and both owned runtimes stopped.
+No new models, downloads or hosted service were used; originals remain unchanged.
+
+- [B-finished 1080p review clip](../build/video-test-archive-2026-09-28/previous-tests/minimal-geometric-tokyo-pilot-2026-09-28/minimal-geometric-tokyo-B-1080p.mp4),
+  SHA-256 `ecd890f20ad22e5cf750f5fd3696dd571519c9fe75a33b0416b5214129448658`.
+- [Native clip](../build/video-test-archive-2026-09-28/previous-tests/minimal-geometric-tokyo-pilot-2026-09-28/minimal-geometric-tokyo-native-768x448.mp4),
+  SHA-256 `11a950124eb2178ca4873320d517ab161ab1bc3c82141a1cd56d3ea8fa3db09f`.
+- [Receipt](../build/video-test-archive-2026-09-28/previous-tests/minimal-geometric-tokyo-pilot-2026-09-28/pilot-result.json)
+  and [sampled frames](../build/video-test-archive-2026-09-28/previous-tests/minimal-geometric-tokyo-pilot-2026-09-28/review-frames.jpg).
+  Both videos pass complete decoding and exact 0.04-second timestamp checks.
+  The receipt discloses native unspecified SAR, final explicit square pixels,
+  remaining color-tag limitations and upscaled rather than native 1080p detail.
+  Scratch job ledgers/wrappers: `build/tabi-geometric-pilot.PQ2JOB/`.
+
+Inspected samples retain the simplified skyline without the earlier large
+pole-smearing artifact, but some tree-canopy and roof/window shapes still soften
+or deform. No flicker reduction was measured; these initial agent observations
+were not acceptance.
+
+**Subsequent user feedback, 2026-09-28:** the user calls this clip “a good starting”
+but reports problems in TABI's eyes and blurring/sloppy shapes around buildings,
+and requests a more distinct background. This is preliminary directional
+feedback, **not approval of eye animation, background coherence or final quality**.
+It refers to the B-finished clip and hash above; the machine receipt retains its
+pre-review state. No long-continuity or VG2/VG6 gate is passed.
+
+Matched native/RealESRGAN crop inspection shows eye-contour and iris-shape changes
+during the blink/gaze transition around 2.40–2.88 seconds (one-based frames 61,
+69 and 73), already present before sharpening. Native samples also retain softened
+or deformed building/tree shapes. This does not quantify sharpening's incremental
+temporal effect. The local inspection sheet is
+`build/tabi-geometric-review.hY6Vx0/eye-comparison.png`; no new inference or original
+media modification was performed for this review. Corrected motion and any more
+distinct artwork still need separate user review.
+
+### Local ComfyUI panorama artwork proof (2026-09-28)
+
+The user authorized Tokyo-reference background/parallax tests and explicitly
+selected continuing **ComfyUI**, rather than Codex image generation, to exercise
+the intended local workflow. One fresh, bounded artwork attempt used the already
+installed FLUX.2 Klein 4B local FP16-dequantized derivative, Qwen 3 4B and FLUX.2
+VAE. This is standalone asset preparation, not an in-app image-generation feature
+or a resumption of the retired reference-image trial. No download, hosted request,
+new custom node, production-source edit or runtime-profile change was made.
+
+The scratch API graph binds three actual image references: an exterior-only
+`(820, 0, 1664, 512)` crop of selected style 03, plus
+`scenario/inspiration-tokyo/IMG_1842.webp` (Asakusa architecture) and
+`scenario/inspiration-tokyo/IMG_1845.jpeg` (Ginza architecture), under the asset kit.
+Each is aspect-preservingly encoded at 0.25 megapixel, rounded to multiples of 16.
+Four Euler steps, CFG 1 and seed `20260928` produced **one native 1536×512 opaque
+PNG**, without AI upscaling. The existing owned `ComfyVideoRuntime`,
+`LocalVideoBackend`, `VideoJobCoordinator` and `VideoJobStore` performed the job;
+the caller remains a scratch wrapper, not the planned Video UI.
+
+- [Native panorama](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-2026-09-28/panorama-native-1536x512.png),
+  SHA-256 `f4edca0eb1337aa2723b9b73cda2eaf06a51f9d7e22c0b73e848241598ebd66a`.
+- [Residential/temple context](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-2026-09-28/scene-start.png)
+  and [clock-tower context](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-2026-09-28/scene-end.png)
+  are **static spatial views**, not animation frames. Ordinary resizing and the
+  previous main-window mask place the generated plate into the original scene;
+  every pixel outside the mask is verified exact. TABI, cup, cabin and smaller
+  left windows stay static and unchanged.
+- [Receipt, input/model pins and resource facts](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-2026-09-28/result.json).
+  The adjacent `evidence/` retains the API graph, prompt, typed job ledger,
+  style crop, host samples and wrapper. Scratch: `build/tabi-comfy-panorama.RsbQ3F/`.
+
+The single attempt completed; runtime-wrapper elapsed time was 75,468 ms,
+including startup and post-run verification. All original/model pins were
+verified unchanged and the owned runtime stopped. Of 34 recorded host samples,
+32 were NORMAL and **two were WARNING**; none were CRITICAL, and no swap increase
+was recorded. Maximum sampled owned-process-tree RSS was 14,008,844,288 bytes;
+this excludes some Metal/unified-memory allocations. An initial normal-only
+summary was corrected from the full sample log, with no repeated inference;
+three scratch reporting regressions cover retained warnings, intermediate swap
+peaks and rejection of critical/unknown/missing samples.
+
+The image has distinct residential, temple and clock-tower sections, but fine
+roof/window details remain irregular. **User artistic review is pending.** This
+is one flattened plate, not independent depth layers, a seamless tile, adequate
+180–300-second coverage or a parallax/eye-motion proof. Layer preparation,
+occlusion/coverage validation and a bounded controlled-motion test remain next;
+no VG2/VG6 acceptance or integrated application capability is inferred.
+
+### More characteristic Tokyo artwork revision (2026-09-28)
+
+Reviewing the first panorama, the user said: “yes, but i'd like something more
+detailed and characteristic, not anonymous or oboring”. This requests refinement,
+not final look or motion approval. The next local ComfyUI candidate adds tiled
+roofs, balconies, laundry, bookshop shelves, vending machines, bicycles, lanterns,
+more articulated cherry trees and distinct storefronts, with stronger linework.
+
+The still uses the same installed Klein/Qwen/FLUX.2 VAE models, four Euler steps,
+CFG 1 and seed `20260928`. Native resolution is now **1920×640**, not an upscale.
+Four reference images are actually bound: the original illustrated scenario's
+exterior crop `(820, 0, 1664, 512)`, the same Asakusa/Ginza photos, and a
+`(0, 0, 320, 620)` facade crop of `inspiration-tokyo/IMG_1844.webp`. The original
+illustration replaces the very flat geometric style reference. Prompt, references
+and resolution changed together; no single-variable quality claim is made.
+
+The initial submission produced no image: persisting ComfyUI's node-local progress
+as whole-job progress triggered `PERSISTENCE_FAILED: Known video progress cannot
+become unknown or move backwards`. Its wrapper stopped the owned runtime and its
+ledger remains at the last ACTIVE/100 observation; that historical state is not
+rewritten. **VG2-04 fixes the adapter**, not the store invariant: whole-workflow
+progress stays unknown while running, and verified output history establishes
+completion. Node-reset/reconnect/durable-publication regressions failed before
+and pass after the repair. One corrective retry used identical graph/prompt/
+dimensions/seed, with repaired client source/bytecode included in its pins.
+
+- [Detailed native panorama](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-detailed-2026-09-28/panorama-native-1920x640.png),
+  SHA-256 `16c276238e2c62d0869c815c51d343bc2f9b680bbdee934a15f246fc810d362a`.
+- Static context views: [shops](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-detailed-2026-09-28/scene-start.png),
+  [temple](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-detailed-2026-09-28/scene-middle.png),
+  [clock-tower district](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-detailed-2026-09-28/scene-end.png).
+  All pixels outside the prior window mask remain exact; TABI/cup/cabin are static.
+- [Receipt](../build/video-test-archive-2026-09-28/previous-tests/tokyo-comfy-panorama-detailed-2026-09-28/result.json)
+  records **two submissions: one failed, one successful**, preserves both requests
+  and host samples, and includes the progress repair patch. Scratch retry:
+  `build/tabi-comfy-panorama-detail-retry.1lv1ok5y/`.
+
+The successful retry's runtime-wrapper time was 95,567 ms. It recorded 56 NORMAL
+and two WARNING samples, no CRITICAL samples, and about 702.07 MiB maximum sampled
+swap increase; maximum sampled owned-process RSS was 17,200,971,776 bytes, not a
+complete Metal/unified-memory measurement. The failed attempt separately recorded
+two warnings and about 2.52 GiB maximum sampled swap increase. Both runtimes stopped;
+model/source/prior-output pins remain unchanged. No download, hosted generation,
+new model, custom node or runtime-limit relaxation was used.
+
+**At publication, look review was pending; this was not motion-ready.** Small human figures appeared
+despite the no-people prompt, signage is not verified typography, and the larger
+foreground buildings/street perspective depart from the requested shallow side-on
+elevation. These must be resolved for the selected motion treatment. This opaque
+plate provides neither separate depth layers nor a parallax/eye-motion proof,
+full-duration scenery coverage, app integration or VG2/VG6 artistic acceptance.
+
+### Layered Tokyo preparation and blocked parallax render — 2026-09-28
+
+The user subsequently approved the richer **direction** (“yes, it's really a good
+direction, i'd like to continue in that way”) and authorized the staged plan (“go
+with this plan”). That is not approval of final layers, motion or release quality;
+the earlier receipt remains unchanged.
+
+New review artifacts: [start composition](../build/video-test-archive-2026-09-28/previous-tests/tokyo-layer-preparation-2026-09-28/scene-start.png),
+[end composition](../build/video-test-archive-2026-09-28/previous-tests/tokyo-layer-preparation-2026-09-28/scene-end.png),
+[middle matte](../build/video-test-archive-2026-09-28/previous-tests/tokyo-layer-preparation-2026-09-28/middle-matte-review.jpg),
+[near matte](../build/video-test-archive-2026-09-28/previous-tests/tokyo-layer-preparation-2026-09-28/near-matte-review.jpg)
+and [receipt/layer pins](../build/video-test-archive-2026-09-28/previous-tests/tokyo-layer-preparation-2026-09-28/result.json).
+**These are preparation stills, not video frames. No new video was produced.**
+
+Four bounded ComfyUI Klein submissions produced native 1920×640 stills. The first
+far-plane candidate retained foreground architecture and was rejected for that
+role. One admitted correction and the two other initial roles used actual cropped
+references from the approved detailed panorama, encoded at 0.25 MP, with four
+Euler steps/CFG 1. All four jobs completed; the rejection was artistic, not a
+runtime failure. Three separate RealESRGAN x2 jobs then finished the usable stills
+at 3840×1280. No frame-by-frame AI redraw, extra model, download, hosted service or
+Codex generation call was used.
+
+The kit contains an opaque far plate and genuinely transparent middle/near planes,
+prepared by local chroma matting, explicit cropping and aspect-preserving resizing.
+These are new style-matched drawings, not faithful automatic extraction of the flat
+panorama. The far crop excludes a second generated tower. The middle plane reveals
+the temple; the near plane supplies shops/branches. Generated signage and recurring
+shop motifs remain limitations, especially before any longer travel. TABI/cabin
+are the original artwork resized once with Lanczos to 1920×1080; pixels outside
+the resized main-window mask are exact in the static checks. Small left windows
+remain unchanged. Matte/scale/style approval is still open.
+
+VG1-02 adds measured transparent-overlay admission without counting overlay bounds
+as opaque coverage. Two JVM regressions and one Node regression failed before the
+change; focused suites and 24 Node tests now pass, including real importer fixtures
+with three depth planes and exact foreground pixels. The full run additionally
+exposed two old hand-written coordinator fixtures lacking measured alpha; corrected
+fixture counts and explicit missing-measurement rejection now pass. `make test`,
+`make build` and `git diff --check` passed after that repair. The real prepared project
+and typed 150-frame descriptor also passed preparation. The supplied visible crop covers
+the entire planned trajectory and three shutter samples; padding stays behind the
+fixed cabin. An initial placement failing the mask's resampling fringe was retained
+and corrected before any render submission.
+
+The **one** durable controlled-media attempt then failed memory admission before
+launching Node/FFmpeg: required **2,147,483,648 free bytes**, reported
+**830,046,208 bytes** (about 792 MiB). Its `FAILED` ledger and private request survive;
+there are zero rendered frames and no MP4. No memory override, reduced safeguard or
+automatic retry was used. A later host snapshot showed recovered free pages, but is
+not a render pass or authorization to retry. At that point fresh bounded retry
+authorization and successful admission were needed; the subsequent authorized
+retry and repair are recorded below. Scratch/evidence: `build/tabi-parallax.TQIWbn/`.
+
+The four generation runs recorded seven WARNING samples in total, no sampled
+CRITICAL pressure, and at most about 8.63 MiB per-run sampled swap growth. Finishing
+and the refused render recorded NORMAL samples only. The receipt preserves each
+run's full counts/peaks; RSS is not complete unified-memory usage. Owned runtimes
+stopped and previous source/publication hashes were reverified unchanged.
+
+The scratch harness uses the production importer, typed descriptor, job coordinator
+and durable media stage. The application convenience scenery compiler still emits
+one coverage plane; it was not used or represented as integrated three-plane UI.
+VG2-03, moving-pixel review, 20–30-second continuity, blink and full-duration delivery
+remain open. This standalone artwork preparation does not change the product's
+externally finished-artwork input contract.
+
+### Five-second parallax and memory repair — 2026-09-28
+
+The user then authorized a retry and a solution without reducing quality if resources
+still blocked it. The [five-second review clip](../build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-5s-2026-09-28/tokyo-parallax-5s-1080p.mp4)
+now exists, with [MP4-decoded review frames](../build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-5s-2026-09-28/review-frames.jpg)
+and [receipt/evidence](../build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-5s-2026-09-28/result.json).
+It is **1920×1080, 150 frames, 30 fps, five seconds, silent H.264, square pixels**.
+SHA-256: `3e104ea878eee9b4f4afbe76bb5c5b182495b44b4cb3dce156da33730a241aa9`.
+The three prepared ComfyUI/RealESRGAN plates were reused: no additional inference,
+upscaling, model, download, provider substitution or artwork regeneration.
+
+The first same-limit retry passed admission but its Node process exceeded the
+2,147,483,648-byte native ceiling at 2,159,640,576 bytes. It stopped after 23 PNGs,
+without an MP4 or take. The whole-chunk synchronous render/write loop prevented
+native-finalizer/event-loop service between frames. VG2-05 adds a macrotask yield
+between PNGs, retaining identical drawing and three-sample shutter calculations.
+Regression tests also cover asynchronous cancellation, including cancellation on
+the final yield before receipt publication. Limits and publication safeguards were
+not weakened. The two original regressions and final-yield regression failed before
+their repairs; all 27 Node checks now pass, alongside focused JVM boundaries.
+
+The first repaired run succeeded in 81,384 ms. A final bounded run after the
+callback-cancellation guard succeeded in 72,973 ms, binding evidence to the exact
+final renderer. Both are retained as separate **UNREVIEWED** immutable takes; no
+accepted output or failed ledger was replaced. Scratch:
+`build/tabi-parallax-retry.2Ixv0Z/`, `build/tabi-parallax-fixed.cxfiro/`, and
+`build/tabi-parallax-final.ScZPRv/`. Final Node sampled peak: **448,675,840 bytes**
+(about 428 MiB); sampled JVM-plus-children peak: 1,295,302,656 bytes. All 38 final
+samples were NORMAL with no sampled swap increase. The previous successful run
+sampled a 457,244,672-byte Node peak. RSS is not full unified-memory usage; sampling
+can miss peaks, and the unchanged production supervisor owns enforcement.
+
+Quality-preservation evidence is concrete rather than a lowered-resolution workaround:
+all 150 final source PNGs match the first successful repair byte-for-byte, and the
+first 23 match the unmodified renderer's retained partial frames. Each frame exactly
+preserves 1,351,577 pixels outside the main-window mask from the once-resized original.
+Selected unobscured start/end patches measure the intended 60/120/180-pixel leftward
+far/middle/near shifts. All 150 rendered and MP4-decoded frames are distinct; full
+decode and presentation timestamps verify cadence and duration. This proves rigid
+scenery motion and fixed source artwork, not automatic appearance or action control.
+H.264/yuv420p remains lossy; the receipt records compression error separately. The
+MP4's color matrix is unspecified, so it is not a color-certified master.
+
+Selected decoded stills were inspected, not substituted for normal-speed user review.
+Perceived depth/speed, shimmer, matte edges and artistic acceptance remain open.
+Only the large right window moves; small left panes stay original. The kit's generated
+signs and recurring shop motifs remain limitations. The first preflight pin check
+noticed externally changed Finder `.DS_Store` metadata; that non-artwork exclusion is
+explicitly recorded. Actual supplied images, prepared layers, previous media and
+failed-run evidence were reverified unchanged. Full test/build/diff gates and exact
+final source/docs pins are retained with the scratch validation logs.
+
+This closes the narrow resource repair, **not VG2-03 or VG6 visual acceptance**.
+The convenience compiler still emits one coverage plane; this production-service
+harness is not integrated three-plane UI. Review this five-second output before
+20–30-second continuity, test blink separately, then consider combining them.
+No longer run, rights/commercial clearance, release or full-duration approval is implied.
+
+### Twenty-second faster Tokyo test (2026-09-28)
+
+After reviewing the five-second clip above (SHA-256
+`3e104ea878eee9b4f4afbe76bb5c5b182495b44b4cb3dce156da33730a241aa9`), the user said
+“i like the parallax,” but found the movement slow and the background tower unlike
+the other artwork. They requested a longer test with more passing scenery. This
+approves the parallax direction, **not** the existing tower, speed or final release.
+The follow-up is now rendered: [20-second MP4](pictures/video/tests/tokyo-parallax-20s-1080p.mp4)
+and [decoded review stills](../build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/review-frames.jpg).
+SHA-256: `30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7`.
+It is silent 1920×1080 H.264/yuv420p, square pixels, 600 frames at 30 fps, 20 seconds.
+Far/middle/near travel is 480/960/1440 pixels: **1.99× the earlier speed**, with
+three shutter samples and no loop, stretch, repeated-frame fill or interpolation.
+Only the large right window moves; TABI/cabin and smaller left panes remain fixed.
+
+Three wider **3072×512 native ComfyUI drawings** supply the scenery, using the
+installed Klein FP16-dequantized derivative/Qwen/VAE route. These are new paintings,
+not extraction of the approved flat panorama. The illustrated panorama supplies
+style; `inspiration-tokyo/IMG_1843.webp` supplies Tokyo Tower structure only.
+The first far candidate clipped the antenna. The single admitted artistic correction
+is selected, with a complete red/ivory illustrated tower. Its native x=0..1600 crop
+excludes an unwanted secondary distant tower outside the intended view. Selected
+far/middle/near paintings each received one RealESRGAN x2 finish to **6144×1024**.
+Aspect-preserving placement, measured chroma mattes and supplied-pixel coverage
+checks precede rendering. The temple, clock tower, different roofs, shopfronts and
+cherry branches pass at distinct depths; generated lettering remains unverified.
+
+Local preparation caught chroma matting erasing part of a genuinely green roof.
+An explicit roof-interior keeper restores the original source RGBA, not invented
+pixels. Its first non-inset candidate was refused for including 75 key-background
+pixels; the final four-pixel inset passes that unchanged guard. Two scratch
+regressions demonstrate the old damage and reject admitting green backing. Original
+paintings, faulty preparation and refused keeper remain retained. This is external
+artwork preparation, not an in-app generation/extraction capability.
+
+One production-service controlled attempt succeeded in **325,083 ms** through the
+same renderer, with absolute chunks `[0,300)` and `[300,600)` and exactly matching
+continuation state. The take `take-e9f8dce9-69e7-4160-88ee-a3cba71d28a8` remains
+**UNREVIEWED**. All 600 lossless frames preserve **1,351,577 pixels outside the
+window** exactly. Selected rendered patches independently measure the planned
+motion. Full MP4 decoding verifies 600 distinct frames, uniform timestamps and no
+audio. Exact pixel preservation is a source-PNG claim: H.264 is lossy (minimum
+source-versus-decoded RGB PSNR 35.48 dB; maximum fixed-region temporal RGB MAE 2.62).
+Color matrix is unspecified; this is not a color-certified master.
+
+The renderer's sampled Node peak was **494,387,200 bytes (~471 MiB)** under the
+unchanged 2-GiB native ceiling; all 162 render samples were NORMAL with no sampled
+swap increase. Artwork generation had two WARNING samples in the middle-plane job
+and about 3.27 GiB host-global swap growth; no sampled CRITICAL. RSS samples are
+not complete unified-memory measurements or exhaustive peaks. The new request's
+7-GiB staging / 1-GiB output budget was sized before rendering for 600 frames, with
+the same 900-second native deadline and 10-GiB free-disk reserve. No resource failure,
+automatic replay, model download, hosted/Codex request or production code change.
+
+Receipts, pins, prompts, graphs, prepared art, decoded proofs and validation are in
+`build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/`; complete source/decoded frame
+sequences remain in `build/tabi-tokyo-long.58RtOJ/`. Prior source/publication bytes
+were reverified, excluding only explicitly irrelevant Finder metadata.
+This is a typed production-service harness, not integrated app/UI support. Review
+speed, tower style, scale, variety, matte edges, occlusion and shimmer at normal
+speed. This 20-second continuity proof does not establish restart recovery,
+30 seconds, blink, 180–300-second delivery, rights or release acceptance.
+Current scope/status remains VG2-03 in TASKS; no further generation starts without
+a separately bounded continuation.
+
+**Subsequent user feedback and blink scope (2026-09-28):** “this test look better”.
+The exact 20-second hash above is the reference for the isolated blink study, not
+a full-duration/release approval. The user authorized a short blink-only test and
+cleaning `docs/pictures/video/tests/` to video results. Its 563 original files were
+moved byte-for-byte to `build/video-test-archive-2026-09-28/previous-tests/`; only
+the current MP4 remains at the review folder root. No source, previous video or
+failed evidence was deleted; historical machine receipts keep their original
+paths. `build/tabi-blink.0GtJyK/archive-{admission,result}.json` records relocation.
+Current documentation links point at the new locations. That ignored archive is
+local evidence and must be preserved when cleaning build output.
+
+Blink preparation first needs matched eye artwork. TABI's pose, head, hands, clothes,
+props and scenery stay fixed; only tightly bounded eyes may change. The current
+compositor blends one supplied pose with the open subject, not a three-pose eyelid
+sequence. Inspect candidate half/closed art before claiming natural lid movement;
+missing alignment or controls block that next step, not grounds for whole-scene
+I2V or invented approval. No integrated UI or in-app picture synthesis is added.
+
+### Blink artwork and guarded render refusal (2026-09-28)
+
+[Open/closed eye comparison](../build/tabi-blink.0GtJyK/prepared/pose-review.jpg)
+is **static artwork preparation, not video**. Three local Klein still submissions
+produced native 1024×1024 crops. The first closed candidate added unwanted eyelashes
+and purple shading. The one admitted correction provides simple closed lid lines.
+The half-closed candidate shifts iris/gaze geometry and adds lid-outline ovals;
+it is retained but not selected or described as a matched pose. Only the corrected
+closed crop was RealESRGAN-finished to 2048×2048, then aspect-preservingly resized
+and confined to the original eye regions. No generated mouth, forehead, headphones,
+body or background enters the scene. Local boundary colour matching and feathering
+are disclosed in the preparation receipt; **2,064,229 outside-support pixels**
+remain exactly equal in the static composition. Eye art remains UNREVIEWED.
+
+An eight-second / 240-frame eyes-only test was prepared through the production
+importer, typed descriptor, job store/coordinator and controlled media stage. It
+selects the existing **open/closed pose crossfade**, not an articulated three-pose
+lid animation. Head/body/props/scenery are fixed; no half pose is silently substituted.
+The single admitted request was refused **before native launch**:
+`Controlled memory admission requires 2147483648 free bytes; available capacity is 1619968000.`
+The FAILED attempt is `attempt-74a82f7a-0b81-478a-9468-94249d8f565a`. There are
+**zero generated PNG frames, no blink MP4 and no imported take**. A predicted blink
+schedule is only unexecuted request data, not motion evidence. The prepared artwork
+is retained for a fresh explicitly bounded retry without regenerating it. No memory
+limit reduction, automatic replay, cache purge or unrelated process termination.
+
+Three generation runs recorded six WARNING samples in total, no sampled CRITICAL;
+maximum per-job sampled host-global swap increase was approximately 1.64 GiB.
+Finishing and the refused render samples were NORMAL; all owned wrappers stopped.
+Sampled RSS is not an exhaustive or complete unified-memory peak. This refusal is
+an admission result, not a measured renderer peak or proof that an eight-second
+blink cannot fit. Inputs, model/runtime pins and previous artifacts remain intact.
+
+`build/tabi-blink.0GtJyK/` retains art, requests, failed ledger, resources and gate
+receipts. Four scratch checks cover static-eye confinement, pose alpha alignment,
+prior-source identity, archive preservation and zero-output refusal; focused JVM,
+27 Node checks, full test/build and diff gates are recorded there. No production
+code changed. The review directory still contains only the unchanged 20-second
+MP4; static studies/logs remain outside it. Next: review the closed-eye art and
+admit a fresh attempt only when memory permits. A true half-lid sequence remains
+an explicit artwork/control gap, not a completed animation capability.
+
+### Eight-second isolated blink retry (2026-09-28)
+
+The user explicitly requested a retry. [Watch the eight-second blink test](pictures/video/tests/tabi-blink-8s-1080p.mp4)
+— one blink around **3.5 seconds**, with head, clothing, hands, props and scenery
+fixed. SHA-256: `e5d3376c9abf01ee820ccf93176a7e28b6db586acdacca8ab02f6cc34b5582c2`.
+This is silent 1920×1080 H.264/yuv420p, 240 frames at 30 fps, square pixels and
+uniform timestamps. No new artwork generation or RealESRGAN pass was needed:
+the prepared open/closed pixels, control/seed, timing, runtime and encoding are
+unchanged. A new private project/request preserves the original failed attempt.
+
+Three preflight NORMAL samples reported 19.26–20.05 GB free before launch. The
+production 2-GiB memory admission and native enforcement were not lowered;
+900-second native deadline, 4-GiB staging, 1-GiB output and 10-GiB free reserve
+remain. One attempt, `attempt-f6b5d9a2-a45a-4d5c-9079-18081219f2b6`, completed in
+**106,792 ms**. Its take `take-f5ea025a-6f74-406b-9caf-9f63785d4087` is **UNREVIEWED**,
+not automatically selected. Sampled Node peak: **302,628,864 bytes (~289 MiB)**;
+55 NORMAL samples, no sampled swap increase and owned wrapper exited. Sampling is
+not an exhaustive or full unified-memory peak.
+
+All 240 lossless compositor frames preserve **2,064,229 non-eye pixels exactly**.
+Frames 101–107 change; peak closure is frame 104 / 3.467s. There are eight distinct
+source images including the original open-eye state and 233 intentional static
+holds. This is an isolated action study, not 240 newly generated motion states or
+a strategy for filling a long video. Full decoding separately confirms the stream,
+cadence, duration and visible eye change. H.264 remains lossy: minimum RGB PSNR
+35.48 dB, maximum fixed-region temporal RGB MAE 2.43; its 107 distinct decoded
+images include compression differences, not additional motion. Color matrix remains
+unspecified; this is not a color-certified master.
+
+[Decoded blink details](../build/tabi-blink-retry.gc18u7/decoded-review/blink-decoded-review.jpg)
+show the supplied closed lines at the peak, and **crossfade/iris ghosting in the
+intermediate states**. This is the disclosed existing open/closed blend, not a
+matched half-lid pose or anatomically articulated eyelid movement. Normal-speed
+human review is still required; do not infer naturalness from pixel checks.
+
+Scratch evidence lives in `build/tabi-blink-retry.gc18u7/`: exact request/quality
+parity, source/decoded proofs, resources, ledgers and final validation. The scratch
+comparison initially failed to account for new import timestamps/source locations;
+a second check assumed a nonexistent metadata field. The already-authorized native
+attempt started while those bookkeeping checks were corrected. Production pin and
+resource checks remained enforced; the corrected comparison rehashes both import
+descriptors, permits only verified metadata changes and checks all other values.
+Three scratch checks reject pixel/control drift. No second native attempt or
+production change followed. Focused JVM, 27 Node checks, full test/build and diff
+gates are retained. Old artwork, archive and refused ledger were reverified intact.
+Only the new MP4 was added beside the parallax result in the review folder.
+
+This delivers the bounded retry, not blink approval, combined motion, three-pose
+support, longer continuity, UI integration or release acceptance. Await review
+before admitting any next render.
+
+**Subsequent user review (2026-09-28):** “ok, the blink is well made, we can
+continue with the next step”. This approves the blink in the exact eight-second
+MP4 above for the next combined experiment. It is genuine scoped human approval,
+not inferred from tests; the earlier UNREVIEWED receipt and take snapshot remain
+historical and unchanged, with no automatic take selection. The existing
+open/closed crossfade remains the implementation; approval does not create
+three-pose control or approve an unseen combined/full-length result.
+
+The admitted next step is one 20-second combination of these eyes and the existing
+three-plane Tokyo parallax, retaining supplied artwork, speed, 1080p30, shutter
+sampling and safeguards. Only eye-support alpha is removed from the fixed cabin
+foreground/occlusion so the eye layer can be seen. No new painting, finishing,
+head/body motion or longer render is implied. Review event and admission:
+`build/tabi-combined.e6gsws/`. Combined motion still needs its own output and review.
+
+### Twenty-second combined blink and parallax (2026-09-28)
+
+[Watch the combined test](pictures/video/tests/tabi-tokyo-blink-parallax-20s-1080p.mp4).
+SHA-256: `7136e45800aebc577e4529a36cc3007b05117199db611e6a3a76a7edb686970f`.
+The approved blink method now accompanies the existing three-plane Tokyo parallax,
+with blink peaks at **3.467, 10.467 and 19.4 seconds**. Head, body, hands, clothing,
+props and cabin remain fixed. The earlier two videos remain intact; the review
+folder contains videos only. [Decoded review sheet](../build/tabi-combined.e6gsws/decoded-review/combined-review.jpg)
+and [eye details](../build/tabi-combined.e6gsws/decoded-review/eye-review.jpg) stay in scratch.
+
+No artwork was generated, refinished or resampled. The supplied scenery planes and
+open/closed eye images were copied byte-for-byte. Only the 9,371-pixel binary eye
+support was cut from cabin foreground/occlusion alpha, letting the separately
+rendered eyes remain visible; all RGB and other alpha pixels stay unchanged.
+The eye and window supports are disjoint. Three preparation checks and the typed
+production importer validate the layering. The seed/control from the approved
+blink drives absolute-time pose blending across the 20-second request; the scenery
+uses the same 480/960/1440-pixel travel, three shutter samples and 0.5 shutter fraction.
+This is the same open/closed crossfade, not new three-pose articulation or whole-scene I2V.
+
+One controlled attempt `attempt-81d482e9-5e4f-4963-8501-52a2dd73f33d` succeeded
+in **331,992 ms**, producing take `take-1e4d9b40-4618-4f61-b56c-28b70bc4ec26`,
+**UNREVIEWED** and not selected. Both absolute chunks `[0,300)` and `[300,600)`
+carry exactly matching scenery continuation. The second blink occurs after the
+chunk boundary on its original absolute clock, not a restarted local clock.
+Full decode confirms 600 distinct frames, 20 seconds, 30 fps, 1920×1080 H.264/yuv420p,
+square pixels and no audio. No loop, repeated-frame fill or per-frame AI redraw.
+
+All **2,064,229 non-eye pixels in every source frame** exactly match the earlier
+20-second parallax's corresponding source frame. All first 240 eye regions exactly
+match the approved eight-second blink's source frames. Across all 600 frames,
+**1,342,206 pixels outside eyes and window** remain fixed, and the eyes follow the
+specified absolute blend within two RGB levels of independently computed rounding.
+The 600 complete source frames are distinct because scenery keeps moving during
+open-eye holds. H.264 is lossy: minimum RGB PSNR 35.48 dB and maximum fixed-region
+temporal RGB MAE 2.62. Exact parity/preservation concerns source PNGs, not encoded
+pixels. Color matrix is unspecified; this is not a color-certified master.
+
+Sampled Node peak: **562,118,656 bytes (~536 MiB)**, under unchanged 2-GiB native
+enforcement. All 166 render samples were NORMAL, with no sampled host-global swap
+growth; the owned wrapper exited. Sampling is not an exhaustive/unified-memory
+peak. The 900-second native / 1020-second wrapper, 7-GiB staging, 1-GiB output and
+10-GiB free reserve stayed unchanged from the admitted 20-second configuration.
+No resource failure, retry, download, provider change, ComfyUI or finishing job.
+
+Exact inputs, human blink review event, preparation, requests, source/decode proofs,
+resources and focused JVM/27 Node/three preparation/full test/build/diff gates are
+retained in `build/tabi-combined.e6gsws/`. Original artwork, both prior videos,
+archive and failed evidence are reverified unchanged; no production code changed.
+This is a production-service harness, not integrated UI. Inspect the combination
+at normal speed before a separately bounded 30–60-second coverage/recovery test.
+Neither that longer test nor three-minute delivery, rights or release is approved
+by this result or by the earlier isolated-blink approval.
+
+**Subsequent combined-test approval (2026-09-28):** the user says “perfect, we can
+continue with the next step”, referring to the exact combined MP4 above. This is
+human approval of that combination, not of unseen longer footage or release.
+Sealed historical take/project receipts remain unchanged; the new review event is
+in `build/tabi-continuity.0lyIo2/`.
+
+The admitted bounded test is 30 seconds at the same pixel speed. Measured coverage
+finds previously unused near-strip pixels sufficient after a 480-pixel rightward
+starting reframe; the initial near crop changes, but artwork is neither rescaled,
+looped nor regenerated. All 900 frames/three shutter samples stay within supplied
+pixels. Sixty seconds still needs additional scenery. The existing backend can
+recover a sealed completed publication after process restart, but cannot resume
+interrupted partial chunks. This run therefore admits one render followed by a
+fresh-JVM completion-recovery/import check, not a mid-render crash/resume claim.
+
+### Thirty-second continuity and completion recovery (2026-09-28)
+
+Human-review draft:
+[`tabi-tokyo-continuity-30s-1080p.mp4`](pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4),
+SHA-256 `abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea`.
+Evidence: `build/tabi-continuity.0lyIo2/`. No new generation/finishing or production
+source change. Prior three review videos and the563-file archive remain protected.
+
+- One request/attempt,900 source frames, three300-frame absolute chunks; render to
+  handoff504,265ms. Same speed/scale; near starting placement shifts480px right,
+  exposing unused supplied pixels. Camera travel720.4007px, middle1440.8013px,
+  near2161.2020px. No wrap, loop, stretching or repeated-frame duration fill.
+- All900 source frames distinct;1,342,206 fixed pixels/error0. First600 eye regions
+  exactly match the approved combination. First599 frames'254,400 top-window pixels
+  exactly match prior far/middle motion. At frame599 the previous20-second endpoint
+  clamps its forward shutter sample, whereas this continuing shot correctly does
+  not:9,344 top-window pixels differ (max27RGB, mean0.094RGB). A scratch comparison
+  initially rejected this; `check-endpoint.cjs` verifies the precise endpoint cause.
+  No renderer change or replay. Near patch movement0→150:361px versus360.601px
+  expected. Blink peaks3.467/10.467/19.4/23.733s, same open/closed crossfade.
+- **Real process restart, limited to completed-output recovery:** JVM5988 stopped
+  normally after sealed media completion, before coordinator success/take import.
+  Fresh JVM9882 recovered the same attempt in11,865ms and imported one UNREVIEWED,
+  unselected take. All900 source PNGs, MP4 and completion receipt remained unchanged.
+  Fail-closed renderer/encode launch guards reported zero calls. This is not an
+  abrupt crash, interrupted-chunk resume, application UI or full-duration proof.
+- Production media validation and full probe passed:900 frames,30s,1080p/30fps,
+  H.264/yuv420p/SAR1:1, no audio, uniform512-tick PTS at1/15360 time base.
+  **Additional independent PNG extraction hit its unchanged180-second deadline.**
+  It retained893 complete/readable/distinct decoded frames0–892 (1,956,788,121bytes),
+  all inspected against source. Frames893–899 have not received that pixel review.
+  No automatic decode retry or limit increase. The MP4 is a review draft, not a
+  fully validated or accepted release artifact. Color matrix remains unspecified.
+- Partial-prefix metrics only: minimum RGB PSNR35.2817dB, maximum mean RGB
+  error2.8130, maximum fixed-region temporal RGB MAE2.6156. These are not metrics
+  for all900 encoded frames; exact preservation claims concern source PNGs only.
+- Render250 NORMAL samples, Node peak564,723,712bytes; owned-tree peak1,532,084,224.
+  Recovery8 NORMAL samples, owned-tree peak949,551,104bytes, no sampled Node process.
+  No sampled swap growth. Sampling is not exhaustive/unified-memory measurement.
+  Native memory remains2GiB; render900s/wrapper1020s, recovery wrapper240s,
+  staging7GiB/output1GiB,10GiB free reserve. Review2GiB/180s/3GiB stays unchanged.
+- `check-dispositions.json` preserves the prelaunch encoded-byte-count comparison,
+  endpoint assumption, review log-name collision and wrong scratch metadata lookup.
+  The latter two stopped before decoder launch; one FFprobe and one FFmpeg PNG
+  extraction were actually executed. After the decoder timeout, no native retry ran.
+
+**Still pending:** normal-speed human review of this draft and fresh authorization
+for bounded completion of the remaining independent decoded-frame check. Software
+focused/full/build/diff gates are recorded separately in scratch; passing them does
+not erase the media-review timeout. More scenery is required for60 seconds; no
+180–300-second, mid-render recovery, reusable action kit, UI, rights or release
+acceptance is established. This video remains silent and independent of MIDI.
+
+**Subsequent user feedback (2026-09-28):** “I think is a great result, just a thing
+not from this run, around Tabi leaves in the window are not crop correctly. And
+then you can start with the next step, don't regenerate this video”. This is a
+positive review of the exact30-second MP4 with a known pre-existing mask issue,
+not an assertion that the cutout is correct or that release gates pass. Playback
+speed was not explicitly reported. The video remains unchanged; no take is
+silently selected and historical sealed review states are not rewritten.
+`build/tabi-tail-review.rT83Xd/user-review.json` records the complete scoped event.
+VG1-03 tracks localization and correction of the window edge around TABI's
+leaf/frond silhouette in future preparation only, without redrawing the character
+or regenerating this video. Exact defective pixels/root cause still need inspection.
+The admitted immediate next step is one bounded read-only tail decode with verified
+overlap to complete the missing seven frame checks, under the same native limits
+and a3-GiB decoded-staging cap counting both old and new files.
+
+**Tail-review completion (2026-09-28):** fresh evidence in
+`build/tabi-tail-review.rT83Xd/` completes independent decoded-pixel coverage of the
+unchanged MP4. One read-only output-side seek to29s extracted frames870–899 in
+9.885s; all23 overlap frames exactly match the earlier decoded RGB, and seven new
+frames complete900 distinct decoded frames. No video was rendered or encoded;
+no art, masks, source PNGs, take/project records or old timeout receipts changed.
+The existing full900-frame probe remains pinned rather than repeated. Review:
+[decoded tail](../build/tabi-tail-review.rT83Xd/review/tail-review.jpg).
+
+Full900-frame metrics remain PSNRmin35.2817dB, RGB MAEmax2.8130 and fixed temporal
+MAEmax2.6156. New staging67,031,353bytes; aggregate with the preserved prefix
+2,023,819,474bytes, below the unchanged3-GiB cap. Native2-GiB/180-second guard and
+10-GiB free reserve retained; wrapper10.290s of215s. Six NORMAL samples, no sampled
+swap growth; FFmpeg sampled peak69,795,840bytes. Sampling is not an exhaustive peak.
+Three scratch regressions check overlap/ordinal/gap/repeated-frame failures; current
+software gates are in the new scratch final-gate logs. VG2-03 is now REVIEW for
+technical integration assessment, not waiting on this decode or repeated user
+feedback. **The reported leaf/window-mask defect remains open under VG1-03.**
+Positive direction approval and complete decoded coverage do not resolve that
+visual defect, establish playback speed, or approve a release. Source-mask repair
+for future footage is next; this video must not be regenerated. Longer duration,
+partial-render recovery, integrated UI and rights remain separate gates.
+
+### Leaf/window mask correction (2026-09-28)
+
+User authorization: “ok, correct it”, referring to the source-mask correction for
+future footage, not regeneration of the existing video. New bundle:
+`build/tabi-leaf-mask.ey9rmD/prepared/`.
+[Before/after still comparison](../build/tabi-leaf-mask.ey9rmD/prepared/review/leaf-mask-comparison.png)
+shows start/middle/end scenery positions and light/dark/green diagnostic backdrops;
+these are **static preparation composites, not rendered or decoded video frames**.
+[Full starting still](../build/tabi-leaf-mask.ey9rmD/prepared/review/context-start.png).
+
+Inspection against the supplied1664×936 original found an oversized, coarse gill
+polygon inherited from the earlier still study. It retained a wedge of original
+exterior above the small right-side fronds and missed part of the middle frond's
+dark outline. The still-study code itself described that mask as not animation-ready;
+this is a preparation defect, not a reproduced compositor bug.
+
+A curated cubic silhouette follows the original outline. The patch is confined to
+viewport box `[854,358,910,486]`;1,164 mask pixels change (960 release exterior,
+204 increase foreground protection). The mask is rasterized locally at8x native
+resolution, resized to the existing viewport and snapped only at <=3/>=252 to remove
+sub-1.2% alpha ringing. No RGB painting, new leaf geometry/artwork generation,
+model execution or whole-mask erosion. Original RGB is retained byte-for-byte in
+foreground/occlusion layers; all eye/scenery assets remain exact. Window bounds
+are unchanged, and2,072,436 pixels outside the changed mask remain identical in
+paired static compositions. Foreground and occlusion alpha are updated together,
+with the existing9,371-pixel eye cutout preserved and no double feathering.
+
+The bundle contains the corrected window mask, cabin foreground/occlusion and
+starting composition plus unchanged required artwork. A new private production
+asset/prepared-scene import passed in5.32s, with measured alpha matching actual
+pixels and all eight consumed references matching prepared hashes. No job, take,
+video render/encode or current-project update occurred. Six scratch checks cover
+background removal, clipped-outline restoration, exact unaffected/RGB pixels,
+eye cutouts/single antialiasing, geometry rejection and exact static starting crop.
+The old masks fail the first two; the initial candidate's alpha-ring and Pillow
+identity-transform failures are preserved. Its one correction passes without
+weakening assertions. Software final gates are retained alongside the bundle.
+
+**Status: VG1-03 REVIEW.** Agent still inspection and pixel tests do not supply
+human visual approval or corrected-motion evidence. Existing videos—including
+30-second SHA `abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea`—
+remain unchanged and intentionally retain their historical mask. Future renders
+must bind the new assets/descriptor rather than reuse old request fingerprints.
+No production code, optional setup, MIDI, archive or release policy changed.
+
+### Corrected-mask acceptance and 60-second prerequisites (2026-09-28)
+
+Subsequent project-user decision: “ok, we can continue with the next step”, in
+response to the corrected-mask still delivery. This accepts the new source bundle
+for the next step; it is not a detailed per-edge review report. The append-only
+scoped event is `build/tabi-next-preflight.iMUH0P/mask-user-review.json`, binding
+comparison SHA `1637fcf810064a5a254f98617718f62065a98c18f27fb95b34f5c3dba17a0f35`
+and preparation SHA `d63fa5d92d9d2ff8276287373a7f911b91d09265c480e15655def9eabd37b99f`.
+VG1-03 closes for source preparation. The original sealed PENDING review state
+remains historical; no take is selected and no corrected video has been rendered.
+The existing30-second MP4 and other three review videos remain unchanged.
+
+A read-only extent check evaluates the same480/599 camera pixels/frame and three
+shutter samples over1,800 frames; production `cameraAt` independently corroborates
+the arithmetic. It does not invoke the renderer or claim new moving evidence.
+
+| Plane | Existing prepared width | Minimum width for60s at current placement | Missing horizontal pixels |
+| --- | ---: | ---: | ---: |
+| Far | 2,500 | 2,582 | 82 |
+| Middle | 4,800 | 4,404 | 0 |
+| Near | 3,648 | 5,765 | 2,117 |
+
+The near source extent ends at frame919 (~30.63s); far ends at1698 (56.6s).
+Another integer starting reframe alone still cannot fit: minimum far/near widths
+would be2,503/5,386. These widths are geometric lower bounds, not seamless artwork
+or full alpha/occlusion validation; filtering/overlap margins require extra space.
+Check unused supplied pixels first; any new artwork must preserve the approved
+style and scale. Do not stretch, repeat, slow down or count transparent padding as
+scenery. The middle layer can be retained subject to complete admission checks.
+
+The prior30-second media attempt measured504.265s. Rough linear scaling gives
+1,008.53s for60 seconds, above the unchanged900s whole-attempt deadline. This is
+not a measurement or a guarantee of failure, and does not authorize a cap increase.
+Existing300-frame invocations share that deadline. Completed-output recovery is
+not partial-render resume; continuous planning/checkpoint integration remains
+VG4/VG5 work. A safe longer run needs those prerequisites, adequate artwork and
+separately bounded admission rather than blindly doubling the old request.
+
+Evidence: `build/tabi-next-preflight.iMUH0P/coverage-result.json`, seven extent checks
+and `camera-proof.json`. The initial camera comparison failed because exact contact
+at frame1697+1/6 rounds just outside the far edge in double precision. That failure
+is retained; sub-nanopixel contact error is recorded separately from missing art.
+The rational far deficit begins at1698. This comparison tolerance changes no
+production coverage guard and grants no render admission. Fresh focused, Node,
+full test/build/diff outcomes are retained in this root's `final-*.log` files.
+No model/media job, new asset import,
+new take, provider/runtime change or production edit was made. Rights, full-motion
+quality, application delivery and release remain separate gates.
+
+### Scoped continuous-plan preparation dependencies (2026-09-28)
+
+After “ho ahead with this.”, VG4-03 implements one bounded prerequisite to longer
+rendering in `VideoAssemblyPlanner.kt`, not a new video. The planner previously
+bound all preparation tools to every chunk, even when a chunk did not consume
+the affected component. Planning requests can now explicitly assign each
+preparation dependency to existing component keys; shared or unspecified ownership
+remains scene-global. A supplied declaration set must account for every dependency
+exactly once, and empty, duplicate, unknown or wrong-kind targets reject.
+
+Resolved pins use the existing assembly dependency lists. Unused component changes
+preserve work fingerprints; pose/effect changes affect their action's consuming
+chunks, including temporal support and particle tails. Base/shared dependencies
+still invalidate globally. Version, SHA and project-owned artifact location remain
+bound; completed takes retain their original identity. Ownership is a typed caller
+input, not inferred metadata or an integrated UI control. Full artifact-verified
+readiness and plan persistence remain unfinished.
+
+Planner semantics are version 2 (assembly schema remains 1). Both version tags are
+mandatory in serialized assemblies; old/missing identities fail closed, without
+migration or rewriting media/prepared scenes. The current controlled-render request
+and prepared-scene formats are unchanged. Evidence in
+`build/vg4-dependency-scope.s6Nk20/` includes three dependency regressions failing
+before the fix, a separate missing-version regression, all 30 passing planner
+checks, 27 Node tests and focused/full test/build/diff logs. The initial JSON test
+fixture's omitted-default failure is retained rather than hidden.
+
+This closes VG4-03 only. VG4-01 still needs persistence/application integration and
+replacement of short-shot planning; VG4-02 and VG5 still own continuous execution
+and checkpoint/resume. There is no new 60-second output, scenery preparation or
+native recovery claim. All four review videos and the accepted leaf-mask bundle
+remain unchanged; limits were not increased and no model/media job or commit ran.
+
+### Continuous-plan proposal persistence (2026-09-28)
+
+After “go for it”, VG4-04 completes a bounded persistence prerequisite split from
+VG4-01. `VideoAssemblyStore` saves the existing immutable proposal rather than
+introducing a second planning format. Descriptors live at
+`assemblies/<id>/v<version>/assembly.json`, bounded to 1 MiB, with assembly schema 1
+and planner 2 unchanged. Project `assemblyVersions` records pin the descriptor,
+prepared scene, finished original and provenance fingerprint. Source text, exact
+frame clock/seed, action schedule, support ranges, dependencies and chunk/work
+fingerprints survive independent store reopening at 180, 240 and 300 seconds.
+These are synthetic planning tests, not generated footage.
+
+Prepared-scene and assembly publication share `VideoProjectStore`'s existing lock,
+optimistic revision guard, confined path checks and atomic document publication.
+Old records cannot be changed or removed, including via ordinary project saves.
+Saving and reopening verify actual prepared-scene/image facts and source identity;
+hashes or filenames alone do not bypass that validation. Stale/concurrent writes,
+symlinks, foreign projects/sources and descriptor/record drift reject. A descriptor
+left by failed document publication is retained; only its exact bytes may be reused,
+never overwritten with a different proposal. This is descriptor publication recovery,
+not renderer checkpoint or abrupt-crash recovery evidence.
+
+**Current Video project schema is now 5.** Prior schema-4 projects, including private
+historical test projects, reject without migration. Their documents, media and sealed
+receipts remain untouched; there is no claim they reopen through the new store.
+Unsupported/missing assembly versions also reject. MIDI, prepared-scene, renderer,
+job/request formats and resource limits are unchanged. Persistence does not confer
+executable readiness, artistic approval, take acceptance or selection.
+
+Evidence: `build/vg4-plan-store.7MaJjG/`. All 14 new persistence tests, existing
+prepared-scene/project tests, 30 planner tests, focused checks, 27 Node tests, full
+JVM tests (789 root +239 desktop, zero failures/errors/skips), build and diff checks
+pass. No check failed or implementation repair was needed; an additional decoded
+image-facts test extends the initial 13-case pass. Post-documentation checks and
+protected/source hashes are separate receipts in that root. No model or real media
+job ran, no take was created, and the four review videos and accepted corrected
+mask remain unchanged. VG4-01 still owns caller integration and retirement of
+short-shot/repeat planning; VG4-02/VG5 own continuous execution, checkpoints and
+complete export. Scenery extension and a separately admitted longer run remain
+necessary; this step produces no new motion or integrated Video UI.
+
 ## Current TABI asset kit
 
 The user confirmed **this entire `docs/pictures/video/` tree, including all

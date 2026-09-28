@@ -4,6 +4,7 @@ import app.melotrail.video.application.VideoAssemblyFindingCode
 import app.melotrail.video.application.VideoAssemblyPlanResult
 import app.melotrail.video.application.VideoAssemblyPlanner
 import app.melotrail.video.application.VideoAssemblyPlanningRequest
+import app.melotrail.video.application.VideoAssemblyPreparationScope
 import app.melotrail.video.application.VideoAssemblyScheduledAction
 import app.melotrail.video.application.VideoAssemblyProposalMotionState
 import app.melotrail.video.application.VideoPreparedMotionInput
@@ -161,7 +162,7 @@ class VideoAssemblyPlannerTest {
         assertEquals(input.guidelineTexts, a.guidelineTexts)
         assertEquals(73, a.seed)
         assertEquals(1, a.schemaVersion)
-        assertEquals(1, a.plannerVersion)
+        assertEquals(2, a.plannerVersion)
         assertEquals(a, Json.decodeFromString<app.melotrail.video.domain.VideoAssembly>(Json.encodeToString(a)))
     }
 
@@ -185,6 +186,23 @@ class VideoAssemblyPlannerTest {
             assertEquals(code, finding.code)
             assertTrue(finding.explanation.isNotBlank() && finding.remedy.isNotBlank())
         }
+    }
+
+    @Test
+    fun `serialized assembly requires explicit schema and planner identity`() {
+        val valid = proposed(input)
+        val explicit = Json { encodeDefaults = true }.encodeToString(valid)
+        val fields = Json.parseToJsonElement(explicit) as kotlinx.serialization.json.JsonObject
+        for (key in listOf("schemaVersion", "plannerVersion")) {
+            val missing = kotlinx.serialization.json.JsonObject(fields.filterKeys { it != key }).toString()
+            assertFailsWith<IllegalArgumentException>("Missing $key must not adopt the current version") {
+                Json.decodeFromString<VideoAssembly>(missing)
+            }
+        }
+        val ordinary = Json.encodeToString(valid)
+        assertTrue(ordinary.contains("\"plannerVersion\":2"))
+        assertTrue(ordinary.contains("\"schemaVersion\":1"))
+        assertEquals(valid, Json.decodeFromString<VideoAssembly>(ordinary))
     }
 
     @Test
@@ -236,6 +254,12 @@ class VideoAssemblyPlannerTest {
         assertFailsWith<IllegalArgumentException> { valid.copy(width = 1280) }
         assertFailsWith<IllegalArgumentException> { valid.copy(frameZero = 1) }
         assertFailsWith<IllegalArgumentException> { valid.copy(schemaVersion = 2) }
+        assertFailsWith<IllegalArgumentException> { valid.copy(plannerVersion = 1) }
+        val explicit = Json { encodeDefaults = true }.encodeToString(valid)
+        assertTrue(explicit.contains("\"plannerVersion\":2"))
+        assertFailsWith<IllegalArgumentException> {
+            Json.decodeFromString<VideoAssembly>(explicit.replace("\"plannerVersion\":2", "\"plannerVersion\":1"))
+        }
         assertFailsWith<IllegalArgumentException> { valid.copy(seed = MAX_SAFE_FRAME_INTEGER + 1) }
         assertFailsWith<IllegalArgumentException> { valid.copy(requestedSupportFrames = 0) }
         // Support may clip only at the outer scene edges, never at an internal chunk edge.
@@ -762,6 +786,148 @@ class VideoAssemblyPlannerTest {
         })))
         assertEquals(listOf(old.work[1].id), planner.invalidatePending(old, changedSelected,
             old.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+    }
+
+    @Test
+    fun `unused preparation dependency changes preserve every work fingerprint and completed take`() {
+        val original = preparedMotion()
+        val unused = original.scene.poses.single().copy(id = "unused-pose")
+        val pin = VideoPreparedDependencyPin("unused-tool", "v1", "8".repeat(64))
+        val motion = original.copy(scene = original.scene.copy(poses = original.scene.poses + unused,
+            dependencies = original.scene.dependencies + pin))
+        val request = input.copy(preparedMotion = motion, scheduledActions = listOf(
+            action("blink", VideoSceneMotionIntent.BLINK, "blink", 310, 340, 0.7)),
+            preparationDependencyScopes = listOf(VideoAssemblyPreparationScope("test"),
+                VideoAssemblyPreparationScope(pin.id, listOf("pose.unused-pose"))))
+        val before = proposed(request)
+        val after = proposed(request.copy(preparedSceneArtifact = VideoArtifact("prepared/new.json", "7".repeat(64)),
+            preparedMotion = motion.copy(scene = motion.scene.copy(dependencies = original.scene.dependencies +
+                pin.copy(version = "v2", sha256 = "9".repeat(64))))))
+        assertTrue(before.provenanceFingerprint != after.provenanceFingerprint)
+        assertEquals(before.work.map { it.fingerprint }, after.work.map { it.fingerprint })
+        assertTrue(before.work.all { work -> work.dependencies.none { it.key == "preparation.unused-tool" } })
+        val completed = listOf(VideoVersionedId("completed-take", 1))
+        val result = planner.invalidatePending(before, after, before.work.map { it.id }.toSet(), completed)
+        assertTrue(result.invalidatedPendingWorkIds.isEmpty())
+        assertEquals(before.work.map { it.id }, result.unaffectedPendingWorkIds)
+        assertEquals(completed, result.retainedCompletedTakeIds)
+    }
+
+    @Test
+    fun `unselected scenery preparation is excluded until its coverage is consumed`() {
+        val original = preparedMotion()
+        val layer = original.scene.layers.single { it.id == "landscape" }.copy(id = "unselected")
+        val pin = VideoPreparedDependencyPin("scenery-tool", "v1", "8".repeat(64))
+        val motion = original.copy(scene = original.scene.copy(layers = original.scene.layers + layer,
+            dependencies = original.scene.dependencies + pin))
+        val request = input.copy(preparedMotion = motion, preparationDependencyScopes = listOf(
+            VideoAssemblyPreparationScope("test"), VideoAssemblyPreparationScope(pin.id, listOf("layer.unselected"))))
+        val before = proposed(request)
+        assertTrue(before.work.all { work -> work.dependencies.none { it.key == "preparation.scenery-tool" } })
+        val changed = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+            dependencies = original.scene.dependencies + pin.copy(sha256 = "9".repeat(64))))))
+        assertEquals(before.work, changed.work)
+        val selected = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+            sceneryCoverage = motion.scene.sceneryCoverage + VideoSceneryCoverage("selected-coverage", layer.id, layer.bounds)))))
+        assertTrue(selected.work.all { work -> work.dependencies.any { it.key == "preparation.scenery-tool" } })
+        assertEquals(before.work.map { it.id }, planner.invalidatePending(before, selected,
+            before.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+    }
+
+    @Test
+    fun `consumed preparation version bytes and artifact location all invalidate their action work`() {
+        val original = preparedMotion()
+        val pin = VideoPreparedDependencyPin("pose-tool", "v1", "8".repeat(64),
+            VideoArtifact("tools/pose.json", "8".repeat(64)))
+        val motion = original.copy(scene = original.scene.copy(dependencies = original.scene.dependencies + pin))
+        val request = input.copy(preparedMotion = motion, preparationDependencyScopes = listOf(
+            VideoAssemblyPreparationScope("test"), VideoAssemblyPreparationScope(pin.id, listOf("pose.blink"))),
+            scheduledActions = listOf(action("blink", VideoSceneMotionIntent.BLINK, "blink", 310, 340, 0.7)))
+        val before = proposed(request)
+        for (replacement in listOf(pin.copy(version = "v2"),
+            pin.copy(sha256 = "9".repeat(64), artifact = VideoArtifact("tools/pose.json", "9".repeat(64))),
+            pin.copy(artifact = VideoArtifact("tools/other.json", "8".repeat(64))))) {
+            val after = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+                dependencies = original.scene.dependencies + replacement))))
+            assertEquals(listOf(before.work[1].id), planner.invalidatePending(before, after,
+                before.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+        }
+    }
+
+    @Test
+    fun `preparation dependency scope follows action support and effect tails only`() {
+        val motion = preparedMotion()
+        // Output ranges are [0,284), [284,568), ...; the second chunk consumes support.
+        for ((item, component) in listOf(
+            action("blink", VideoSceneMotionIntent.BLINK, "blink", 280, 285, 0.7) to "pose.blink",
+            action("steam", VideoSceneMotionIntent.STEAM, "steam", 276, 282, 2.0) to "anchor.steam-anchor",
+        )) {
+            val request = input.copy(preparedMotion = motion, supportFramesPerSide = 8,
+                scheduledActions = listOf(item), preparationDependencyScopes = listOf(
+                    VideoAssemblyPreparationScope("test", listOf(component))))
+            val before = proposed(request)
+            val after = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+                dependencies = listOf(motion.scene.dependencies.single().copy(sha256 = "9".repeat(64)))))))
+            assertTrue(before.executionDependencies.none { it.key == "preparation.test" })
+            assertEquals(before.work.take(2).map { it.id }, planner.invalidatePending(before, after,
+                before.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+            assertEquals(before.work, Json.decodeFromString<VideoAssembly>(Json.encodeToString(before)).work)
+        }
+    }
+
+    @Test
+    fun `shared global and unspecified preparation dependencies remain conservative`() {
+        val motion = preparedMotion()
+        for (scopes in listOf(null, listOf(VideoAssemblyPreparationScope("test")),
+            listOf(VideoAssemblyPreparationScope("test", listOf("pose.blink", "layer.clean"))))) {
+            val request = input.copy(preparedMotion = motion, preparationDependencyScopes = scopes,
+                scheduledActions = listOf(action("blink", VideoSceneMotionIntent.BLINK, "blink", 310, 340, 0.7)))
+            val before = proposed(request)
+            val after = proposed(request.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+                dependencies = listOf(motion.scene.dependencies.single().copy(version = "changed-tool-version"))))))
+            assertTrue(before.work.all { it.dependencies.any { pin -> pin.key == "preparation.test" } })
+            assertEquals(before.work.map { it.id }, planner.invalidatePending(before, after,
+                before.work.map { it.id }.toSet(), emptyList()).invalidatedPendingWorkIds)
+        }
+    }
+
+    @Test
+    fun `preparation scope declarations reject missing unknown duplicate empty and dangling ownership`() {
+        val motion = preparedMotion()
+        val valid = VideoAssemblyPreparationScope("test", listOf("pose.blink"))
+        for (scopes in listOf(emptyList(), listOf(valid, valid), listOf(valid.copy(dependencyId = "unknown")),
+            listOf(valid.copy(componentKeys = emptyList())),
+            listOf(valid.copy(componentKeys = listOf("pose.absent"))),
+            listOf(valid.copy(componentKeys = listOf("layer.blink"))), // pose IDs are not layer IDs
+            listOf(valid.copy(componentKeys = listOf("pose.blink", "pose.blink"))),
+            listOf(valid.copy(componentKeys = listOf("seed"))))) {
+            val blocked = assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(
+                preparedMotion = motion, preparationDependencyScopes = scopes)))
+            assertEquals(VideoAssemblyFindingCode.MALFORMED_PLAN, blocked.findings.single().code)
+            assertTrue(blocked.findings.single().explanation.contains("preparation", ignoreCase = true))
+            assertTrue(blocked.findings.single().remedy.isNotBlank())
+        }
+        assertIs<VideoAssemblyPlanResult.Blocked>(planner.plan(input.copy(preparationDependencyScopes = listOf(valid))))
+    }
+
+    @Test
+    fun `preparation ownership ordering is irrelevant and returned work snapshots mutable declarations`() {
+        val motion = preparedMotion()
+        val extra = VideoPreparedDependencyPin("pose-tool", "v1", "8".repeat(64))
+        val keys = mutableListOf("pose.blink", "capability.blink-cap")
+        val scopes = mutableListOf(VideoAssemblyPreparationScope("test"), VideoAssemblyPreparationScope(extra.id, keys))
+        val request = input.copy(preparedMotion = motion.copy(scene = motion.scene.copy(
+            dependencies = motion.scene.dependencies + extra)), preparationDependencyScopes = scopes,
+            scheduledActions = listOf(action("blink", VideoSceneMotionIntent.BLINK, "blink", 310, 340, 0.7)))
+        val before = proposed(request)
+        val json = Json.encodeToString(before)
+        val reversed = proposed(request.copy(preparationDependencyScopes = scopes.reversed().map {
+            it.copy(componentKeys = it.componentKeys?.reversed())
+        }))
+        assertEquals(before.work, reversed.work)
+        keys.clear(); scopes.clear()
+        assertEquals(json, Json.encodeToString(before))
+        assertEquals(before.work, Json.decodeFromString<VideoAssembly>(json).work)
     }
 
     private fun action(id: String, intent: VideoSceneMotionIntent, control: String, start: Long, end: Long, value: Double) =

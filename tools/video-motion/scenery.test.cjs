@@ -20,8 +20,8 @@ function baseScene() {
   const bounds = { coordinateSpaceId: 'scene', x: 0, y: 0, width: 600, height: 100 };
   return {
     layers: [
-      { id: 'near', kind: 'SCENERY', bounds, reviewStatus: 'UNREVIEWED' },
-      { id: 'far', kind: 'SCENERY', bounds, reviewStatus: 'UNREVIEWED' },
+      { id: 'near', kind: 'SCENERY', bounds, alpha: { opaquePixels: 60000, translucentPixels: 0, transparentPixels: 0 }, reviewStatus: 'UNREVIEWED' },
+      { id: 'far', kind: 'SCENERY', bounds, alpha: { opaquePixels: 60000, translucentPixels: 0, transparentPixels: 0 }, reviewStatus: 'UNREVIEWED' },
     ],
     masks: [],
     sceneryCoverage: [
@@ -49,6 +49,24 @@ function depthRequest(planes = [
     planes,
   };
 }
+
+test('transparent depth overlays never establish opaque trajectory coverage', () => {
+  const scene = baseScene();
+  scene.layers[0].alpha = { opaquePixels: 29900, translucentPixels: 100, transparentPixels: 30000 };
+  const validate = () => validateScenery(scene, { coordinateSpaceId: 'scene', width: 100, height: 100 },
+    30, { startFrame: 0, frameCount: 11 }, depthRequest(), 73);
+  assert.deepEqual(validate().planes.map(plane => plane.depthFactor), [1, 2]);
+  // Near has wide bounds but cannot conceal the far plate leaving the viewport.
+  scene.layers[1].bounds = { ...scene.layers[1].bounds, width: 150 };
+  scene.sceneryCoverage[1].bounds = scene.layers[1].bounds;
+  assert.throws(validate, /visible hole/);
+  scene.layers[1].bounds = { ...scene.layers[1].bounds, width: 600 };
+  scene.sceneryCoverage[1].bounds = scene.layers[1].bounds;
+  scene.layers[1].alpha = { opaquePixels: 0, translucentPixels: 60000, transparentPixels: 0 };
+  assert.throws(validate, /visible hole/);
+  delete scene.layers[1].alpha;
+  assert.throws(validate, /visible hole/);
+});
 
 test('admits full-length 30 fps camera trajectories without constructing frame batches', () => {
   const request = wideFixture();

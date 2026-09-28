@@ -153,18 +153,29 @@ class VideoAnimationAssets {
                 )
             }
         }
+        // Transparent scenery is an overlay, never proof of opaque coverage. A
+        // measured backing plate must cover the initial viewport; executable
+        // admission separately checks selected opaque plates for every shutter.
+        val hasOpaqueSceneryBacking = request.scenery.any { scenery ->
+            val resolved = resolvedAssets.getValue(scenery.asset.referenceId)
+            !resolved.alpha.hasNonOpaquePixels &&
+                scenery.asset.bounds.contains(scenery.coverageBounds) && scenery.coverageBounds.contains(viewport) &&
+                scenery.asset.bounds.width <= resolved.asset.original.width &&
+                scenery.asset.bounds.height <= resolved.asset.original.height
+        }
         request.scenery.forEach { scenery ->
             val resolved = resolvedAssets.getValue(scenery.asset.referenceId)
             if (!scenery.asset.bounds.contains(scenery.coverageBounds) ||
                 scenery.coverageBounds.coordinateSpaceId != request.coordinateSpaceId ||
-                !scenery.coverageBounds.contains(viewport) || resolved.alpha.hasNonOpaquePixels ||
+                !scenery.coverageBounds.contains(viewport) || resolved.alpha.visiblePixels == 0L ||
+                (resolved.alpha.hasNonOpaquePixels && !hasOpaqueSceneryBacking) ||
                 scenery.asset.bounds.width > resolved.asset.original.width ||
                 scenery.asset.bounds.height > resolved.asset.original.height
             ) {
                 deficiencies += deficiency(
                     VideoAnimationAssetDeficiencyCode.INSUFFICIENT_SCENERY_COVERAGE,
-                    "Scenery '${scenery.asset.id}' does not provide opaque decoded content and declared coverage for the initial viewport.",
-                    "Supply fully opaque external scenery and place its declared coverage across the full viewport; transparent holes and translucent pixels cannot establish coverage.",
+                    "Scenery '${scenery.asset.id}' needs visible decoded pixels, native-size declared coverage and opaque backing for the initial viewport.",
+                    "Supply fully opaque external scenery across the viewport, optionally with visible transparent overlays; transparent or translucent pixels cannot establish coverage.",
                     scenery.asset.id,
                 )
             }

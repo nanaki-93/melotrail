@@ -9,6 +9,7 @@ import app.melotrail.video.application.VideoProjectNotFoundException
 import app.melotrail.video.application.VideoProjectPersistence
 import app.melotrail.video.application.VideoProjectSaveException
 import app.melotrail.video.domain.VideoArtifact
+import app.melotrail.video.domain.VideoAssemblyRecord
 import app.melotrail.video.domain.VideoPreparedSceneRecord
 import app.melotrail.video.domain.VideoProject
 import app.melotrail.video.domain.VideoProjectControlPaths
@@ -376,25 +377,48 @@ class VideoProjectStore(
         } finally { runCatching { Files.deleteIfExists(temporary) } }
     }
 
-    /**
-     * Publishes a prepared-scene descriptor and appends its record under the same
-     * project lock used by ordinary saves. The caller owns descriptor encoding;
-     * this store continues to own path safety, artifact verification and revision publication.
-     */
     internal fun appendPreparedScene(
         projectRoot: Path,
         expectedRevision: Long,
         record: VideoPreparedSceneRecord,
         descriptorBytes: ByteArray,
     ): VideoProject {
-        require(expectedRevision >= 0L) { "Expected video project revision must not be negative" }
-        require(sha256(descriptorBytes) == record.artifact.sha256) {
-            "Prepared-scene descriptor bytes do not match their artifact pin"
-        }
-        val expectedPath = "prepared-scenes/${record.id.id}/v${record.id.version}/scene.json"
-        require(record.artifact.relativePath == expectedPath) {
+        require(record.artifact.relativePath == "prepared-scenes/${record.id.id}/v${record.id.version}/scene.json") {
             "Prepared-scene record does not point to its immutable descriptor path"
         }
+        return appendDescriptor(projectRoot, expectedRevision, record.artifact, descriptorBytes, record.consumedArtifacts) { current, revision ->
+            require(current.preparedSceneVersions.none { it.id == record.id }) {
+                "Prepared-scene version ${record.id.id} v${record.id.version} already exists"
+            }
+            current.copy(preparedSceneVersions = current.preparedSceneVersions + record, revision = revision)
+        }
+    }
+
+    internal fun appendAssembly(
+        projectRoot: Path,
+        expectedRevision: Long,
+        record: VideoAssemblyRecord,
+        descriptorBytes: ByteArray,
+    ): VideoProject = appendDescriptor(projectRoot, expectedRevision, record.artifact, descriptorBytes,
+        listOf(record.preparedSceneArtifact, record.finishedReferenceArtifact)) { current, revision ->
+        require(current.assemblyVersions.none { it.id == record.id }) {
+            "Assembly version ${record.id.id} v${record.id.version} already exists"
+        }
+        current.copy(assemblyVersions = current.assemblyVersions + record, revision = revision)
+    }
+
+    /** One immutable descriptor publisher for prepared scenes and assembly proposals.
+     * Record validation, source verification and document CAS share the project lock. */
+    private fun appendDescriptor(
+        projectRoot: Path,
+        expectedRevision: Long,
+        artifact: VideoArtifact,
+        descriptorBytes: ByteArray,
+        consumedArtifacts: List<VideoArtifact>,
+        append: (VideoProject, Long) -> VideoProject,
+    ): VideoProject {
+        require(expectedRevision >= 0L) { "Expected video project revision must not be negative" }
+        require(sha256(descriptorBytes) == artifact.sha256) { "Descriptor bytes do not match their artifact pin" }
         val root = existingSafeRoot(validateLocation(projectRoot))
         return withWriteLock(root) {
             val current = readCurrentProject(root)
@@ -403,25 +427,19 @@ class VideoProjectStore(
                     "The video project changed from revision $expectedRevision to ${current.revision}.",
                 )
             }
-            require(current.preparedSceneVersions.none { it.id == record.id }) {
-                "Prepared-scene version ${record.id.id} v${record.id.version} already exists"
-            }
             val requiredRevision = try {
                 Math.addExact(expectedRevision, 1L)
             } catch (error: ArithmeticException) {
                 throw IllegalArgumentException("The video project revision cannot advance safely", error)
             }
-            val replacement = current.copy(
-                preparedSceneVersions = current.preparedSceneVersions + record,
-                revision = requiredRevision,
-            )
+            val replacement = append(current, requiredRevision)
             requireAppendOnlyHistory(current, replacement)
             verifyArtifacts(root, current)
-            record.consumedArtifacts.forEach { verifyArtifact(root, it) }
+            consumedArtifacts.forEach { verifyArtifact(root, it) }
 
-            val target = root.resolve(record.artifact.relativePath).normalize()
+            val target = root.resolve(artifact.relativePath).normalize()
             if (!target.startsWith(root)) {
-                throw InvalidVideoProjectException("Prepared-scene descriptor escapes the video project root")
+                throw InvalidVideoProjectException("Descriptor escapes the video project root")
             }
             val parent = requireNotNull(target.parent)
             requireNoSymlinkComponents(root, parent)
@@ -429,7 +447,7 @@ class VideoProjectStore(
                 Files.createDirectories(parent)
             } catch (error: IOException) {
                 throw VideoProjectSaveException(
-                    "Prepared-scene descriptor folder could not be created; the project document was preserved.",
+                    "Descriptor folder could not be created; the project document was preserved.",
                     projectFile(root),
                     null,
                     error,
@@ -439,20 +457,20 @@ class VideoProjectStore(
             val realParent = try {
                 parent.toRealPath()
             } catch (error: IOException) {
-                throw InvalidVideoProjectException("Prepared-scene descriptor folder could not be resolved", error)
+                throw InvalidVideoProjectException("Descriptor folder could not be resolved", error)
             }
             if (!realParent.startsWith(root)) {
-                throw InvalidVideoProjectException("Prepared-scene descriptor folder escapes the video project root")
+                throw InvalidVideoProjectException("Descriptor folder escapes the video project root")
             }
 
             if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
-                verifyArtifact(root, record.artifact)
+                verifyArtifact(root, artifact)
             } else {
                 val temporary = try {
-                    Files.createTempFile(parent, ".prepared-scene-", ".tmp")
+                    Files.createTempFile(parent, ".video-descriptor-", ".tmp")
                 } catch (error: IOException) {
                     throw VideoProjectSaveException(
-                        "Prepared-scene descriptor could not be staged; the project document was preserved.",
+                        "Descriptor could not be staged; the project document was preserved.",
                         projectFile(root),
                         null,
                         error,
@@ -467,7 +485,7 @@ class VideoProjectStore(
                     publishNewFile(temporary, target)
                 } catch (error: Exception) {
                     throw VideoProjectSaveException(
-                        "Prepared-scene descriptor could not be published; the project document was preserved.",
+                        "Descriptor could not be published; the project document was preserved.",
                         projectFile(root),
                         null,
                         error,
@@ -479,7 +497,7 @@ class VideoProjectStore(
 
             // Retain an immutable descriptor if project publication fails. A retry may reuse
             // only the same digest, while the previous project document remains authoritative.
-            verifyArtifact(root, record.artifact)
+            verifyArtifact(root, artifact)
             verifyArtifacts(root, replacement)
             publishDocument(root, projectFile(root), replacement, replace = true)
             replacement
@@ -500,6 +518,9 @@ class VideoProjectStore(
         }
         require(replacement.preparedSceneVersions.startsWith(current.preparedSceneVersions)) {
             "Prepared-scene versions are immutable and append-only"
+        }
+        require(replacement.assemblyVersions.startsWith(current.assemblyVersions)) {
+            "Assembly versions are immutable and append-only"
         }
         require(replacement.takeVersions.startsWith(current.takeVersions)) {
             "Take versions are immutable and append-only"
@@ -745,7 +766,7 @@ fun interface VideoAtomicWriteObserver {
 
 private object VideoProjectSchema {
     const val SCHEMA = "melotrail-video-project"
-    const val VERSION = 4
+    const val VERSION = 5
 
     private val json = Json {
         prettyPrint = true

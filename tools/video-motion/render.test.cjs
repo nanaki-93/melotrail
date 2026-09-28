@@ -369,6 +369,33 @@ test('uses absolute section state across a split join and reaps only cancelled c
   assert.equal(fs.existsSync(path.join(output, 'frame-00000451.png')), false, 'cancelled invocation reaps only its owned frame');
 });
 
+test('renders imported transparent three-plane pixels with opaque backing and fixed foreground', async () => {
+  const sample = fixture('transparent-depth');
+  const images = await imagesFor(sample);
+  const request = copy(sample.request);
+  request.scenery.camera.motionBlurSamples = 1;
+  request.scenery.camera.shutterFraction = 0;
+  request.scenery.planes.reverse(); // Depth, not caller order, controls painting.
+  const validated = validateRequest(request);
+  assert.deepEqual(validated.scenery.planes.map(plane => plane.depthFactor), [1, 2, 3]);
+  for (const id of ['scenery-b', 'scenery-c']) {
+    const layer = request.preparedScene.layers.find(item => item.id === id);
+    assert.ok(layer.alpha.transparentPixels > 0 && layer.alpha.translucentPixels > 0);
+  }
+  for (const frame of [0, 150, 299]) {
+    const expected = createCanvas(120, 80);
+    const context = expected.getContext('2d');
+    for (const [index, id] of ['scenery-a', 'scenery-b', 'scenery-c'].entries()) {
+      context.drawImage(images.get(`layer:${id}`), -240 * frame / 899 * (index + 1), 0);
+    }
+    context.drawImage(images.get('layer:foreground'), 56, 20);
+    const actual = renderFrame(validated, images, frame).canvas;
+    assert.deepEqual(actual.getContext('2d').getImageData(0, 0, 120, 80).data,
+      context.getImageData(0, 0, 120, 80).data, `exact layered pixels at frame ${frame}`);
+    assert.deepEqual(pixel(actual, 60, 30), [233, 210, 140, 255], 'foreground never moves');
+  }
+});
+
 test('derives exact far-to-near pixels independent of plane order and keeps the near feature faster', async () => {
   const sample = fixture('wide-scenery');
   const images = await imagesFor(sample);
@@ -633,6 +660,80 @@ test('steam follows its transformed subject source while the production foregrou
     assert.deepEqual(rgbaAt(withoutPixels, blendedEdge.index), expectedWithout, 'filtered edge composites the same foreground without steam');
     assert.notDeepEqual(expectedWith, expectedWithout, 'translucent antialiasing retains the attenuated backdrop instead of pretending to be opaque');
   }
+});
+
+test('bounded PNG rendering yields between frames without changing pixels or absolute time', async (t) => {
+  const sample = fixture('transparent-depth');
+  sample.request.frameRange.frameCount = 6;
+  const validated = validateRequest(sample.request);
+  const images = await imagesFor(sample);
+  const expected = Array.from({ length: 6 }, (_, frame) => renderFrame(validated, images, frame).canvas.toBuffer('image/png'));
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-motion-yield-'));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  let pending = false;
+  let checks = 0;
+  let yields = 0;
+  const receipt = await renderBounded(sample.request, sample.projectRoot, path.join(temporary, 'output'), {
+    isCancelled: () => {
+      assert.equal(pending, false, 'native finalizers and cancellation must get an event-loop turn before another frame');
+      pending = true;
+      checks += 1;
+      setImmediate(() => { pending = false; yields += 1; });
+      return false;
+    },
+  });
+  assert.equal(checks, 7, 'six frame admissions plus the final publication check');
+  assert.equal(yields, 6);
+  for (const record of receipt.frames) {
+    assert.equal(record.timeSeconds, record.frame / 30);
+    assert.deepEqual(fs.readFileSync(path.join(temporary, 'output', record.file)), expected[record.frame]);
+  }
+});
+
+test('asynchronous cancellation stops before the next PNG and removes only owned output', async (t) => {
+  const sample = fixture('transparent-depth');
+  sample.request.frameRange.frameCount = 6;
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-motion-async-cancel-'));
+  t.after(async () => {
+    await new Promise((resolve) => setImmediate(resolve));
+    fs.rmSync(temporary, { recursive: true, force: true });
+  });
+  const output = path.join(temporary, 'output');
+  let cancelled = false;
+  let scheduled = false;
+  let framesAtCancellation;
+  await assert.rejects(renderBounded(sample.request, sample.projectRoot, output, {
+    isCancelled: () => {
+      if (!scheduled) {
+        scheduled = true;
+        setImmediate(() => {
+          framesAtCancellation = fs.readdirSync(output).filter((name) => name.endsWith('.png'));
+          fs.writeFileSync(path.join(output, 'unrelated.txt'), 'preserve');
+          cancelled = true;
+        });
+      }
+      return cancelled;
+    },
+  }), /cancelled before the next frame/);
+  assert.deepEqual(framesAtCancellation, ['frame-00000000.png']);
+  assert.deepEqual(fs.readdirSync(output), ['unrelated.txt']);
+  assert.equal(fs.readFileSync(path.join(output, 'unrelated.txt'), 'utf8'), 'preserve');
+});
+
+test('cancellation on the last frame yield wins before receipt publication', async (t) => {
+  const sample = fixture('transparent-depth');
+  sample.request.frameRange.frameCount = 1;
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-motion-final-cancel-'));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const output = path.join(temporary, 'output');
+  let cancelled = false;
+  await assert.rejects(renderBounded(sample.request, sample.projectRoot, output, {
+    isCancelled: () => {
+      if (!cancelled) setImmediate(() => { cancelled = true; });
+      return cancelled;
+    },
+  }), /cancelled before receipt publication/);
+  assert.equal(fs.existsSync(output), false, 'neither final PNG nor receipt is published after cancellation');
 });
 
 test('rejects duplicate subject controls and keeps every admitted state inside declared bounds', () => {

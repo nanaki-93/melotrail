@@ -43,6 +43,9 @@ data class VideoAssemblyPlanningRequest(
     val maximumOutputFramesPerChunk: Int = 300,
     /** A preparation snapshot is required for actions; plain text alone grants no capability. */
     val preparedMotion: VideoPreparedSceneMotion? = null,
+    /** Null conservatively binds all preparation pins globally. An explicit list must
+     * declare every pin once; component ownership is never inferred from pin names. */
+    val preparationDependencyScopes: List<VideoAssemblyPreparationScope>? = null,
     val scheduledActions: List<VideoAssemblyScheduledAction> = emptyList(),
     /** Explicit requested motions that must not disappear when no control could be scheduled. */
     val requestedMotionIntents: List<VideoSceneMotionIntent> = emptyList(),
@@ -53,6 +56,17 @@ data class VideoAssemblyPlanningRequest(
     val compilerVersion: String,
     val rendererVersion: String,
     val runtimeVersion: String,
+)
+
+/** Preparation provenance ownership, not an arbitrary execution-pin filter.
+ * null componentKeys means scene-global. Nonempty keys use the planner's component
+ * namespaces (layer.*, pose.*, mask.*, space.*, anchor.*, landmark.*, coverage.*,
+ * capability.*, depth.*, occlusion.*) and must resolve in the prepared scene.
+ * Resolved used pins are persisted by VideoAssembly's existing dependency lists.
+ */
+data class VideoAssemblyPreparationScope(
+    val dependencyId: String,
+    val componentKeys: List<String>? = null,
 )
 
 data class VideoAssemblyScheduledAction(
@@ -153,6 +167,7 @@ class VideoAssemblyPlanner {
             .map { issue -> VideoAssemblyFinding(VideoAssemblyFindingCode.PROMPT_COMPILATION,
                 issue.message, "Keep this guidance visible; supply an executable prepared control for any requested action.") }
         return try {
+            val preparationScopes = validatedPreparationScopes(request)
             VideoAssemblyPlanResult.Proposed(VideoAssembly(
                 id = request.id,
                 projectId = request.projectId,
@@ -171,10 +186,10 @@ class VideoAssemblyPlanner {
                 requestedSupportFrames = support,
                 chunks = chunks,
                 actions = actionResult.actions,
-                executionDependencies = globalDependencies(request),
+                executionDependencies = globalDependencies(request, preparationScopes),
                 actionDependencies = actionResult.actions.map { action ->
                     VideoAssemblyActionDependencies(action.id, consumedActionDependencies(request, action,
-                        actionResult.controlIds.getValue(action.id)))
+                        actionResult.controlIds.getValue(action.id), preparationScopes))
                 },
             ), advisories, when {
                 actionResult.actions.isNotEmpty() -> VideoAssemblyProposalMotionState.SCHEDULED_UNVERIFIED
@@ -204,7 +219,52 @@ class VideoAssemblyPlanner {
         return VideoAssemblyInvalidation(stale, pending.filterNot(stale::contains), completedTakeIds.toList())
     }
 
-    private fun globalDependencies(request: VideoAssemblyPlanningRequest): List<VideoAssemblyDependency> =
+    /** Fail closed when the caller opts into narrowing preparation provenance. Missing
+     * declarations cannot silently turn shared tools into unused dependencies. */
+    private fun validatedPreparationScopes(request: VideoAssemblyPlanningRequest): Map<String, Set<String>?> {
+        val scene = request.preparedMotion?.scene
+        val dependencyIds = scene?.dependencies.orEmpty().map { it.id }.toSet()
+        val declarations = request.preparationDependencyScopes
+            ?: return dependencyIds.associateWith { null }
+        require(declarations.map { it.dependencyId }.toSet() == dependencyIds && declarations.size == dependencyIds.size) {
+            "Explicit preparation scopes must declare every prepared dependency exactly once, with no unknown IDs"
+        }
+        val knownKeys = buildSet {
+            scene?.let {
+                addAll(it.layers.map { component -> "layer.${component.id}" })
+                addAll(it.poses.map { component -> "pose.${component.id}" })
+                addAll(it.masks.map { component -> "mask.${component.id}" })
+                addAll(it.coordinateSpaces.map { component -> "space.${component.id}" })
+                addAll(it.effectAnchors.map { component -> "anchor.${component.id}" })
+                addAll(it.subjectLandmarks.map { component -> "landmark.${component.id}" })
+                addAll(it.sceneryCoverage.map { component -> "coverage.${component.id}" })
+                addAll(it.motionCapabilities.map { component -> "capability.${component.id}" })
+                addAll(it.depthRelations.map { relation -> "depth.${relation.nearerLayerId}.${relation.fartherLayerId}" })
+                addAll(it.occlusionRelations.map { relation ->
+                    "occlusion.${relation.occluderLayerId}.${relation.occludedLayerId}.${relation.maskId}" })
+            }
+        }
+        return declarations.associate { declaration ->
+            val keys = declaration.componentKeys
+            require(keys == null || keys.isNotEmpty() && keys.distinct().size == keys.size && keys.all(knownKeys::contains)) {
+                "Preparation dependency '${declaration.dependencyId}' needs nonempty, unique, existing component keys or scene-global ownership"
+            }
+            declaration.dependencyId to keys?.toSet()
+        }
+    }
+
+    private fun consumedPreparationDependencies(
+        request: VideoAssemblyPlanningRequest,
+        scopes: Map<String, Set<String>?>,
+        consumedKeys: Set<String>,
+        includeGlobal: Boolean,
+    ): List<VideoAssemblyDependency> = request.preparedMotion?.scene?.dependencies.orEmpty().filter { dependency ->
+        val consumers = scopes.getValue(dependency.id)
+        if (consumers == null) includeGlobal else consumers.any(consumedKeys::contains)
+    }.map { dependency -> VideoAssemblyDependency("preparation.${dependency.id}", assemblyDigest(Json.encodeToString(dependency))) }
+
+    private fun globalDependencies(request: VideoAssemblyPlanningRequest,
+        preparationScopes: Map<String, Set<String>?>): List<VideoAssemblyDependency> =
         canonicalAssemblyDependencies(buildList {
             fun addValue(key: String, value: String) { add(VideoAssemblyDependency(key, assemblyDigest(value))) }
             addValue("project", request.projectId)
@@ -262,12 +322,12 @@ class VideoAssemblyPlanner {
                 motion.componentReviews.filter { it.componentId in renderedLayers || it.componentId in renderedMasks ||
                     scene.sceneryCoverage.any { coverage -> coverage.id == it.componentId && coverage.layerId in renderedLayers }
                 }.forEach { addValue("review.${it.kind}.${it.componentId}", it.status.name) }
-                scene.dependencies.forEach { addValue("preparation.${it.id}", Json.encodeToString(it)) }
+                addAll(consumedPreparationDependencies(request, preparationScopes, map { it.key }.toSet(), includeGlobal = true))
             }
         })
 
     private fun consumedActionDependencies(request: VideoAssemblyPlanningRequest, action: VideoAssemblyAction,
-        controlId: String): List<VideoAssemblyDependency> {
+        controlId: String, preparationScopes: Map<String, Set<String>?>): List<VideoAssemblyDependency> {
         val motion = requireNotNull(request.preparedMotion)
         val scene = motion.scene
         val control = motion.controls.single { it.id == controlId }
@@ -332,8 +392,9 @@ class VideoAssemblyPlanner {
                 it.componentId == "${motion.look.id.id}-v${motion.look.id.version}" }.forEach {
                 pin("review.${it.kind}.${it.componentId}", it.status.name)
             }
-            // Preparation/tool pins are needed only for work consuming this control.
-            scene.dependencies.forEach { pin("preparation.${it.id}", Json.encodeToString(it)) }
+            // Shared tools are already global. Component-scoped tools follow these
+            // actual component pins, then the assembly's support/tail-aware action range.
+            addAll(consumedPreparationDependencies(request, preparationScopes, map { it.key }.toSet(), includeGlobal = false))
             control.dependencies.filter { it.key.startsWith("control.${control.id}.") }.forEach {
                 add(VideoAssemblyDependency("prepared.${it.key}", it.sha256))
             }

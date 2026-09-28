@@ -25,6 +25,8 @@ data class VideoProject(
     val exportRecords: List<VideoExportRecord> = emptyList(),
     /** Monotonic optimistic-concurrency revision for the persisted document. */
     val revision: Long = 0L,
+    /** Saved continuous-plan proposals, not job checkpoints or executable readiness. */
+    val assemblyVersions: List<VideoAssemblyRecord> = emptyList(),
 ) {
     init {
         requireSafeId(id, "Video project")
@@ -40,6 +42,7 @@ data class VideoProject(
         requireUnique(referenceVersions.map(VideoReferenceRecord::id), "Reference")
         requireUnique(lookVersions.map(VideoLookRecord::id), "Look")
         requireUnique(preparedSceneVersions.map(VideoPreparedSceneRecord::id), "Prepared scene")
+        requireUnique(assemblyVersions.map(VideoAssemblyRecord::id), "Assembly")
         requireUnique(takeVersions.map(VideoTakeRecord::id), "Take")
         requireUnique(exportRecords.map(VideoExportRecord::id), "Export")
 
@@ -55,6 +58,12 @@ data class VideoProject(
         }) {
             "Every prepared-scene source must identify persisted look and reference versions"
         }
+        require(assemblyVersions.all { assembly ->
+            val scene = preparedSceneVersions.singleOrNull { it.id == assembly.preparedSceneId }
+            scene != null && scene.artifact == assembly.preparedSceneArtifact &&
+                assembly.finishedReferenceId in scene.sourceReferenceIds &&
+                assembly.finishedReferenceArtifact in scene.consumedArtifacts
+        }) { "Every assembly must bind an existing prepared-scene version and one of its pinned source originals" }
         require(takeVersions.all { take ->
             val provenance = requireNotNull(take.provenance)
             val scene = preparedSceneVersions.find { it.id == provenance.preparedSceneId }
@@ -89,6 +98,7 @@ data class VideoProject(
             addAll(referenceVersions.map { it.artifact.relativePath })
             addAll(lookVersions.map { it.artifact.relativePath })
             addAll(preparedSceneVersions.map { it.artifact.relativePath })
+            addAll(assemblyVersions.map { it.artifact.relativePath })
             addAll(takeVersions.map { it.artifact.relativePath })
             addAll(exportRecords.map { it.artifact.relativePath })
         }
@@ -112,6 +122,11 @@ data class VideoProject(
         preparedSceneVersions.forEach { scene ->
             add(scene.artifact)
             addAll(scene.consumedArtifacts)
+        }
+        assemblyVersions.forEach { assembly ->
+            add(assembly.artifact)
+            add(assembly.preparedSceneArtifact)
+            add(assembly.finishedReferenceArtifact)
         }
         addAll(takeVersions.map(VideoTakeRecord::artifact))
         addAll(exportRecords.map(VideoExportRecord::artifact))

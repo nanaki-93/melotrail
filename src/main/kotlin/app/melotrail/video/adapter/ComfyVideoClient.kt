@@ -24,7 +24,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -177,7 +176,10 @@ class ComfyVideoClient private constructor(
             return ComfyClientObservation.Unknown("ComfyUI queue is unavailable: ${useful(error)}")
         }
         return if (queueContains(queue, promptId)) {
-            ComfyClientObservation.Running(event?.progressPercent)
+            // ComfyUI progress is node-local (sampling, decoding, etc.), not a fraction
+            // of the whole workflow. It can hit 100 then reset while this job is running.
+            // Keep overall progress unknown; only verified history establishes completion.
+            ComfyClientObservation.Running(null)
         } else {
             // Absence cannot prove that a prior ambiguous POST did not enqueue or finish elsewhere.
             ComfyClientObservation.Unknown("The stable prompt identity is absent from current history and queue.")
@@ -540,7 +542,7 @@ class ComfyVideoClient private constructor(
 
     private fun historyContains(history: JsonObject, promptId: String): Boolean = history[promptId] is JsonObject
 
-    private data class SocketEvent(val progressPercent: Int? = null, val failure: String? = null, val cancelled: Boolean = false)
+    private data class SocketEvent(val failure: String? = null, val cancelled: Boolean = false)
     private data class ApiResponse(val status: Int, val bytes: ByteArray) {
         fun statusCode(): Int = status
         fun body(): ByteArray = bytes
@@ -564,16 +566,11 @@ class ComfyVideoClient private constructor(
                 val dataObject = event?.get("data") as? JsonObject
                 if (dataObject?.get("prompt_id")?.jsonPrimitive?.contentOrNull == promptId) {
                     when (event["type"]?.jsonPrimitive?.contentOrNull) {
-                        "progress" -> {
-                            val value = dataObject["value"]?.jsonPrimitive?.intOrNull
-                            val max = dataObject["max"]?.jsonPrimitive?.intOrNull
-                            result.complete(SocketEvent(if (value != null && max != null && max > 0) (value * 100 / max).coerceIn(0, 100) else null))
-                        }
                         "execution_interrupted" -> result.complete(SocketEvent(cancelled = true))
                         "execution_error" -> result.complete(SocketEvent(failure =
                             dataObject["exception_message"]?.jsonPrimitive?.contentOrNull?.take(MAX_ERROR)
                                 ?: "ComfyUI reported a node execution error."))
-                        "executing", "executed", "execution_success" -> result.complete(SocketEvent())
+                        "progress", "executing", "executed", "execution_success" -> result.complete(SocketEvent())
                     }
                 }
             }

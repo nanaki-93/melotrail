@@ -279,7 +279,7 @@ class ComfyVideoClientTest {
     }
 
     @Test
-    fun `websocket progress reconciles queue and late history validates exact output node`() {
+    fun `node progress stays indeterminate and late history validates exact output node`() {
         SocketComfyServer().use { server ->
             server.webSocketEvent.set("""{"type":"progress","data":{"prompt_id":"$PROMPT_ID","value":2,"max":5}}""")
             server.response.set { request -> when (request.path) {
@@ -287,7 +287,7 @@ class ComfyVideoClientTest {
                 "/queue" -> json("""{"queue_running":[[1,"$PROMPT_ID",{},{}]],"queue_pending":[]}""")
                 else -> json("{}", 404)
             } }
-            assertEquals(40, assertIs<ComfyClientObservation.Running>(
+            assertEquals(null, assertIs<ComfyClientObservation.Running>(
                 server.client().observe(PROMPT_ID, "client-1", VideoComfyOutputBinding("3", setOf("mp4"))),
             ).progressPercent)
 
@@ -301,6 +301,32 @@ class ComfyVideoClientTest {
             )
             assertEquals("take_00001_.mp4", completed.output.fileName)
             assertEquals("clips", completed.output.subfolder)
+        }
+    }
+
+    @Test
+    fun `node progress resets and node completion never claim whole workflow completion`() {
+        SocketComfyServer().use { server ->
+            server.response.set { request -> when (request.path) {
+                "/history/$PROMPT_ID" -> json("{}")
+                "/queue" -> json("""{"queue_running":[[1,"$PROMPT_ID",{},{}]],"queue_pending":[]}""")
+                else -> json("{}", 404)
+            } }
+            val events = listOf(
+                """{"type":"progress","data":{"prompt_id":"$PROMPT_ID","node":"13","value":4,"max":4}}""",
+                """{"type":"progress","data":{"prompt_id":"$PROMPT_ID","node":"14","value":1,"max":4}}""",
+                """{"type":"executed","data":{"prompt_id":"$PROMPT_ID","node":"14"}}""",
+                """{"type":"progress","data":{"prompt_id":"$PROMPT_ID","node":"14","value":1,"max":10}}""",
+                null, // Reconnected without a progress event; queue/history remain authoritative.
+            )
+            events.forEach { event ->
+                server.webSocketEvent.set(event)
+                val running = assertIs<ComfyClientObservation.Running>(
+                    server.client().observe(PROMPT_ID, "client-1", OUTPUT),
+                )
+                assertEquals(null, running.progressPercent, "Node-local progress is not overall completion: $event")
+            }
+            assertTrue(server.requests.none { it.method == "POST" })
         }
     }
 

@@ -154,19 +154,22 @@ class VideoMotionDescriptorFixtureTest {
                 sceneryWorldOffsets = listOf(0, 80),
             ),
         )
-        specs.forEach { emitFixture(output.resolve(it.name), it) }
+        val transparentSpec = specs.last().copy(name = "transparent-depth", sceneryWidth = 900,
+            sceneryWorldOffsets = listOf(0, 0, 0), transparentPlanes = true)
+        val allSpecs = specs + transparentSpec
+        allSpecs.forEach { emitFixture(output.resolve(it.name), it) }
         Files.writeString(
             output.resolve("fixture-set.json"),
             JSON.encodeToString(
                 JsonObject.serializer(),
                 buildJsonObject {
                     put("schema", "melotrail-motion-production-fixtures-v1")
-                    put("fixtures", buildJsonArray { specs.forEach { add(JsonPrimitive(it.name)) } })
+                    put("fixtures", buildJsonArray { allSpecs.forEach { add(JsonPrimitive(it.name)) } })
                     put("selectorEnvironment", "MELOTRAIL_MOTION_FIXTURE_ROOT")
                 },
             ) + "\n",
         )
-        assertEquals(specs.map(FixtureSpec::name).sorted(), Files.list(output).use { children ->
+        assertEquals(allSpecs.map(FixtureSpec::name).sorted(), Files.list(output).use { children ->
             children.filter { Files.isDirectory(it, LinkOption.NOFOLLOW_LINKS) }
                 .map { it.fileName.toString() }.sorted().toList()
         })
@@ -205,7 +208,9 @@ class VideoMotionDescriptorFixtureTest {
         )
         val sceneryPaths = spec.sceneryWidth?.let { width ->
             spec.sceneryWorldOffsets.mapIndexed { index, worldX ->
-                sceneryImage(inputs.resolve("scenery-${'a' + index}.png"), width, spec.height, worldX)
+                val path = inputs.resolve("scenery-${'a' + index}.png")
+                if (spec.transparentPlanes && index > 0) sceneryOverlay(path, width, spec.height, index)
+                else sceneryImage(path, width, spec.height, worldX)
             }
         }.orEmpty()
 
@@ -299,7 +304,8 @@ class VideoMotionDescriptorFixtureTest {
                 },
             ),
             depthRelations = listOf(VideoDepthRelation("foreground", occludedId)) +
-                scenery.indices.map { VideoDepthRelation("foreground", "scenery-${'a' + it}") },
+                scenery.indices.map { VideoDepthRelation("foreground", "scenery-${'a' + it}") } +
+                if (spec.transparentPlanes) listOf(VideoDepthRelation("scenery-c", "scenery-b"), VideoDepthRelation("scenery-b", "scenery-a")) else emptyList(),
             occlusionRelations = listOf(VideoOcclusionRelation("foreground", occludedId, "foreground-occlusion")) +
                 scenery.indices.map { VideoOcclusionRelation("foreground", "scenery-${'a' + it}", "foreground-occlusion") },
         )
@@ -444,7 +450,16 @@ class VideoMotionDescriptorFixtureTest {
             put("motionBlurSamples", 3); put("shutterFraction", 0.5)
         })
         put("planes", buildJsonArray {
-            add(buildJsonObject {
+            if (spec.transparentPlanes) {
+                spec.sceneryWorldOffsets.indices.forEach { index -> add(buildJsonObject {
+                    put("id", "depth-$index")
+                    put("sections", buildJsonArray { add(buildJsonObject {
+                        put("coverageId", "scenery-${'a' + index}-coverage")
+                        put("worldX", 0); put("worldY", 0)
+                        put("startFrame", 0); put("endFrameExclusive", 900)
+                    }) })
+                }) }
+            } else add(buildJsonObject {
                 put("id", "world")
                 put("sections", buildJsonArray {
                     spec.sceneryWorldOffsets.forEachIndexed { index, worldX ->
@@ -515,6 +530,20 @@ class VideoMotionDescriptorFixtureTest {
                 image.setRGB(x, y, color.rgb)
             }
         }
+        assertTrue(ImageIO.write(image, "png", path.toFile()))
+        return path
+    }
+
+    private fun sceneryOverlay(path: Path, width: Int, height: Int, depth: Int): Path {
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            graphics.composite = AlphaComposite.Src
+            graphics.color = if (depth == 1) Color(240, 40, 60) else Color(20, 240, 90)
+            graphics.fillRect(70 + depth * 15, 10 + depth * 10, 40, 35)
+            graphics.color = Color(200, 150, 60, 128)
+            graphics.fillRect(250, 10, 20, 30)
+        } finally { graphics.dispose() }
         assertTrue(ImageIO.write(image, "png", path.toFile()))
         return path
     }
@@ -596,6 +625,7 @@ class VideoMotionDescriptorFixtureTest {
         val blackAlphaOcclusionMask: Boolean = false,
         val sceneryWidth: Int? = null,
         val sceneryWorldOffsets: List<Int> = emptyList(),
+        val transparentPlanes: Boolean = false,
     )
 
     private companion object {

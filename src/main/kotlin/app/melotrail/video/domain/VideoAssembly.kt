@@ -118,7 +118,29 @@ data class VideoAssemblyWork(
     val fingerprint: String,
 )
 
-/** Versioned immutable proposal; publication and execution binding follow in later slices. */
+/** Compact append-only project record; the descriptor owns the complete proposal.
+ * Neither persistence nor its provenance fingerprint attests executable readiness. */
+@Serializable
+data class VideoAssemblyRecord(
+    val id: VideoVersionedId,
+    val artifact: VideoArtifact,
+    val preparedSceneId: VideoVersionedId,
+    val preparedSceneArtifact: VideoArtifact,
+    val finishedReferenceId: VideoVersionedId,
+    val finishedReferenceArtifact: VideoArtifact,
+    val provenanceFingerprint: String,
+    val createdAt: String,
+) {
+    init {
+        require(artifact.relativePath == "assemblies/${id.id}/v${id.version}/assembly.json") {
+            "Assembly record must point to its immutable descriptor path"
+        }
+        require(Regex("[0-9a-f]{64}").matches(provenanceFingerprint)) { "Assembly provenance needs a lowercase SHA-256" }
+        require(runCatching { java.time.Instant.parse(createdAt) }.isSuccess) { "Assembly record needs an ISO-8601 creation timestamp" }
+    }
+}
+
+/** Versioned immutable proposal; execution binding remains a separate readiness gate. */
 @Serializable
 class VideoAssembly private constructor(
     val id: VideoVersionedId,
@@ -141,8 +163,9 @@ class VideoAssembly private constructor(
     @SerialName("actions") private val storedActions: List<VideoAssemblyAction>,
     @SerialName("executionDependencies") private val storedExecutionDependencies: List<VideoAssemblyDependency> = emptyList(),
     @SerialName("actionDependencies") private val storedActionDependencies: List<VideoAssemblyActionDependencies> = emptyList(),
-    val schemaVersion: Int = CURRENT_ASSEMBLY_SCHEMA,
-    val plannerVersion: Int = CURRENT_ASSEMBLY_PLANNER,
+    // Required on the wire: an absent version must never adopt new planner semantics.
+    val schemaVersion: Int,
+    val plannerVersion: Int,
     val width: Int = 1920,
     val height: Int = 1080,
     val pixelAspectNumerator: Int = 1,
@@ -385,7 +408,7 @@ fun assemblyDigest(vararg parts: String): String {
 const val MAX_SAFE_FRAME_INTEGER: Long = 9_007_199_254_740_991L
 const val MAX_RENDER_FRAMES: Long = 300L
 const val CURRENT_ASSEMBLY_SCHEMA = 1
-const val CURRENT_ASSEMBLY_PLANNER = 1
+const val CURRENT_ASSEMBLY_PLANNER = 2
 
 private fun validAssemblyText(text: String): Boolean =
     text.isNotBlank() && text.length <= 20_000 && text.none(::forbiddenAssemblyTextControl)

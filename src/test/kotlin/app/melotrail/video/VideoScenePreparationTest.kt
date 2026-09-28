@@ -654,6 +654,19 @@ class VideoScenePreparationTest {
             rigidInput.motion.descriptor.copy(requestJson = insufficientJson.toString())
         }
         assertTrue(coverageError.message.orEmpty().contains("visible hole"), coverageError.message.orEmpty())
+        val transparentScene = scene.copy(layers = scene.layers.map { layer ->
+            if (layer.id == scene.sceneryCoverage.single { it.id == "travel-coverage" }.layerId) layer.copy(
+                image = layer.image.copy(hasAlphaChannel = true, hasTransparentPixels = true),
+                alpha = app.melotrail.video.domain.VideoMeasuredAlpha(layer.image.width.toLong() * layer.image.height - 1, 0, 1),
+            ) else layer
+        })
+        val transparentJson = JsonObject(rigidJson.toMutableMap().apply {
+            put("preparedScene", Json { encodeDefaults = true }.encodeToJsonElement(VideoPreparedScene.serializer(), transparentScene))
+        })
+        val transparentError = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            rigidInput.motion.descriptor.copy(requestJson = transparentJson.toString())
+        }
+        assertTrue(transparentError.message.orEmpty().contains("visible hole"), transparentError.message.orEmpty())
         assertEquals("Move the supplied scenery behind the subject.",
             VideoScenePreparation().prepare(look, scene, travelRequest.motionRequest, capabilities(), guidelines())
                 .let { (it as VideoScenePreparationResult.Prepared).input.primaryMotionPrompt })

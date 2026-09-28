@@ -817,7 +817,16 @@ async function renderBounded(request, projectRoot, outputDirectory, options = {}
       fs.writeFileSync(target, bytes, { flag: 'wx', mode: 0o600 });
       written.push(target);
       frames.push({ frame, timeSeconds: rendered.state.time, file: fileName, sha256: sha256(bytes) });
+      // Canvas/native finalizers and asynchronous cancellation need an event-loop
+      // turn. A synchronous whole-chunk loop retains native frame allocations
+      // until it returns, even though only one PNG is intentionally buffered.
+      // A resolved Promise/microtask is insufficient; drawing and PNG bytes stay
+      // unchanged, and the native supervisor still enforces the same RSS limit.
+      await new Promise((resolve) => setImmediate(resolve));
     }
+    // The final yield is also cancellable; do not publish a success receipt
+    // after an asynchronous cancellation on the last frame.
+    if (options.isCancelled?.()) throw new MotionInputError('Controlled-motion render was cancelled before receipt publication.');
   } catch (error) {
     if (options.isCancelled?.()) {
       // Only files this invocation created are reaped. Existing chunks, inputs,

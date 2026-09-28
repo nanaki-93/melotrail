@@ -531,6 +531,56 @@ class LocalVideoBackendTest {
     }
 
     @Test
+    fun `node progress resets survive durable reconciliation and reconnect before one publication`() = withRuntime { fixture, runtime ->
+        ComfyVideoClientTest.SocketComfyServer().use { server ->
+            val prompt = AtomicReference<String>()
+            val completed = AtomicBoolean(false)
+            server.response.set { call -> when {
+                call.path == "/object_info" -> json(LOCAL_OBJECT_INFO)
+                call.path == "/upload/image" -> json("""{"name":"subject.png","subfolder":"","type":"input"}""")
+                call.path == "/prompt" -> {
+                    prompt.set(Json.parseToJsonElement(call.body.toString(Charsets.UTF_8)).jsonObject.getValue("prompt_id").jsonPrimitive.content)
+                    json("""{"prompt_id":"${prompt.get()}"}""")
+                }
+                call.path.startsWith("/history/") -> if (completed.get()) json(successHistory(prompt.get())) else json("{}")
+                call.path == "/queue" -> json("""{"queue_running":[[1,"${prompt.get()}",{},{}]],"queue_pending":[]}""")
+                else -> json("{}", 404)
+            } }
+            val request = fixture.request()
+            val jobs = fixture.root.resolve("jobs")
+            val protectedRoots = listOf(fixture.root.resolve("midi-protected").createDirectories())
+            fun reopened() = coordinator(VideoJobStore(jobs, "comfy-test", protectedRoots),
+                fixture.runtimeBackend(runtime, server.client(), request))
+            val first = assertIs<VideoJobResult.Accepted>(reopened().submit(request)).attempt!!
+            // Sampler finishes; VAE decoding starts and reports its own smaller fraction.
+            listOf("13" to 100, "14" to 25, "14" to 100, "16" to 10).forEach { (node, value) ->
+                server.webSocketEvent.set("""{"type":"progress","data":{"prompt_id":"${prompt.get()}","node":"$node","value":$value,"max":100}}""")
+                val result = assertIs<VideoJobResult.Accepted>(reopened().reconcile(request.id))
+                assertEquals(VideoGenerationAttemptStatus.ACTIVE, result.attempt!!.status)
+                assertEquals(first.id, result.attempt!!.id)
+                assertTrue(result.job.outputs.isEmpty())
+            }
+            val active = VideoJobStore(jobs, "comfy-test", protectedRoots).snapshot().jobs.single().attempts.single()
+            assertEquals(null, active.progressPercent)
+            assertEquals(1, server.requests.count { it.path == "/prompt" })
+
+            val bytes = "one fixture output after all workflow nodes finish".toByteArray()
+            Files.write(fixture.session.outputDirectory.resolve("take.mp4"), bytes)
+            completed.set(true)
+            val result = assertIs<VideoJobResult.Accepted>(reopened().reconcile(request.id))
+            assertEquals(VideoGenerationAttemptStatus.SUCCEEDED, result.attempt!!.status)
+            assertEquals(100, result.attempt!!.progressPercent)
+            val artifact = result.job.outputs.single()
+            val published = fixture.publication.resolve(requireNotNull(artifact.relativePath))
+            assertContentEquals(bytes, Files.readAllBytes(published))
+            assertEquals(sha256(bytes), artifact.sha256)
+            assertEquals(result.job, assertIs<VideoJobResult.Accepted>(reopened().reconcile(request.id)).job)
+            assertEquals(1, server.requests.count { it.path == "/prompt" })
+            runtime.acquireInferenceSlot(fixture.session, "next-attempt").close()
+        }
+    }
+
+    @Test
     fun `enqueued HTTP 500 retains runtime and V16 admission until reconstructed backend publishes same job`() = withRuntime { fixture, runtime ->
         ComfyVideoClientTest.SocketComfyServer().use { server ->
             val prompt = AtomicReference<String>()

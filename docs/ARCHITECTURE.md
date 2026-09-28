@@ -80,9 +80,15 @@ separately authorized, explicit operation. New additive records must not
 reinterpret already accepted MIDI or silently upgrade artifacts.
 
 Video project storage uses a separately selected root outside MIDI projects and
-exports. It owns immutable reference copies, scene looks, prepared scenes, takes,
-job attempts and export records. Continuous-plan persistence and complete export
-orchestration remain VG4–VG5 work. Video code cannot write a
+exports. It owns immutable reference copies, scene looks, prepared scenes,
+continuous-plan proposals, takes, job attempts and export records. Current Video
+project schema 5 records append-only assembly versions; `VideoAssemblyStore`
+persists bounded schema-1/planner-2 descriptors through `VideoProjectStore`'s shared
+locked, revision-guarded descriptor publisher. Reopening verifies the descriptor,
+source identities and prepared image facts. Unsupported project/plan versions
+reject without migration or artifact rewriting. Proposal persistence is not
+executable readiness: application integration, continuous execution/checkpoints
+and complete export orchestration remain VG4–VG5 work. Video code cannot write a
 MIDI project or import MIDI application/storage owners. Only the application
 composition root coordinates the two workspaces.
 
