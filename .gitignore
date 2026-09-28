@@ -24,3 +24,5 @@ exports/
 
 # PI
 .pi/
+docs/pictures/video/tests/
+*.mp4
