@@ -369,6 +369,189 @@ blink `e5d3376c…5582c2` and four review MP4 hashes are recorded in
 [TABI evidence](docs/TABI_VIDEO.md#vg2-06-protected-movement-candidate-2026-09-28).
 No new take, selection or live job; Step 1.2 must measure the missing inputs.
 
+VG2-06 Step 1.2 preflight (2026-09-28): **blocked on artwork, not a static-import pass**. Read-only executable probe `node build/vg2-character-input-a1/check-inputs.cjs` uses the pinned corrected preparation and four MP4s; its measurements are in ignored `build/vg2-character-input-a1/input-probe.json`. At 1920×1080 both fixed and finished images are fully opaque (2,073,600 pixels). At head (600,320), cheek/hand (720,540), coat (560,690) and tail (310,840), the putative fixed-scene and cabin-foreground backing still contains *exactly the character's visible RGB*. Opaque cabin occlusion and black eye-support at these witnesses are not subject mattes. Negative checks reject reuse of these painted pixels as a clean plate, transparent backing. Alignment rejection needs a real separated subject; there is no separated subject or erased-character backing in the accepted bundle; deriving hidden seat/cabin/window art from this flat picture would require newly finished artwork. **No artwork-job admission was supplied:** no subject/plate was fabricated, no new project/reference/prepared scene was imported and no moving-quality assertion is made. Request a bounded external-artwork preparation admission or supplied registered transparent subject and genuinely clean plate; then measure swept support, registration and occlusion and perform new current-schema import/reopen under this same step. Focused four-selector Gradle suite passed (1 executed/5 up-to-date); protected pins unchanged. Existing preparation and all videos remain untouched.
+
+VG2-06 external-artwork follow-up (2026-09-29): the user explicitly requested
+Codex-generated TABI artwork in `docs/pictures/video/tabi-assets/train-actions/`.
+Five new 1920×1080 **candidate/guide** PNGs (13–17) cover an empty cabin, transparent
+TABI, foreground extraction and two original-RGB derivatives; see
+[TABI artwork candidates](docs/TABI_VIDEO.md#external-breathing-artwork-candidates-2026-09-29).
+The served images were 1672×941 and resized; the opaque inpaint changes 65.4% of
+pixels outside the candidate character matte and shifts the main window frame.
+The foreground guide covers the subject with seat/window art; even the restricted
+table/cup layer overlaps 37,613 subject pixels. A targeted plate correction and
+localized composite were also visually rejected. Original, accepted preparation
+and four MP4 pins remain unchanged. **Step 1.2 is still blocked on finishing and
+validation of registered artwork**; these candidates are not imported or motion-
+ready, and no render/media job, accepted take or human approval is claimed.
+
+VG2-06 user artwork feedback (2026-09-29): `16` contained a piece of tabletop,
+`17` contained TABI, and notebook pictures faced away from TABI. Non-destructive
+`16-...-v2`/`17-...-v2` visible-region cuts and new `19`/`20` book-facing-TABI
+scene/plate candidates are in `train-actions/`; old drafts are preserved. The
+Pi-generated close-up changes only page interiors (30,162 pixels, zero outside
+that region); tower tip now faces the near edge, base faces seated TABI. Manual
+stationary geometry keeps source RGB, excludes measured old bleed witnesses and
+keeps protected source/preparation/four MP4 pins unchanged. Scratch checks:
+`build/vg2-character-art-a1/check-corrections.cjs`; static review stack there.
+The generated clean plate still shifts the window and subject fringe/swept
+support are unvalidated; **Step 1.2 remains BLOCKED for motion-ready inputs**.
+Escalation recheck: the retained recipe reproduced the missing `16-...-v2` and
+`17-...-v2` derivatives without changing protected inputs. The scratch check now
+uses current derivative pixels rather than assuming superseded guide pixels are
+immutable: `node build/vg2-character-art-a1/check-corrections.cjs` passes the
+cutout/foreground witness and deliberately misaligned/missing-backing rejection
+checks. At 1920×1080 with ±2 px vertical subject travel and a 3 px fringe,
+338,677 pixels are in conservative swept support, but the candidate opaque
+plate differs from the book-corrected scene at **1,703,062 pixels outside it**
+(first mismatch 0,0). Evidence: ignored
+`build/vg2-character-art-a1/escalation-check.json`; v2 cutout/foreground SHA-256
+`c1e0e223…edc7367` / `f43bdb50…ac9cfe4`. These are diagnostic candidates,
+not a registered clean plate or motion-ready layers. Scene-matched plate,
+subject-edge/occlusion finishing and neutral-composite proof still require a
+separately bounded artwork admission or supplied finished layers before preparing
+and importing a new private project. No import, media job, take or artistic
+acceptance is inferred.
+
+VG2-06 bounded artwork-finishing continuation (2026-09-29): at the user's
+request, the Pi image-generative tool inpainted a cropped cabin/seat behind TABI
+and made one Tokyo extension **style study** using `panorama-style.png` and Tokyo
+architecture references. New `train-actions/23` is the untouched model crop;
+localized opaque backing `26` and neutral-aligned original-look subject `27`
+are 1920×1080 candidates. The backing changes zero pixels outside the
+conservative ±2 px/3 px fringe support (previous plate: 1,703,062 outside).
+Scratch `build/vg2-character-art-a1/registered-v2-sweep-check.json` and ±2/0/+2
+static stills report zero changed outside support; neutral still has 2,111 pixels
+with RGB delta >8 and direct inspection finds ghost contours at seat/poster/window.
+No swept-filtered motion, endpoint return or production import/reopen is proven;
+**Step 1.2 remains BLOCKED**, not a valid moving-input admission. The three
+accepted, hash-pinned 5600×1080 Tokyo far/middle/near parallax planes were copied
+byte-identically into `scenario/` so future art can retain the selected rigid
+parallax. The new opaque `tokyo-parallax-addition-study.png` is not separated or
+joined and does not extend the 60/240-second corridor. No new media render/take,
+accepted mask change, video approval or automatic move to VG4. Escalation's
+static registration check now explicitly rejects the 2,111 neutral pixels above
+threshold instead of treating zero outside-support changes as motion readiness;
+Step 1.2 still needs a finished ghost-free backing/edge, swept checks and production
+import/reopen. No additional artwork job is admitted by this check. Evidence/limits:
+[TABI art study](docs/TABI_VIDEO.md#bounded-registered-plate-and-tokyo-parallax-artwork-study-2026-09-29).
+
+VG2-06 Step 1.2 artwork-finishing attempt (2026-09-29): the user authorized
+**one image-edit attempt and at most one targeted correction, no video render**.
+Both were used to clean the empty-cabin crop and its silhouette-shaped seam.
+Original generated crops and scratch composites remain in ignored
+`build/vg2-character-art-a2/`; no previous candidate or accepted asset was
+replaced. The corrected candidate is still visibly patch-shaped at the poster,
+seat and window. Its neutral composite has **2,287** pixels with RGB delta >8
+(earlier: 2,111); backing changes zero pixels outside the conservative support,
+but that is insufficient. Scratch receipt: `corrected-measure.json`; first attempt:
+`candidate-measure.json`. The source, accepted mask and four review MP4 pins were
+rechecked unchanged. Focused four-selector Gradle, fixture generation, 27 Node
+motion tests, `make test`, `make build` and both diff checks passed; logs are
+under `build/vg2-character-art-a2/`. **BLOCKED**: the authorized artwork budget
+is exhausted, no image was promoted or imported, and no video/media job ran. A separately
+supplied artist-finished, scene-registered clean plate and matte, or a *new*
+explicitly bounded finishing admission, is needed before swept/production proof.
+Do not interpret another threshold-only check or a generated empty-seat picture
+as completion. See [finishing attempt](docs/TABI_VIDEO.md#registered-cabin-artwork-finishing-attempt-2026-09-29).
+
+VG2-06 fresh user authorization (2026-09-29): the user explicitly allowed another
+image-generation attempt and, if needed, a full cabin redraw. One full-scene Pi
+image edit was used; the reserved targeted correction was **not** used. This is a
+**replacement-scene candidate**, not a successful fix of the original accepted
+scene: model output 1672×941 was scaled to 1920×1080 and redraws 1,741,839
+backing pixels outside old subject support. Scratch `build/vg2-character-art-a3/`
+retains original output, opaque resized cabin, trimmed source-RGB TABI cutout,
+new fixed table/cup occlusion, geometry-only new window mask, three static ±2/0
+stills and measured checks. These stills change zero pixels outside their *new*
+neutral subject support, but self-comparison to a newly composed neutral cannot
+certify original-pixel restoration or moving quality. The refreshed parallax
+still reuses the three pinned depth planes without altering their bytes. Review
+images `train-actions/28`–`30` are unapproved candidates; see
+[new cabin study](docs/TABI_VIDEO.md#new-full-cabin-replacement-study-2026-09-29).
+The clean empty-seat backing looks substantially better than 26/27 at the old
+ghost contour, but the cabin/city/prop drawing and window geometry have changed;
+new-window matte, foot/seat contact, shutter-filtered sweep, neutral endpoints,
+production import/reopen and user appearance approval remain unproven. Focused
+four-selector Gradle, fixture generation, all 27 Node motion tests, `make test`,
+`make build` and both diff checks passed; see ignored `build/vg2-character-art-a3/`
+logs. Protected source, mask, depth-plane and four MP4 pins remain unchanged.
+**Step 1.2 is still BLOCKED**; do not replace the accepted leaf bundle, parallax
+result or old still reference with this new scene automatically. No video, take
+or media job.
+
+VG4-05 independent scenery-art study while VG2-07 review remains pending
+(2026-09-29): user requested more visibly varied exterior scenery using
+`scenario/inspiration-tokyo/`. One Pi-generated 2172×724 opaque side-on panorama
+and one targeted lateral-canal correction used the illustrated
+`panorama-style.png`, protected far-plane palette, Asakusa gate and Ginza clock
+photo references. The selected **study**, not an accepted depth layer or joined
+extension, is `scenario/tokyo-sideon-district-variety-study.png` (SHA-256
+`fadd6ada400114dc4c89857be0cc59970f286bf7e175d6c6c557f5fc9f5df879`).
+Ignored `build/vg4-tokyo-variety-a1/` retains both model PNGs, three window-position
+stills using the **unapproved** replacement cabin 28–30, the scratch recipe and
+`static-preview-report.json`. Static window compositing changes zero pixels
+outside the provisional mask, is opaque and has zero sample coverage gaps at
+three selected positions. The first scratch Canvas-mask preview leaked 1,255
+pixels outside the mask; exact-alpha composition corrected this scratch-only
+study, not a production renderer. The distinct older blocks → bridge/canal →
+cream clock-front sequence is visible in stills but is **not** a seamless handoff,
+separated far/middle/near planes or sufficient 60/240-second coverage. Fixture
+Gradle, 27 Node motion tests, `make test`, `make build` and both diff checks
+passed; logs and protected-source/plane/four-MP4 hashes are in the same scratch.
+Do not move VG4-05 to DONE or replace the protected planes; no video render,
+new take, production import or human approval. See [district-variety still study](docs/TABI_VIDEO.md#side-on-tokyo-district-variety-study-2026-09-29).
+
+VG4-05 follow-up **scratch-only** join preparation after the user's approval of
+tiled depth sections (2026-09-29): `build/vg4-60s-a1/` holds a measured
+coverage receipt, one generated candidate near cutout, a derived 6000×1080
+near section and five window stills. The initial manual extraction from the
+flat study was rejected (visible polygonal sky); the replacement cutout has
+measured alpha and a native overlap preserving all old near pixels through
+x=4127. User feedback identified a ghostly doubled façade at frame 1380:
+the 90-pixel entrance alpha ramp was removed, and the candidate now starts
+at an open bridge from x=4660 after a 532-pixel quiet near-depth pause. A
+focused regression checks the formerly shaded region, opaque entrance pixels
+and late new-art visibility; the rejected still remains in scratch. At the
+candidate frame-810 handoff, three same-camera shutter samples differ only
+by canvas re-rasterization (at most two 8-bit channel levels), with no
+opaque-window gaps; sampled cabin stills change zero pixels outside the
+*unapproved* window mask. **User review (2026-09-29):** after inspecting the
+revised `window-frame-1380.png` (SHA-256
+`47410cd5a6117f85d45848dfbbb0c1099b273413ca06cfa43730ddb748c43fbc`),
+the user said “yes, this one is ok, i confirm the quality of the backgrounds”.
+Record this as the initial **static background appearance** response only;
+do not reinterpret it as approval of the earlier shaded still, character kit,
+moving seam, entire corridor or video. **Follow-up review corrected this
+response:** the user found a lower-right terrace incorrectly overlaid on the
+middle-depth house in that same frame, so this still is not accepted as clean.
+This is **not** a moving seam test,
+character-art approval or coherent three-plane extension. The existing far
+plane's earlier measured authored extent of 2500 px is still 82 px short
+for 60 seconds, even though its opaque PNG has transparent-free padding past
+that extent; the new near strip also needs shutter/alpha and moving-join
+review. In response to the terrace report (2026-09-29), v2–v4 local-mask
+attempts in ignored scratch removed one defect but left floating trees or a
+hard building edge. A new source-island cutout (SHA-256
+`d2caeacead907fd30dc304db32f9886890ae0e88b11287afe41763d645a3b1dd`)
+yields the v5 6200×1080 near candidate (SHA-256
+`c1114749dc6b1ae704d448231320c13ef3e3ba092b71ecab7394500b6fc9a1e0`),
+preserving the earlier stills/bytes. Its first new alpha≥8 column is x=4956
+and its last x=6019; the deeper streets carry the quiet gap. Static frame-1380
+regression detects zero changed pixels in the reported 13,352-pixel window
+area, no old/new entrance fade, and >318,000 distinct new-near window pixels
+at frame1799. **User decision (2026-09-29):** after reviewing v5 stills, the
+user said “the v5 version is ok” and requested saving it in `scenario/`.
+The approved scope is v5 **static background quality/appearance**, not a
+motion-tested source section. Preserve exact copies of the v5 section and its
+editable source in [tokyo-clockfront-near-v5](docs/pictures/video/tabi-assets/scenario/tokyo-clockfront-near-v5/):
+`tokyo-near-section-v5-candidate-6200x1080.png` and
+`tokyo-clockfront-cutout-v5-source-2172x724.png` (the two SHA-256 pins above).
+Do not replace the protected far/middle/near planes or the earlier reviewed
+stills. This does not prove moving quality, 60-second far authored coverage or
+180-second variety. Do not start VG4-06's 180/240-second corridor, render,
+import or mark VG4-05 DONE while VG2-07 and the moving seam gate remain open.
+
 VG2-06/07 scope: start with one compatible gentle movement/glance before cup or
 hand choreography; a broad pose library is not required. Inspect supplied art
 first. The drinking reference's handled mug and pose do not match the scene's
