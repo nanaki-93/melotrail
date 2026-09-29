@@ -25,7 +25,7 @@ Create/open → import melody → confirm settings, structure and chord duration
 
 An independent Video workspace accepts externally finished scene artwork and
 optional ready layers. It generates supported motion and delivers one continuous
-**180–300 second video, default 240 seconds**, as **1920×1080 H.264 MP4, 30 fps,
+**180–300 second video, default 180 seconds**, as **1920×1080 H.264 MP4, 30 fps,
 square pixels and zero audio streams**. Music is added in the user's external
 Apple editor; no MIDI project, soundtrack or export is required.
 
@@ -39,8 +39,12 @@ Neither workstream waits for the other's artistic acceptance. They share one
 Kotlin/Compose application, not projects, musical timing or generation state.
 
 **Production-first priority (2026-09-28):** prove the creative workflow with a
-scene-compatible TABI character test, a scenery-join test, a combined 60-second
-proof and one complete 240-second pilot before implementing the reusable app flow.
+scene-compatible TABI character test, a moving scenery-join test, a combined
+60-second proof and one complete 180-second Tokyo train-window pilot before
+implementing the reusable app flow. The pilot must show distinct passing points
+of interest about every 5–10 seconds, quieter scenery between them, moving
+far/middle/near parallax and readable TABI actions inside the fixed train cabin.
+Short tests establish parts of this recipe, never the full three-minute result.
 A supervised harness may reuse the existing video services for these proofs;
 it is not an app feature or a replacement job system. Only narrowly necessary
 rendering/continuation/encoding work precedes the pilot. The product flow above
@@ -258,7 +262,7 @@ synthetic preview, fictional progress, soundtrack prerequisite or image-generati
 
 The first creative proof is one coherent offscreen scenery join, after the
 character test is reviewed. Establish 60-second coverage before extending the
-same method to the full 240-second corridor. Do not generate a large untested
+same method to the full 180-second pilot corridor. Do not generate a large untested
 asset library. Missing full-length coverage blocks a full render, not an honestly
 bounded shorter probe with its own validated inputs and identity.
 
@@ -268,9 +272,17 @@ bounded shorter probe with its own validated inputs and identity.
    app callers and retire short-shot/repeat planning, retaining required prompt,
    fingerprint and estimate behavior once.
 2. Validate externally prepared scenery against the complete camera trajectory;
-   derive rigid depth-layer movement and occlusion from that trajectory.
+   derive rigid far/middle/near movement and occlusion from that trajectory. For
+   the Tokyo pilot, plan distinct passing landmarks or district moments about
+   every 5–10 seconds (roughly 18–36 over three minutes), with quieter painted
+   travel between them. Keep the approved warm side-on style; do not stretch,
+   paste obvious repeats or count transparent padding as authored scenery.
 3. Join scenery outside the visible region and carry subject/effect/scenery state
    across chunks. Preserve blink phase, particle age and random sequence on resume.
+   Schedule scene-compatible TABI actions inside the fixed train cabin throughout
+   the pilot, beyond the existing blink; use only approved registered action
+   art/mattes and check contact, occlusion, neutral returns and continuity across
+   chunk boundaries. One isolated action test is not a full-length action schedule.
 4. Recompute only dependent work when inputs change. Report fresh action footage,
    procedural motion and reused components without double-counting layered time.
 
@@ -288,8 +300,11 @@ or whole-clip loops. Missing coverage requests more external artwork.
    tool changes require separate proof. Bound disk as well as memory, validate
    every frame/timestamp/join and atomically publish to a new filename.
 3. Measure and review a real combined 60-second proof, then extend coverage and
-   produce one complete 240-second pilot (7,200 frames). Fixture checks remain
-   mandatory but cannot substitute for the real film. Estimate preparation,
+   produce one complete 180-second pilot (5,400 frames) with moving depth-plane
+   parallax, distinct passing views and TABI actions inside the cabin. Inspect the
+   entire timeline, including quiet stretches and all joins; a repeated short
+   loop or static still sequence does not qualify. Fixture checks remain mandatory
+   but cannot substitute for the real film. Estimate preparation,
    composition, encoding and review separately; never extrapolate artistic quality.
 4. After full-pilot viewing and editor handoff establish the production recipe,
    expose it through the approved app flow with full-cut review, join inspection,
@@ -307,8 +322,9 @@ and any action-cadence conversion are disclosed; duplicated frames are not nativ
 2. Independently finish fixture-based assembly, packaging, accessibility and UI
    regressions while that decision is pending. Prove MIDI works without any optional
    video runtime; prove configured Video works in a private installed application.
-3. After the early approach is accepted, produce one real 3–5-minute result through
-   the app with current selected artwork and a bounded authorized local run.
+3. After the early approach is accepted, produce one real 180-second result through
+   the app with current selected artwork and a bounded authorized local run;
+   retain support for other selected durations in the 180–300-second range.
 4. Have the user watch the whole cut and joins at normal speed, assess continuity,
    fidelity, prompt adherence and repetition, then import/play it in the chosen
    Apple editor. Record a separate video release decision and remaining limitations.
@@ -331,7 +347,7 @@ suggestions in dated evidence, without changing that evidence or its review stat
 | 3 | VG4 scenery-extension/join test | A reviewed rigid-motion join and sufficient supplied coverage for the 60-second proof, without wrap/stretch/slowdown |
 | 4 | VG4–VG5 minimal supervised production runner | Exact range/coverage/state binding, verified completed-chunk restart, bounded encoding and immutable publication; no UI prerequisite |
 | 5 | VG5 combined 60-second proof and user review | Corrected mask, approved character motion, moving scenery, joins and measured runtime/storage/memory |
-| 6 | VG4–VG5 full corridor and complete 240-second pilot | One continuous 7,200-frame silent 1080p30 MP4, not repeated short footage |
+| 6 | VG4–VG5 full corridor and complete 180-second pilot | One continuous 5,400-frame silent 1080p30 MP4 with passing views, parallax and in-cabin TABI actions, not repeated short footage |
 | 7 | VG5 full-pilot viewing and editor handoff | User accepts the production recipe or identifies specific repairs; not app/release acceptance |
 | 8 | VG4 app caller integration → VG3 workflow → VG5 app review/export | Implement future-video functionality from the proven recipe; preserve generic scenario support and obtain UI design permission/approval |
 | 9 | VG6 app clips, installed/UI proof and real full app export | Separate artifact-specific app and release decisions; the harness pilot cannot substitute |

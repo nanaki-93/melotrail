@@ -16,10 +16,12 @@ still separate. Earlier “next VG4-01” or app-first statements are historical
 
 ## Production-first workflow (2026-09-28)
 
-The user selected this order: **character tests → scenery join → combined
-60-second proof → full 240-second pilot → review/editor handoff → reusable app
-functionality**. This section defines the production recipe; PLAN owns the roadmap
-and TASKS owns executable rows, dependencies and status. Updating these documents
+The production order remains **character tests → moving scenery join → combined
+60-second proof → full pilot → review/editor handoff → reusable app
+functionality**. The original pilot default was 240 seconds; the current requested
+pilot target is **180 seconds / 5,400 frames**. This section defines the production
+recipe; PLAN owns the roadmap and TASKS owns executable rows, dependencies and
+status. Updating these documents
 does not authorize a live run, new artwork, downloads, spending or limit changes.
 
 ### Starting point and next creative proof
@@ -487,21 +489,26 @@ samples, along with opaque backing and measured alpha. No wrap, stretching,
 reversal, transparent-padding coverage or silent slowdown.
 
 First establish 60-second coverage; after combined review, extend the same method
-to the full corridor. Read-only horizontal lower bounds at the current placement,
+to the full 180-second pilot corridor. At the approved speed and scale, schedule
+about 18–36 distinct Tokyo views/points of interest, spaced about 5–10 seconds
+apart with quieter authored travel between them. Preserve the warm side-on style;
+no pasted terrace, translucent façade, hard-cut fragment or repeated landmark
+counts as a new view. Read-only horizontal lower bounds at the current placement,
 window right edge 1920 and camera speed `480/599` pixels/frame are:
 
-| Plane | Current x / depth | Minimum total extent for 240s |
-| --- | --- | ---: |
-| Far | 780 / 1 | 6,909 px |
-| Middle | 400 / 2 | 13,058 px |
-| Near | 480 / 3 | 18,747 px |
+| Plane | Current x / depth | Minimum total extent for 180s | Earlier 240s bound |
+| --- | --- | ---: | ---: |
+| Far | 780 / 1 | 5,467 px | 6,909 px |
+| Middle | 400 / 2 | 10,173 px | 13,058 px |
+| Near | 480 / 3 | 14,420 px | 18,747 px |
 
-Calculation: `ceil(1920 - x + depth * 480 * (7200 - 1) / 599)`. These are not
-additional-pixel counts or full coverage admission. Add overlap/filter margins
-and verify every trajectory/shutter position. Use bounded tiles rather than
-raising image-size limits. The renderer currently loads all supplied images;
-300-frame chunks alone do not bound asset memory. Measure the selected kit and
-scope loading changes only if necessary, without dropping consumed pins.
+Calculation: `ceil(1920 - x + depth * 480 * (frames - 1) / 599)` with
+5,400 frames for 180 seconds; the earlier 240-second bounds use 7,200 frames.
+These are not additional-pixel counts or full coverage admission. Add overlap/
+filter margins and verify every trajectory/shutter position. Use bounded tiles
+rather than raising image-size limits. The renderer currently loads all supplied
+images; 300-frame chunks alone do not bound asset memory. Measure the selected
+kit and scope loading changes only if necessary, without dropping consumed pins.
 
 ### Supervised production runner, then the app
 
@@ -522,7 +529,8 @@ output recovery does not already supply this boundary or abrupt-crash recovery.
 
 The recorded 30-second run took 504.265s and retained 2,802,271,515 source-PNG bytes.
 Straight-line four-minute extrapolations are about **67 minutes and 22.4 GB of
-source PNGs**, not measured full-run costs. Encoder copies, assets, decoded review,
+source PNGs**; they are retained historical estimates, not measurements or an
+admitted budget for the three-minute target. Encoder copies, assets, decoded review,
 outputs and the free reserve are extra. Measure composition, encode and review
 separately at 60 seconds; bound disk as well as RAM. Do not retain all decoded
 review frames merely to inspect every frame when bounded streaming can be verified.
@@ -537,7 +545,11 @@ After the character and seam decisions, produce the combined 60-second proof wit
 corrected source masks, approved character motion and extended scenery. Verify
 full decoding, joins/resources and restart after a completed chunk while further
 work remains. Obtain normal-speed user review before full corridor preparation
-and the separately admitted 240-second/7,200-frame silent 1080p30 pilot. Watch the
+and the separately admitted 180-second/5,400-frame silent 1080p30 pilot with
+moving far/middle/near scenery, distinct passing views and a pinned schedule of
+reviewed in-cabin TABI actions beyond blinking across the full cut. The isolated
+action proof is not a 180-second hold/loop approval; prepare/review additional
+compatible motion inputs if needed. Inspect quiet stretches and all joins; watch the
 entire film and test editor import/playback. Only then implement the reusable app
 workflow around this proven recipe. This is production-method acceptance, not
 rights clearance, monetization, color certification or VG6 app/release approval.
@@ -545,10 +557,11 @@ The eventual app remains generic; TABI/Tokyo is this pilot, not a required prese
 
 ## Outcome and scope
 
-**Current scope, 2026-09-16:** the user creates all finished picture assets outside
+**Current delivery scope (pilot target revised to 180 seconds):** the user creates
+all finished picture assets outside
 Melotrail. The app accepts a **finished scene image, with optional separate
 character/background layers**, then generates motion and a complete continuous
-180–300 second silent video (default 240s), 1920×1080 H.264 MP4 at 30 fps. No in-app
+180–300 second silent video (default 180s), 1920×1080 H.264 MP4 at 30 fps. No in-app
 image generation, outfit/style transfer, inpainting or new-background creation is
 offered in this delivery. Missing motion-ready artwork is supplied externally;
 separately authorized pilot preparation does not add those app features. Audio
@@ -1897,7 +1910,7 @@ selected ComfyUI/LTX route remains a separate measured short-I2V option consumin
 one composed image, not independent layers or proven long-form action control.
 No model download, provider switch or hosted upload is automatic.
 
-The product remains one continuous 180–300-second scene at 30 fps, default 240.
+The product remains one continuous 180–300-second scene at 30 fps, default 180.
 Reuse of small motion patterns is allowed; whole-clip repeat-to-fill is not.
 Validate complete trajectory/shutter coverage before a full render and carry
 absolute state/seed through bounded chunks. Record fresh action footage,
@@ -2829,7 +2842,7 @@ publication stays under user control.
 
 First establish the production recipe outside the unfinished app: VG2-07 reviews
 the isolated character test, VG4-05 records the scenery-join decision, VG5-05
-reviews the combined 60-second proof, and VG5-07 reviews the full 240-second pilot
+reviews the combined 60-second proof, and VG5-07 reviews the full 180-second pilot
 and editor handoff. Record exact artifacts, reviewer/date, normal-speed observations
 and unresolved defects. These decisions unlock later app work, not release, rights
 or new unseen clips. None is inferred from the existing blink/parallax approvals.

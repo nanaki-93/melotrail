@@ -25,7 +25,10 @@ are **not yet delivered**.
 
 **Current priority: produce the video before building the app flow.** Next is a
 scene-compatible 5–10-second TABI character test, then a scenery-join test, a
-combined 60-second proof and one complete 240-second pilot. Review the full film
+combined 60-second proof and one complete 180-second/5,400-frame Tokyo
+train-window pilot with moving depth-plane parallax, distinct passing views
+about every 5–10 seconds, quieter scenery between them and TABI actions inside
+the cabin. Review the full film
 and editor handoff before implementing reusable future-video functionality.
 Reuse current services through bounded production tooling; preserve existing
 videos and the accepted corrected mask. This documentation update starts no
@@ -91,7 +94,7 @@ Use the [evaluation procedure](docs/VALIDATION.md#musical-evaluation) and
 A finished PNG/JPEG scene is the primary input, with optional externally prepared
 character/background layers, poses, masks and scenery. Motion capabilities are
 validated rather than invented. The target is one continuous 180–300-second
-1920×1080 H.264 MP4 at 30 fps, with zero audio streams. Local ComfyUI and controlled
+1920×1080 H.264 MP4 at 30 fps (default 180 seconds), with zero audio streams. Local ComfyUI and controlled
 motion are selected; hosted fallback is optional and needs explicit authorization.
 No in-app image generation, outfit transfer, whole-clip repeat-to-fill, MIDI
 dependency, soundtrack synchronization or public upload is part of this delivery.

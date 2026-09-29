@@ -19,9 +19,9 @@ All new review decisions below remain pending.
 | Production gate | Required evidence and real decision |
 | --- | --- |
 | VG2-06/07 · Character first | New 5–10-second isolated scene-matched movement beyond the retained blink; decoded actual motion, aligned entry/return, stable identity/clothing/props, correct eye/gill/foreground masks and unchanged pixels outside the declared support. User reviews at normal speed. Do not substitute a camera pan, unrelated drinking pose or static comparison. |
-| VG4-05 · Scenery join | One new moving offscreen handoff with matching overlap pixels, rigid depth travel and no visible seam/hole/wrap; full requested-range/shutter coverage and sufficient supplied 60-second extents. Record the user's seam decision before DONE; a geometric width calculation alone is insufficient. |
+| VG4-05 · Scenery join | One new moving offscreen handoff with matching overlap pixels, rigid depth travel and no visible seam/hole/wrap; full requested-range/shutter coverage and sufficient supplied 60-second extents. Static v5 scenery-art approval is not moving-seam approval. Record the user's seam decision before DONE; a geometric width calculation alone is insufficient. |
 | VG5-03/05 · Combined 60 seconds | Corrected source mask, accepted character motion and extended scenery in one silent 1080p30 result. Fully decode and verify exact timing/frames/joins, measure stages and aggregate resources, then record normal-speed user review. Prove restart after a verified completed chunk while later work remains, not just reconciliation of a finished MP4. |
-| VG4-06, VG5-06/07 · Full pilot | Full supplied corridor/alpha/shutter coverage and a newly admitted 240-second/7,200-frame production batch. Verify complete decode, timestamps, first/last/action/chunk/scenery boundaries and disclosed reuse. User watches the whole cut and imports/plays it in the chosen Apple editor, accepting the production recipe or identifying repairs. Not an app/release pass. |
+| VG4-06, VG5-06/07 · Full pilot | Full supplied far/middle/near corridor/alpha/shutter coverage and a newly admitted 180-second/5,400-frame production batch. Verify continuous moving parallax, distinct passing points of interest about every 5–10 seconds with quieter scenery between, and a pinned, reviewed TABI action schedule inside the fixed cabin beyond blinking throughout the cut. An isolated action test does not approve a 180-second hold/loop. Fully decode; check timestamps, first/last/action/chunk/scenery boundaries and disclosed reuse. User watches the whole cut and imports/plays it in the chosen Apple editor, accepting the production recipe or identifying repairs. A short or static sample is not an app/release pass. |
 
 Keep source, rendered lossless PNG and decoded H.264 claims distinct. New motion
 may require new support/mattes and clean plates; declare those regions rather than
@@ -543,7 +543,8 @@ native versus converted/upscaled action footage.
 
 VG6-03/04 proves installed behavior and the complete UI with owned/fake inputs,
 preparing current review evidence. VG6-05/06 requires the user to watch a real
-3–5-minute silent cut and every join at normal speed, verify prompt/reference
+180-second silent app cut (with the product retaining 180–300-second support)
+and every join at normal speed, verify prompt/reference
 fidelity and repetition, then import/play it in the chosen Apple editor. Technical
 checks, file decodability and synthetic clips cannot supply either human decision.
 
