@@ -496,6 +496,83 @@ logs. Protected source, mask, depth-plane and four MP4 pins remain unchanged.
 result or old still reference with this new scene automatically. No video, take
 or media job.
 
+VG2-06 appearance-route gate recheck (2026-09-29): no later user decision in this request names and approves replacement appearance `train-actions/28`–`30` and its artifact hashes; permission for a redraw was not approval of its output. No supplied finished original-appearance registered cutout, ghost-free opaque plate and stationary occlusion were identified. Read-only `python3 build/vg2-character-gate-20260929/check-gate.py` verified all 20 protected pins and recorded ten **unselected** candidate hashes in `preflight.json`. Prior original-route 26/27 fails neutral edges (2,111 pixels over delta 8); the correction in `build/vg2-character-art-a2/corrected-measure.json` still fails (2,287); replacement a3 redraws 1,741,839 backing pixels outside the old support and its zero outside-*new*-support static shifts compare only against itself. No selected kit exists on which to run a full translated/filtered/shutter sweep, baseline-neutrality, contact or misregistration proof. **Step 2.1 is blocked on an explicit appearance choice and finished layers; Step 2.2 must not import these candidates.** No additional artwork or video work is authorized by this recheck.
+
+VG2-06 subsequent appearance decision: after reviewing the proposed replacement route,
+the user explicitly said “yes, i approve these” for the three identified review
+stills `train-actions/28` (SHA-256 `922ff5afd87417c9ba653b327d4b00007670981c99d1d927c20f4ea596769e14`),
+`29` (`2d3a8ca5e7b8b55828c44f080fd31efd0e825330560901f5eb1bdd1356ba7e7a`)
+and `30` (`2322f28268921172f74dea3517a63b670e16205e3b98e8164287ddc2cbd2921b`).
+Current SHA-256 checks match all three. This selects the **replacement appearance**
+and its new neutral baseline, not original-scene fidelity or motion-ready layers.
+Step 2.1 repair (same selected route): the initial in-memory sweep used direct
+Canvas subject compositing. A separate production-compositor check reproduced a
+neutral-edge defect in that *measurement*: `render.cjs` clips the subject to its
+own alpha before drawing. The original a3 cutout differs from approved neutral
+29 at 3,432 pixels by >8/255 (max 48); failed witness retained at
+`build/vg2-character-approval-20260929/production-compositor-check.json`.
+Without changing production or approved review stills, a new scratch subject
+alpha derivative compensates that self-clip, retaining source RGB:
+`build/vg2-character-approval-20260929/full-subject-alpha-compensated.png`
+(SHA-256 `c8097fc7b39631c0c19bb359c1ed36079e8a965a0935dc3879fe9f87c6ad0865`).
+A binary coverage mask derived from unchanged a3 foreground alpha is
+`full-foreground-coverage.png` (SHA-256
+`0dbc32a26c4fb0ff4f8f388e041d95e9f038509850f2772ade1545a4f07f81fa`).
+`node build/vg2-character-approval-20260929/production-compositor-check.cjs --repaired`
+then passes the unchanged approved 29 neutral at both endpoints: zero pixels
+>8/255, maximum two levels; its receipt is `production-compositor-repaired.json`.
+The **selected isolated fixed-scene kit** consumes 28 as opaque plate, 29 as
+approved neutral, the new compensated subject, unchanged a3 foreground and its
+new coverage mask. Still 30 and the provisional window/scenery matte are only
+appearance references: no scenery or scenery shutter is consumed in this
+isolated action. `node build/vg2-character-approval-20260929/measure.cjs`
+checks all 217 fractional translations with the compositor's self-clip and
+occluder-mask order: 328,526 conservative swept/filter-support pixels, all
+frames opaque, zero changed pixels outside support, separately neutral first/
+last frames (max two channel levels), and interior frame 54 changes 309,645
+pixels with peak 1.99999998 px. Negative fixtures reject a missing/transparent
+or painted-subject plate, 3-pixel misregistration and original-scene fidelity
+inferred from support-only self-comparison (1,741,839 outside-support changes). A second negative actually stacks
+subject over the painted neutral plate: 3,384 pixels exceed the declared
+8/255 tolerance; a 3-px offset exceeds it at 133,695 pixels.
+Receipt: `build/vg2-character-approval-20260929/measurement.json`. Five 1:1
+`contact-repaired-{eyesGills,cheekHand,feetSeat,tableContact,windowEdge}.png`
+strips show 0/1/2-pixel positions. On direct inspection the hand/cheek and
+eyes/gills stay together, feet meet the seat without a visible ghost gap, and
+stationary table, notebook, cup, window and poster remain intact. This is a
+**technical input-kit pass for Step 2.1** at the fixed-scene range, not user
+approval of moving footage. The 2-pixel relative foot/seat travel and largely
+translucent subject source remain quality limits for moving review; neither
+parallax nor provisional window matte is cleared for moving use. Recheck:
+`node build/vg2-character-approval-20260929/production-compositor-check.cjs --repaired`
+and `node build/vg2-character-approval-20260929/measure.cjs` passed;
+`./gradlew :test --tests '*VideoAnimationAssetsTest' --tests '*VideoAssetImportTest'`
+passed (1 executed/5 up-to-date); `make test` passed (1 executed/13
+up-to-date); `make build` passed (14 up-to-date). Logs are in the same ignored
+scratch root. Protected pins passed 20/20 before and after; diff check passed.
+Step 2.2 may
+import/reopen only this five-input kit in a new private project; no live video
+render is admitted. The earlier missing-decision preflight is historical.
+
+VG2-06 source-pool direction (current request): use the already supplied
+`docs/pictures/video/tabi-assets/scenario/` and sibling TABI asset folders to
+prepare **new video tests**, not unrelated placeholder art. Start from
+`scenario/tabi-quiet-ride-through-tokyo.png` (SHA `01e4db85…2473e`) and the
+accepted corrected leaf/window preparation for original-scene identity. Reuse
+the hash-pinned `scenario/tokyo-parallax-{far,middle,near}-5600x1080.png`
+for rigid scenery; consult `train-actions/` for TABI identity/action references.
+`01-drinking-coffee.png` has the wrong handled mug/pose for this isolated
+breathing test. The subsequent user decision above selects `28`–`30` as the
+replacement-appearance baseline, not as validated motion layers. Step 2.1 must
+measure full filtered/shutter swept support, contact and negative cases against
+that route. Only then import/reopen (Step 2.2)
+and seek separate bounded admission for a 5–10-second test (Step 3); no live
+video job follows merely from choosing a source directory. For the later VG4-05
+scenery test, `scenario/tokyo-clockfront-near-v5/` has approved **static** look
+only; check far authored coverage and the actual moving join before extending
+or combining footage. Preserve source bytes, old MP4s, accepted mask and takes.
+VG2-06 stays TODO pending Step 2.2 and separately admitted technical footage; VG2-07 remains WAITING_USER.
+
 VG4-05 independent scenery-art study while VG2-07 review remains pending
 (2026-09-29): user requested more visibly varied exterior scenery using
 `scenario/inspiration-tokyo/`. One Pi-generated 2172×724 opaque side-on panorama

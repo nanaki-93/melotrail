@@ -26,6 +26,35 @@ does not authorize a live run, new artwork, downloads, spending or limit changes
 
 ### Starting point and next creative proof
 
+**Source pool for the TABI video tests (current request):** read existing
+`docs/pictures/video/tabi-assets/scenario/` and sibling TABI asset folders,
+without altering originals. For the isolated character test, use
+`scenario/tabi-quiet-ride-through-tokyo.png` (SHA-256
+`01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e`)
+and the accepted corrected leaf/window bundle as the original-appearance
+reference. The three 5600×1080 `scenario/tokyo-parallax-{far,middle,near}`
+PNGs have the same bytes as the pinned prepared planes below; they are usable
+**scenery references**, not proof of extended coverage. Consult
+`train-actions/` for TABI pose/style cues; a flat action illustration is not
+an aligned transparent pose or clean backing. The drinking image has a handled
+mug unlike the lidded scene cup. The subsequent artifact-specific user decision below approves the appearance
+of `train-actions/28`–`30` as a **replacement baseline**. Using this source
+directory alone did not authorize a new render. The isolated fixed-scene kit's
+technical sweep is recorded below; moving-footage review remains pending.
+
+Order of tests: validate the selected replacement subject/plate/occlusion
+kit and its full translated/filter/shutter-sampled support and contact; import
+and reopen it in a private current-schema project; then seek a separate bounded
+admission for one 5–10-second breathing clip using the proven seed/control/range.
+After artifact-specific review, test a moving scenery join using existing planes
+and the **static-look-only** v5 near section in
+`scenario/tokyo-clockfront-near-v5/` if its moving overlap and far authored
+coverage pass. Combine only reviewed components later. Keep the original scene,
+accepted corrected layers, planes, four MP4s and earlier candidates unchanged;
+new output must use fresh ignored destinations. This is a source-selection
+instruction for preparation/tests, not approval of an appearance, moving seam,
+new take, 60-second corridor or live-work budget.
+
 Retain the positively reviewed 30-second blink/parallax MP4 without regenerating
 or overwriting it. Its full decoded review is complete. The corrected leaf/window
 source bundle is accepted for future work, but no moving video uses it yet.
@@ -355,6 +384,88 @@ whether to adopt this replacement appearance and the new kit passes contact,
 shutter-swept/matte/coverage, timing and production import/reopen checks. If the
 user rejects the redrawn scene, the old-scene registration blocker remains; do not
 relabel a new neutral baseline as a fix for it.
+
+#### VG2-06 appearance gate recheck (2026-09-29)
+
+Read-only command `python3 build/vg2-character-gate-20260929/check-gate.py`
+records 20 protected hashes (all unchanged) and ten **unselected** candidate hashes
+in ignored `build/vg2-character-gate-20260929/preflight.json`. No explicit user
+approval identifies the replacement appearance **and** artifact hashes for
+`train-actions/28`–`30`; permission to redraw did not approve that output.
+Neither a finished registered original-look cutout/ghost-free opaque plate with
+stationary occlusion nor a selected replacement kit was supplied. Earlier 26/27
+neutral edge error (2,111 pixels over channel delta 8) and a2 correction (2,287)
+remain failed original-route witnesses. The a3 replacement changes 1,741,839
+backing pixels outside the old support; its static ±2 px comparisons use its own
+new baseline. These cannot establish original fidelity or appearance approval.
+
+A complete decoded-alpha/viewport/transforms and filtered/shutter-sampled swept
+support check, baseline comparison, cheek/hand, eyes/gills, foot/seat, table and
+stationary-geometry inspection, and negative tests for painted or missing backing,
+misregistration and support-only self-comparison require a *selected, finished*
+kit. This preflight does **not** assert those tests passed. Step 2.1 and therefore
+Step 2.2 remain blocked; no project import, model job, media work or take was
+performed. Supply finished original-appearance layers or explicitly approve the
+replacement scene with exact artifact hashes, then validate against the appropriate
+baseline before importing.
+
+#### Subsequent replacement-appearance decision
+
+After the three replacement review stills were named with their hashes, the user
+said “yes, i approve these.” This selects the **new** cabin appearance in
+`train-actions/28-breathing-rebuilt-cabin-review-candidate.png` (SHA-256
+`922ff5afd87417c9ba653b327d4b00007670981c99d1d927c20f4ea596769e14`),
+`29-breathing-rebuilt-neutral-review-candidate.png` (`2d3a8ca5e7b8b55828c44f080fd31efd0e825330560901f5eb1bdd1356ba7e7a`)
+and `30-breathing-rebuilt-parallax-review-candidate.png` (`2322f28268921172f74dea3517a63b670e16205e3b98e8164287ddc2cbd2921b`).
+All three hashes were rechecked. This decision supersedes only the earlier
+**missing appearance decision**: new neutral art is the replacement baseline,
+not proof of restoration of the original. The first direct-Canvas input sweep
+missed the production compositor's `subjectCanvas` self-alpha clip. When tested
+with that actual operation, the unmodified a3 cutout fails the approved neutral
+by 3,432 pixels >8/255 (max 48). Retain the failed witness at
+`build/vg2-character-approval-20260929/production-compositor-check.json`;
+the old sweep's exact-neutral claim is withdrawn. A new scratch-only cutout
+`full-subject-alpha-compensated.png` (SHA-256
+`c8097fc7b39631c0c19bb359c1ed36079e8a965a0935dc3879fe9f87c6ad0865`)
+compensates alpha before the compositor self-clip, without repainting source
+RGB or editing approved stills. A binary `full-foreground-coverage.png`
+(SHA-256 `0dbc32a26c4fb0ff4f8f388e041d95e9f038509850f2772ade1545a4f07f81fa`)
+selects the unchanged a3 stationary foreground for the production occluder.
+Both new layers are in ignored `build/vg2-character-approval-20260929/`;
+`production-compositor-repaired.json` checks the repaired neutral at both
+endpoints: zero pixels >8/255, maximum two channel levels.
+
+The **selected isolated kit** is now 28 as opaque plate, 29 as user-approved
+neutral, the new alpha-compensated subject, unchanged a3 foreground and new
+foreground coverage mask. Still 30 and the provisional window mask remain
+appearance references only. No scenery changes in this isolated character
+proof, so there are no moving-scenery shutter samples; the production control
+samples the subject once per frame. `node build/vg2-character-approval-20260929/measure.cjs`
+measures the actual self-clip and occluder-mask Canvas order at every 217
+fractional subject positions: all outputs opaque, zero differences outside
+328,526 conservative swept/filter-support pixels, first and last neutral
+separately within two 8-bit channel levels of 29, 309,645 changed interior
+pixels at peak frame 54, displacement ≤2 px. It rejects missing/transparent
+or painted-subject backing, 3-px subject misregistration and self-comparison
+mistaken for original-scene fidelity (1,741,839 differences outside support). Compositing the invalid painted
+neutral as backing produces 3,384 pixels above the predeclared 8/255 threshold;
+a 3-px misplaced subject produces 133,695 such pixels. These are failure
+witnesses, not alternatives to the clean plate.
+Receipt: `build/vg2-character-approval-20260929/measurement.json`.
+
+Five 1:1 0/1/2-px still strips (`contact-repaired-*.png` in that scratch
+folder) were inspected: cheek/hand and eyes/gills move together, feet still
+meet the seat without a visible ghost gap, and table, notebook, cup, poster
+and window remain intact. This is technical input-kit evidence, **not** user
+approval of animated motion; slight 2-px foot/seat relative travel and a
+mostly translucent source matte remain moving-review limitations. Step 2.1
+passes only for this fixed-scene kit. Step 2.2 must import/reopen these exact
+five inputs in a new private project; any moving parallax/window proof and
+separately admitted video execution remain open. No prior scene or take was
+replaced. The selected-kit measurement and repaired compositor commands passed
+on recheck; focused JVM import/asset checks, `make test`, `make build`, diff check
+and 20/20 protected pins passed (logs under the ignored approval scratch root).
+The older missing-decision preflight remains historical.
 
 #### Side-on Tokyo district-variety study (2026-09-29)
 
