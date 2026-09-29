@@ -372,6 +372,19 @@ blink `e5d3376c…5582c2` and four review MP4 hashes are recorded in
 [TABI evidence](docs/TABI_VIDEO.md#vg2-06-protected-movement-candidate-2026-09-28).
 No new take, selection or live job; Step 1.2 must measure the missing inputs.
 
+VG2-06 Step 1.1 control-only fixture proof (2026-09-29): the existing compositor
+supports a bounded 2 px whole-subject inhale/exhale with seed `3001`, control ID
+`vg2-breathing`, default period 3.6s, and absolute frames **0–216** (217 frames,
+30 fps). Declared before testing: each endpoint ≤0.02 px from neutral,
+interior frame 54 ≥1.5 px, all frames within 0..2 px. The production-imported
+unit-scale fixture tests each endpoint separately against an amplitude-zero
+neutral PNG, every frame's travel and fixed pixels outside conservative swept
+support, interior non-blink movement, absolute-frame chunk parity, and seed `73`
+as a non-neutral rejection witness (~0.945 px at both endpoints). This proves
+only timing/control behavior on owned art, **not** TABI's appearance, clean plate,
+contact, occlusion, imported kit or scene-artwork readiness. No timing-control
+production repair is required for this range; Step 1.2 artwork remains blocked.
+
 VG2-06 Step 1.2 preflight (2026-09-28): **blocked on artwork, not a static-import pass**. Read-only executable probe `node build/vg2-character-input-a1/check-inputs.cjs` uses the pinned corrected preparation and four MP4s; its measurements are in ignored `build/vg2-character-input-a1/input-probe.json`. At 1920×1080 both fixed and finished images are fully opaque (2,073,600 pixels). At head (600,320), cheek/hand (720,540), coat (560,690) and tail (310,840), the putative fixed-scene and cabin-foreground backing still contains *exactly the character's visible RGB*. Opaque cabin occlusion and black eye-support at these witnesses are not subject mattes. Negative checks reject reuse of these painted pixels as a clean plate, transparent backing. Alignment rejection needs a real separated subject; there is no separated subject or erased-character backing in the accepted bundle; deriving hidden seat/cabin/window art from this flat picture would require newly finished artwork. **No artwork-job admission was supplied:** no subject/plate was fabricated, no new project/reference/prepared scene was imported and no moving-quality assertion is made. Request a bounded external-artwork preparation admission or supplied registered transparent subject and genuinely clean plate; then measure swept support, registration and occlusion and perform new current-schema import/reopen under this same step. Focused four-selector Gradle suite passed (1 executed/5 up-to-date); protected pins unchanged. Existing preparation and all videos remain untouched.
 
 VG2-06 external-artwork follow-up (2026-09-29): the user explicitly requested

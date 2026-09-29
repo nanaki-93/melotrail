@@ -736,6 +736,76 @@ test('cancellation on the last frame yield wins before receipt publication', asy
   assert.equal(fs.existsSync(output), false, 'neither final PNG nor receipt is published after cancellation');
 });
 
+test('VG2 breathing control has independently neutral endpoints, interior motion and bounded absolute travel', async () => {
+  // Control-only proof on the imported, opaque-backed unit-scale fixture; this
+  // does not certify the TABI artwork, contact, matte or a rendered video.
+  // Contract declared before sampling: displacement <= 0.02 px at EACH endpoint,
+  // >= 1.5 px at an interior non-blink frame, and 0..2 px at EVERY frame.
+  // Exact fixture PNG equality to an amplitude-zero neutral frame is an additional
+  // (stricter, runtime-specific) assertion; it does not set a real-art tolerance.
+  const sample = fixture('unit-scale');
+  const request = copy(sample.request);
+  request.seed = 3001;
+  request.frameRange = { startFrame: 0, frameCount: 217 }; // 0..216, two 3.6s cycles at 30 fps
+  request.controls = [{
+    id: 'vg2-breathing', kind: 'breathing',
+    capabilityId: sample.request.controls.find((control) => control.kind === 'breathing').capabilityId,
+    amplitudePixels: 2, periodSeconds: 3.6,
+  }];
+  const validated = validateRequest(request);
+  assert.deepEqual(validated.controls.map((control) => control.kind), ['breathing']);
+  const neutralRequest = copy(request);
+  neutralRequest.controls[0].amplitudePixels = 0;
+  const neutral = validateRequest(neutralRequest);
+  const images = await imagesFor(sample);
+  const baselineCanvas = renderFrame(neutral, images, 0).canvas;
+  const baseline = baselineCanvas.toBuffer('image/png');
+  const fixedPixels = baselineCanvas.getContext('2d').getImageData(0, 0, 100, 80).data;
+  for (const frame of [0, 216]) {
+    const displacement = motionAt(validated, frame).breathPixels;
+    assert.ok(displacement >= 0 && displacement <= 0.02, `frame ${frame} must independently return to neutral: ${displacement}`);
+    assert.deepEqual(renderFrame(validated, images, frame).canvas.toBuffer('image/png'), baseline,
+      `frame ${frame} must independently reproduce the fixture neutral image`);
+  }
+  for (let frame = 0; frame <= 216; frame += 1) {
+    const displacement = motionAt(validated, frame).breathPixels;
+    assert.ok(displacement >= 0 && displacement <= 2 + 1e-9, `frame ${frame} must stay inside 2 px: ${displacement}`);
+    const pixels = renderFrame(validated, images, frame).canvas.getContext('2d').getImageData(0, 0, 100, 80).data;
+    for (let y = 0; y < 80; y += 1) for (let x = 0; x < 100; x += 1) {
+      // Imported subject bounds are (20,20,30,40). One pixel of filtering
+      // and the 2px downward travel fit inside this conservative swept box.
+      if (x >= 19 && x <= 50 && y >= 19 && y <= 62) continue;
+      const offset = (y * 100 + x) * 4;
+      assert.deepEqual(pixels.subarray(offset, offset + 4), fixedPixels.subarray(offset, offset + 4),
+        `frame ${frame}: fixed pixel ${x},${y} outside swept subject support`);
+    }
+  }
+  const interior = 54; // Half-period peak, away from both endpoints and without blink.
+  assert.ok(motionAt(validated, interior).breathPixels >= 1.5);
+  const moved = renderFrame(validated, images, interior).canvas;
+  assert.notDeepEqual(moved.toBuffer('image/png'), baseline);
+  assert.deepEqual(pixel(moved, 24, 22), sample.metadata.colors.background,
+    'interior non-occluded subject edge vacates its neutral position');
+  assert.deepEqual(pixel(moved, 24, 24), sample.metadata.colors.subject,
+    'same subject edge arrives two pixels lower, not via a camera pan');
+  assert.deepEqual(pixel(moved, 5, 5), pixel(renderFrame(neutral, images, interior).canvas, 5, 5),
+    'fixed clean background remains fixed');
+  const chunk = copy(request);
+  chunk.frameRange = { startFrame: 150, frameCount: 67 };
+  const resumed = validateRequest(chunk);
+  assert.equal(motionAt(resumed, 216).breathPixels, motionAt(validated, 216).breathPixels,
+    'absolute-frame state is independent of the invocation start');
+  assert.deepEqual(renderFrame(resumed, images, 216).canvas.toBuffer('image/png'), baseline);
+
+  const badPhase = copy(request);
+  badPhase.seed = 73; // Deliberately non-neutral at both endpoints.
+  const invalid = validateRequest(badPhase);
+  for (const frame of [0, 216]) {
+    assert.ok(motionAt(invalid, frame).breathPixels > 0.02, `seed 73 frame ${frame} must fail neutral admission`);
+    assert.notDeepEqual(renderFrame(invalid, images, frame).canvas.toBuffer('image/png'), baseline);
+  }
+});
+
 test('rejects duplicate subject controls and keeps every admitted state inside declared bounds', () => {
   const sample = fixture('unit-scale');
   for (const kind of ['blink', 'breathing', 'headGesture']) {
