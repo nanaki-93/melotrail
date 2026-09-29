@@ -467,6 +467,41 @@ on recheck; focused JVM import/asset checks, `make test`, `make build`, diff che
 and 20/20 protected pins passed (logs under the ignored approval scratch root).
 The older missing-decision preflight remains historical.
 
+#### VG2-06 private-project integrity check (2026-09-29)
+
+The selected **five-input isolated fixed-scene kit** was copied through the
+production asset importer to new immutable `vg2-neutral`, `vg2-plate`,
+`vg2-subject`, `vg2-foreground` and `vg2-occlusion` references in ignored
+`build/vg2-character-import-20260929/final/project/`. Production project and
+prepared-scene stores plus the asset importer reopen schema-5 revision 6; the scene
+record is `vg2-isolated-breathing` v1, descriptor SHA-256
+`22124d90f9c89a6f53cb2f161d81952cf7833a70250d43adfa1bbe4b841f0fe9`.
+`final/import-receipt.json` records each original/descriptor digest, decoded
+1920×1080 alpha counts and identity/unit geometry. All imported originals have
+exactly the bytes of the selected pinned sources; no original/source reference,
+review MP4, existing project or selected take was rewritten. The look selector
+reconstructs the neutral reference (there is no persisted look record for this
+path). The subject, plate, fixed foreground and binary occlusion retain their
+separate roles/pins. Stale revision, wrong-space placement, malformed rotation,
+missing backing and a changed original in an independent fixture copy reject
+without appending another prepared scene or take. The runnable command and
+negative results are in the ignored host/receipt beside the private project.
+Earlier failed and diagnostic project folders in that scratch root remain as
+non-authoritative evidence.
+
+**Important control limitation:** with the selected full-viewport 1920×1080
+subject image placed at (0,0), production preparation derives no `TRANSLATE_Y`
+capability: the full declared bounds cannot move even 2 px without leaving the
+viewport. An explicit −2..2 request returns an actionable `UNSUPPORTED_MOTION`
+rejection; it was not converted into a successful preparation. The imported
+prepared scene omits that request and proves *only import/reopen integrity*, not
+breathing admission. Before a real motion request, a newly derived lossless
+subject crop with viewport clearance needs its own approved-neutral and complete
+filtered sweep revalidation and new private import. Do not claim the current
+scene is executable, change production bounds to suppress rejection, or infer
+artistic/motion approval. No renderer, encoder, model or take ran; live admission
+remains separate.
+
 #### Side-on Tokyo district-variety study (2026-09-29)
 
 The user requested a more visually varied exterior during a future video, using

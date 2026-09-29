@@ -554,6 +554,38 @@ Step 2.2 may
 import/reopen only this five-input kit in a new private project; no live video
 render is admitted. The earlier missing-decision preflight is historical.
 
+VG2-06 Step 2.2 private-project integrity check (2026-09-29):
+`./gradlew -I build/vg2-character-import-20260929/compile-host.init.gradle verifyVg2KitImport`
+imports the five selected, SHA-pinned images as distinct immutable references in
+`build/vg2-character-import-20260929/final/project/` (current video-project schema 5,
+revision 6). `final/import-receipt.json` records reopened original-byte equality,
+1920×1080 image/alpha and unit transform facts, production look selection and
+prepared descriptor SHA `22124d90f9c89a6f53cb2f161d81952cf7833a70250d43adfa1bbe4b841f0fe9`.
+Stale revision, wrong coordinate space, malformed rotation, absent clean backing
+and a changed original in a separate copied fixture reject with actionable results,
+without appending another scene or take. Earlier `project/` holds a failed
+unsupported-motion attempt and `verified/` an earlier passing diagnostic; neither
+is the final project. No existing project, take, selection or MP4 was changed.
+
+**Execution prerequisite discovered, not silently passed:** the selected subject
+PNG is a 1920×1080 full-viewport transparent image. The production preparation
+validator derives zero safe vertical travel from its declared full-viewport bounds.
+Requesting `TRANSLATE_Y` −2..2 returns `UNSUPPORTED_MOTION`; the imported scene
+therefore has only `IMAGE_TO_VIDEO`, not a usable breathing capability. The stored
+scene is **integrity-only** with no requested motion. Before Step 3.1 can bind a
+breathing request, prepare a *new*, losslessly cropped/repositioned subject
+reference with ≥2 px viewport clearance, remeasure its neutral composite and
+complete translated/filter sweep against the approved 29 baseline, then import
+it under a new scene/version in a fresh private project. Do not alter the five
+selected source bytes, pretend this rejected control was admitted, or change
+production capability policy merely to bypass bounds. No live execution admission
+is supplied. Focused five-selector Gradle passed (1 executed/5 up-to-date); the
+private-project command passed (2 executed/2 up-to-date); `make test` passed
+(1 executed/13 up-to-date), `make build` passed (14 up-to-date), and
+`git diff --check` passed. All 20 protected pins matched again. Logs in
+`build/vg2-character-import-20260929/`; this is integrity evidence only, not
+motion-quality approval. See [private import](docs/TABI_VIDEO.md#vg2-06-private-project-integrity-check-2026-09-29).
+
 VG2-06 source-pool direction (current request): use the already supplied
 `docs/pictures/video/tabi-assets/scenario/` and sibling TABI asset folders to
 prepare **new video tests**, not unrelated placeholder art. Start from
