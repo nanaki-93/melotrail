@@ -9,6 +9,9 @@ import app.melotrail.video.domain.VideoMotionControl
 import app.melotrail.video.domain.VideoMotionTargetType
 import app.melotrail.video.domain.VideoPreparedLayer
 import app.melotrail.video.domain.VideoPreparedMask
+import app.melotrail.video.domain.VideoPoseSequence
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 import app.melotrail.video.domain.VideoPreparedPose
 import app.melotrail.video.domain.VideoPreparedScene
 import app.melotrail.video.domain.VideoMotionUnit
@@ -90,6 +93,18 @@ class VideoScenePreparation(
                 )
                 return@mapNotNull null
             }
+            if (control.poseSequence != null || capability.control == VideoMotionControl.POSE_REPLACE) {
+                val failure = runCatching {
+                    require(control.intent == VideoSceneMotionIntent.CHARACTER_ACTION && control.minimum == 0.0 &&
+                        control.maximum == 1.0 && control.defaultValue == 1.0) { "Select an enabled 0..1 supplied-pose sequence explicitly" }
+                    requireNotNull(control.poseSequence) { "Supply absolute-frame pose steps with neutral entry and return" }
+                        .subject(scene, capability.id)
+                }.exceptionOrNull()
+                if (failure != null) {
+                    problems += unsupported(control, failure.message ?: "Invalid supplied-pose sequence.")
+                    return@mapNotNull null
+                }
+            }
             ResolvedControl(control, capability, consumedComponents(scene, control, capability))
         }
 
@@ -155,6 +170,7 @@ class VideoScenePreparation(
                 requestedDefaultValue = control.defaultValue,
                 dependencies = dependencies,
                 fingerprint = fingerprint(dependencies),
+                poseSequence = control.poseSequence,
             )
         }
         val dependencies = buildList {
@@ -191,6 +207,15 @@ class VideoScenePreparation(
     fun compileControlledControls(input: VideoPreparedSceneMotion): List<kotlinx.serialization.json.JsonObject> {
         val compiled = input.controls.mapNotNull { control ->
             val capability = control.capability
+            control.poseSequence?.let { sequence ->
+                require(control.intent == VideoSceneMotionIntent.CHARACTER_ACTION && control.requestedMinimum == 0.0 &&
+                    control.requestedMaximum == 1.0 && control.requestedDefaultValue == 1.0)
+                sequence.subject(input.scene, capability.id)
+                return@mapNotNull buildJsonObject {
+                    put("id", control.id); put("capabilityId", capability.id); put("kind", "poseSequence")
+                    put("sequence", Json.encodeToJsonElement(sequence))
+                }
+            }
             val (kind, field, value) = when (control.intent) {
                 VideoSceneMotionIntent.BLINK -> {
                     require(capability.targetType == VideoMotionTargetType.POSE && capability.control == VideoMotionControl.POSE_BLEND)
@@ -252,6 +277,10 @@ class VideoScenePreparation(
         }
         require(compiled.size <= 16) { "At most 16 controlled operations are supported." }
         val kinds = compiled.map { it.getValue("kind").toString() }
+        require(kinds.count { it == "\"poseSequence\"" } <= 1 &&
+            ("\"poseSequence\"" !in kinds || kinds.none { it in listOf("\"blink\"", "\"breathing\"", "\"headGesture\"") })) {
+            "A supplied-pose sequence cannot combine with blink, breathing or head gesture; supply those actions in the pose art."
+        }
         require(listOf("blink", "breathing", "headGesture").all { kind -> kinds.count { it == "\"$kind\"" } <= 1 }) {
             "Only one blink, breathing and head gesture control per subject can be composed; remove ambiguous duplicates."
         }
@@ -324,7 +353,9 @@ class VideoScenePreparation(
     private fun rendererLimitation(input: VideoPreparedMotionInput): VideoPromptIssue? {
         val detail = rendererUnsupportedReason(input) ?: when (input.intent) {
             VideoSceneMotionIntent.CAMERA_OR_AMBIENT, VideoSceneMotionIntent.BLINK -> return null
-            VideoSceneMotionIntent.CHARACTER_ACTION -> "Generic character actions are not executable; select bounded breathing or a masked head gesture explicitly."
+            VideoSceneMotionIntent.CHARACTER_ACTION -> if (input.poseSequence != null)
+                "Supplied poses are held and replaced at explicit absolute frames, not blended or interpolated; held frames are not native articulated motion."
+                else "Generic character actions are not executable; select bounded breathing or a masked head gesture explicitly."
             VideoSceneMotionIntent.BREATHING, VideoSceneMotionIntent.HEAD_GESTURE -> return null
             VideoSceneMotionIntent.SCENERY_TRAVEL -> "Scenery requires an explicit nonzero rigid-camera travel and full-trajectory coverage validation at descriptor compilation."
             VideoSceneMotionIntent.EFFECT -> "Generic effects are unsupported; explicitly select anchored steam (≤8/s, rise ≤28 px/s)."
@@ -343,6 +374,7 @@ class VideoScenePreparation(
         VideoSceneMotionIntent.BLINK -> if (input.requestedMinimum < 0 || input.requestedMaximum > 1)
             "Blink exceeds the compositor's 0..1 amount." else null
         VideoSceneMotionIntent.CHARACTER_ACTION -> when (input.capability.control) {
+            VideoMotionControl.POSE_REPLACE -> if (input.poseSequence == null) "Supply an explicit neutral-entry/return pose sequence." else null
             VideoMotionControl.TRANSLATE_Y -> "Generic subject translation is not a compositor control; only bounded breathing (≤4 px) is implemented."
             VideoMotionControl.ROTATE -> "Generic subject rotation is not a compositor control; explicitly select a head gesture (≤3°) with a HEAD_REGION mask."
             VideoMotionControl.TRANSLATE_X -> "Independent subject translation is not implemented by the compositor."
@@ -415,6 +447,7 @@ class VideoScenePreparation(
                     capability.minimum.toString(), capability.maximum.toString(), capability.defaultValue.toString(),
                     request.minimum.toString(), request.maximum.toString(), request.defaultValue.toString(),
                     capability.reviewStatus.name,
+                    request.poseSequence.toString(),
                 ),
             ),
         )
@@ -500,6 +533,9 @@ class VideoScenePreparation(
                     ),
                 )
             }
+        }
+        request.poseSequence?.steps?.mapNotNull { it.poseId }?.distinct()?.filter { it != capability.targetId }?.forEach { id ->
+            addPose(scene.poses.single { it.id == id })
         }
         if (capability.control != VideoMotionControl.IMAGE_TO_VIDEO) {
             // The clean plate supports independent subject/pose motion. Effects attached to a
@@ -589,6 +625,7 @@ data class VideoSceneMotionControlRequest(
     val minimum: Double,
     val maximum: Double,
     val defaultValue: Double,
+    val poseSequence: VideoPoseSequence? = null,
 ) {
     init {
         require(SAFE_ID.matches(id)) { "Motion input ID must be a safe stable identifier" }
@@ -628,7 +665,7 @@ enum class VideoSceneMotionIntent(val label: String, val nextAction: String) {
         CAMERA_OR_AMBIENT -> capability.control == VideoMotionControl.IMAGE_TO_VIDEO
         BLINK -> capability.targetType == VideoMotionTargetType.POSE && capability.control == VideoMotionControl.POSE_BLEND
         CHARACTER_ACTION -> when (capability.targetType) {
-            VideoMotionTargetType.POSE -> capability.control == VideoMotionControl.POSE_BLEND
+            VideoMotionTargetType.POSE -> capability.control in setOf(VideoMotionControl.POSE_BLEND, VideoMotionControl.POSE_REPLACE)
             VideoMotionTargetType.LAYER -> scene.layers.singleOrNull { it.id == capability.targetId }?.kind == VideoLayerKind.SUBJECT &&
                 capability.control in CHARACTER_LAYER_CONTROLS
             else -> false
@@ -672,6 +709,7 @@ data class VideoPreparedMotionInput(
     val requestedDefaultValue: Double,
     val dependencies: List<VideoInputDependency>,
     val fingerprint: String,
+    val poseSequence: VideoPoseSequence? = null,
 )
 
 data class VideoSceneComponentReview(

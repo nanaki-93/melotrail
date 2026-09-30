@@ -179,7 +179,7 @@ class VideoMotionRenderer(
         check()
         val obj = Json.parseToJsonElement(Files.readString(path)).jsonObject
         require(obj["schema"]?.jsonPrimitive?.content == "melotrail-controlled-motion-receipt-v1")
-        require(obj["tool"]?.jsonObject?.get("version")?.jsonPrimitive?.content == "1.1.0")
+        require(obj["tool"]?.jsonObject?.get("version")?.jsonPrimitive?.content == "1.2.0") { "Receipt tool version must be 1.2.0" }
         val frameRange = obj["frameRange"]!!.jsonObject
         require(frameRange["startFrame"]!!.jsonPrimitive.content.toLong() == start && frameRange["frameCount"]!!.jsonPrimitive.content.toLong() == end - start)
         val expectedPins = Json.parseToJsonElement(request).jsonObject["preparedScene"]?.jsonObject?.let { scene ->

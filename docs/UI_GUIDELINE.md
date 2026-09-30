@@ -9,6 +9,15 @@ The existing six-page MIDI workspace is implemented. The app-level Video tab and
 its controls described below are the planned VG3/VG5/VG6 target; this document does
 not claim that they already exist.
 
+Current content/evidence cross-reference (2026-09-30): the user's selected route
+is a TABI train series with changing city exteriors and activity sequences. The
+[production recipe and actual-kit blockers](TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30)
+and [TASKS](../TASKS.md) distinguish fixture-proven held-pose control from missing
+neutral/alpha artwork, executable episode scheduling and cross-city/full-film
+proof. This adds no screen, control, mockup or design approval and does not make
+Tokyo/train/TABI mandatory. VG3 design permission remains separate after full-
+pilot and second-city reuse review.
+
 ## References and interpretation
 
 All nine PNGs in `pictures/UI` were inspected. They are 1536 × 1024 references.

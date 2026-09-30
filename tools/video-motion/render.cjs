@@ -15,7 +15,7 @@ const {
 } = require('./scenery.cjs');
 
 const TOOL_ID = 'melotrail-controlled-motion';
-const TOOL_VERSION = '1.1.0';
+const TOOL_VERSION = '1.2.0';
 const REQUEST_SCHEMA = 'melotrail-controlled-motion-request-v1';
 const LIMITS = Object.freeze({
   maximumFramesPerInvocation: 300,
@@ -25,6 +25,8 @@ const LIMITS = Object.freeze({
   maximumBlinkAmount: 1,
   maximumBreathPixels: 4,
   maximumHeadDegrees: 3,
+  maximumPoseSequenceSteps: 16,
+  maximumPoseSequenceFrames: 9000,
   maximumSteamRatePerSecond: 8,
   maximumSteamRisePixelsPerSecond: 28,
 });
@@ -269,6 +271,51 @@ function assertV18aDescriptor(scene) {
   }
 }
 
+function validatePoseSequence(control, capability, scene, spaceId) {
+  if (Object.keys(control).some((key) => !['id', 'kind', 'capabilityId', 'sequence'].includes(key)) ||
+      capability.targetType !== 'POSE' || capability.control !== 'POSE_REPLACE' || capability.unit !== 'RATIO' ||
+      capability.minimum !== 0 || capability.maximum !== 1) {
+    throw new MotionInputError('Pose sequence requires an explicit POSE_REPLACE capability and supported fields.');
+  }
+  const sequence = control.sequence;
+  const steps = sequence?.steps;
+  if (!sequence || Object.keys(sequence).some((key) => key !== 'steps') || !Array.isArray(steps) ||
+      steps.length < 3 || steps.length > LIMITS.maximumPoseSequenceSteps || steps.some((step, index) =>
+        !step || Object.keys(step).some((key) => !['frame', 'poseId'].includes(key)) ||
+        !Number.isSafeInteger(step.frame) || step.frame < 0 || (index && step.frame <= steps[index - 1].frame) ||
+        (step.poseId != null && !safeId.test(step.poseId))) || steps[0].poseId != null || steps.at(-1).poseId != null ||
+      steps.at(-1).frame - steps[0].frame < 2 || steps.at(-1).frame - steps[0].frame > LIMITS.maximumPoseSequenceFrames) {
+    throw new MotionInputError('Pose sequence needs 3..16 increasing safe absolute-frame steps with neutral entry/return within 9000 frames.');
+  }
+  const ids = [...new Set(steps.map((step) => step.poseId).filter((id) => id != null))];
+  if (!ids.includes(capability.targetId)) throw new MotionInputError('Pose sequence must consume its selected capability pose.');
+  const poses = ids.map((id) => poseById(scene, id));
+  const subject = layerById(scene, poses[0].subjectLayerId, 'subject layer');
+  const placement = (item) => JSON.stringify([item.bounds?.coordinateSpaceId, item.bounds?.x, item.bounds?.y,
+    item.bounds?.width, item.bounds?.height, item.transform?.translateX, item.transform?.translateY,
+    item.transform?.scaleX, item.transform?.scaleY, item.transform?.rotationDegrees ?? 0, item.pivot ?? null]);
+  const cutout = (item) => {
+    const a = item.alpha; const count = item.image?.width * item.image?.height;
+    return a && item.image.hasAlphaChannel && Number.isSafeInteger(count) && count > 0 &&
+      ['opaquePixels', 'translucentPixels', 'transparentPixels'].every((key) => Number.isSafeInteger(a[key]) && a[key] >= 0) &&
+      a.opaquePixels + a.translucentPixels + a.transparentPixels === count &&
+      a.transparentPixels > 0 && a.opaquePixels + a.translucentPixels > 0;
+  };
+  if (subject.kind !== 'SUBJECT' || !cutout(subject) || poses.some((pose) =>
+    pose.subjectLayerId !== subject.id || placement(pose) !== placement(subject) || !cutout(pose))) {
+    throw new MotionInputError('Sequence poses must be usable cutouts aligned to the same neutral subject, placement, scale and pivot.');
+  }
+  assertMatchingSpace(subject, spaceId, 'Pose sequence subject');
+  const viewport = scene.layers.find((layer) => layer.kind === 'FINISHED_SCENE' && layer.bounds.coordinateSpaceId === spaceId);
+  const base = cleanBase(scene, viewport.bounds.width, viewport.bounds.height);
+  assertMatchingSpace(base, spaceId, 'Pose sequence clean plate');
+  if (base.reviewStatus === 'REJECTED' || base.alpha?.opaquePixels !== base.image.width * base.image.height ||
+      base.alpha.translucentPixels !== 0 || base.alpha.transparentPixels !== 0) {
+    throw new MotionInputError('Pose replacement needs a measured opaque clean full-viewport plate.');
+  }
+  return { ...control, capability, sequence, poses, subject };
+}
+
 /** Pure request/descriptor admission. It does no image IO and has no side effects. */
 function validateRequest(request) {
   if (!request || request.schema !== REQUEST_SCHEMA) throw new MotionInputError(`Request schema must be '${REQUEST_SCHEMA}'.`);
@@ -312,7 +359,12 @@ function validateRequest(request) {
     if (!control || !safeId.test(control.id || '') || ids.has(control.id)) throw new MotionInputError('Control IDs must be unique safe identifiers.');
     ids.add(control.id);
     const capability = capabilityById(scene, control.capabilityId);
-    if (control.kind === 'blink') {
+    if (control.kind === 'poseSequence') {
+      requireUniqueSubjectControl(subjectControlKinds, control.kind);
+      const selected = validatePoseSequence(control, capability, scene, canvas.coordinateSpaceId);
+      subjectLayerId = requireSameSubject(subjectLayerId, selected.subject.id, control.kind);
+      controls.push(selected);
+    } else if (control.kind === 'blink') {
       requireUniqueSubjectControl(subjectControlKinds, control.kind);
       if (capability.targetType !== 'POSE' || capability.control !== 'POSE_BLEND') throw new MotionInputError(`Blink '${control.id}' needs a POSE_BLEND capability.`);
       const pose = poseById(scene, capability.targetId);
@@ -368,6 +420,10 @@ function validateRequest(request) {
       throw new MotionInputError(`Unsupported controlled-motion kind '${control.kind}'.`);
     }
   }
+  if (subjectControlKinds.has('poseSequence') && (subjectControlKinds.size !== 1 ||
+      controls.some((control) => control.kind === 'steam' && control.source.id === subjectLayerId))) {
+    throw new MotionInputError('Pose sequence cannot combine with blink, breathing, head gesture or a subject-attached effect.');
+  }
   if (subjectLayerId) cleanBase(scene, width, height);
   let scenery;
   try {
@@ -415,6 +471,10 @@ function motionAt(validated, frame) {
   const time = frameTime(frame, validated.fps);
   const state = { time, blink: 0, breathPixels: 0, headRadians: 0, steam: [] };
   for (const control of validated.controls) {
+    if (control.kind === 'poseSequence') {
+      state.poseId = null;
+      for (const step of control.sequence.steps) { if (step.frame > frame) break; state.poseId = step.poseId ?? null; }
+    }
     if (control.kind === 'blink') state.blink = Math.max(state.blink, blinkClosedAmount(time, validated.request.seed, control.id, control.amount));
     if (control.kind === 'breathing') {
       const period = number(control.periodSeconds ?? 3.6, 'Breathing periodSeconds', 1, 12);
@@ -533,9 +593,17 @@ function subjectCanvas(validated, images, state) {
   const subject = layerById(validated.scene, validated.subjectLayerId, 'subject layer');
   const canvas = createCanvas(validated.width, validated.height);
   const ctx = canvas.getContext('2d');
-  drawAsset(ctx, images.get(`layer:${subject.id}`), subject);
+  const sequence = validated.controls.find((control) => control.kind === 'poseSequence');
+  const selected = sequence && state.poseId != null ? sequence.poses.find((pose) => pose.id === state.poseId) : subject;
+  const image = images.get(selected === subject ? `layer:${subject.id}` : `pose:${selected.id}`);
+  // Replace the whole supplied cutout, including newly exposed arm pixels. Never
+  // draw an alternate pose over the neutral sprite or clip it to the neutral arm.
+  drawAsset(ctx, image, selected);
+  // A full-cutout replacement already carries authoritative alpha. Reapplying
+  // that alpha would square a translucent edge and darken approved source art.
+  if (sequence) return canvas;
   const silhouette = createCanvas(validated.width, validated.height);
-  drawAsset(silhouette.getContext('2d'), images.get(`layer:${subject.id}`), subject);
+  drawAsset(silhouette.getContext('2d'), image, selected);
   const blink = validated.controls.find((control) => control.kind === 'blink');
   if (blink && state.blink > 0) {
     const pose = createCanvas(validated.width, validated.height);
@@ -565,8 +633,7 @@ function subjectCanvas(validated, images, state) {
     ctx.drawImage(head, 0, 0);
     ctx.restore();
   }
-  // Neither a supplied blink pose nor a rotated supplied head region may grow
-  // beyond the authoritative separated-subject silhouette.
+  // Legacy blink/head controls keep their original neutral-silhouette behavior.
   ctx.globalCompositeOperation = 'destination-in';
   ctx.drawImage(silhouette, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
@@ -872,6 +939,7 @@ async function renderBounded(request, projectRoot, outputDirectory, options = {}
       'This bounded compositor moves only supplied prepared-layer pixels; it does not regenerate surrounding scene pixels.',
       'Blinking uses supplied aligned pose pixels; head gesture uses only a supplied HEAD_REGION mask.',
       'Steam is a source-anchored soft rise/fade effect. Scenery uses only supplied declared-coverage pixels, exact supplied section overlaps, and a bounded camera track.',
+      'Pose sequences hold supplied registered keyframes at explicit absolute frames, with neutral entry/return; there is no generated interpolation or cross-dissolve, and held frames are not native articulated motion.',
       'Drinking and page-turning are not supported by this motion set.',
     ],
   };

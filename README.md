@@ -17,23 +17,35 @@ Logic checks, visual acceptance and release approval remain pending. The origina
 5/10 feedback is not an improved score simply because tests pass.
 
 Video has independent project/asset/job storage, prepared-scene validation, an
-owned ComfyUI adapter, pinned media supervision and bounded controlled-motion
-rendering. Controlled blink/parallax has reached a reviewed 30-second pilot;
-continuous-plan proposals and guarded persistence exist. The Video tab, in-app
-moving playback, executable full-duration workflow and complete silent export
-are **not yet delivered**.
+owned ComfyUI adapter, pinned media supervision and bounded controlled motion.
+A reviewed 30-second blink/parallax reference, continuous-plan persistence and
+fixture-tested held-pose replacement (manifest 4/tool 1.2.0) exist. The approved
+halfway still is not moving approval: actual neutral/head/alpha/contact fail,
+and continuous episode schedules do not yet represent supplied pose sequences.
+The Video tab, moving playback, executable full-duration workflow and complete
+silent export are **not yet delivered**.
 
-**Current priority: produce the video before building the app flow.** Next is a
-scene-compatible 5–10-second TABI character test, then a scenery-join test, a
-combined 60-second proof and one complete 180-second/5,400-frame Tokyo
-train-window pilot with moving depth-plane parallax, distinct passing views
-about every 5–10 seconds, quieter scenery between them and TABI actions inside
-the cabin. Review the full film
-and editor handoff before implementing reusable future-video functionality.
-Reuse current services through bounded production tooling; preserve existing
-videos and the accepted corrected mask. This documentation update starts no
-model/render job or implementation. See [production order](PLAN.md#7-step-by-step-delivery-order)
-and [production recipe](docs/TABI_VIDEO.md#production-first-workflow-2026-09-28).
+**Current priority (updated 2026-09-30): a complete video, then a reusable TABI
+train series—different city exteriors and activity sequences for every episode.**
+First finish the blocked matching-head/consistent-alpha wave kit and review a
+readable moving test; then prove one additional quiet activity. Bind their episode
+schedule, validate compatible window/frond/foreground mattes, prove a moving
+scenery join and measure/review 60 seconds. Deliver/watch the complete 180-second/
+5,400-frame Tokyo film: continuous depth parallax, distinct views about every
+5–10 seconds, quieter travel and reviewed activities with clean neutral returns.
+
+Then select one second city (for example Kyoto, Madrid or Rome), supply its
+finished scenery and materially different activity script, and review a 20–30-second
+reuse proof through the same owners. Only afterward implement the reusable app
+workflow; its full second-city export still needs complete corridor/action
+readiness and whole-film/editor review. Reuse compatible cabin/TABI/props; replace
+city art and activity choice/order/timing, not merely label or seed. Other city
+packs and integrated controls are not implemented; generic scenarios remain valid.
+Preserve existing art, videos, accepted masks and takes. This update starts no
+artwork/model job, render, spending, implementation or commit. See
+[production order](PLAN.md#7-step-by-step-delivery-order),
+[recipe/current evidence](docs/TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30)
+and [the exact queue](TASKS.md).
 
 [PLAN](PLAN.md) describes features CORE, AC1–AC5 and VG1–VG6.
 [TASKS](TASKS.md) is the fresh dependency/status queue. Existing code is reused;

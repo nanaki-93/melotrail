@@ -97,6 +97,62 @@ class VideoScenePreparationTest {
     @TempDir lateinit var root: Path
 
     @Test
+    fun `supplied pose sequence binds every pose timing review and exact neutral return`() {
+        val fixture = fixture()
+        val base = fixture.layeredScene()
+        val midpoint = base.scene.poses.single().copy(id = "midpoint", image = changedImage(base.scene.poses.single().image))
+        val scene = base.scene.copy(poses = base.scene.poses + midpoint)
+        val capability = scene.motionCapabilities.single { it.control == VideoMotionControl.POSE_REPLACE }
+        val sequence = app.melotrail.video.domain.VideoPoseSequence(listOf(
+            app.melotrail.video.domain.VideoPoseSequenceStep(900),
+            app.melotrail.video.domain.VideoPoseSequenceStep(903, "midpoint"),
+            app.melotrail.video.domain.VideoPoseSequenceStep(906, "blink"),
+            app.melotrail.video.domain.VideoPoseSequenceStep(930, "midpoint"),
+            app.melotrail.video.domain.VideoPoseSequenceStep(933),
+        ))
+        val control = control("wave", VideoSceneMotionIntent.CHARACTER_ACTION, capability.id, 0.0, 1.0, 1.0)
+            .copy(poseSequence = sequence)
+        val request = VideoSceneMotionRequest("Raise the supplied hand and return to neutral.", listOf(control))
+        val service = VideoScenePreparation()
+        fun prepare(s: VideoPreparedScene = scene, r: VideoSceneMotionRequest = request) =
+            service.prepare(fixture.look(base.finishedId), s, r, capabilities(), guidelines())
+        val prepared = assertIs<VideoScenePreparationResult.Prepared>(prepare()).input
+        val compiled = service.compileControlledControls(prepared).single()
+        assertEquals("poseSequence", compiled.getValue("kind").jsonPrimitive.content)
+        assertEquals(5, compiled.getValue("sequence").jsonObject.getValue("steps").jsonArray.size)
+        assertTrue(prepared.controls.single().dependencies.any { it.key.contains("pose.midpoint.image") })
+        assertTrue(prepared.componentReviews.any { it.componentId == "midpoint" })
+        assertEquals(null, sequence.poseAt(899)); assertEquals(null, sequence.poseAt(900))
+        assertEquals("midpoint", sequence.poseAt(905)); assertEquals("blink", sequence.poseAt(906))
+        assertEquals(null, sequence.poseAt(933)); assertEquals(null, sequence.poseAt(1000))
+        val changedTiming = request.copy(controls = listOf(control.copy(poseSequence = sequence.copy(
+            steps = sequence.steps.map { if (it.frame == 903L) it.copy(frame = 904) else it },
+        ))))
+        assertNotEquals(prepared.requestFingerprint, assertIs<VideoScenePreparationResult.Prepared>(prepare(r = changedTiming)).input.requestFingerprint)
+        val changedPose = scene.copy(poses = scene.poses.map { if (it.id == "midpoint") it.copy(image = changedImage(it.image).copy(
+            artifact = it.image.artifact.copy(sha256 = "e".repeat(64)))) else it })
+        assertNotEquals(prepared.controls.single().fingerprint,
+            assertIs<VideoScenePreparationResult.Prepared>(prepare(s = changedPose)).input.controls.single().fingerprint)
+        assertIs<VideoScenePreparationResult.Rejected>(prepare(s = scene.copy(poses = scene.poses.map {
+            if (it.id == "midpoint") it.copy(reviewStatus = VideoComponentReviewStatus.REJECTED) else it
+        })))
+        assertIs<VideoScenePreparationResult.Rejected>(prepare(r = request.copy(controls = listOf(control.copy(poseSequence = null)))))
+        kotlin.test.assertFailsWith<IllegalArgumentException> { sequence.copy(steps = sequence.steps.dropLast(1)) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { sequence.copy(steps = sequence.steps.reversed()) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { sequence.copy(steps = sequence.steps.map {
+            if (it == sequence.steps.last()) it.copy(frame = 9901) else it
+        }) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { sequence.copy(steps = (0L..16L).map {
+            app.melotrail.video.domain.VideoPoseSequenceStep(it, if (it in 1L..15L) "blink" else null)
+        }) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { app.melotrail.video.domain.VideoPoseSequenceStep(Long.MAX_VALUE) }
+        val blink = scene.motionCapabilities.single { it.control == VideoMotionControl.POSE_BLEND }
+        val combined = assertIs<VideoScenePreparationResult.Prepared>(prepare(r = request.copy(controls = request.controls +
+            control("blink-extra", VideoSceneMotionIntent.BLINK, blink.id, 0.0, 1.0, 1.0)))).input
+        kotlin.test.assertFailsWith<IllegalArgumentException> { service.compileControlledControls(combined) }
+    }
+
+    @Test
     fun `reopened ready assets compile exact controlled motion and scoped fingerprints`() {
         val fixture = fixture()
         val prepared = fixture.layeredScene()
@@ -300,7 +356,7 @@ class VideoScenePreparationTest {
             masks = base.masks + headMask,
             effectAnchors = listOf(VideoEffectAnchor("steam", subject.id, position = point)),
             motionCapabilities = base.motionCapabilities.map {
-                if (it.targetType == VideoMotionTargetType.POSE) it.copy(id = "blink-blend") else it
+                if (it.control == VideoMotionControl.POSE_BLEND) it.copy(id = "blink-blend") else it
             } + listOf(
                 VideoMotionCapability("breath", VideoMotionTargetType.LAYER, subject.id, VideoMotionControl.TRANSLATE_Y,
                     VideoMotionUnit.PIXELS, -4.0, 4.0, 0.0),

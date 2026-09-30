@@ -88,7 +88,12 @@ locked, revision-guarded descriptor publisher. Reopening verifies the descriptor
 source identities and prepared image facts. Unsupported project/plan versions
 reject without migration or artifact rewriting. Proposal persistence is not
 executable readiness: application integration, continuous execution/checkpoints
-and complete export orchestration remain VG4–VG5 work. Video code cannot write a
+and complete export orchestration remain VG4–VG5 work. `VideoAssemblyActionKind`
+still lacks pose sequences and scheduled actions have scalar values; VG4-07 must
+add their representation/compile path through the existing assembly/planner/store/
+preparation owners, with one current contract, pose/timing pins and absolute
+chunk-boundary tests. Runtime pose admission is not episode-schedule support.
+Video code cannot write a
 MIDI project or import MIDI application/storage owners. Only the application
 composition root coordinates the two workspaces.
 
@@ -139,15 +144,28 @@ Audition timbre is not authoritative and does not render audio files.
 
 ## Video isolation and remaining integration
 
-Production order is now pilot-first: character test, scenery join, combined
-60-second proof, full 240-second pilot and user/editor review precede reusable
-app integration. See [PLAN](../PLAN.md#7-step-by-step-delivery-order) and the
-[TABI production recipe](TABI_VIDEO.md#production-first-workflow-2026-09-28).
+Production order (updated 2026-09-30): finish/review the matching wave/neutral
+kit, then one additional quiet activity; moving scenery join and pose-schedule
+binding → combined 60-second proof/review → full 180-second Tokyo film/editor
+review → selected second-city 20–30-second reuse proof/review → app integration.
+The default/current full target is 180 seconds, not a mandatory 240; the product
+supports 180–300. See [PLAN](../PLAN.md#7-step-by-step-delivery-order) and the
+[TABI recipe/evidence](TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30).
 A thin, supervised harness may call the existing Kotlin project/job/media owners;
 it must not introduce a second ledger, scheduler, persistence schema, permanent
 alternate rendering backend or MIDI dependency. Limit pre-pilot engineering to
 required executable bindings, completed-chunk continuation and bounded encoding.
 Preserve existing planner/store/decoder work; defer app caller cleanup and UI.
+
+For the user's recurring train series, reuse compatible cabin/camera/TABI/props,
+replace city-specific exterior art and activity choice/order/timing/quiet intervals,
+and derive new immutable scene/plan/job identities through the same owners. These
+are content inputs, not a separate episode schema, city-specific backend or second
+scheduler. All visible exterior apertures and the full selected duration need
+coverage; original static small panes and a short reuse clip cannot prove a full
+new-city film. Generic scenarios remain valid. Full-pilot success unlocks second-
+city method testing; its reviewed short proof unlocks app work, not full second-
+city coverage, app/release acceptance or automatic live budgets.
 
 The initial full-film assembly route is verified absolute chunk PNGs followed by
 one immutable numbered image sequence and a pinned FFmpeg image2/H.264 encode.
@@ -185,8 +203,18 @@ The runtime owns server lifecycle; `ComfyVideoClient` and `LocalVideoBackend`
 separately own short I2V API jobs. This does not supply semantic layer extraction
 or full-video orchestration. `VideoMotionRenderer` supervises the external
 Node/Canvas controlled compositor in bounded absolute-frame ranges; it is a media
-stage, not a second generative provider. The Video tab/application composition,
-visible motion setup and full assembly/export remain planned in VG2–VG6.
+stage, not a second generative provider. Manifest 4/tool 1.2.0 adds `POSE_REPLACE`:
+3–16 strictly ordered absolute-frame steps holding supplied cutouts, neutral
+entry/return and ≤9000-frame span; each invocation remains ≤300 frames. It replaces the whole cutout and
+applies alpha once, not a dissolve or native articulated interpolation, and rejects
+simultaneous blink/breathing/head/subject-steam controls. Synthetic production-
+imported tests pass; actual neutral/head/alpha/contact still fail. Window/frond/
+foreground mattes must fit the selected cabin and all allowed poses; the accepted
+old fixed-head mask is not automatically compatible. Original art/masks/videos
+remain immutable. The Video tab/application composition, visible motion setup and
+full assembly/export remain planned in VG2–VG6. For this series, VG6's full app
+export uses the selected second city/different script only after complete corridor/
+contact/sequence readiness and separately admitted full execution.
 
 The Swift companion and MIDI Export soundtrack handoff have been removed from
 active production and build wiring. Historical external evidence remains; no

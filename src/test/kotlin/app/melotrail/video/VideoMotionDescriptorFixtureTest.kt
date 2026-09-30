@@ -64,8 +64,10 @@ class VideoMotionDescriptorFixtureTest {
     fun `emit deterministic production importer bundles for controlled motion pixel comparisons`() {
         val runtimeDescriptor = Path.of(System.getProperty("user.dir"), "src", "main", "resources", "video", "motion-runtime.json")
         val runtime = JSON.parseToJsonElement(Files.readString(runtimeDescriptor)).jsonObject
-        assertEquals("1.1.0", runtime.getValue("tool").jsonObject.getValue("version").jsonPrimitive.content)
+        assertEquals("1.2.0", runtime.getValue("tool").jsonObject.getValue("version").jsonPrimitive.content)
         assertEquals(300, runtime.getValue("limits").jsonObject.getValue("maximumFramesPerInvocation").jsonPrimitive.int)
+        assertEquals(16, runtime.getValue("limits").jsonObject.getValue("maximumPoseSequenceSteps").jsonPrimitive.int)
+        assertEquals(9000, runtime.getValue("limits").jsonObject.getValue("maximumPoseSequenceFrames").jsonPrimitive.int)
         assertEquals(9000, runtime.getValue("limits").jsonObject.getValue("maximumCameraDurationFrames").jsonPrimitive.int)
         val output = Path.of(System.getProperty("user.dir"), "build", "video-motion-fixtures").toAbsolutePath().normalize()
         require(output.endsWith(Path.of("build", "video-motion-fixtures"))) { "Fixture output must remain under owned build/video-motion-fixtures" }
@@ -156,7 +158,11 @@ class VideoMotionDescriptorFixtureTest {
         )
         val transparentSpec = specs.last().copy(name = "transparent-depth", sceneryWidth = 900,
             sceneryWorldOffsets = listOf(0, 0, 0), transparentPlanes = true)
-        val allSpecs = specs + transparentSpec
+        val poseSpec = specs.first().copy(name = "pose-sequence", subjectBounds = PixelRect(20, 20, 40, 40),
+            subjectSourceWidth = 40, subjectSourceHeight = 40, headBounds = PixelRect(20, 20, 40, 16),
+            headSourceWidth = 40, foregroundBounds = PixelRect(25, 47, 10, 12), foregroundSourceWidth = 10,
+            foregroundSourceHeight = 12, poseSequence = true)
+        val allSpecs = specs + transparentSpec + poseSpec
         allSpecs.forEach { emitFixture(output.resolve(it.name), it) }
         Files.writeString(
             output.resolve("fixture-set.json"),
@@ -191,8 +197,11 @@ class VideoMotionDescriptorFixtureTest {
         val occlusionPixels = sourceInterior(spec.foregroundBounds, spec.foregroundSourceWidth, spec.foregroundSourceHeight)
         val finishedPath = finishedScene(inputs.resolve("finished-scene.png"), spec, subjectPixels, foregroundPixels)
         val cleanPath = rgbImage(inputs.resolve("clean-background.png"), spec.width, spec.height, BACKGROUND)
-        val subjectPath = cutout(inputs.resolve("subject.png"), spec.subjectSourceWidth, spec.subjectSourceHeight, SUBJECT)
-        val posePath = cutout(inputs.resolve("blink-pose.png"), spec.subjectSourceWidth, spec.subjectSourceHeight, POSE)
+        val subjectPath = if (spec.poseSequence) sequenceSprite(inputs.resolve("subject.png"), 0)
+            else cutout(inputs.resolve("subject.png"), spec.subjectSourceWidth, spec.subjectSourceHeight, SUBJECT)
+        val posePath = if (spec.poseSequence) sequenceSprite(inputs.resolve("blink-pose.png"), 1)
+            else cutout(inputs.resolve("blink-pose.png"), spec.subjectSourceWidth, spec.subjectSourceHeight, POSE)
+        val wavePath = if (spec.poseSequence) sequenceSprite(inputs.resolve("wave-pose.png"), 2) else null
         val foregroundPath = cutout(inputs.resolve("foreground.png"), spec.foregroundSourceWidth, spec.foregroundSourceHeight, FOREGROUND)
         val headMaskPath = if (spec.opaqueGrayscaleHeadMask) {
             opaqueGrayscaleMask(inputs.resolve("head-mask.png"), spec.headSourceWidth, spec.headSourceHeight, inset = 3)
@@ -231,6 +240,7 @@ class VideoMotionDescriptorFixtureTest {
         val clean = imported("clean", cleanPath, VideoReferenceRole.ENVIRONMENT)
         val foreground = imported("foreground", foregroundPath, VideoReferenceRole.ENVIRONMENT)
         val pose = imported("pose", posePath, VideoReferenceRole.SUBJECT)
+        val wavePose = wavePath?.let { imported("wave-pose", it, VideoReferenceRole.SUBJECT) }
         val headMask = imported("head-mask", headMaskPath, VideoReferenceRole.ENVIRONMENT)
         val occlusionMask = imported("occlusion-mask", occlusionMaskPath, VideoReferenceRole.ENVIRONMENT)
         val scenery = sceneryPaths.mapIndexed { index, source ->
@@ -280,7 +290,9 @@ class VideoMotionDescriptorFixtureTest {
             poses = listOf(VideoPoseAnimationAsset(
                 VideoPlacedAnimationAsset("blink-pose", pose.asset.id, subjectBounds, subjectPivot),
                 "subject",
-            )),
+            )) + listOfNotNull(wavePose?.let { VideoPoseAnimationAsset(
+                VideoPlacedAnimationAsset("wave-pose", it.asset.id, subjectBounds, subjectPivot), "subject",
+            ) }),
             masks = listOf(
                 VideoMaskAnimationAsset(
                     VideoPlacedAnimationAsset("head-mask", headMask.asset.id, spec.headBounds.videoRect(), subjectPivot),
@@ -345,7 +357,18 @@ class VideoMotionDescriptorFixtureTest {
 
         val sceneDocument = Files.readString(projectRoot.resolve("prepared-scenes/${sceneId.id}/v${sceneId.version}/scene.json"))
         val sceneJson = JSON.parseToJsonElement(sceneDocument)
-        val controls = if (spec.sceneryWidth != null) {
+        val controls = if (spec.poseSequence) {
+            buildJsonArray { add(buildJsonObject {
+                put("id", "wave-sequence"); put("kind", "poseSequence")
+                put("capabilityId", capability(scene, VideoMotionControl.POSE_REPLACE, "wave-pose"))
+                put("sequence", buildJsonObject { put("steps", buildJsonArray {
+                    listOf(0L to null, 100L to "blink-pose", 103L to "wave-pose", 180L to "blink-pose",
+                        183L to "wave-pose", 300L to "blink-pose", 330L to null).forEach { (frame, poseId) ->
+                        add(buildJsonObject { put("frame", frame); put("poseId", poseId?.let(::JsonPrimitive) ?: kotlinx.serialization.json.JsonNull) })
+                    }
+                }) })
+            }) }
+        } else if (spec.sceneryWidth != null) {
             buildJsonArray { }
         } else if (spec.effectOnly) {
             buildJsonArray { add(steamControl(scene)) }
@@ -377,6 +400,12 @@ class VideoMotionDescriptorFixtureTest {
                 if (spec.sceneryWidth != null) put("scenery", sceneryRequest(spec))
             }) + "\n",
         )
+        if (spec.poseSequence) {
+            // Pure durable admission of the exact production-imported sequence, no launch.
+            motionDescriptor(listOf(app.melotrail.video.domain.VideoGenerationDependencyPin(
+                "renderer", "9".repeat(64), ownedPath = "/runtime/render.cjs")), 90, 390, 73)
+                .copy(requestJson = Files.readString(fixtureRoot.resolve("request.json")))
+        }
         val componentBounds = linkedMapOf(
             "layer:finished-scene" to PixelRect(0, 0, spec.width, spec.height),
             "layer:subject" to subjectPixels,
@@ -561,6 +590,26 @@ class VideoMotionDescriptorFixtureTest {
         return path
     }
 
+    /** Different hand locations, identical planted lower body; wave grows beyond neutral alpha. */
+    private fun sequenceSprite(path: Path, phase: Int): Path {
+        val image = BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            g.color = SUBJECT; g.fillRect(8, 15, 14, 23)
+            when (phase) {
+                0 -> g.fillRect(12, 14, 4, 9)
+                1 -> g.fillRect(18, 12, 8, 10)
+                2 -> g.fillRect(19, 5, 16, 17)
+            }
+            g.color = POSE
+            val x = listOf(8, 22, 31)[phase]; val y = listOf(12, 9, 2)[phase]
+            g.fillRect(x, y, 7, 7)
+            g.color = Color(240, 225, 205, 128); g.fillRect(6, 25, 2, 8)
+        } finally { g.dispose() }
+        assertTrue(ImageIO.write(image, "png", path.toFile()))
+        return path
+    }
+
     private fun opaqueGrayscaleMask(path: Path, width: Int, height: Int, inset: Int): Path {
         Files.createDirectories(requireNotNull(path.parent))
         require(inset > 0 && width > inset * 2 && height > inset * 2)
@@ -621,6 +670,7 @@ class VideoMotionDescriptorFixtureTest {
         val headSourceHeight: Int,
         val anchor: PixelPoint,
         val effectOnly: Boolean = false,
+        val poseSequence: Boolean = false,
         val opaqueGrayscaleHeadMask: Boolean = false,
         val blackAlphaOcclusionMask: Boolean = false,
         val sceneryWidth: Int? = null,

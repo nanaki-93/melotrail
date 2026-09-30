@@ -40,6 +40,13 @@ class VideoMotionRendererTest {
         fixtureRender()
     }
 
+    @Test fun `current receipt version rejects old and unknown compositor receipts`() {
+        for (version in listOf("1.1.0", "1.2.1")) {
+            val error = assertFailsWith<IllegalArgumentException> { fixtureRender(receiptToolVersion = version) }
+            assertContains(error.message.orEmpty(), "Receipt tool version must be 1.2.0")
+        }
+    }
+
     @Test fun `rejects wrong loaded Canvas package`() {
         assertFailsWith<IllegalArgumentException> { fixtureRender(canvasPathMismatch = true) }
     }
@@ -174,7 +181,7 @@ class VideoMotionRendererTest {
         }
     }
 
-    private fun fixtureRender(canvasPathMismatch: Boolean = false, omitSourcePin: Boolean = false, wrongRequestHash: Boolean = false, cancelDuringValidation: Boolean = false, mutateSceneryDuringRender: Boolean = false, mutateSceneryDuringValidation: Boolean = false, mutateSceneryAfterValidation: Boolean = false, mutateCanvasDuringRender: Boolean = false, mutateManifestDuringRender: Boolean = false, mutateFfmpegDuringRender: Boolean = false,
+    private fun fixtureRender(receiptToolVersion: String = "1.2.0", canvasPathMismatch: Boolean = false, omitSourcePin: Boolean = false, wrongRequestHash: Boolean = false, cancelDuringValidation: Boolean = false, mutateSceneryDuringRender: Boolean = false, mutateSceneryDuringValidation: Boolean = false, mutateSceneryAfterValidation: Boolean = false, mutateCanvasDuringRender: Boolean = false, mutateManifestDuringRender: Boolean = false, mutateFfmpegDuringRender: Boolean = false,
         startFrame: Int = 100, frameCount: Int = 650, expectedSizes: List<Int> = listOf(300, 300, 50),
         missingFrame: Boolean = false, mutateFrame: Boolean = false, expireAfterFirstChunk: Boolean = false, budgetAfterFirstChunk: Boolean = false) {
         val root = Files.createTempDirectory("motion-render-test").toRealPath()
@@ -232,7 +239,7 @@ class VideoMotionRendererTest {
             }
             Files.writeString(out.resolve("render-receipt-${start.toString().padStart(8,'0')}-${count.toString().padStart(8,'0')}.json"), buildJsonObject {
                 put("schema", "melotrail-controlled-motion-receipt-v1")
-                put("tool", buildJsonObject { put("version", "1.1.0") })
+                put("tool", buildJsonObject { put("version", receiptToolVersion) })
                 put("frameRange", buildJsonObject { put("startFrame", start); put("frameCount", count) })
                 put("sourcePins", JsonArray(if (omitSourcePin) emptyList() else listOf(JsonPrimitive(sourceHash))))
                 put("requestSha256", if (wrongRequestHash) "0".repeat(64) else currentCanonical)

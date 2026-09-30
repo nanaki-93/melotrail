@@ -146,7 +146,7 @@ class VideoPreviewHostCheckTest {
                         .mapNotNull { it.jsonObject["image"]?.jsonObject?.get("artifact")?.jsonObject?.get("sha256")?.jsonPrimitive?.content }.toSet()
                     Files.writeString(directory.resolve("render-receipt.json"), buildJsonObject {
                         put("schema", "melotrail-controlled-motion-receipt-v1")
-                        put("tool", buildJsonObject { put("version", "1.1.0") })
+                        put("tool", buildJsonObject { put("version", "1.2.0") })
                         put("frameRange", range); put("frames", records)
                         put("sourcePins", buildJsonArray { pins.forEach { add(it) } })
                         put("requestSha256", PreviewPreflight.sha(descriptorPath))

@@ -241,6 +241,81 @@ function matchingHeadFrame(validated) {
 }
 
 if (!comparisonMode) {
+test('supplied pose sequence replaces without ghosting or neutral-silhouette clipping and returns exactly', async () => {
+  const sample = fixture('pose-sequence');
+  const images = await imagesFor(sample);
+  const validated = validateRequest(sample.request);
+  const neutral = renderFrame(validated, images, 90).canvas;
+  const expectedNeutral = createCanvas(neutral.width, neutral.height);
+  const ec = expectedNeutral.getContext('2d');
+  const base = validated.scene.layers.find((layer) => layer.kind === 'ENVIRONMENT');
+  drawAsset(ec, images.get(`layer:${base.id}`), base);
+  drawAsset(ec, images.get(`layer:${validated.subjectLayerId}`), validated.scene.layers.find((layer) => layer.id === validated.subjectLayerId));
+  assert.deepEqual(pixel(neutral, 26, 45), pixel(expectedNeutral, 26, 45), 'supplied translucent alpha is applied once, not squared');
+  const mid = renderFrame(validated, images, 100).canvas;
+  const wave = renderFrame(validated, images, 103).canvas;
+  assert.deepEqual(pixel(neutral, 30, 34), sample.metadata.colors.pose);
+  assert.deepEqual(pixel(mid, 44, 31), sample.metadata.colors.pose);
+  assert.deepEqual(pixel(wave, 54, 24), sample.metadata.colors.pose, 'new hand remains outside the neutral alpha');
+  assert.deepEqual(pixel(wave, 30, 34), sample.metadata.colors.background, 'old cheek-rest hand is erased, not stacked underneath');
+  assert.deepEqual(pixel(wave, 28, 52), sample.metadata.colors.foreground, 'recorded table/seat occluder remains on top');
+  const baseline = neutral.getContext('2d').getImageData(0, 0, neutral.width, neutral.height).data;
+  const distinct = new Set();
+  for (let frame = 90; frame < 390; frame++) {
+    const rendered = renderFrame(validated, images, frame).canvas;
+    const actual = rendered.getContext('2d').getImageData(0, 0, rendered.width, rendered.height).data;
+    for (let y = 42; y < rendered.height; y++) for (let x = 0; x < rendered.width; x++) {
+      const i = (y * rendered.width + x) * 4;
+      assert.deepEqual([...actual.slice(i, i + 4)], [...baseline.slice(i, i + 4)], 'planted lower body and stationary contact stay exact');
+    }
+    distinct.add(rendered.toBuffer('image/png').toString('base64'));
+  }
+  assert.equal(distinct.size, 3, 'held art states are disclosed, not claimed as 300 native articulated frames');
+  assert.equal(neutral.toBuffer('image/png').equals(renderFrame(validated, images, 389).canvas.toBuffer('image/png')), true);
+  for (const frame of [90, 99, 100, 102, 103, 179, 180, 183, 299, 300, 329, 330, 389]) {
+    const split = copy(sample.request); split.frameRange = { startFrame: frame, frameCount: 1 };
+    const chunk = validateRequest(split);
+    assert.equal(renderFrame(chunk, images, frame).canvas.toBuffer('image/png').equals(renderFrame(validated, images, frame).canvas.toBuffer('image/png')), true);
+  }
+  assert.equal(motionAt(validated, 0).poseId, null); assert.equal(motionAt(validated, 1000).poseId, null);
+});
+
+test('pose sequences reject missing neutral return, invalid timing, misregistration, rejection and ambiguous controls', () => {
+  const sample = fixture('pose-sequence');
+  const reject = (change) => { const r = copy(sample.request); change(r); assert.throws(() => validateRequest(r), MotionInputError); };
+  reject((r) => r.controls[0].sequence.steps.pop());
+  reject((r) => r.controls[0].sequence.steps[0].poseId = 'wave-pose');
+  reject((r) => r.controls[0].sequence.steps.at(-1).frame = 9001);
+  reject((r) => r.controls[0].sequence.steps = Array.from({ length: 17 }, (_, frame) =>
+    ({ frame, poseId: frame === 0 || frame === 16 ? null : 'wave-pose' })));
+  reject((r) => r.controls[0].sequence.steps[1].frame = '100');
+  reject((r) => r.controls[0].sequence.steps[1].frame = 0);
+  reject((r) => r.controls[0].sequence.steps.at(-1).frame = Number.MAX_SAFE_INTEGER + 1);
+  reject((r) => r.controls[0].sequence.steps[1].poseId = 'missing-pose');
+  reject((r) => r.preparedScene.poses[0].transform.scaleX = 1.01);
+  reject((r) => r.preparedScene.poses[0].reviewStatus = 'REJECTED');
+  reject((r) => r.preparedScene.layers.find((l) => l.kind === 'ENVIRONMENT').alpha.translucentPixels = 1);
+  reject((r) => r.controls.push(copy(r.controls[0])));
+  reject((r) => r.controls.push({ id: 'blink-extra', kind: 'blink', capabilityId:
+    r.preparedScene.motionCapabilities.find((c) => c.control === 'POSE_BLEND').id, amount: 1 }));
+  reject((r) => r.controls.push({ id: 'attached-steam', kind: 'steam', capabilityId:
+    r.preparedScene.motionCapabilities.find((c) => c.control === 'EFFECT_RATE').id, ratePerSecond: 1 }));
+});
+
+test('pose sequence frame output still verifies every source pin before claiming output', async (t) => {
+  const sample = fixture('pose-sequence');
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'melotrail-pose-sequence-'));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const request = copy(sample.request); request.frameRange = { startFrame: 100, frameCount: 3 };
+  const receipt = await renderBounded(request, sample.projectRoot, path.join(temporary, 'good'));
+  assert.equal(receipt.frames.length, 3);
+  assert.equal(receipt.tool.version, '1.2.0');
+  assert.ok(receipt.sourcePins.includes(request.preparedScene.poses.find((p) => p.id === 'wave-pose').image.artifact.sha256));
+  request.preparedScene.poses.find((p) => p.id === 'wave-pose').image.artifact.sha256 = 'f'.repeat(64);
+  await assert.rejects(() => renderBounded(request, sample.projectRoot, path.join(temporary, 'bad')), /SHA-256 pin/);
+  assert.equal(fs.existsSync(path.join(temporary, 'bad')), false);
+});
+
 test('rejects unsafe range endpoints and invocations above the 300-frame bound', () => {
   const sample = fixture('wide-scenery');
   const unsafe = copy(sample.request);

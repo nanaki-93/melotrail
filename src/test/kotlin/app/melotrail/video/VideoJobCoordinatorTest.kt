@@ -57,6 +57,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import app.melotrail.video.domain.MAX_JAVASCRIPT_SAFE_INTEGER
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.assertNotEquals
@@ -86,6 +95,53 @@ internal fun motionDescriptor(
 )
 
 class VideoJobCoordinatorTest {
+    @Test
+    fun `durable pose sequence descriptors reject missing return unsafe timing rejection and combined subject controls`() {
+        val original = motionDescriptor(listOf(VideoGenerationDependencyPin("renderer", "9".repeat(64),
+            ownedPath = "/runtime/render.cjs")), 0, 30, 73)
+        val request = Json.parseToJsonElement(original.requestJson).jsonObject
+        val rawScene = request.getValue("preparedScene").jsonObject
+        val alpha = buildJsonObject { put("opaquePixels", 1200); put("translucentPixels", 0); put("transparentPixels", 400) }
+        val scene = JsonObject(rawScene.toMutableMap().apply {
+            put("layers", kotlinx.serialization.json.JsonArray(rawScene.getValue("layers").jsonArray.map { element ->
+                if (element.jsonObject["id"]?.jsonPrimitive?.content == "subject") JsonObject(element.jsonObject + ("alpha" to alpha)) else element
+            }))
+            put("poses", kotlinx.serialization.json.JsonArray(rawScene.getValue("poses").jsonArray.map { JsonObject(it.jsonObject + ("alpha" to alpha)) }))
+            put("motionCapabilities", kotlinx.serialization.json.JsonArray(rawScene.getValue("motionCapabilities").jsonArray +
+                JsonObject(rawScene.getValue("motionCapabilities").jsonArray.single().jsonObject.toMutableMap().apply {
+                    put("id", JsonPrimitive("replace-capability")); put("control", JsonPrimitive("POSE_REPLACE"))
+                    put("minimum", JsonPrimitive(0)); put("maximum", JsonPrimitive(1)); put("defaultValue", JsonPrimitive(0))
+                })))
+        })
+        val sequence = app.melotrail.video.domain.VideoPoseSequence(listOf(
+            app.melotrail.video.domain.VideoPoseSequenceStep(0), app.melotrail.video.domain.VideoPoseSequenceStep(2, "pose"),
+            app.melotrail.video.domain.VideoPoseSequenceStep(6),
+        ))
+        val control = buildJsonObject {
+            put("id", "wave"); put("kind", "poseSequence"); put("capabilityId", "replace-capability")
+            put("sequence", Json.encodeToJsonElement(app.melotrail.video.domain.VideoPoseSequence.serializer(), sequence))
+        }
+        val good = JsonObject(request + ("preparedScene" to scene) +
+            ("controls" to kotlinx.serialization.json.JsonArray(listOf(control))))
+        val admitted = original.copy(requestJson = good.toString())
+        assertEquals(30L, admitted.frameCount)
+        fun reject(bad: JsonObject) { assertFailsWith<IllegalArgumentException> { original.copy(requestJson = bad.toString()) } }
+        val noReturn = buildJsonObject { put("steps", buildJsonArray {
+            add(buildJsonObject { put("frame", 0) }); add(buildJsonObject { put("frame", 2); put("poseId", "pose") })
+            add(buildJsonObject { put("frame", 6); put("poseId", "pose") })
+        }) }
+        reject(JsonObject(good + ("controls" to kotlinx.serialization.json.JsonArray(listOf(JsonObject(control + ("sequence" to noReturn)))))))
+        reject(JsonObject(good + ("controls" to kotlinx.serialization.json.JsonArray(listOf(control) + request.getValue("controls").jsonArray))))
+        reject(JsonObject(good + ("controls" to kotlinx.serialization.json.JsonArray(listOf(JsonObject(control + ("unknown" to JsonPrimitive(1))))))))
+        val rejectedScene = JsonObject(scene + ("poses" to kotlinx.serialization.json.JsonArray(scene.getValue("poses").jsonArray.map {
+            JsonObject(it.jsonObject + ("reviewStatus" to JsonPrimitive("REJECTED")))
+        })))
+        reject(JsonObject(good + ("preparedScene" to rejectedScene)))
+        assertFailsWith<IllegalArgumentException> { sequence.copy(steps = sequence.steps.map {
+            if (it.poseId != null) it.copy(frame = MAX_JAVASCRIPT_SAFE_INTEGER + 1) else it
+        }) }
+    }
+
     @Test
     fun `cancellation after durable admission but before launch prevents initial and retry backend invocation`() {
         listOf(false, true).forEach { hosted ->

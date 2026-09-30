@@ -1,9 +1,9 @@
 {
   "schema": "melotrail-controlled-motion-runtime",
-  "version": 3,
+  "version": 4,
   "tool": {
     "id": "melotrail-controlled-motion",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "entryPoint": "tools/video-motion/render.cjs",
     "installCommand": "npm ci --prefix tools/video-motion",
     "fixtureCommand": "./gradlew :test --tests 'app.melotrail.video.VideoMotionDescriptorFixtureTest'",
@@ -27,6 +27,8 @@
     "maximumBlinkAmount": 1,
     "maximumBreathPixels": 4,
     "maximumHeadDegrees": 3,
+    "maximumPoseSequenceSteps": 16,
+    "maximumPoseSequenceFrames": 9000,
     "maximumSteamRatePerSecond": 8,
     "maximumSteamRisePixelsPerSecond": 28,
     "maximumCameraDurationFrames": 9000,
@@ -37,6 +39,7 @@
   },
   "supportedControls": [
     "POSE_BLEND:blink",
+    "POSE_REPLACE:absolute-frame-pose-sequence",
     "TRANSLATE_Y:breathing",
     "ROTATE:headGesture",
     "EFFECT_RATE:steam",
@@ -44,6 +47,7 @@
   ],
   "limitations": [
     "Blinking requires a supplied aligned pose and is clipped to the supplied subject silhouette.",
+    "Pose sequences replace one registered subject with supplied full cutouts at 3–16 absolute-frame steps over at most 9000 frames, with neutral entry and return. They neither cross-dissolve nor generate in-between artwork; held frames are not native articulated motion. Blink, breathing, head gesture and subject-attached effects cannot combine with a sequence.",
     "Breathing requires a separated subject over a supplied clean environment layer.",
     "Head gestures require a supplied HEAD_REGION mask and separated subject; drinking and page-turning are unsupported.",
     "Steam is available only for a requested EFFECT_RATE capability with a supplied V18a effect anchor, follows supported source-subject motion, and remains behind recorded foreground occlusion for moving or static sources.",

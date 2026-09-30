@@ -451,7 +451,7 @@ data class VideoMotionCapability(
 enum class VideoMotionTargetType { LAYER, POSE, EFFECT_ANCHOR, SCENERY_COVERAGE }
 
 @Serializable
-enum class VideoMotionControl { IMAGE_TO_VIDEO, TRANSLATE_X, TRANSLATE_Y, ROTATE, SCALE, OPACITY, POSE_BLEND, EFFECT_RATE }
+enum class VideoMotionControl { IMAGE_TO_VIDEO, TRANSLATE_X, TRANSLATE_Y, ROTATE, SCALE, OPACITY, POSE_BLEND, POSE_REPLACE, EFFECT_RATE }
 
 @Serializable
 enum class VideoMotionUnit { PIXELS, DEGREES, RATIO, PER_SECOND }
@@ -528,7 +528,7 @@ private fun VideoMotionCapability.requireSupportedShape() {
             require(unit == VideoMotionUnit.RATIO && targetType == VideoMotionTargetType.LAYER && minimum >= 0.0 && maximum <= 1.0) {
                 "Opacity controls require a layer target and bounds from zero to one"
             }
-        VideoMotionControl.POSE_BLEND ->
+        VideoMotionControl.POSE_BLEND, VideoMotionControl.POSE_REPLACE ->
             require(unit == VideoMotionUnit.RATIO && targetType == VideoMotionTargetType.POSE && minimum >= 0.0 && maximum <= 1.0) {
                 "Pose-blend controls require a pose target and bounds from zero to one"
             }

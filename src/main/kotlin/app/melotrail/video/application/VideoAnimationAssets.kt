@@ -344,6 +344,7 @@ class VideoAnimationAssets {
             }
             poses.forEach { pose ->
                 add(VideoMotionTargetType.POSE, pose.id, VideoMotionControl.POSE_BLEND, VideoMotionUnit.RATIO, 0.0, 1.0, 0.0)
+                add(VideoMotionTargetType.POSE, pose.id, VideoMotionControl.POSE_REPLACE, VideoMotionUnit.RATIO, 0.0, 1.0, 0.0)
             }
         }
         coverage.forEach { item ->
@@ -386,7 +387,7 @@ class VideoAnimationAssets {
             requested.control in setOf(VideoMotionControl.ROTATE, VideoMotionControl.SCALE) &&
                 layer?.kind == VideoLayerKind.SUBJECT && layer.pivot == null ->
                 VideoAnimationAssetDeficiencyCode.MISSING_PIVOT
-            requested.control == VideoMotionControl.POSE_BLEND && poses.none { it.id == requested.targetId } ->
+            requested.control in setOf(VideoMotionControl.POSE_BLEND, VideoMotionControl.POSE_REPLACE) && poses.none { it.id == requested.targetId } ->
                 VideoAnimationAssetDeficiencyCode.MISSING_POSE
             requested.control in setOf(VideoMotionControl.TRANSLATE_X, VideoMotionControl.TRANSLATE_Y) &&
                 coverage.any { it.id == requested.targetId } -> VideoAnimationAssetDeficiencyCode.INSUFFICIENT_SCENERY_COVERAGE
@@ -437,7 +438,7 @@ class VideoAnimationAssets {
     private companion object {
         const val FINISHED_SCENE_LAYER_ID = "finished-scene"
         const val VALIDATOR_ID = "prepared-animation-assets"
-        const val VALIDATOR_VERSION = "2"
+        const val VALIDATOR_VERSION = "3"
         val SUBJECT_CONTROLS = setOf(
             VideoMotionControl.TRANSLATE_X,
             VideoMotionControl.TRANSLATE_Y,

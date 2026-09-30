@@ -431,6 +431,18 @@ data class VideoControlledMotionDescriptor(
         require(controls.all { control ->
             if (control !is JsonObject || control["id"] !is JsonPrimitive || control["capabilityId"] !is JsonPrimitive ||
                 control["id"]?.jsonPrimitive?.isString != true || control["capabilityId"]?.jsonPrimitive?.isString != true) return@all false
+            if (control["kind"]?.jsonPrimitive?.content == "poseSequence") {
+                if (control.keys != setOf("id", "capabilityId", "kind", "sequence") ||
+                    !safeId.matches(control.getValue("id").jsonPrimitive.content) || !subjectKinds.add("poseSequence")) return@all false
+                val subject = runCatching {
+                    val sequence = Json.decodeFromString(VideoPoseSequence.serializer(), control.getValue("sequence").toString())
+                    sequence.subject(scene, control.getValue("capabilityId").jsonPrimitive.content)
+                }.getOrNull() ?: return@all false
+                if (subject.bounds.coordinateSpaceId != json.getValue("canvas").jsonObject.getValue("coordinateSpaceId").jsonPrimitive.content ||
+                    (controlledSubject != null && controlledSubject != subject.id)) return@all false
+                controlledSubject = subject.id
+                return@all true
+            }
             val numeric = when (control["kind"]?.jsonPrimitive?.content) {
                 "blink" -> Triple("amount", 0.0, 1.0)
                 "breathing" -> Triple("amplitudePixels", 0.0, 4.0)
@@ -502,7 +514,14 @@ data class VideoControlledMotionDescriptor(
                 (control[numeric.first] as? JsonPrimitive)?.let { !it.isString && it.content.toDoubleOrNull()?.let { n -> n.isFinite() && n in numeric.second..numeric.third } == true } == true &&
                 (numeric.first != "ratePerSecond" || control["risePixelsPerSecond"] == null ||
                     (control["risePixelsPerSecond"] as? JsonPrimitive)?.let { !it.isString && it.content.toDoubleOrNull()?.let { n -> n.isFinite() && n in 0.01..28.0 } == true } == true)
-        } && controls.map { it.jsonObject.getValue("id").jsonPrimitive.content }.distinct().size == controls.size &&
+        } && ("poseSequence" !in subjectKinds || subjectKinds.size == 1 && controls.none { control ->
+            val c = control.jsonObject
+            c["kind"]?.jsonPrimitive?.content == "steam" && scene.effectAnchors.any { anchor ->
+                anchor.layerId == controlledSubject && scene.motionCapabilities.any { capability ->
+                    capability.id == c["capabilityId"]?.jsonPrimitive?.content && capability.targetId == anchor.id
+                }
+            }
+        }) && controls.map { it.jsonObject.getValue("id").jsonPrimitive.content }.distinct().size == controls.size &&
             (controlledSubject == null || scene.layers.count {
                 it.kind == VideoLayerKind.ENVIRONMENT && it.bounds.coordinateSpaceId ==
                     json.getValue("canvas").jsonObject.getValue("coordinateSpaceId").jsonPrimitive.content &&
