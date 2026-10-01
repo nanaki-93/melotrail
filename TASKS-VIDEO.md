@@ -467,6 +467,29 @@ not permission to publish commercially, and does not admit Blender evaluation,
 video/media work, production imports or later tasks. VG2-14 still needs an exact-
 artifact user decision. The coordinator alone changes task status.
 
+VG2-12 coordinator disposition (2026-10-01): current candidate HEAD
+`1ed449a7cc76271d30046e24e7883ab18474494a`, with only unrelated untracked
+`.venv-transcription-spike/`, `.venv-worker/`, `.venv/` and `tools/__pycache__/`
+preserved; no tracked changes or submodules at preflight. JDK 21.0.11,
+Node 25.8.2, npm 11.14.1 and installed Canvas 0.1.80 match the configured
+pins. Read-only `/opt/homebrew/bin/node build/vg2-12-pool-20261001-a1/inspect.cjs --check`
+passed: all 31 PNG hashes/decoded alpha facts match, and all eight original
+51–58 publication paths remain absent with exact candidate-v2 bytes retained.
+`/opt/homebrew/bin/node build/vg2-12-pool-20261001-a1/check-kit.cjs` passed:
+the pinned proposal retains neutral 48 as an opaque composed reference, missing
+parts and unknown shoulder/elbow/wrist pivots, swept support and joint limits.
+The retained `kit-proposal.json` SHA-256 is
+`ca65b5aa4e8a0e2b8c2a60e958b0638b7ff04d7e5616e1878337e1d97a13decc`;
+all six VG2-12 owner files remain unchanged. `git diff --check` passed;
+headless `./gradlew -I "$HEADLESS_INIT" :test --tests '*DocumentationIntegrityTest'`
+passed (1 executed, 5 up-to-date), with `MidiCoreNativeResponsivenessTest`
+excluded, **not passed**. The historical unresolved-rights classification
+remains as recorded; the *later* user-reported local derivative
+permission and eight-target/16-call VG2-13 allowance above are separate, not
+independent upstream/commercial/publication clearance. No art, rig, media or
+VG2-13 preparation was started. This closes inspection/proposal reconciliation
+only, not part readiness or VG2-14 appearance approval.
+
 These rows implement the selected method **only on a future bounded run**. They
 are not a second product workflow or permission to launch an unbounded sequence.
 Every row produces a concrete artifact/check; the user gates decide whether to
@@ -475,7 +498,7 @@ movie as an animation baseline.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
-| VG2-12 | Inspect the existing TABI source pool and retained preparation; freeze one view/outfit, neutral 48 as starting appearance reference and a five-second/150-frame neutral → lift → two wrist beats → lower → neutral test. Identify exact reusable parts, missing hidden surfaces/hand shapes, joint limits, fixed/contact regions and future output owners. Confirm rights/source provenance and propose the smallest finite artwork/rig/test budgets; no asset creation or native render. | CORE-01 | TODO |
+| VG2-12 | Inspect the existing TABI source pool and retained preparation; freeze one view/outfit, neutral 48 as starting appearance reference and a five-second/150-frame neutral → lift → two wrist beats → lower → neutral test. Identify exact reusable parts, missing hidden surfaces/hand shapes, joint limits, fixed/contact regions and future output owners. Confirm rights/source provenance and propose the smallest finite artwork/rig/test budgets; no asset creation or native render. | CORE-01 | DONE |
 | VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | TODO |
 | VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | WAITING_USER |
 | VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | TODO |
