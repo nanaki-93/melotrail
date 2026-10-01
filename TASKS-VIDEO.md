@@ -117,9 +117,12 @@ input/import and process-boundary proof; a standalone pass cannot supply it.
    budget needs a new explicit run instruction. Usage interruptions resume the same
    stage; missing human evidence is not a code failure. Independent review examines
    the exact tested candidate, not a stale commit or historical receipt.
-6. Commit only if the implementation run authorizes commits, and only task-owned
-   changes plus the status update. Do not reset/stash the user's tree, move live
-   branch refs, push or start a scheduler. Old scheduler task IDs are not aliases.
+6. A workflow may commit each approved step/task/feature, including validation-only
+   checkpoints, when its implementation run authorizes commits. Commit only
+   task-owned changes plus any coordinator-owned status update; the builder leaves
+   changes uncommitted for review when the runner owns commits. Do not reset/stash
+   the user's tree, move live branch refs, push or start a scheduler. Old scheduler
+   task IDs are not aliases.
 7. DONE records concise evidence beside the row: current build/input identity,
    commands with executed/cached outcomes, artifact location and limitations.
    Larger artifacts belong in ignored `build/` or selected external storage.
@@ -375,6 +378,29 @@ Blender test is rejected; VG2-07 will review only a new articulated VG2-18 resul
 | VG2-10 | User reviews that second action's exact moving test, readable movement and compatibility with the approved rig/wave/neutral. Static reading or a blink is not a second demonstrated activity. Accept or request repairs; no full-film approval or automatic selection. | VG2-09 | WAITING_USER |
 | VG2-11 | Historical standalone Blender seven-pose feasibility: source-pixel proof passes, user rejects inconsistent/clipped arms, export transfer check fails. Preserve all evidence and consumed packets; no encoding-only follow-up or automatic repair. Route 1 is selected for a fresh proof under VG2-12–20, not implemented here. | VG2-02 | BLOCKED |
 
+VG2 preview baseline checkpoint (2026-10-01): candidate HEAD
+`787b4c7ce7854d48666bed96f441b8628f21b96c`, with the pre-existing
+unstaged queue commit-permission clarification; unrelated untracked `.venv*` and
+`tools/__pycache__/` were preserved. No submodules. JDK 21.0.11, Node 25.8.2,
+and installed Canvas 0.1.80 match configured pins. The headless `test build
+--dry-run` included root/desktop tests and builds but no native capture/install.
+Ten focused root selectors (`VideoClipGenerationTest`,
+`VideoControlledMediaStageTest`, `VideoJobCoordinatorTest`,
+`VideoResultImportTest`, `VideoTakeReviewTest`, `VideoProjectStoreTest`,
+`LocalVideoBackendTest`, `ComfyVideoClientTest`,
+`TargetArchitectureRulesTest`, `DocumentationIntegrityTest`) passed with six
+executed tasks and no build cache. The filtered `make test` passed (one executed,
+13 up-to-date; root 794 tests, desktop 239 tests, zero failures/errors);
+`make build` passed (14 up-to-date), and `git diff --check` passed. Logs are in
+ignored `build/vg2-step-1.1-baseline/`. A temporary init script enforced
+`java.awt.headless=true` and excluded `MidiCoreNativeResponsivenessTest`:
+**excluded, not passed**. These fixture suites cover durable claims and uncertain
+reconciliation, current-attempt immutable import, independent review/selection,
+separate ComfyUI I2V and indeterminate progress; no regression was reproduced,
+so no backend owner changed. No historical media packet, model, app window, take
+or MIDI artifact was run or modified. This is a baseline checkpoint only, not
+VG2-12 kit readiness, articulated motion, user approval or VG2 completion.
+
 ### Route 1 — Standalone rig proof tasks
 
 These rows implement the selected method **only on a future bounded run**. They
@@ -402,8 +428,11 @@ Inspect/reuse the direct supervisor/path/pixel tests in
 `build/vg2-blender-phase-3noEBfTw/` by copy into a new owner; never modify its sealed
 packet, helper files or media. A scratch `.blend`, scripts and input/action data
 are proof artifacts, not a production rig schema or second job ledger. No edits
-to Kotlin/Compose/runtime manifests, no old project/take mutations, no downloads,
-commits or automatic application integration within VG2-12–20.
+to Kotlin/Compose/runtime manifests, no old project/take mutations, no downloads
+or automatic application integration within VG2-12–20. The user explicitly
+permits task-scoped commits for each approved step/task/feature in this route,
+including validation-only checkpoints, under the execution contract above;
+this permission does not admit artwork, native media, spending or later gates.
 
 **Preparation rules:** inspect the actual assets listed in PLAN-VIDEO and their existing
 receipts; names/presence do not prove alpha, anatomy, motion support or rights.
