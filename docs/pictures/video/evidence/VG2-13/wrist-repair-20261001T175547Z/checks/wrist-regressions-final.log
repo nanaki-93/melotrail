@@ -1,0 +1,13 @@
+✔ the full authored hand/wrist/cuff bridge survives; a slit missed by joint-centre checks is rejected (48.695459ms)
+✔ generated green fabric is behind the existing sleeve, while wrist and cuff are drawn exactly once (33.365167ms)
+✔ transparent input margins are real alpha; supplied generated files remain hash-bound (58.328292ms)
+✔ only faint generated edge pixels can be confined; meaningful out-of-support art fails (0.6645ms)
+✔ the full cuff boundary has sleeve support in all four poses, including the real v2 gap witnesses (1239.336666ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1548.009542

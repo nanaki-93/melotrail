@@ -1,0 +1,12 @@
+{
+  "ordinal": 5,
+  "target": "hand_neutral",
+  "targetAttempt": 1,
+  "status": "OUTPUT_RETAINED",
+  "source": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-b14348d9-f4d4-4eff-8eef-25dcb843471b.png",
+  "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/attempts/hand-neutral-1.png",
+  "sha256": "1ea8c932f5e7adec901faac367eb6a3ec95571351d8f40fb58fed7815b02a865",
+  "tool": "built-in image_gen",
+  "prompt": "inputs/neutral-prompt.txt",
+  "appearance": "UNREVIEWED; scene assembly pending; not exact cuff pixel equality across drawings"
+}

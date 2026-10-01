@@ -1,0 +1,168 @@
+{
+  "version": "v2",
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v2.png",
+    "sha256": "cf252244a24e4222b96f9320814f3e9b1855dcf45359aad2664b488c2c22648a"
+  },
+  "specs": {
+    "open": {
+      "file": "attempts/hand-wave-1.png",
+      "sha256": "c5f5bbd41dc709ba83eddf3a4594716f4c09ec300e76134d354ed7d150343d70",
+      "base": [
+        550,
+        1120
+      ],
+      "scale": 0.14,
+      "entry": [
+        592,
+        765
+      ],
+      "bridge": [
+        520,
+        716,
+        185,
+        72
+      ],
+      "cuffContour": "M 0 0 H 1109 V 950 H 893 Q 884 1015 848 1058 Q 798 1115 747 1137 Q 684 1166 598 1162 Q 495 1150 422 1100 Q 293 1024 193 889 H 0 Z"
+    },
+    "neutral": {
+      "file": "attempts/hand-neutral-1.png",
+      "sha256": "1ea8c932f5e7adec901faac367eb6a3ec95571351d8f40fb58fed7815b02a865",
+      "base": [
+        620,
+        1120
+      ],
+      "scale": 0.14,
+      "entry": [
+        650,
+        748
+      ],
+      "bridge": [
+        587,
+        680,
+        170,
+        67
+      ],
+      "cuffContour": "M 0 0 H 1109 V 909 H 992 Q 975 1000 919 1048 Q 851 1111 784 1134 Q 710 1148 637 1137 Q 548 1120 480 1080 Q 333 1009 244 861 H 0 Z"
+    }
+  },
+  "facts": [
+    {
+      "state": "neutral",
+      "placement": {
+        "angle": -0.3711613294090541,
+        "scale": 0.14,
+        "at": [
+          833.041330294322,
+          609.3469386125645
+        ],
+        "base": [
+          620,
+          1120
+        ],
+        "cuffContour": "M 0 0 H 1109 V 909 H 992 Q 975 1000 919 1048 Q 851 1111 784 1134 Q 710 1148 637 1137 Q 548 1120 480 1080 Q 333 1009 244 861 H 0 Z"
+      },
+      "wristEntry": [
+        818.0660306562824,
+        559.2899031355116
+      ],
+      "wristEntryHoles": 0,
+      "confinedGeneratedEdge": {
+        "pixels": 1,
+        "maxAlpha": 1
+      },
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "c5b2b2038d9b3f2259134e8c30025acfc6b3c508a1ba0b84df74605de253f1c7"
+    },
+    {
+      "state": "lift",
+      "placement": {
+        "angle": -0.11983391712187053,
+        "scale": 0.14,
+        "at": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "base": [
+          550,
+          1120
+        ],
+        "cuffContour": "M 0 0 H 1109 V 950 H 893 Q 884 1015 848 1058 Q 798 1115 747 1137 Q 684 1166 598 1162 Q 495 1150 422 1100 Q 293 1024 193 889 H 0 Z"
+      },
+      "wristEntry": [
+        883.6223205324723,
+        536.7892013872163
+      ],
+      "wristEntryHoles": 0,
+      "confinedGeneratedEdge": {
+        "pixels": 0,
+        "maxAlpha": 0
+      },
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "ddab2fde454a2a252a654710f4a304231c4be524a352294d09eaa3b656ca7d66"
+    },
+    {
+      "state": "wrist_in",
+      "placement": {
+        "angle": -0.32927342736119003,
+        "scale": 0.14,
+        "at": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "base": [
+          550,
+          1120
+        ],
+        "cuffContour": "M 0 0 H 1109 V 950 H 893 Q 884 1015 848 1058 Q 798 1115 747 1137 Q 684 1166 598 1162 Q 495 1150 422 1100 Q 293 1024 193 889 H 0 Z"
+      },
+      "wristEntry": [
+        873.2193304418445,
+        537.9043920290111
+      ],
+      "wristEntryHoles": 0,
+      "confinedGeneratedEdge": {
+        "pixels": 0,
+        "maxAlpha": 0
+      },
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "be3de9f72fa8b0c3538069574e8399eb648ebe2bbfe6f86fc06c98b6d72f3454"
+    },
+    {
+      "state": "wrist_out",
+      "placement": {
+        "angle": 0.089605593117449,
+        "scale": 0.14,
+        "at": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "base": [
+          550,
+          1120
+        ],
+        "cuffContour": "M 0 0 H 1109 V 950 H 893 Q 884 1015 848 1058 Q 798 1115 747 1137 Q 684 1166 598 1162 Q 495 1150 422 1100 Q 293 1024 193 889 H 0 Z"
+      },
+      "wristEntry": [
+        894.029841501997,
+        537.8612835958866
+      ],
+      "wristEntryHoles": 0,
+      "confinedGeneratedEdge": {
+        "pixels": 0,
+        "maxAlpha": 0
+      },
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "f12de3fc8e1cb0d7bf8f62afc693406acbbbc143ba075bf5eff322b247f0f198"
+    }
+  ],
+  "appearance": "UNREVIEWED",
+  "limitations": [
+    "Four stills only; no rig/motion approval.",
+    "The two generated wrist drawings retain their raw alpha and differ in cuff pixels; transition/cloth consistency remains a later moving proof."
+  ]
+}

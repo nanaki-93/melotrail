@@ -513,6 +513,23 @@ filtered make-test/build receipts live in `checks/`; the native-window test is
 excluded, not passed. Scoped inspection scratch is bundled and deleted; the
 temporary headless Gradle init is removed by the validation script's exit trap.
 
+VG2-13 connected-wrist evidence (2026-10-02, user local date):
+`pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/` preserves the user's
+v5 rejection, bounded correction admission, two raw built-in image edits and exact
+prompts, four exported layers, three static candidates and prior-helper snapshots.
+Selected review SHA-256 is `98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968`.
+The new `tools/video-motion/vg2-wrist-attachment.test.cjs` checks the entire authored
+wrist bridge rather than only its centre; a cut-wrist negative keeps that centre
+opaque but fails the full region. Actual v1/v2 negatives retain the overlay patch,
+faint protected-pixel mismatch and cuff gap. Rear fabric overlap closes the gap
+while preserving the supplied forearm and drawing the wrist/front cuff once.
+The first negative test fixture omitted native ImageData dimensions; correcting
+that test setup does not modify artwork or erase its failing receipt. Exports
+retain alpha coverage and native registration. Headless focused/Node/make-test/
+build receipts are in `checks/`; the native-window class is excluded, not passed.
+Tests cannot approve anatomy, the inherited inner sleeve/body junction, differing
+cuff drawings or their moving transition. VG2-14 remains a human appearance gate.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

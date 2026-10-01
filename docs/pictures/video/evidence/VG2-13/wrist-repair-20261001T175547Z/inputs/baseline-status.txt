@@ -1,0 +1,14 @@
+ M AGENTS.md
+ M PLAN-AUDIO.md
+ M PLAN-VIDEO.md
+ M README.md
+ M TASKS-AUDIO.md
+ M TASKS-VIDEO.md
+ M docs/ARCHITECTURE.md
+ M docs/TABI_VIDEO.md
+ M docs/VALIDATION.md
+?? .venv-transcription-spike/
+?? .venv-worker/
+?? .venv/
+?? docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/
+?? tools/__pycache__/

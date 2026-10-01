@@ -1,0 +1,62 @@
+{
+  "schema": "tightly-scoped-wrist-repair-1",
+  "owner": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z",
+  "userInstruction": "no, these assets are not good enough yet, the hand are still not good, it seems not linked to the arm. please fix it",
+  "rejectedCandidate": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png",
+    "sha256": "440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc"
+  },
+  "decision": "REJECTED \u2014 hands still appear disconnected from the arm",
+  "scope": "Repair the neutral and wave wrist attachment, integrated cuff edge and local sleeve connection. Reuse existing reference48 appearance and same two hand states. Static review only.",
+  "priorConsumption": {
+    "imageAttempts": 3,
+    "derivativeFiles": 15,
+    "staticPasses": 5
+  },
+  "newLimits": {
+    "imageAttempts": 4,
+    "perHandTarget": 2,
+    "derivativeFiles": 8,
+    "staticPasses": 3
+  },
+  "imageTargets": [
+    "hand_neutral",
+    "hand_wrist_beat"
+  ],
+  "generationPolicy": "At most one initial and one targeted correction for each of the two already-admitted hand targets. No automatic retry after quota/connection/incomplete-stream failure. Prior target usage remains consumed.",
+  "generationTool": "built-in image_gen per current imagegen skill; no CLI/provider/model fallback",
+  "excluded": [
+    "Blender",
+    "video/media",
+    "production imports",
+    "new gestures",
+    "face/body/scenery redesign"
+  ],
+  "pins": [
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/checks/kit-freeze.json",
+      "sha256": "962890aad6245338563fe5210668961dc38711bb4284bbeed2de465c26e02e8b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png",
+      "sha256": "440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/scripts/repair.cjs",
+      "sha256": "a8924684e86585289d05d68466dd6f3793e0483ff5dfbb9cea1e9201fbe14686"
+    },
+    {
+      "path": "tools/video-motion/vg2-contour-repair.test.cjs",
+      "sha256": "e706ae9639784eb3ac1ade3e0643ab65e10751b2faeacfe24816bbfeaae3c7cb"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+      "sha256": "5e3890233ad57764b0c7b7a0279934d4e1dc9dfd778184f961c0195543660dc5"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/48-matching-neutral-return-baseline-review.png",
+      "sha256": "c6dc10f9d03a0a0548645f62594d3f36a6ba5a772e3a0717fb72e96c1a81865b"
+    }
+  ],
+  "status": "IN_PROGRESS; exact new appearance approval pending"
+}

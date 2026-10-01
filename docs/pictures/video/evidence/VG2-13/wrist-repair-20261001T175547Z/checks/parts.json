@@ -1,0 +1,87 @@
+{
+  "schema": "standalone-wrist-layer-exports-1",
+  "parts": [
+    {
+      "kind": "derivative",
+      "ordinal": 16,
+      "hand": "open",
+      "layer": "front",
+      "destination": "parts/open-front.png",
+      "sha256": "6a3a046b1bf62b765918fc84f5060e5c84f148c378e3eeb3f60a920f88dec8d2",
+      "width": 1109,
+      "height": 1418,
+      "source": "attempts/hand-wave-1.png",
+      "sourceSha256": "c5f5bbd41dc709ba83eddf3a4594716f4c09ec300e76134d354ed7d150343d70",
+      "anchor": [
+        550,
+        1120
+      ],
+      "sceneScale": 0.14
+    },
+    {
+      "kind": "derivative",
+      "ordinal": 17,
+      "hand": "open",
+      "layer": "overlap",
+      "destination": "parts/open-overlap.png",
+      "sha256": "859cb421af6cd434b2b6fb3b02223d9a6bfac01c9b3f7192d22583d5bf8c3423",
+      "width": 1109,
+      "height": 1418,
+      "source": "attempts/hand-wave-1.png",
+      "sourceSha256": "c5f5bbd41dc709ba83eddf3a4594716f4c09ec300e76134d354ed7d150343d70",
+      "anchor": [
+        550,
+        1120
+      ],
+      "sceneScale": 0.14
+    },
+    {
+      "kind": "derivative",
+      "ordinal": 18,
+      "hand": "neutral",
+      "layer": "front",
+      "destination": "parts/neutral-front.png",
+      "sha256": "16ae432fb9b63d1185297cd23e710a2ff8dd114d6a40b3f31b43550ebe550651",
+      "width": 1109,
+      "height": 1418,
+      "source": "attempts/hand-neutral-1.png",
+      "sourceSha256": "1ea8c932f5e7adec901faac367eb6a3ec95571351d8f40fb58fed7815b02a865",
+      "anchor": [
+        620,
+        1120
+      ],
+      "sceneScale": 0.14
+    },
+    {
+      "kind": "derivative",
+      "ordinal": 19,
+      "hand": "neutral",
+      "layer": "overlap",
+      "destination": "parts/neutral-overlap.png",
+      "sha256": "cf734e9489a82cae424b692addacf7835b27742633a129dc29d2c6db8014962f",
+      "width": 1109,
+      "height": 1418,
+      "source": "attempts/hand-neutral-1.png",
+      "sourceSha256": "1ea8c932f5e7adec901faac367eb6a3ec95571351d8f40fb58fed7815b02a865",
+      "anchor": [
+        620,
+        1120
+      ],
+      "sceneScale": 0.14
+    }
+  ],
+  "drawOrder": [
+    "upper sleeve",
+    "wrist overlap",
+    "existing forearm",
+    "connected hand/wrist/cuff front",
+    "existing foreground"
+  ],
+  "registration": "Front and overlap share native canvas, origin, scale and transform. Never scale or shift the hand independently.",
+  "alpha": "Raw generation files retained; exported layers use only the declared complementary cuff masks, with no RGB painting.",
+  "appearance": "PENDING VG2-14",
+  "limitations": [
+    "Separate neutral/open cuff drawings are not yet proven in motion.",
+    "Four reviewed-pose candidates only; no rig/all-frame/hand-opening transition proof."
+  ]
+}

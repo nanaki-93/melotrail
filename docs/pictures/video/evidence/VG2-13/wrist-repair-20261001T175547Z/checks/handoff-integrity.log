@@ -1,0 +1,24 @@
+{
+  "integrity": "PASS",
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png",
+    "sha256": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968"
+  },
+  "consumption": {
+    "imageAttempts": 5,
+    "partDerivatives": 19,
+    "staticPasses": 8
+  },
+  "newUse": {
+    "imageAttempts": 2,
+    "partDerivatives": 4,
+    "staticPasses": 3
+  },
+  "appearance": "PENDING user VG2-14 decision",
+  "limitations": [
+    "Four stills only; no rig/motion approval.",
+    "The two generated wrist drawings retain their raw alpha and differ in cuff pixels; transition/cloth consistency remains a later moving proof.",
+    "The prior inner sleeve/body junction is inherited; this repair does not award full silhouette or moving approval.",
+    "Historical build dependencies remain pinned; no clean-checkout or app-delivery claim."
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "decision": "REJECTED",
+  "artifact": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png",
+    "sha256": "440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc"
+  },
+  "userFeedback": "no, these assets are not good enough yet, the hand are still not good, it seems not linked to the arm. please fix it",
+  "implication": "VG2-13 reopened for wrist attachment correction; VG2-14 not passed; no rig/media expansion.",
+  "priorTests": "Prior numeric contour/alpha passes remain technical evidence only; they did not verify a natural wrist/cuff connection."
+}

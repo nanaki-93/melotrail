@@ -1,0 +1,12 @@
+{
+  "ordinal": 4,
+  "target": "hand_wrist_beat",
+  "targetAttempt": 1,
+  "status": "OUTPUT_RETAINED",
+  "source": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-0e8cd2b8-abdb-4f5a-b889-a1e7533a3e9f.png",
+  "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/attempts/hand-wave-1.png",
+  "sha256": "c5f5bbd41dc709ba83eddf3a4594716f4c09ec300e76134d354ed7d150343d70",
+  "tool": "built-in image_gen",
+  "prompt": "inputs/wave-prompt.txt",
+  "appearance": "UNREVIEWED; visually connected wrist and cuff, assembly pending"
+}

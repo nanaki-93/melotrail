@@ -1,0 +1,29 @@
+✖ the full authored hand/wrist/cuff bridge survives; a slit missed by joint-centre checks is rejected (30.793167ms)
+✔ generated green fabric is behind the existing sleeve, while wrist and cuff are drawn exactly once (37.231041ms)
+✔ transparent input margins are real alpha; supplied generated files remain hash-bound (62.143375ms)
+✔ only faint generated edge pixels can be confined; meaningful out-of-support art fails (0.722208ms)
+✔ the full cuff boundary has sleeve support in all four poses, including the real v2 gap witnesses (1271.661375ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1594.384042
+
+✖ failing tests:
+
+test at tools/video-motion/vg2-wrist-attachment.test.cjs:20:1
+✖ the full authored hand/wrist/cuff bridge survives; a slit missed by joint-centre checks is rejected (30.793167ms)
+  AssertionError [ERR_ASSERTION]: negative deliberately preserves the old centre sample
+      at TestContext.<anonymous> (/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-wrist-attachment.test.cjs:28:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

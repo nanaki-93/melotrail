@@ -1,0 +1,182 @@
+{
+  "schema": "connected-wrist-handoff-1",
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png",
+    "sha256": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968"
+  },
+  "consumption": {
+    "imageAttempts": 5,
+    "partDerivatives": 19,
+    "staticPasses": 8
+  },
+  "newUse": {
+    "imageAttempts": 2,
+    "partDerivatives": 4,
+    "staticPasses": 3
+  },
+  "appearance": "PENDING user VG2-14 decision",
+  "limitations": [
+    "Four stills only; no rig/motion approval.",
+    "The two generated wrist drawings retain their raw alpha and differ in cuff pixels; transition/cloth consistency remains a later moving proof.",
+    "The prior inner sleeve/body junction is inherited; this repair does not award full silhouette or moving approval.",
+    "Historical build dependencies remain pinned; no clean-checkout or app-delivery claim."
+  ],
+  "pins": [
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/attempts/hand-neutral-1.png",
+      "sha256": "1ea8c932f5e7adec901faac367eb6a3ec95571351d8f40fb58fed7815b02a865"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/attempts/hand-wave-1.png",
+      "sha256": "c5f5bbd41dc709ba83eddf3a4594716f4c09ec300e76134d354ed7d150343d70"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/assembly-review.json",
+      "sha256": "14a8f5d20f15b30bb169e007fad26e11b8f349da91867a9316eafcf29995622e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/image-04-result.json",
+      "sha256": "3833bb0f7b7e526c301e3d2865f206d38a5cd18ea6b30e095a77987729bcad86"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/image-05-result.json",
+      "sha256": "003f92f11d133a830cf87eff34a85766e91aead4165eb89fa1578fca4883cec8"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/parts.json",
+      "sha256": "cac85e013435f01770fb5e3619e162df9c2b2dad5f37ea68d097fd37a906942c"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/rejected-v5.json",
+      "sha256": "c4806494f1585996b40a3ef148641c57043b35a411572b15f108ada8e782bf70"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/static-v1.json",
+      "sha256": "df747e8979c5504ee28ed952b8402fef715b8189354eebf613f6746722ace6a8"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/static-v2.json",
+      "sha256": "81c5bb89705fcc98fe206366d0e3567e4701a637172a71a8458183bb8fa2cb63"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/static-v3.json",
+      "sha256": "127de00cb13f810418ffba62d01826b76c2e946e09cd72d3ebcba5d30627ae65"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/admission.json",
+      "sha256": "822572b8a56dd1ab6e22e8c1bafa3c467e27af8992d4f084b4d8d95eabc632e3"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/baseline-status.txt",
+      "sha256": "16a351a49c594f8a47a66b4c9a22d0df243c70566031574827eecba997e5d1d3"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/neutral-prompt.txt",
+      "sha256": "cf94f41aef7b5c8950779c5d1bf04456e3f9cc7ab70749d0fb4d36865cce8d8f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/neutral-wrist-source.png",
+      "sha256": "e2ce7f722bfaa6a3e88fc3798713c619344604160f6ec388f6efd54900897a49"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/v1-assembly-source.cjs",
+      "sha256": "4a475ce2d271b59ae918b23a48ca9206c9d496d106c76d6fb84d916fe0766e47"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/v2-assembly-source.cjs",
+      "sha256": "fc06c2b999914dc0553d0db1468b774aeec321be7fe04543b37afe371d672f78"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/wave-prompt.txt",
+      "sha256": "fd88e2b1a997df7ad1c07c011d43fda69ecb3e050bf66eb95f48be875beb1bb8"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/inputs/wave-wrist-source.png",
+      "sha256": "94110667e534e383c73c1dbe8b1060e785fac8a6a4f7b22de31aa569b40241c7"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/derivative-16-open-front.json",
+      "sha256": "89420bb8bee161cb72cb12b04f5b06644324632627d0bbd5cd9b5729faec95bd"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/derivative-17-open-overlap.json",
+      "sha256": "7fe941edbf788b52d518662da8f325b767b6da884c592122433ccfdde7071980"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/derivative-18-neutral-front.json",
+      "sha256": "05a75c6062d3edb3e5e04e4dd5eaace67730a123b7f9e395a9eb9b8bbe53ae64"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/derivative-19-neutral-overlap.json",
+      "sha256": "d9006183bf1405c66b73b03f7c6e6fa03780891c487b7ab7510a151bbd76bc28"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/image-04-hand-wave-1.json",
+      "sha256": "6132b085a2f0728bde4ed98447a5b6c75d34ba5c5f28d64ae254d9007f727079"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/image-05-hand-neutral-1.json",
+      "sha256": "22b66077f62940f637bbbb83edb58caae8399726f05bffcf098adae674d5dee7"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/static-6-v1.json",
+      "sha256": "b01c12b63119f183b37d033415933ab4ec2726edfb5cfad957ebf48d9a9b913b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/static-7-v2.json",
+      "sha256": "ebd2e6b095a76625286e1dc4ebe8a19d19b5b6d2a8f5e74c20401b3d4e7f81d2"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/journal/static-8-v3.json",
+      "sha256": "ab2b73bdb11c096d73f5eda3d52915cde046b22abafb6a0f981128e6e4002a2d"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-front.png",
+      "sha256": "16ae432fb9b63d1185297cd23e710a2ff8dd114d6a40b3f31b43550ebe550651"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-overlap.png",
+      "sha256": "cf734e9489a82cae424b692addacf7835b27742633a129dc29d2c6db8014962f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-front.png",
+      "sha256": "6a3a046b1bf62b765918fc84f5060e5c84f148c378e3eeb3f60a920f88dec8d2"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-overlap.png",
+      "sha256": "859cb421af6cd434b2b6fb3b02223d9a6bfac01c9b3f7192d22583d5bf8c3423"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v1.png",
+      "sha256": "e8156c6a611a5f2c2bd41e9a725be725cd84d5a23b9bb61099b3103f21763750"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v2.png",
+      "sha256": "cf252244a24e4222b96f9320814f3e9b1855dcf45359aad2664b488c2c22648a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png",
+      "sha256": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/assemble-wrists.cjs",
+      "sha256": "b0df7acfa31b8c2ae7ed8c03ea03ddb9a2aaf9da659d3fd39786baab19dcf8c5"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/check-handoff.cjs",
+      "sha256": "01af9541391b9a0a90ca9716f6a6c021475771c69b31a681d62a3508a8e18b23"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/export-parts.cjs",
+      "sha256": "5201d224e16d43b1969231b0e8e045ed1f6ac595efe6a6f650071677dafbc8b9"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/validate.sh",
+      "sha256": "f0945ccf7b16202fbaf4e90daa64e281dff876f3a7efaaa8186261f98199cf91"
+    },
+    {
+      "path": "tools/video-motion/vg2-wrist-attachment.test.cjs",
+      "sha256": "6e8149c9fa0af3b878932fd5e3112bc0944f0a070934642f6ea15940c65f52d9"
+    }
+  ]
+}

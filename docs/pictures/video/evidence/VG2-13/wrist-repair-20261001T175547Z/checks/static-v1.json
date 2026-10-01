@@ -1,0 +1,146 @@
+{
+  "version": "v1",
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v1.png",
+    "sha256": "e8156c6a611a5f2c2bd41e9a725be725cd84d5a23b9bb61099b3103f21763750"
+  },
+  "specs": {
+    "open": {
+      "file": "attempts/hand-wave-1.png",
+      "sha256": "c5f5bbd41dc709ba83eddf3a4594716f4c09ec300e76134d354ed7d150343d70",
+      "base": [
+        550,
+        1120
+      ],
+      "scale": 0.14,
+      "entry": [
+        592,
+        765
+      ],
+      "bridge": [
+        520,
+        716,
+        185,
+        72
+      ]
+    },
+    "neutral": {
+      "file": "attempts/hand-neutral-1.png",
+      "sha256": "1ea8c932f5e7adec901faac367eb6a3ec95571351d8f40fb58fed7815b02a865",
+      "base": [
+        620,
+        1120
+      ],
+      "scale": 0.14,
+      "entry": [
+        650,
+        748
+      ],
+      "bridge": [
+        587,
+        680,
+        170,
+        67
+      ]
+    }
+  },
+  "facts": [
+    {
+      "state": "neutral",
+      "placement": {
+        "angle": -0.3711613294090541,
+        "scale": 0.14,
+        "at": [
+          833.041330294322,
+          609.3469386125645
+        ],
+        "base": [
+          620,
+          1120
+        ]
+      },
+      "wristEntry": [
+        818.0660306562824,
+        559.2899031355116
+      ],
+      "wristEntryHoles": 0,
+      "outsideChanges": 1,
+      "nonOpaque": 0,
+      "rgbaSha256": "3263da03a27c7221bba821d290c150dd08468d13dbd9bb54d115b9c5ca2634f7"
+    },
+    {
+      "state": "lift",
+      "placement": {
+        "angle": -0.11983391712187053,
+        "scale": 0.14,
+        "at": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "base": [
+          550,
+          1120
+        ]
+      },
+      "wristEntry": [
+        883.6223205324723,
+        536.7892013872163
+      ],
+      "wristEntryHoles": 0,
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "9904b590c35c78774f25cfa9d01fec8db98ea58ced1a0ce5deaf8466b5b1173c"
+    },
+    {
+      "state": "wrist_in",
+      "placement": {
+        "angle": -0.32927342736119003,
+        "scale": 0.14,
+        "at": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "base": [
+          550,
+          1120
+        ]
+      },
+      "wristEntry": [
+        873.2193304418445,
+        537.9043920290111
+      ],
+      "wristEntryHoles": 0,
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "64d1279d8e27acdac88d81d16c6c720dbd78f51ab67e6db9c8586c929f8871f4"
+    },
+    {
+      "state": "wrist_out",
+      "placement": {
+        "angle": 0.089605593117449,
+        "scale": 0.14,
+        "at": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "base": [
+          550,
+          1120
+        ]
+      },
+      "wristEntry": [
+        894.029841501997,
+        537.8612835958866
+      ],
+      "wristEntryHoles": 0,
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "e2a393139a3efdf80b12613e7161ed1adc45d4840c96e0f8ea9c734fef315801"
+    }
+  ],
+  "appearance": "UNREVIEWED",
+  "limitations": [
+    "Four stills only; no rig/motion approval.",
+    "The two generated wrist drawings retain their raw alpha and differ in cuff pixels; transition/cloth consistency remains a later moving proof."
+  ]
+}

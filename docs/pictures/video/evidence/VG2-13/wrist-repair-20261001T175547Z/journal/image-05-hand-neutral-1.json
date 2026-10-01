@@ -1,0 +1,9 @@
+{
+  "kind": "imageAttempt",
+  "ordinal": 5,
+  "target": "hand_neutral",
+  "targetAttempt": 1,
+  "status": "RESERVED_BEFORE_DISPATCH",
+  "prompt": "inputs/neutral-prompt.txt",
+  "destination": "attempts/hand-neutral-1.png"
+}

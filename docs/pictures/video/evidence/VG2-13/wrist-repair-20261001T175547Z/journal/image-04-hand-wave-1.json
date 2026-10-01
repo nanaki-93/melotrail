@@ -1,0 +1,9 @@
+{
+  "kind": "imageAttempt",
+  "ordinal": 4,
+  "target": "hand_wrist_beat",
+  "targetAttempt": 1,
+  "status": "RESERVED_BEFORE_DISPATCH",
+  "prompt": "inputs/wave-prompt.txt",
+  "destination": "attempts/hand-wave-1.png"
+}

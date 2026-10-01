@@ -683,6 +683,50 @@ are retained in `checks/{focused-final,node-final,make-test,make-build,diff-chec
 verified in `checks/source-localization.zip` and removed; validation init scratch
 is automatically removed. Further static repair needs a new bounded allowance.
 
+VG2-14 rejects assembled v5 (2026-10-02, user local date): the user says the
+hands still look disconnected from the arm and explicitly requests a fix.
+The exact rejected SHA-256 remains
+`440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc`;
+receipt: `docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/rejected-v5.json`.
+Prior alpha/joint-centre passes did not establish a natural wrist/cuff connection.
+The repair uses the two already-admitted hand targets, with at most two image
+attempts each (four total), eight new derivative files and three static review
+passes. This scoped fix request extends exhausted local preparation ceilings;
+prior 3 image attempts / 15 derivatives / 5 static passes remain consumed.
+The current built-in imagegen tool follows its skill; no CLI/provider fallback.
+Keep a visible wrist entering the cuff, with its front rim overlapping the wrist;
+validate the connected assembly at normal scene scale. Preserve the old sources,
+rejections and helpers. No new gesture, Blender, media or production import.
+Owner: `docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/`.
+VG2-13 is IN_PROGRESS; VG2-14 awaits a new exact-artifact appearance decision.
+
+VG2-13 wrist-connection handoff (2026-10-02, user local date): selected
+[connected-wrists v3](docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png),
+SHA-256 `98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968`.
+Two built-in image edits create the existing resting/open hand states with a
+visible wrist entering a cuff opening; the front rim overlaps the wrist. Each
+hand/wrist/cuff uses one shared transform. The supplied green forearm stays in
+front of the generated sleeve overlap, closing the v2 cuff gap without laying
+another green patch over the forearm. Four PNG layers and anchors are retained
+in `parts/` and `checks/parts.json`; raw images, exact prompts and both rejected
+assembly variants remain. The first scene also exposed one faint out-of-support
+pixel; confinement now rejects meaningful artwork at that boundary and removes
+only alpha ≤8 overspill. Full bridge, real cuff-gap, depth-order, protected-pixel
+and exported-layer regressions live in `tools/video-motion/vg2-wrist-attachment.test.cjs`.
+The initial test's negative fixture lost native ImageData dimensions while being
+spread into an object; the test fixture was corrected, with its failed log retained.
+Prior hand-over-cuff tests remain evidence for the rejected helper, not the new
+layer order. Four static states have zero entry holes and protected-pixel changes.
+Consumption is 5 image attempts / 19 part derivatives / 8 static review passes;
+this request used two image calls, four part exports and all three static passes.
+Two reference crops are intake evidence, not additional motion parts. All original
+sources and prior consumed allowances remain unchanged. VG2-13 is REVIEW and
+VG2-14 is WAITING_USER for this exact new appearance; no rig or media was run.
+The inner sleeve/body junction is inherited and the two cuff drawings differ;
+complete silhouette approval and transition/cloth consistency are not inferred
+from the wrist repair. Headless validation receipts are retained in `checks/`;
+`MidiCoreNativeResponsivenessTest` remains excluded, not passed.
+
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
 `docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.

@@ -197,6 +197,29 @@ All static passes are consumed. Diagnostic source crops are bundled and task-own
 scratch removed. VG2-13 is REVIEW and VG2-14 awaits the exact new appearance decision;
 VG2-15 and all media work remain unstarted. Further repair needs a finite extension.
 
+### VG2-13 connected wrist correction after v5 rejection (2026-10-02)
+
+The user rejects v5 because the hands still appear disconnected from the arm and
+requests a fix. The retained rejection is under
+`pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/rejected-v5.json`.
+The new [connected-wrists v3 review](pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png)
+is SHA-256 `98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968`. Two built-in imagegen
+edits repair the already-admitted neutral and open hand targets. A visible wrist
+now enters the cuff; its front rim overlaps the wrist. Hand, wrist and cuff keep
+one transform, with generated fabric overlap behind the supplied forearm.
+Four transparent native-canvas layers and registered anchors are retained in
+`parts/` and `checks/parts.json`; exact prompts/raw outputs are preserved.
+
+The first composite showed an extra green strip and one faint protected-region
+pixel; the second removed the strip but exposed a cuff gap. Both remain retained.
+The selected third assembly closes the gap with rear overlap. Full wrist-bridge,
+depth-order, actual gap and protected-pixel regressions complement visual inspection.
+They do not award artistic approval. The inherited inner sleeve/body junction and
+cuff differences between drawings still require whole-appearance/moving review.
+Cumulative use is 5 image attempts, 19 part derivatives and 8 static passes; no
+Blender, video, import or selected take. VG2-13 is REVIEW; VG2-14 awaits the exact
+new appearance decision. Existing rejections and motion/colour failures remain.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

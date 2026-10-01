@@ -1,0 +1,5 @@
+{
+  "v1": "Not selected: an extra generated green sleeve strip visibly overlays the supplied sleeve; one faint out-of-support pixel also fails exact protected equality.",
+  "v2": "Not selected by agent visual inspection: removal of the extra strip exposes a narrow cuff-to-forearm gap even though joint-entry/protected-pixel checks pass.",
+  "repair": "Place the generated sleeve overlap behind the supplied forearm, retaining connected hand/cuff pixels above it under the same affine transform. No new artwork call."
+}
