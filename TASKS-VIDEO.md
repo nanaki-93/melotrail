@@ -522,6 +522,20 @@ outputs exclusively without overwrite, rechecking symlink-safe paths at write ti
 An interrupted lock requires explicit reconciliation, not auto-retry.
 This checkpoint does not make VG2-13 DONE or admit VG2-14 appearance approval.
 
+VG2-13 continuation baseline (2026-10-01): HEAD
+`82985a63ffdc0b5b5c107545f4cd778787872587` plus the pre-existing nine-file
+documentation diff and untracked continuation owner (preserved, not included in
+this checkpoint commit). Evidence: `docs/pictures/video/evidence/VG2-13/run-20261001T155758Z/checks/`.
+Read-only preparation integrity passes at 0 attempts/4 derivatives/0 static
+passes; successor tests pass 10/10. Six focused JVM selectors pass (1 executed,
+5 up-to-date); filtered `make test` passes (1 executed, 13 up-to-date).
+The command timeout interrupted `make build`, not a test failure; its incomplete
+log is retained. Resumed filtered `make build` passes; `git diff --check` passes.
+The temporary init excludes `MidiCoreNativeResponsivenessTest` (not passed) and
+sets headless JVM mode; task graph inspected, no GUI/media/model dispatch.
+Task-owned temporary init removed. No allowance spent or appearance approval;
+VG2-13 remains incomplete. Pre-existing documentation/evidence remain unstaged.
+
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
 `docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.

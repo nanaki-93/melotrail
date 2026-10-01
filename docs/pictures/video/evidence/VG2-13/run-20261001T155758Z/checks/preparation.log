@@ -1,0 +1,18 @@
+✔ inherited receipts, bytes and four spent slots survive relocation; incomplete is read-only (70.116917ms)
+✔ changed source/predecessor pins and missing or altered inherited records fail closed (7.56775ms)
+✔ one writer, immutable reservations before output and no refund on reopen (179.489167ms)
+✔ derivative and static limits count historical reservations even after writer restart (375.448125ms)
+✔ aliases, collisions and occupied files cannot be published or silently counted (227.56825ms)
+✔ case-variant output cannot impersonate an exact-path reservation (101.444708ms)
+✔ changed donor and protected-pixel edits reject exact RGBA witnesses (1.64225ms)
+✔ interrupted lock and pending write block new spending (145.804583ms)
+✔ actual inherited fixed pixels and alpha remain exactly pinned (166.800917ms)
+✔ retained cropped-head derivative is rejected; face/chin and cheek boundary are protected (91.573666ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1499.71075
