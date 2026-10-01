@@ -1,0 +1,34 @@
+{
+  "receipt": {
+    "id": "065e93fa3ab3dd7bef4a74c7573d7e6c",
+    "kind": "attempt",
+    "ordinal": 1,
+    "target": "upper_sleeve_separate",
+    "destination": "attempts/upper_sleeve_separate-1.png"
+  },
+  "raw": "docs/pictures/video/evidence/VG2-13/run-20261001T155758Z/raw/01a0f82e-63fc-71ee-b347-c66087a4612a/ig_04d09d1c98db211b016abe84f6c84487d0b91726b2ddb96652.png",
+  "sha256": "64858095d4e71cbd679caa42168b3ec2cdd4508c28a8cbc6584549ad6e07069a",
+  "width": 1254,
+  "height": 1254,
+  "alpha": {
+    "zero": 1281022,
+    "partial": 290969,
+    "opaque": 525,
+    "bounds": [
+      49,
+      12,
+      1198,
+      1198
+    ]
+  },
+  "backendReported": {
+    "status": "completed",
+    "size": "1254x1254",
+    "quality": "medium",
+    "background": "transparent"
+  },
+  "pixelChecks": {
+    "transparentCorners": true
+  },
+  "disposition": "Raw candidate only. No registration, derivative, static pass, assembled appearance approval or rig readiness."
+}

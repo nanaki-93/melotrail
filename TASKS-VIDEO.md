@@ -536,6 +536,33 @@ sets headless JVM mode; task graph inspected, no GUI/media/model dispatch.
 Task-owned temporary init removed. No allowance spent or appearance approval;
 VG2-13 remains incomplete. Pre-existing documentation/evidence remain unstaged.
 
+VG2-13 upper-sleeve preparation checkpoint (2026-10-01): candidate
+`142baf766` plus this step's new files; evidence owner
+`docs/pictures/video/evidence/VG2-13/run-20261001T155758Z/`.
+One Pi image call for `upper_sleeve_separate` was reserved before dispatch;
+raw result SHA `64858095d4e71cbd679caa42168b3ec2cdd4508c28a8cbc6584549ad6e07069a`
+is retained both at the tool's raw destination and the active owner's attempt
+path. Actual pixels are 1254×1254 with transparent corners, not the requested
+1024×1024 magenta backing. Most fabric alpha is 253. A new reserved derivative
+`parts/upper_sleeve_candidate_v1.png` clears alpha ≤8 and makes alpha ≥245 opaque,
+without RGB painting or scaling; opaque RGB witnesses remain exact. SHA
+`ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54`;
+282,497 opaque, 3,546 partial and 1,286,473 transparent pixels. This is an
+**unregistered isolated candidate**, not a ready rig part or approved appearance.
+The prompt, source pins, reservations, raw/derivative facts and helper are retained.
+Active consumption is now **1/16 image attempts, 5/12 derivatives, 0/3 static
+passes** (upper sleeve 1/2 attempts); no allowance refunded. Writer lock released.
+Two new matte regressions plus ten inherited preparation tests pass; the raw
+candidate fails the new opaque-fabric check before normalization. Production
+fixture generation passes; Node renderer/scenery tests pass 31/31. Filtered
+`make test` and `make build` each pass with 1 executed/13 up-to-date;
+`MidiCoreNativeResponsivenessTest` remains excluded, not passed. Diff check passes.
+Logs are in `checks/`; temporary init removed, pre-existing build fixtures retained.
+Existing uncommitted continuation helpers and documentation are preserved outside
+this step's commit. VG2-13 is still incomplete: remaining parts, registration,
+neutral/extreme composites and support/seam checks precede VG2-14 user review.
+No Blender, video encode/decode, app integration or take mutation occurred.
+
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
 `docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.

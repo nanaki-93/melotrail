@@ -1,0 +1,36 @@
+{
+  "receipt": {
+    "id": "77747b3dfdfeaa1e58b3a8e5bc0b9c25",
+    "kind": "derivative",
+    "ordinal": 5,
+    "target": "upper_sleeve_separate",
+    "destination": "parts/upper_sleeve_candidate_v1.png"
+  },
+  "rawSha256": "64858095d4e71cbd679caa42168b3ec2cdd4508c28a8cbc6584549ad6e07069a",
+  "outputSha256": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54",
+  "width": 1254,
+  "height": 1254,
+  "alpha": {
+    "zero": 1286473,
+    "partial": 3546,
+    "opaque": 282497,
+    "bounds": [
+      438,
+      176,
+      847,
+      1082
+    ]
+  },
+  "policy": {
+    "clearAlphaAtMost": 8,
+    "opaqueAlphaAtLeast": 245,
+    "rgb": "unchanged at opaque witnesses; no painting or scaling"
+  },
+  "clearedPixels": 5451,
+  "solidifiedPixels": 281972,
+  "registration": null,
+  "assembledNeutral": null,
+  "extremeSupport": null,
+  "appearanceApproval": null,
+  "limitation": "Isolated candidate only, not a ready articulated part. No anchors or overlap coverage inferred from alpha bounds."
+}

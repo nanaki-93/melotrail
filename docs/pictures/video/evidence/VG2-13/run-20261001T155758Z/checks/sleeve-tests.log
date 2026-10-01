@@ -1,0 +1,10 @@
+✔ endpoint normalization preserves RGB, intermediate edge alpha, dimensions and input (0.946959ms)
+✔ actual raw candidate fails opaque-fabric check; exact endpoint derivative passes (44.640375ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 176.639083

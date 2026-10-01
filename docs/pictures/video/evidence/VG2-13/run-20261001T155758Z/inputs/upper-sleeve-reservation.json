@@ -1,0 +1,10 @@
+{
+  "receipt": {
+    "id": "065e93fa3ab3dd7bef4a74c7573d7e6c",
+    "kind": "attempt",
+    "ordinal": 1,
+    "target": "upper_sleeve_separate",
+    "destination": "attempts/upper_sleeve_separate-1.png"
+  },
+  "requestSha256": "03c4f3d5d492c807e6cf5126ef8e542037ff41a6ecbd5c227b11a847011a2001"
+}
