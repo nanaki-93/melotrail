@@ -1,0 +1,19 @@
+{
+  "technicalStaticRepair": "PASS",
+  "appearance": "PENDING renewed VG2-14",
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png",
+    "sha256": "440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc"
+  },
+  "consumption": {
+    "imageAttempts": 3,
+    "derivativeFiles": 15,
+    "staticPasses": 5
+  },
+  "limitations": [
+    "Four static states only; no Blender rig, all-frame support, hand-opening transition or moving approval.",
+    "Changed neutral/cuff/hand placement and inner sleeve/backing junction require explicit review against unchanged reference48.",
+    "V3 and v4, their helper/test snapshots and every historical candidate remain retained. All five aggregate static passes are consumed.",
+    "Historical build inputs remain hash-pinned local dependencies; no clean-checkout or app-delivery claim."
+  ]
+}

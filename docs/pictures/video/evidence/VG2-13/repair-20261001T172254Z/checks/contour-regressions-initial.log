@@ -1,0 +1,51 @@
+✔ supplied resting and open hand contours fail the old clipped masks and survive repair (427.247916ms)
+✔ cuff clears the old orphan hand outline; valid sleeve pixels no longer get cut by the diagonal matte (776.712041ms)
+✔ hand and cuff share the corrected wave scale and wrist attachment; hand stays above the cuff (0.328334ms)
+✔ repair preserves historical counts, rejects raised caps and never admits image/media operations (1069.316458ms)
+✖ reserved outputs are exclusive, confined and still consumed after reopening (471.4275ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2945.392375
+
+✖ failing tests:
+
+test at tools/video-motion/vg2-contour-repair.test.cjs:67:1
+✖ reserved outputs are exclusive, confined and still consumed after reopening (471.4275ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /destination exists|reserved alias/. Input:
+
+  'AssertionError [ERR_ASSERTION]: The input did not match the regular expression /^parts\\/[a-z0-9_-]+\\.png$/. Input:\n' +
+    '\n' +
+    "'parts/HAND.png'\n"
+
+      at TestContext.<anonymous> (/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-contour-repair.test.cjs:77:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: AssertionError [ERR_ASSERTION]: The input did not match the regular expression /^parts\/[a-z0-9_-]+\.png$/. Input:
+
+    'parts/HAND.png'
+
+        at Object.reserve (/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/scripts/repair.cjs:69:10)
+        at /Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-contour-repair.test.cjs:77:30
+        at getActual (node:assert:586:5)
+        at strict.throws (node:assert:734:24)
+        at TestContext.<anonymous> (/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-contour-repair.test.cjs:77:12)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1201:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+        at Test.postRun (node:internal/test_runner/test:1330:19)
+        at Test.run (node:internal/test_runner/test:1258:12),
+    expected: /destination exists|reserved alias/,
+    operator: 'throws',
+    diff: 'simple'
+  }

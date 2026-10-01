@@ -1,0 +1,145 @@
+{
+  "schema": "standalone-static-repair-handoff-1",
+  "candidate": "v5",
+  "appearance": "PENDING renewed VG2-14",
+  "counts": {
+    "additional": {
+      "derivative": 3,
+      "staticPass": 3
+    },
+    "aggregate": {
+      "imageAttempts": 3,
+      "derivativeFiles": 15,
+      "staticPasses": 5
+    },
+    "lockPresent": false
+  },
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png",
+    "sha256": "440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc"
+  },
+  "part": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/parts/contour_atlas_v5.png",
+    "sha256": "71376c9dc7e1906e88501faf512b4a99a01f86e75c89ae7284f6137058397746"
+  },
+  "pins": [
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/checks/source-localization.json",
+      "sha256": "4202a3880304a9f6204b204fc031238c4da6f407e088e4bd34ce85f375394a98"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/checks/source-localization.zip",
+      "sha256": "c562b7f3fb64429ffbffbf2cdfadc86fc91fdbc926d9f463c644d5feaf1df7eb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/checks/static-v3.json",
+      "sha256": "75ed852b830d78853fc7c68755f5883aa9b1c2b9cf2d4393dacc5939d8e772f2"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/checks/static-v4.json",
+      "sha256": "01eefa088086fccc572b0a4faaa6d2ea31490015fc526b0b6fbdca92959b5714"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/checks/static-v5.json",
+      "sha256": "604b2726b9ba2a49409a5de8bfa6082ad4e507682dfd9e02b1bb4757935d42eb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/inputs/admission.json",
+      "sha256": "88d1c291e45ebbfa5788db9b4711a13778f766e240642b14c67d04029898b0ad"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/inputs/baseline-status.txt",
+      "sha256": "2060095342e429ebab7ca87b45c028d9571e0e212dcd011add3912bfcdba4f25"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/inputs/static-allowance-reconciliation.json",
+      "sha256": "dc9222ce4aad539d6d7e993acbc000a8b24c5ad09c31ed3ee9b6e42a908c71f7"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/inputs/v3-helper.cjs",
+      "sha256": "a835a71ddae76c14d1a1be921341120809d66401e3e31518f788555f8bd54519"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/inputs/v3-regression-source.cjs",
+      "sha256": "64dab88433b475b2031417c04e444dbb69ba8cb92bb8de5b48899b9583e1ddce"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/inputs/v4-helper.cjs",
+      "sha256": "a154e822251312267345ba0971e15bbb6a5fb763a791c7c7747e1957a9665d8a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/inputs/v4-regression-source.cjs",
+      "sha256": "ae391fa4265932a6968c039b5f8dc020d9a483520fa222d2f66e88cd70902272"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/journal/1dc927eebaf56b1b939a0ce952654d89.json",
+      "sha256": "4c31e2e512456319b23e2b9f22ec94ab8c5fe692e580c494fd0ec28bd9b66d48"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/journal/29ebffb249a181c793e1518be9f144cd.json",
+      "sha256": "c81d8c9c1da7d3a247ed51b207145427a7076c4795c1b69e37db7bce4fafed4b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/journal/48ac1b72819bfed79d685322e3aa0365.json",
+      "sha256": "5b1c3439769406b8999c501bc2d1b1c0c88102d85101304223ee0396ff12b6d6"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/journal/7c329af494d7ac66920f96a924c0ad3f.json",
+      "sha256": "08bd7fe056f25d0f06bb26c1d816b07fcd73731af29b0dea2845b839deb5e218"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/journal/9d518786d5ccaa08b1be303a45089715.json",
+      "sha256": "cf9e556d2413e3ecb11a9de095ab1b13a1d3e015807e7aa5a85e982803606cf6"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/journal/9f22bf9446228fe063e18e384f9ef1f1.json",
+      "sha256": "41f9ee5986e0a150b33fa36fab3f38836f45e6eb15de79d02a443e0c7a96f9ad"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/parts/contour_atlas_v3.png",
+      "sha256": "71bb6fc2da8e1eeabd79d5d9eeb135132fb4ab907cfcba8f9e33819021da3b82"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/parts/contour_atlas_v4.png",
+      "sha256": "d57aa6967f63dd7be4420e80aed64967c5b06c38318e795c5c18d7389d7ee337"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/parts/contour_atlas_v5.png",
+      "sha256": "71376c9dc7e1906e88501faf512b4a99a01f86e75c89ae7284f6137058397746"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v3.png",
+      "sha256": "95bf2f7ce7268f0f915f2e6ab6ced22dd91935f92d34d7f8a57df960198c21b7"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v4.png",
+      "sha256": "ce9f48d7606ee1ba24dab5d523140d87a324f8f36d4a3b310cd246b50f0dfd28"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png",
+      "sha256": "440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/scripts/check-repair.cjs",
+      "sha256": "91a717e55ae99486dc3311ffdc577c94ac370aa1c453781dd417127c4aaaabd0"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/scripts/repair.cjs",
+      "sha256": "a8924684e86585289d05d68466dd6f3793e0483ff5dfbb9cea1e9201fbe14686"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/scripts/validate.sh",
+      "sha256": "26bc9d5cc88546cdc595c2007e6f36cd8b75da7f15d6e31bef059e0cff625d54"
+    },
+    {
+      "path": "tools/video-motion/vg2-contour-repair.test.cjs",
+      "sha256": "e706ae9639784eb3ac1ade3e0643ab65e10751b2faeacfe24816bbfeaae3c7cb"
+    }
+  ],
+  "limitations": [
+    "Four static states only; no Blender rig, all-frame support, hand-opening transition or moving approval.",
+    "Changed neutral/cuff/hand placement and inner sleeve/backing junction require explicit review against unchanged reference48.",
+    "V3 and v4, their helper/test snapshots and every historical candidate remain retained. All five aggregate static passes are consumed.",
+    "Historical build inputs remain hash-pinned local dependencies; no clean-checkout or app-delivery claim."
+  ]
+}

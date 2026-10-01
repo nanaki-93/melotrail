@@ -490,6 +490,29 @@ new human decision. No rig evaluation, video or new asset creation is authorized
 by this review record; the queue requests a finite extension of the exhausted
 local derivative allowance. Old artifact bytes and consumed budgets are unchanged.
 
+VG2-13 local-repair evidence (2026-10-02, user local date):
+`pictures/video/evidence/VG2-13/repair-20261001T172254Z/` retains the admission,
+source-localization ZIP, initial v3 and intermediate v4 candidates/helper snapshots,
+selected v5, per-state facts and immutable handoff pins. New canonical regressions
+are `tools/video-motion/vg2-contour-repair.test.cjs`: real old hand-contour clipping,
+orphan cuff outlines, diagonal sleeve clipping, mistaken warm-outline removal,
+backing/planted-contact preservation, allowance accounting and no-overwrite/path
+guards. The initial test expected a case alias to reach collision detection; the
+guard already rejected uppercase names earlier, so the expectation was corrected,
+retaining the failing log. The final seven regressions and four-state technical
+checks pass; source skin/selected outline/opaque RGB losses and cuff debris are zero.
+The selected review SHA-256 is
+`440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc`.
+No human decision exists for this changed neutral, raised poses or inner
+sleeve/backing junction. This is a static-review candidate, not an accepted rig
+or moving video. All previous rejections and motion/colour failures remain.
+Consumption is 3 image attempts / 15 derivative files / 5 static passes, preserving
+the original unused pass and two-pass extension in explicit reconciliation. No new
+image call, Blender, media, production import or selected take. Focused/Node and
+filtered make-test/build receipts live in `checks/`; the native-window test is
+excluded, not passed. Scoped inspection scratch is bundled and deleted; the
+temporary headless Gradle init is removed by the validation script's exit trap.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

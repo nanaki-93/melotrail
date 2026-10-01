@@ -1,0 +1,10 @@
+{
+  "schema": "static-allowance-reconciliation-1",
+  "originalStaticCeiling": 3,
+  "historicalStaticPasses": 2,
+  "originalUnusedStaticPasses": 1,
+  "additionalStaticPasses": 2,
+  "aggregateStaticCeiling": 5,
+  "newPassesAvailable": 3,
+  "reason": "The accepted queue proposal adds two static passes to the original three-pass ceiling. Its original unused pass remains available; no spent pass or failed candidate is refunded. The initial repair admission correctly records the additional two but omitted the inherited unused pass from its executable available-pass count."
+}

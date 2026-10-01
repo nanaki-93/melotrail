@@ -1,0 +1,215 @@
+{
+  "variant": "v4",
+  "part": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/parts/contour_atlas_v4.png",
+    "sha256": "d57aa6967f63dd7be4420e80aed64967c5b06c38318e795c5c18d7389d7ee337"
+  },
+  "regions": {
+    "revealed_torso_cabin_backing": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "forearm_separate": [
+      0,
+      1100,
+      160,
+      154
+    ],
+    "cuff_wrist_overlap": [
+      200,
+      1100,
+      140,
+      123
+    ],
+    "hand_neutral": [
+      400,
+      1100,
+      78,
+      84
+    ],
+    "hand_wrist_beat": [
+      520,
+      1100,
+      116,
+      132
+    ]
+  },
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v4.png",
+    "sha256": "ce9f48d7606ee1ba24dab5d523140d87a324f8f36d4a3b310cd246b50f0dfd28"
+  },
+  "registration": {
+    "cuffBase": [
+      67,
+      104
+    ],
+    "cuffScale": 0.82,
+    "handScales": {
+      "neutral": 1,
+      "open": 0.82
+    },
+    "handOnTop": true
+  },
+  "proof": {
+    "hands": {
+      "hand_neutral": {
+        "source": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+        "oldFails": "hand contour/outline or source RGB mismatch\n+ actual - expected\n\n  {\n    changedOpaqueRgb: 0,\n+   clippedOutline: 527,\n+   clippedSkin: 162,\n+   foreignSkin: 18,\n+   gold: 39\n-   clippedOutline: 0,\n-   clippedSkin: 0,\n-   foreignSkin: 0,\n-   gold: 0\n  }\n",
+        "new": {
+          "clippedSkin": 0,
+          "clippedOutline": 0,
+          "changedOpaqueRgb": 0,
+          "foreignSkin": 0,
+          "gold": 0
+        }
+      },
+      "hand_wrist_beat": {
+        "source": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+        "oldFails": "hand contour/outline or source RGB mismatch\n+ actual - expected\n\n  {\n    changedOpaqueRgb: 0,\n+   clippedOutline: 785,\n+   clippedSkin: 442,\n+   foreignSkin: 165,\n-   clippedOutline: 0,\n-   clippedSkin: 0,\n-   foreignSkin: 0,\n    gold: 0\n  }\n",
+        "new": {
+          "clippedSkin": 0,
+          "clippedOutline": 0,
+          "changedOpaqueRgb": 0,
+          "foreignSkin": 0,
+          "gold": 0
+        }
+      }
+    },
+    "cuff": {
+      "orphanOutlineBefore": 162,
+      "orphanOutlineAfter": 0,
+      "removed": 319
+    },
+    "forearm": {
+      "restoredSuppliedGreenPixels": 239
+    },
+    "backing": {
+      "mask": "M 780 685 Q 797 679 811 696 Q 824 716 825 742 L 789 743 Q 790 727 777 716 Z",
+      "source": {
+        "path": "docs/pictures/video/tabi-assets/train-actions/28-breathing-rebuilt-cabin-review-candidate.png",
+        "sha256": "922ff5afd87417c9ba653b327d4b00007670981c99d1d927c20f4ea596769e14",
+        "width": 1920,
+        "height": 1080,
+        "alpha": {
+          "zero": 0,
+          "partial": 0,
+          "opaque": 2073600
+        }
+      },
+      "protectedPlantedHandPixels": 3280,
+      "cabinWitnesses": [
+        [
+          809,
+          731
+        ],
+        [
+          811,
+          732
+        ]
+      ]
+    }
+  },
+  "checks": [
+    {
+      "state": "neutral",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "af708550c28d6015efaf1706c7f1d2556062e237fb1ad5d721b73c147c7a60c6"
+    },
+    {
+      "state": "lift",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "6124881d1e15bab09bd5286b32e5c4ea6ada19300f149ecaf2e47ac8078bf203"
+    },
+    {
+      "state": "wrist_in",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "a0dc2a6390fdc7e6eca247b1884c961964e771cd9d69bc2bad4dd69995b12583"
+    },
+    {
+      "state": "wrist_out",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "e8319d7fb0e486914688038fdc1756f6ba89618e85a8a4805ad6ea54ca2bea48"
+    }
+  ],
+  "technicalPass": true,
+  "appearance": "UNREVIEWED",
+  "scope": "Four static poses only. No rig, all-frame evaluation, hand-opening transition or moving approval."
+}

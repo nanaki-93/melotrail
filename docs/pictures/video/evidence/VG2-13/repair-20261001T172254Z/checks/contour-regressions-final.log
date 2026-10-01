@@ -1,0 +1,15 @@
+✔ supplied resting and open hand contours fail the old clipped masks and survive repair (417.184666ms)
+✔ cuff clears the old orphan hand outline; valid sleeve pixels no longer get cut by the diagonal matte (796.632792ms)
+✔ hand and cuff share the corrected wave scale and wrist attachment; hand stays above the cuff (0.290417ms)
+✔ the supplied warm dark hand outline survives instead of being mistaken for cuff fabric (400.445709ms)
+✔ the old hard backing tail is replaced by exact cabin pixels while planted contact survives (781.816667ms)
+✔ repair preserves historical counts, rejects raised caps and never admits image/media operations (1100.6865ms)
+✔ reserved outputs are exclusive, confined and still consumed after reopening (720.455542ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4365.678167

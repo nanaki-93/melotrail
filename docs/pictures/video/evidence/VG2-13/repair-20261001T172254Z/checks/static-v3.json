@@ -1,0 +1,190 @@
+{
+  "variant": "v3",
+  "part": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/parts/contour_atlas_v3.png",
+    "sha256": "71bb6fc2da8e1eeabd79d5d9eeb135132fb4ab907cfcba8f9e33819021da3b82"
+  },
+  "regions": {
+    "revealed_torso_cabin_backing": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "forearm_separate": [
+      0,
+      1100,
+      160,
+      154
+    ],
+    "cuff_wrist_overlap": [
+      200,
+      1100,
+      140,
+      123
+    ],
+    "hand_neutral": [
+      400,
+      1100,
+      78,
+      84
+    ],
+    "hand_wrist_beat": [
+      520,
+      1100,
+      116,
+      132
+    ]
+  },
+  "review": {
+    "path": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v3.png",
+    "sha256": "95bf2f7ce7268f0f915f2e6ab6ced22dd91935f92d34d7f8a57df960198c21b7"
+  },
+  "registration": {
+    "cuffBase": [
+      67,
+      104
+    ],
+    "cuffScale": 0.82,
+    "handScales": {
+      "neutral": 1,
+      "open": 0.82
+    },
+    "handOnTop": true
+  },
+  "proof": {
+    "hands": {
+      "hand_neutral": {
+        "source": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+        "oldFails": "hand contour/outline or source RGB mismatch\n+ actual - expected\n\n  {\n    changedOpaqueRgb: 0,\n+   clippedOutline: 259,\n+   clippedSkin: 162,\n+   foreignSkin: 18,\n+   gold: 151\n-   clippedOutline: 0,\n-   clippedSkin: 0,\n-   foreignSkin: 0,\n-   gold: 0\n  }\n",
+        "new": {
+          "clippedSkin": 0,
+          "clippedOutline": 0,
+          "changedOpaqueRgb": 0,
+          "foreignSkin": 0,
+          "gold": 0
+        }
+      },
+      "hand_wrist_beat": {
+        "source": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+        "oldFails": "hand contour/outline or source RGB mismatch\n+ actual - expected\n\n  {\n    changedOpaqueRgb: 0,\n+   clippedOutline: 583,\n+   clippedSkin: 442,\n+   foreignSkin: 165,\n+   gold: 8\n-   clippedOutline: 0,\n-   clippedSkin: 0,\n-   foreignSkin: 0,\n-   gold: 0\n  }\n",
+        "new": {
+          "clippedSkin": 0,
+          "clippedOutline": 0,
+          "changedOpaqueRgb": 0,
+          "foreignSkin": 0,
+          "gold": 0
+        }
+      }
+    },
+    "cuff": {
+      "orphanOutlineBefore": 70,
+      "orphanOutlineAfter": 0,
+      "removed": 319
+    },
+    "forearm": {
+      "restoredSuppliedGreenPixels": 239
+    }
+  },
+  "checks": [
+    {
+      "state": "neutral",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "fdbcfa1d58f3b7abc6baaf1155ffad8eceed9fe41e30a28575bbc4fe49c5243f"
+    },
+    {
+      "state": "lift",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "7b6b6122e75af0be41716d3a75336dc250be3835c3a171203ec045aee7226f9d"
+    },
+    {
+      "state": "wrist_in",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "8fcb38337e2fed2471b0b315cf3e95eabf39d4bc3fe949c3021f749ea096a8f2"
+    },
+    {
+      "state": "wrist_out",
+      "seams": [
+        {
+          "joint": "shoulder",
+          "holes": 0
+        },
+        {
+          "joint": "elbow",
+          "holes": 0
+        },
+        {
+          "joint": "forearmCuff",
+          "holes": 0
+        },
+        {
+          "joint": "hand",
+          "holes": 0
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "91ae08904a3d929cb7046112c9758ceaef8c9fcb43dd7c63c47e03f472652c7a"
+    }
+  ],
+  "technicalPass": true,
+  "appearance": "UNREVIEWED",
+  "scope": "Four static poses only. No rig, all-frame evaluation, hand-opening transition or moving approval."
+}

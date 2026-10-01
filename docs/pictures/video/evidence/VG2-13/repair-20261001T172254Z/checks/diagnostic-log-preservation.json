@@ -1,0 +1,17 @@
+{
+  "operation": "Preserve exact raw diagnostics in verified ZIP; strip trailing whitespace and final blank lines in readable copies.",
+  "archive": "diagnostic-raw-logs.zip",
+  "archiveSha256": "6d040d69aebfeb0ff3a0d81020468fd027b01290cadab705a697c553955ee3f0",
+  "files": [
+    {
+      "file": "contour-regressions-initial.log",
+      "rawSha256": "3b5303bd4f86f301eb03c62f645e870d67f470fbc9ad3c064438435675ce21bb",
+      "normalizedSha256": "b9092230e850bb4f8c5401b4c1b26e57333081252a11700d6fdddf8fbaf4b812"
+    },
+    {
+      "file": "gradle-test-thread-sample.log",
+      "rawSha256": "9445a370bb7fcfe80944f2b1ea335062ff1d26ebc7d00714a86e31d2aa1cb872",
+      "normalizedSha256": "11b4723b1467bcb3342ceb5d3627b5019bfe7afa5a313f78292196fc5b22ffc7"
+    }
+  ]
+}

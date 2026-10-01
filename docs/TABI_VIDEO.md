@@ -173,6 +173,30 @@ proceed to Blender. VG2-13 is reopened for bounded correction, VG2-14 is blocked
 and the exhausted 12-file derivative allowance requires an explicit extension.
 The queue contains a finite local-only repair proposal; it has not been executed.
 
+### VG2-13 local contour repair / renewed VG2-14 review (2026-10-02)
+
+The user authorizes continuing point 1's bounded local repair. New owner:
+`pictures/video/evidence/VG2-13/repair-20261001T172254Z/`; original v2 rejection
+and all old inputs remain unchanged. Review
+[assembled v5](pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png)
+(SHA-256 `440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc`).
+It restores supplied resting/open-hand contours, clears orphan hand-outline pixels
+from the cuff, retains valid forearm pixels and corrects cuff/wrist registration
+and draw order. The initial repair mistook warm brown hand outlines for fabric;
+that failure and the subsequent backing/contact correction remain retained as v3/v4.
+No new image calls or RGB painting; supplied cabin pixels repair the local backing.
+
+The selected parts atlas, registration, helpers, old sources and three new static
+sheets are pinned by `checks/kit-freeze.json`. Source/contour negatives and four-state
+joint/opacity/protected-area checks pass. The inner sleeve/backing junction and the
+new neutral/cuff/hand proportions still need visual review against unchanged 48;
+numerical checks do not award appearance, rig or motion approval. Consumption is
+3 image attempts / 15 derivative files / 5 static passes. The original unused pass
+plus the two added passes are explicitly reconciled, with no refund of failures.
+All static passes are consumed. Diagnostic source crops are bundled and task-owned
+scratch removed. VG2-13 is REVIEW and VG2-14 awaits the exact new appearance decision;
+VG2-15 and all media work remain unstarted. Further repair needs a finite extension.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

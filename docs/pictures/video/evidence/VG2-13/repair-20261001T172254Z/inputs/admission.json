@@ -1,0 +1,414 @@
+{
+  "schema": "standalone-local-parts-repair-1",
+  "owner": "docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z",
+  "userInstruction": "ok, i'd like to continue step by step starting from point 1",
+  "interpretedScope": "The concrete point-1 proposal presented immediately before this instruction: four additional local derivative files and two static repair passes, existing source pixels only. No new image calls, rig evaluation or video/media runs.",
+  "historicalConsumption": {
+    "imageAttempts": 3,
+    "derivativeFiles": 12,
+    "staticPasses": 2
+  },
+  "additionalLimits": {
+    "imageCalls": 0,
+    "derivativeFiles": 4,
+    "staticPasses": 2
+  },
+  "aggregateCeilings": {
+    "imageAttempts": 16,
+    "derivativeFiles": 16,
+    "staticPasses": 5
+  },
+  "repairAttempts": 3,
+  "approval": "PENDING renewed VG2-14; rejection and all previous bytes remain authoritative",
+  "runtime": {
+    "node": "v25.8.2",
+    "executable": "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+    "sha256": "fdfd102dbe86b0af5dfc540a9c8dcb2fa0c5a3166d4a6c067eaf78d49568af40"
+  },
+  "pins": [
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/pre-wave-layer.png",
+      "sha256": "e13ae06f6ba41d66d33b45d86b118bd2663f0ed9d57f7b4c1e8cd500b3274bef"
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/pre-wave-review.png",
+      "sha256": "04ff12183b0e436f1703f2ef561e94ef07c1fd58d1f2a9d756a58c614f94f5c7"
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-early-layer.png",
+      "sha256": "3de20537d15ff86598949c2577e49b5e6fb229f622452ef78c08fe3d2ee88956"
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-early-review.png",
+      "sha256": "1350db94c6246a382ae684467c814ce3e7e822075ad41ad0ac85e3b46f2c4fba"
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-late-layer.png",
+      "sha256": "c15de61428584f09a08575851baf5590c0a7d15d414cc68224a067464e2fb755"
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-late-review.png",
+      "sha256": "6c3c99080ad1656a1b8b034c4a63a18c1b884a4d09f1296a4ced345a45aa52bf"
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/wrist-out-layer.png",
+      "sha256": "11d83ef673a7c3531389e840244544c6099749172531f5a5088e8051942300a5"
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/wrist-out-review.png",
+      "sha256": "c5aad3b708746b31481635535f628e34d0cc38fb67b74ee4cce59641102763a0"
+    },
+    {
+      "path": "build/vg2-character-approval-20260929/full-foreground-coverage.png",
+      "sha256": "0dbc32a26c4fb0ff4f8f388e041d95e9f038509850f2772ade1545a4f07f81fa"
+    },
+    {
+      "path": "build/vg2-character-art-a3/full-foreground.png",
+      "sha256": "e9d69d59f21ecac1d15561487c193d19d3cef2e65ca2970a1669c062dec9e93a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/backing-raw-1.json",
+      "sha256": "2f45a3e568b71ece73f726e79f720eadaa4f983ba2f06315501fabe0c0d0f2be"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/backing-raw-2.json",
+      "sha256": "9f9bdd865f97a6f8e745adda0a392bfb522a9ded108c7efc22e435c926df61c8"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/correction-atlas.json",
+      "sha256": "f5c9e54d8a805c67b2c8fe221f7173ea687cf12e32aa4fc631db67c201f00fef"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/parts.json",
+      "sha256": "37b98739a0f05fb5beea825c6b79cfa323917a792a4d04f82c5d6c568df703e6"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/static-v1.json",
+      "sha256": "f5f667864da74bb8c0faeb386cd3b5db3522262b03ccb15ee58a9cd6e317ab96"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/static-v2.json",
+      "sha256": "11b5b92c170de42c485e2cc22587e25ea691e21b96a02a91f516b7bea59a2e6d"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/inputs/backing-correction-request.json",
+      "sha256": "4656f571a687a396dbe1a17ecb7562466cfaea02e8e33b96119c62b12d2ee075"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/inputs/backing-correction-reservation.json",
+      "sha256": "978100314306f6ae878aef4ea978612a8bfeabd7fbad3c82820a0ff8f40a759b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/inputs/backing-request.json",
+      "sha256": "03e9b5b4e31f64458e845ea55baca44a8b21414697eec21628463fedd4b70b9c"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/inputs/backing-reservation.json",
+      "sha256": "80fcbc8859804c86f2766b90dae3bbdff34d50d911c2ecdf52880e3c1bb71c4f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/inputs/preparation-scope.json",
+      "sha256": "f8fd9619bc2b099ead23345c8047719d5f2d5831656aca2dec52b8373ef68f2e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/raw/01a0f82e-63fc-71ee-b347-c66087a4612a/ig_00e21170e847b4f3016abe8964895487d0951ec2b7f65f5a2c.png",
+      "sha256": "b71ae995f9ec811c71767e55f2d50a07eb96123c4c26c58cd0791854adb90ebb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/raw/01a0f82e-63fc-71ee-b347-c66087a4612a/ig_0dafa537f34c43d0016abe8900037c87d0b6448bf900f5c2ce.png",
+      "sha256": "86828a956dac93c2331c7d402e3275b682f51345c82ff91ff29a3401c8354f00"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/scripts/assemble.cjs",
+      "sha256": "b553f511ea75c1b14407ba5c875eb3a9708650f434b13df3044e2c8815138ab2"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/scripts/check-kit.cjs",
+      "sha256": "1e42c2235536bf7c757cc5d86c699844d9194f2f491f7a62fbc41bc51ec1f86c"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/scripts/correct.cjs",
+      "sha256": "36a964cda26ee91165d0682b190bd81c27292df20a049c20f29784fb4ade9791"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/scripts/static-review.cjs",
+      "sha256": "f6e2d9130883083a93c94d532446625e94183c4ab3a3690d980f6613ac186939"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/attempts/revealed_torso_cabin_backing-2.png",
+      "sha256": "86828a956dac93c2331c7d402e3275b682f51345c82ff91ff29a3401c8354f00"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/attempts/revealed_torso_cabin_backing-3.png",
+      "sha256": "b71ae995f9ec811c71767e55f2d50a07eb96123c4c26c58cd0791854adb90ebb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/attempts/upper_sleeve_separate-1.png",
+      "sha256": "64858095d4e71cbd679caa42168b3ec2cdd4508c28a8cbc6584549ad6e07069a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/check-preparation.cjs",
+      "sha256": "6e382be561fe5a723040ac0f9a9cd7177cc046d37e2c0e1ecb17d86b368b7651"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/065e93fa3ab3dd7bef4a74c7573d7e6c.json",
+      "sha256": "b08daa82eb5aaf9bfed64c0d406312543a5b9bcebbd5e8137e91edc6c8da3aee"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/14c283e0384a4c401a45eaafde40402a.json",
+      "sha256": "5c6896e714f95ed3e41461c657dd672b1cf720c5b6a2d1f90b525ebfc1ebfc59"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/2483de2a5906e20633ea0b496cff07f5.json",
+      "sha256": "7f6c3291ac0997cbf8dbe624865f483e0f5f041b1b57816e26c956be63c7df17"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/2f7938fd47f36e120b64c61faff47317.json",
+      "sha256": "3f26141dbd9e759a6b4fd773f3c03adb1ba2c55ce2ce6b6a394756e86c6ffca3"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/310ec5b5db0a7416f42df650f4cc927f.json",
+      "sha256": "9b8b30343f974fe9dd5c3e5c0d1c355658ee77111da0eed9cfa7197949693c42"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/43ef0e546719bfb053041c6c4dbb4ce6.json",
+      "sha256": "1be0ab34711b10f536901257c451db02224140fbaa53943e520c1a61dd69427c"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/55c1bb4bdd54bcb6e2d027702649161a.json",
+      "sha256": "8b74e0f7e415fd5bf33dce543a92a9076de9ffccd50eb33f4dce69b0c288f392"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/77747b3dfdfeaa1e58b3a8e5bc0b9c25.json",
+      "sha256": "d3db77f6d588b977e4a61bfecc64b2b7adabec5409305ae8eb3141dc7d5ba2d6"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/a11ebb7f4e7a32c782cacd1a4d0b62b1.json",
+      "sha256": "f095f5e4fbde359cf7f7cad3fc1eedc26cbaa559913d2c3c33f108dada34ab86"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/adb8b05a406859ab2b08f4592e395dbb.json",
+      "sha256": "1237e4c4ed3e61dc2495b314a5dfa9c6023cde8b93d850141d2ede0d53c303e6"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/b3466d626242395b96bea8f79c4fe328.json",
+      "sha256": "573663ee862ded603067e218df917a67d7d4042c44319f160a48059d2593e453"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/bdb54aff8a39abd54db86a65f75f6783.json",
+      "sha256": "84c08be04e20169bd51707b55c79e8bbb534d606f1743972a0b1c9752c777ccc"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/c095eb6a36ed6c514fd7a07378f2730b.json",
+      "sha256": "c5474c9da07f083923cc3eacde2ffba5dfc3aa6da8fef56d5e257625efdbf891"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/c6a455387d8afa21a511a4a9e1abdd52.json",
+      "sha256": "64508d52289b754d08973ed300fc0ab35c5348539effa5acc04b50a4b805650e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/d35cf05dfda6c05029a87df8d72f1c12.json",
+      "sha256": "ec4900e89f88f7100512eec3d8c92aa5c4dd9be350e7f942105d4fcd6964e0f7"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/dbfbf2f7852ffb75e4f039324b8a5f1b.json",
+      "sha256": "595766288f40f5e38d7c2dab85e47e7b05d4f26a3ff08f9f4f01829be9933194"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/journal/ec16665da7892a3fa9c6e9501d4d6a81.json",
+      "sha256": "72a3bc2b3e17226b7af86b163d03a11643774d3517c394bd6026398a24c46a65"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/corrected_parts_atlas_v2.png",
+      "sha256": "202cff830d00f1c846bbf822a4bff196508292925c71a94ecf8393def2d9effc"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/cuff_wrist_overlap_assembly_v1.png",
+      "sha256": "4d78248725825b5309e72261f45e9c08409cb4b4b8e64fb919b5f8dabfd13c4d"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/fixed_head_fronds.png",
+      "sha256": "61fdcf0d61460b012528915f525e4514450a0e476c03acc258aec86f6efe5c12"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/fixed_head_fronds_face.png",
+      "sha256": "b776b878fa8453a5993e654a3741f7162130b8d7fcd03250019378e8c5243d6b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/forearm_separate_assembly_v1.png",
+      "sha256": "d0c4f08f3935c9c6c307bc577a684b397e438337428ceb37bada7172f5b47132"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/hand_neutral_assembly_v1.png",
+      "sha256": "55f40c4029d04e65d7f931da88cc5db99dca0f64dbb9cb5cb928fa40fc79e41b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/hand_wrist_beat_assembly_v1.png",
+      "sha256": "77b5e222a0652c183bd9b808eeb56bb591ba5cb10ac4ea57357f6a7462e222b1"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/hidden_shoulder_elbow_overlap_assembly_v1.png",
+      "sha256": "fb51a410627d4112ca6c906fcff564bd521519529f0f6e0791f93089e810465f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/lower_contact.png",
+      "sha256": "ed44e4d56c8de14e0495992a6b5a993d5111091c5a5a4665c9f458e115d362b2"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/revealed_torso_cabin_backing_assembly_v1.png",
+      "sha256": "696db9b84ad8b9cfa62164c620e9ad5d14e4b5e120ba86aaabde1dc9386355ef"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/unaffected_torso_islands.png",
+      "sha256": "8985e87f978634f09e2a0be6fcb5c00333287bd88902729fe7467cedaabd2226"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/upper_sleeve_candidate_v1.png",
+      "sha256": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/preparation.test.cjs",
+      "sha256": "6ef558ed80a9ecd216bfb4a31d9d4043ae64f7fd9547cd9543f5ab31a6c2c845"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v1.png",
+      "sha256": "8c953a96bb8faa46a6eca0fde1f2a3c7de24c6424ddb27ebd483226d011bbf62"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v2.png",
+      "sha256": "3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/character-profile/tabi-character-profile.png",
+      "sha256": "1c63aa8f579634eff5f8c6864e97882513feba381c1e2380ae66018800f9d238"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png",
+      "sha256": "01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/10-waving-hello.png",
+      "sha256": "3429a363598b58c93477075eda366aa6602239f97a485eb6896b9d142e1c79b7"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/28-breathing-rebuilt-cabin-review-candidate.png",
+      "sha256": "922ff5afd87417c9ba653b327d4b00007670981c99d1d927c20f4ea596769e14"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/35-wave-isolated-no-lipstick-guide.png",
+      "sha256": "f8d1493887067a3afb9a14dc16890a3f7a94bbad2d2e2360cd2667940d0dddd1"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/36-wave-fixed-lower-alpha-review-candidate.png",
+      "sha256": "e0d146605258fa1c200c08df4c29d403c4492bf19beec0ecfcfb0bcb3a88e1b7"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/37-wave-fixed-lower-review-candidate.png",
+      "sha256": "d503b6c65c83091de42cd9b9fd7909906aa824fe86e7d60d504145fa5f46444a"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/38-wave-halfway-arm-model-source.png",
+      "sha256": "b75f75fdf4b627864a34ae6a0323f81dc579bb7f10174b32beea53945fb10c45"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/39-wave-halfway-arm-alpha-candidate.png",
+      "sha256": "7e64f7c9e6e9cb8902ceb26253bb63703537f883bc414670f154687078eb75b8"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/40-wave-halfway-seated-alpha-candidate-v2.png",
+      "sha256": "7039302f84c4a8571e0231fbfa7581ef9e3dc4ddf7b2357387e6e3593252d11e"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/41-wave-halfway-scene-review-candidate-v2.png",
+      "sha256": "1e24238cddcff8c61a660628dca98fd9e0509b8d35de1afbfdc74403a4f2e72c"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/42-wave-neutral-halfway-raised-comparison-v2.png",
+      "sha256": "022343e69230183f4118da9dbbd84b7141c66449cbe624df406e85d5063d5619"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/43-neutral-cheek-rest-arm-model-source.png",
+      "sha256": "c20dba059aefc5fed28aac0380cfe7e890afbedca35d308b3ca6fbed08acf56a"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/44-neutral-cheek-rest-arm-registered-guide.png",
+      "sha256": "c70d77872d7bff06c98bbb00fa3838c41436712a77079d842468acd3b2d1a0a8"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+      "sha256": "33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/46-matching-halfway-single-pass-alpha-candidate.png",
+      "sha256": "1523f8575723c7979fc26090c219e3ed2c64b659189400deea9958f47af75985"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+      "sha256": "5e3890233ad57764b0c7b7a0279934d4e1dc9dfd778184f961c0195543660dc5"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/48-matching-neutral-return-baseline-review.png",
+      "sha256": "c6dc10f9d03a0a0548645f62594d3f36a6ba5a772e3a0717fb72e96c1a81865b"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/49-matching-neutral-halfway-wave-comparison.png",
+      "sha256": "9097314133cb6a7c427495e1750984f71aef451b6020407e5ad475a074227d5c"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/50-matching-kit-contact-review.png",
+      "sha256": "b53ff899962783eaac8270204f9484d730c43f37c10e1554a39ebcd172eae6f6"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/59-wave-seven-pose-static-comparison.png",
+      "sha256": "7dff03003bfa600aa82e77c1c47bc9e5382628b16f5e76cc19ff425a0421e207"
+    },
+    {
+      "path": "tools/video-motion/node_modules/@napi-rs/canvas-darwin-arm64/skia.darwin-arm64.node",
+      "sha256": "b6b2f5cc20d4d536c1b5768ba41ef6c83fcd289f4cc435d9aac5e2185e0b655c"
+    },
+    {
+      "path": "tools/video-motion/node_modules/@napi-rs/canvas/geometry.js",
+      "sha256": "2e0ae365059fdb0424ddd2da8401e240a250c52b7efca68680996a99e804c1a1"
+    },
+    {
+      "path": "tools/video-motion/node_modules/@napi-rs/canvas/index.js",
+      "sha256": "c7ce5cd89e3647d747a9ca9f28d1362e4da79561336fb49bf49e78eba9850333"
+    },
+    {
+      "path": "tools/video-motion/node_modules/@napi-rs/canvas/js-binding.js",
+      "sha256": "b9849c13b0368608c13cbbf431524c3a2e69bcea314bb719d6e52725232fcb67"
+    },
+    {
+      "path": "tools/video-motion/node_modules/@napi-rs/canvas/load-image.js",
+      "sha256": "a63d9edc7dc00ebee21eb1fe87172b9be68070e49a958ef4d1826445b7c1240e"
+    },
+    {
+      "path": "tools/video-motion/node_modules/@napi-rs/canvas/package.json",
+      "sha256": "8e345a28e4d1cedd40ee8f41a4c779ef9aeb590c8bbce21eef6c64192c74bdc3"
+    },
+    {
+      "path": "tools/video-motion/vg2-static-parts.test.cjs",
+      "sha256": "3a7425740fc9a4a1fadba950ece0c06da8b4df9187422a3cc3104a28e2c80d01"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/scripts/check-ready.cjs",
+      "sha256": "1442fc8ae989a3244e5a6fcb7a48b2e56e67fe382500f81eff818e57ffa4686c"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/scripts/finalize-readiness.cjs",
+      "sha256": "3f55918403d92163b581fdc4e88d47b00661afdc4655329d39373804dff57247"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/kit-freeze-final.json",
+      "sha256": "dbdb1910001ed4128d227ebbf18cda63e6bda4d46aade3f9268dd79504f07697"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/preparation.json",
+      "sha256": "ff892463615f460a3d3d91aa2ab26094c672225ff6f29a66384c1937e4f9d50f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-14/rejection-20261001T170716Z/review.json",
+      "sha256": "cb0b375a643abb5c7d39160854e7b981c88a7773a75ee401f5893f41b7c09592"
+    }
+  ]
+}

@@ -499,8 +499,8 @@ movie as an animation baseline.
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
 | VG2-12 | Inspect the existing TABI source pool and retained preparation; freeze one view/outfit, neutral 48 as starting appearance reference and a five-second/150-frame neutral → lift → two wrist beats → lower → neutral test. Identify exact reusable parts, missing hidden surfaces/hand shapes, joint limits, fixed/contact regions and future output owners. Confirm rights/source provenance and propose the smallest finite artwork/rig/test budgets; no asset creation or native render. | CORE-01 | DONE |
-| VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | WAITING_USER |
-| VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | BLOCKED |
+| VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | REVIEW |
+| VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | WAITING_USER |
 | VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | TODO |
 | VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | TODO |
 | VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | TODO |
@@ -637,6 +637,51 @@ most two bounded corrections. Reuse pinned source pixels; zero new image calls,
 Blender or media runs. Localize and regress full hand/cuff/arm contours and overlap,
 not just joint centres, before showing a new candidate. Explicit approval of
 this limited extension is required before creating more derived assets.
+
+VG2-13 bounded local repair admission (2026-10-02, user local date): after being
+shown point 1's four-additional-derivative/two-static-pass proposal, the user says
+“ok, i'd like to continue step by step starting from point 1”. This authorizes
+that concrete local repair extension. Owner:
+`docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/`; inherited consumption
+remains 3 image attempts / 12 derivatives / 2 static passes. At most four new
+derivative files and two additional static passes; the original unused pass
+remains available within the aggregate five-pass ceiling. Zero new image calls, Blender
+or media runs. Preserve historical kit, rejection and allowances. Reuse source
+pixels, localize full hand/cuff/arm contours and add failing-before regressions.
+The changed neutral and extremes still need a renewed exact-artifact VG2-14
+decision before VG2-15; this admission does not approve their appearance.
+
+VG2-13 local repair handoff (2026-10-02, user local date): candidate HEAD
+`8cc3d1e140d9ff95e104c4a9c95f896b358e7031` plus the task-owned repair owner,
+`tools/video-motion/vg2-contour-repair.test.cjs` and this disposition; the nine-file
+pre-existing documentation diff and unrelated environments are preserved.
+Selected review:
+[assembled v5](docs/pictures/video/evidence/VG2-13/repair-20261001T172254Z/review/assembled_review_v5.png),
+SHA-256 `440c015c4e2ef4c4e14294f427f089c402aef2e3943120a3c48e46c3b9bdcfbc`.
+`checks/kit-freeze.json` pins the candidate atlas, registered cuff/hand placement,
+helpers/tests, predecessor sources and all three new static candidates. The old
+v2 masks fail full selected-hand skin/outline checks; source-colour-preserving
+matte repair restores their contours. Cuff orphan-outline count falls 162 → 0;
+239 supplied green forearm pixels survive removal of the diagonal clipping mask.
+One correction restores warm dark hand-outline pixels that the first pass
+mistook for ochre fabric. The backing correction uses supplied cabin pixels and
+preserves the planted other hand. V3/v4, their helper/test snapshots and the source
+localization ZIP remain retained; no historical file or approval was replaced.
+All four static states pass joint samples, opacity and exact equality outside the
+declared support area. These checks do not certify complete anatomy/cloth/silhouette
+quality: inspect the inner sleeve/backing junction, hand/cuff proportions and changed
+neutral against unchanged reference48 before any rigging. VG2-13 remains REVIEW;
+VG2-14 awaits that exact-artifact decision, not an inferred pass.
+Consumption is now 3 image attempts / 15 derivative files / 5 static passes:
+three new atlases and three review sheets use the original unused static pass plus
+the two added passes. `inputs/static-allowance-reconciliation.json` records that
+accounting; no spent attempt was refunded. All five aggregate static passes are
+consumed. Zero new image calls, Blender, media, imports or take changes. Read-only
+handoff/source integrity and the seven new regressions pass; final headless checks
+are retained in `checks/{focused-final,node-final,make-test,make-build,diff-check}.log`.
+`MidiCoreNativeResponsivenessTest` is excluded, not passed. Diagnostic scratch is
+verified in `checks/source-localization.zip` and removed; validation init scratch
+is automatically removed. Further static repair needs a new bounded allowance.
 
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
