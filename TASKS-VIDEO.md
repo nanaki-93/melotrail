@@ -282,6 +282,76 @@ VG1-01 evidence (2026-09-24): tested source candidate HEAD `6815543197c12b61f36d
 
 Fresh verification passed: full selectors `./gradlew :test --no-build-cache --rerun-tasks --tests '*VideoProjectStoreTest' --tests '*VideoAssetImportTest' --tests '*VideoAnimationAssetsTest' --tests '*VideoPreparedSceneStoreTest' --tests '*VideoSceneLooksTest' --tests '*VideoScenePreparationTest' --tests '*VideoPromptCompilerTest' --tests '*LocalVideoSetupTest' --tests '*VideoMotionRendererTest' --tests '*VideoMediaProcessTest' --tests '*LocalVideoBackendTest' --tests '*VideoClipGenerationTest' --tests '*TargetArchitectureRulesTest' --tests '*DocumentationIntegrityTest'` (6 executed); `./gradlew :test --tests '*VideoMotionDescriptorFixtureTest'` (1 executed, 5 up-to-date); `MELOTRAIL_MOTION_FIXTURE_ROOT="$PWD/build/video-motion-fixtures" node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs` (22/22). `make test` passed (root and `:desktopApp`, 1 executed/13 up-to-date); `make build` passed (14 up-to-date); `git diff --check` passed. Logs/exit files are under ignored `build/vg1/step-3.1-20260924T062554Z/`. Escalation recheck after correcting the archive citation: `build/vg1/escalation-20260924T063623Z/` (focused 6 executed; fixture generator 1 executed/5 up-to-date; Node 22/22; `make test` 1 executed/13 up-to-date; `make build` 14 up-to-date; `git diff --check` passed). The original archived fixture bytes still hash to the corrected value above. No defect reproduced. No real model/media inference, artistic/rights/UI/production-generation/release approval is claimed; preview WIP and unrelated user data remain untouched.
 
+VG1 current-candidate checkpoint (2026-10-01; **FAILED, not a fresh VG1 pass**):
+HEAD `6bf50fe80723b4af9ecdf3ad0e50f2882731cf50`; preflight
+`git status --short`, `git rev-parse HEAD`, `git submodule status`, and
+`git diff --stat` found no tracked changes or submodules. Unrelated untracked
+`.venv-transcription-spike/`, `.venv-worker/`, `.venv/`, and
+`tools/__pycache__/` were preserved. JDK 21.0.11, `/opt/homebrew/bin/node`
+25.8.2 and installed/lockfile `@napi-rs/canvas` 0.1.80 match the pins.
+Temporary headless Gradle init excluded `**/MidiCoreNativeResponsivenessTest*`
+and set `java.awt.headless=true`; that native-window class is **excluded, not
+passed**. `./gradlew -I "$HEADLESS_INIT" test build --dry-run` passed; graph
+includes root and `:desktopApp:test`/`build`, but no capture, installer, model,
+or GUI launch task. The required 16-selector
+`./gradlew -I "$HEADLESS_INIT" :test --no-build-cache --rerun-tasks`
+with `--tests '*VideoProjectStoreTest'`, `'*VideoAssetImportTest'`,
+`'*VideoAnimationAssetsTest'`, `'*VideoPreparedSceneStoreTest'`,
+`'*VideoSceneLooksTest'`, `'*VideoScenePreparationTest'`,
+`'*VideoPromptCompilerTest'`, `'*LocalVideoSetupTest'`,
+`'*VideoJobCoordinatorTest'`, `'*VideoMotionRendererTest'`,
+`'*VideoMediaProcessTest'`, `'*VideoMediaProbeTest'`,
+`'*LocalVideoBackendTest'`, `'*VideoClipGenerationTest'`,
+`'*TargetArchitectureRulesTest'`, and `'*DocumentationIntegrityTest'`
+ran six tasks (all executed, none cached); **252 tests, one failure**:
+`DocumentationIntegrityTest.all local Markdown links in the active documentation
+resolve`. Its JUnit XML reports three links to the same missing
+`docs/pictures/video/tabi-assets/train-actions/59-wave-seven-pose-static-comparison.png`
+in this queue, `docs/VALIDATION.md`, and `docs/TABI_VIDEO.md`. The linked file is
+absent locally and at HEAD; no comparison was recreated, replaced or relinked.
+Dry-run/focused logs and temporary init path are retained in ignored
+`build/vg1/current-candidate-checkpoint/`; the XML is at
+`build/test-results/test/TEST-app.melotrail.documentation.DocumentationIntegrityTest.xml`.
+After this evidence edit, `./gradlew -I "$HEADLESS_INIT" :test --tests
+'*DocumentationIntegrityTest'` also failed the same link test (8 tests,
+1 failed; 1 task executed/5 up-to-date); its log is `post-evidence-doc.log`.
+`git diff --check` passed. Stop at this failed gate: fixture generation,
+Node suites and filtered `make test`/`make build` were not run; the post-evidence
+documentation recheck still fails. At that point a source-verified repair of the missing reference was needed;
+no historical comparison was changed. This was not a new appearance/moving-footage,
+artistic, UI, or release pass; VG1-01/02/03's DONE states remained unchanged.
+
+VG1 current-candidate checkpoint repair (2026-10-01; same HEAD `6bf50fe80723b4af9ecdf3ad0e50f2882731cf50`, plus this evidence and the restored image):
+The retained `build/vg2-08-fluid-assets-1TFP896e/candidate-v2/seven-pose-comparison.png`
+is exactly 690,768 bytes with SHA-256
+`7dff03003bfa600aa82e77c1c47bc9e5382628b16f5e76cc19ff425a0421e207`,
+matching `published-candidates.json`, the prior static-approval receipt and all
+three documentation citations. The retained candidate-v1 has a different hash;
+no comparison was regenerated. The exact candidate-v2 bytes were copied to the
+previously missing `docs/pictures/video/tabi-assets/train-actions/59-wave-seven-pose-static-comparison.png`;
+source and destination SHA-256 match. The earlier failed link test is the
+failing-before witness; the same 16-selector headless test run now passes (6 tasks
+executed), including the documentation link test. `./gradlew -I "$HEADLESS_INIT"
+test build --dry-run` passed (both root and desktop graphs; dry-run tasks SKIPPED).
+`./gradlew -I "$HEADLESS_INIT" :test --tests '*VideoMotionDescriptorFixtureTest'`
+passed (1 executed/5 up-to-date), generating
+`build/video-motion-fixtures/fixture-set.json`; with that root,
+`/opt/homebrew/bin/node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs`
+passed 31/31. `make GRADLE="./gradlew -I $HEADLESS_INIT" test` passed
+(4 executed/10 up-to-date; root and desktop tests executed); corresponding
+`make ... build` passed (14 up-to-date). `git diff --check` passed.
+After this evidence edit, `./gradlew -I "$HEADLESS_INIT" :test --tests
+'*DocumentationIntegrityTest'` passed (1 executed/5 up-to-date; 8 tests,
+0 failures); the final `git diff --check` passed. All tests used a temporary
+init script setting `java.awt.headless=true` and excluding
+`MidiCoreNativeResponsivenessTest`; excluded is **not passed**. Logs:
+`build/vg1/current-candidate-checkpoint/escalation-{dry-run,focused,fixture,node,make-test,make-build,diff-check}.log`;
+the post-edit logs are `escalation-post-evidence-{doc,diff}.log` in the same
+directory; original failure logs remain there. This validates owned synthetic imports,
+scenery/pixel parity, pins, setup and persistence through fixture tests, not
+moving-art quality or historical artwork production. No real model, production
+render, app window, artistic/motion/rights or release approval is claimed.
+
 ## Feature VG2 — Durable previews and immutable takes
 
 Backend technical gates and the controlled 5/20/30-second ladder are recorded
