@@ -62,6 +62,27 @@ full-pilot/second-city/app gates. Earlier “next kit/render/encoding” directi
 below are retained historical dispositions, superseded as scheduling by TASKS-VIDEO.
 VG2-08 count/socket failures and VG2-11 motion/colour failures remain BLOCKED.
 
+### VG2-12 source-pool pin and classification (2026-10-01)
+
+Read-only Step 1.2 evidence is under ignored `build/vg2-12-pool-20261001-a1/`:
+`sources.json` freezes 31 exact PNG paths/hashes, `inspection.json` records
+Canvas-decoded width/height and zero/partial/opaque alpha counts, and
+`classification.json` records provenance, limited static approval and candidate
+pixel/references/missing surfaces. `inspect.cjs --check` rechecks them without
+opening media. Original Tokyo scene and wave 10 are opaque illustrations;
+28 is an opaque cabin candidate; 45 is a transparent *whole subject*, not
+separated articulated geometry; **48 is the approved opaque composed neutral
+appearance reference**, not an interchangeable body layer. Fixed head/body/lower
+contact and foreground are possible pixel donors subject to support/occlusion
+checks, not rig-approved parts. Exact 51–58 bytes are retained at
+`build/vg2-08-fluid-assets-1TFP896e/candidate-v2/` with matching historical
+publication hashes; the originally published `train-actions/51`–`58` paths are
+absent here and were not recreated. Source creator/licence and permission to
+make/use derivatives are unresolved; static approvals are neither rights nor
+moving suitability. Joint overlaps, exposed backing and hand transitions remain
+missing/unverified. Step 1.3 still needs to freeze the minimum kit, geometry,
+limits and proposed budgets; no art/rig/video was produced by this inspection.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

@@ -403,6 +403,28 @@ VG2-12 kit readiness, articulated motion, user approval or VG2 completion.
 
 ### Route 1 — Standalone rig proof tasks
 
+VG2-12 source-pool inspection checkpoint (Step 1.2, 2026-10-01; not kit freeze):
+HEAD `8738043d3dd23306581d97aaf91960d9a9c1b620`; fresh ignored owner
+`build/vg2-12-pool-20261001-a1/` has `sources.json`, `classification.json`,
+`inspection.json` and read-only `inspect.cjs`. The frozen 31-PNG source list
+covers profile/original Tokyo, cabin 28, subject 45/composed neutral **48**,
+original wave 10 and wave/midpoint guides, foreground/coverage and 51–58 retained
+candidate-v2 bytes. SHA-256, decoded dimensions and zero/partial/opaque alpha
+counts are checked with `/opt/homebrew/bin/node build/vg2-12-pool-20261001-a1/inspect.cjs --check`.
+All eight originally published 51–58 paths are absent locally; their exact
+historically cited SHA-256 bytes survive at `build/vg2-08-fluid-assets-1TFP896e/candidate-v2/`
+under different filenames, verified against the publication receipt and the
+Blender `inputs.json`. No original published paths were reconstructed. 48 is the
+starting **composed** reference, not an articulated part. Only fixed head/body/
+lower-contact pixels, cabin and foreground are *candidate* reusable pixels;
+transparent full cutouts/independent arm drawings are not coherent rig parts.
+Hidden shoulder/elbow/wrist support, backing and hand transitions remain unproven;
+creator/licence/derivative rights are unresolved. Static look approval does not
+approve motion, parts or rights. The prior seven-pose movie remains rejected,
+and the count/socket/colour failures stay blocked. VG2-12 remains TODO until the
+separate minimum-kit/limits/budget proposal; no artwork or native media was made.
+
+
 These rows implement the selected method **only on a future bounded run**. They
 are not a second product workflow or permission to launch an unbounded sequence.
 Every row produces a concrete artifact/check; the user gates decide whether to
