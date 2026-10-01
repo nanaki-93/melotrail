@@ -1,0 +1,26 @@
+✔ inherited receipts, bytes and four spent slots survive relocation; incomplete is read-only (69.006375ms)
+✔ changed source/predecessor pins and missing or altered inherited records fail closed (8.708458ms)
+✔ one writer, immutable reservations before output and no refund on reopen (173.200041ms)
+✔ derivative and static limits count historical reservations even after writer restart (376.100875ms)
+✔ aliases, collisions and occupied files cannot be published or silently counted (226.850292ms)
+✔ case-variant output cannot impersonate an exact-path reservation (107.88425ms)
+✔ changed donor and protected-pixel edits reject exact RGBA witnesses (0.52825ms)
+✔ interrupted lock and pending write block new spending (141.521709ms)
+✔ actual inherited fixed pixels and alpha remain exactly pinned (165.986833ms)
+✔ retained cropped-head derivative is rejected; face/chin and cheek boundary are protected (91.999041ms)
+✔ endpoint normalization preserves RGB, intermediate edge alpha, dimensions and input (1.029334ms)
+✔ translucent fabric fails; endpoint derivative passes without permitting opaque RGB edits (72.000292ms)
+✔ static articulated poses keep identical limb lengths, shoulder and scale (1.052417ms)
+✔ unsupported articulation and extra hand states reject rather than extrapolate (0.380834ms)
+✔ admitted colour cleanup removes pink donor contamination but preserves emerald and leopard RGB (0.348666ms)
+✔ static admission rejects holes, protected-pixel drift, stretched limbs and fabricated approval (4.590125ms)
+✔ readiness cannot become approval or point to unbound or stale records (0.4275ms)
+✔ registered extraction anchors stay inside each explicit crop (0.065917ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1496.786875

@@ -130,6 +130,35 @@ decision; Blender, video/media, production imports, commercial publication and
 later gates have no admission from this message. See the [VG2-13 admission and
 queue status](../TASKS-VIDEO.md#route-1--standalone-rig-proof-tasks).
 
+### VG2-13 coherent static kit / pending VG2-14 review (2026-10-01)
+
+The standalone preparation is now technically handed off, not appearance-approved.
+[Review the exact assembled v2 sheet](pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v2.png)
+(SHA-256 `3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825`).
+It shows original neutral 48, a proposed new neutral, lifted wave, wrist-out and
+close-ups including wrist-in. Explicit approval of the changed neutral is needed:
+arm/cuff placement and scale, the hidden coat backing and the assembled silhouettes
+are new. Head/fronds, cabin, table/props and lower contact are preserved outside
+the declared local support envelope. Existing source 47 supplies the exposed cheek;
+no face was generated. Two supplied hand drawings have registered wrists, but no
+continuous hand-opening/closing or cloth-motion proof exists yet.
+
+Retained owners are `pictures/video/evidence/VG2-13/assembly-20261001T162141Z/`
+(inputs, scripts, checks and both backing image results) and the active
+`pictures/video/evidence/VG2-13/continuation-20261001-153813Z/` (reservations,
+parts and both static sheets). The first backing result was rejected as sleeve-
+shaped. The first sheet exposed a pink donor fragment and clipped cheek despite
+passing joint-centre checks; both defects have retained failing-before witnesses
+and a corrected atlas, without changing the failed outputs. Hash-bound final
+readiness and four-state alpha/geometry/protected-pixel checks do not certify all
+in-between poses. Historical build inputs remain pinned local dependencies.
+
+VG2-13 consumption is 3/16 image attempts, 12/12 derivative files and 2/3 static
+passes; backing has used both allowed attempts. More derivative files require a
+new allowance. User review is pending: approve these specific parts/new neutral/
+extremes or identify repairs. VG2-14 is not passed, and no Blender rig, video,
+production import or selected take was created by this preparation.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

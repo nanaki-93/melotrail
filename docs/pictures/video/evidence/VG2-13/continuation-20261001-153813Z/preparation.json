@@ -365,11 +365,32 @@
     "staticCandidatePasses": 3
   },
   "readiness": {
-    "parts": null,
-    "registration": null,
-    "neutral": null,
-    "usefulExtreme": null,
-    "technicalChecks": null,
+    "parts": {
+      "record": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/parts.json",
+      "sha256": "37b98739a0f05fb5beea825c6b79cfa323917a792a4d04f82c5d6c568df703e6"
+    },
+    "registration": {
+      "record": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/static-v2.json",
+      "sha256": "11b5b92c170de42c485e2cc22587e25ea691e21b96a02a91f516b7bea59a2e6d"
+    },
+    "neutral": {
+      "record": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v2.png",
+      "sha256": "3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825",
+      "state": "neutral"
+    },
+    "usefulExtreme": {
+      "record": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v2.png",
+      "sha256": "3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825",
+      "states": [
+        "lift",
+        "wrist_in",
+        "wrist_out"
+      ]
+    },
+    "technicalChecks": {
+      "record": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/kit-freeze-final.json",
+      "sha256": "dbdb1910001ed4128d227ebbf18cda63e6bda4d46aade3f9268dd79504f07697"
+    },
     "humanAppearance": "pending VG2-14"
   },
   "fixedFoundation": {

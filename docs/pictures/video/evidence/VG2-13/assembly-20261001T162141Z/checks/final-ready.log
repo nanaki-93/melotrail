@@ -1,0 +1,11 @@
+{
+  "technicalPreparation": "PASS",
+  "appearance": "PENDING VG2-14",
+  "consumption": {
+    "attempt": 3,
+    "derivative": 12,
+    "staticPass": 2
+  },
+  "reviewSha256": "3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825",
+  "scope": "Four static states only; no rig, moving or release approval."
+}

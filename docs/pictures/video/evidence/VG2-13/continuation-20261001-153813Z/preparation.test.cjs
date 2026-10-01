@@ -14,6 +14,8 @@ function fixture(t) {
   for (const dir of ['journal','parts','states','attempts']) fs.mkdirSync(path.join(root, dir));
   const c = JSON.parse(fs.readFileSync(path.join(owner, 'preparation.json')));
   c.owner = root;
+  // Fixture is the inherited incomplete checkpoint, not mutable current readiness.
+  c.readiness = JSON.parse(fs.readFileSync(path.join(repo, c.predecessor.owner, 'preparation.json'))).readiness;
   fs.writeFileSync(path.join(root, 'preparation.json'), JSON.stringify(c));
   for (const pin of c.predecessor.files.filter(f => /^(journal|parts)\//.test(f.path)))
     fs.copyFileSync(path.join(owner, pin.path), path.join(root, pin.path));

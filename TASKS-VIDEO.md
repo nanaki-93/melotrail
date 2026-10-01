@@ -499,7 +499,7 @@ movie as an animation baseline.
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
 | VG2-12 | Inspect the existing TABI source pool and retained preparation; freeze one view/outfit, neutral 48 as starting appearance reference and a five-second/150-frame neutral → lift → two wrist beats → lower → neutral test. Identify exact reusable parts, missing hidden surfaces/hand shapes, joint limits, fixed/contact regions and future output owners. Confirm rights/source provenance and propose the smallest finite artwork/rig/test budgets; no asset creation or native render. | CORE-01 | DONE |
-| VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | TODO |
+| VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | DONE |
 | VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | WAITING_USER |
 | VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | TODO |
 | VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | TODO |
@@ -594,6 +594,28 @@ owned temporary init removed and writer locks released. The verified continuatio
 manifest/helpers/inherited receipts are now included as task-owned prerequisites;
 unrelated nine-file documentation WIP and local environments remain untouched.
 Next: reconcile readiness and request exact-artifact VG2-14 review. No rig/media run.
+
+VG2-13 technical handoff / VG2-14 review request (2026-10-01): candidate
+`e39e4c97e` plus readiness reconciliation. `checks/kit-freeze-final.json` in the
+assembly owner binds the selected corrections, unchanged review sheet, tools and
+current checks. The active `preparation.json` now holds hash-bound parts,
+registration, neutral/extreme and technical records; `check-ready.cjs --check`
+verifies them and `check-preparation.cjs --check --require-ready` reports complete.
+The inherited negative-test fixture explicitly restores its predecessor's
+incomplete readiness, rather than taking mutable current readiness as test input;
+missing/stale/unbound records and fabricated approval remain negative cases.
+No artwork or allowance was changed in this reconciliation. Final `check-ready`
+and `--require-ready` checks pass; 18 focused Node tests pass. Final headless
+architecture/documentation selectors and filtered `make test`/`make build` pass
+(each full make gate: 1 executed/13 up-to-date); the native-window class remains
+excluded, not passed. `git diff --check` passes. Logs are `checks/final-*.log`;
+owned temporary init removed, no pending write or writer lock remains.
+VG2-13 is DONE for static preparation only; VG2-14 remains WAITING_USER for the
+exact v2 sheet above.
+Review the new neutral against reference 48, cuff/hand scale, shoulder/elbow
+attachment, revealed cheek/coat backing, and all three raised/wrist positions.
+Do not infer cloth continuity, hand-opening motion, all-frame support or a rig
+pass from these stills. VG2-15 and every native-media gate remain unstarted.
 
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under

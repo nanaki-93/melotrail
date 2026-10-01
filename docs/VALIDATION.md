@@ -461,6 +461,22 @@ not independent licensing or commercial/publication clearance, a new-part
 appearance approval, an admitted media run or a technical validation pass.
 VG2-14 still requires review of the actual assembled neutral and extremes.
 
+VG2-13 static handoff (2026-10-01; **human decision pending**): exact review
+artifact is [assembled v2](pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v2.png),
+SHA-256 `3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825`.
+Technical source/part/tool pins and results are under
+`pictures/video/evidence/VG2-13/assembly-20261001T162141Z/checks/`;
+`kit-freeze-final.json` binds the final candidate. Four static states have opaque
+output, constant limb lengths, supported joint-centre samples and exact pixels
+outside the declared support region. The first sheet's donor contamination and
+clipped cheek remain retained with negative checks and the corrected atlas.
+These checks do not establish full joint-edge continuity, all-frame swept support,
+hand-opening motion, cloth/anatomy quality or appearance approval. The reviewer
+must explicitly accept the changed neutral versus original 48 and inspect the
+new arm/cuff/hand proportions, exposed coat/cheek and raised/wrist extremes.
+No reviewer/date/decision is recorded yet. No Blender or media run is admitted by
+this static handoff; VG2-14 still gates the later rig proof.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

@@ -22,6 +22,13 @@ test('static admission rejects holes, protected-pixel drift, stretched limbs and
  validateStatic(good());
  for(const change of [x=>x.checks[0].seam[0].holes=1,x=>x.checks[0].outsideChanges=1,x=>x.checks[1].geometry.elbow[0]++,x=>x.appearance='APPROVED',x=>x.checks.pop()]){const bad=good();change(bad);assert.throws(()=>validateStatic(bad));}
 });
+test('readiness cannot become approval or point to unbound or stale records',()=>{
+ const {validateReadiness}=require('../../docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/scripts/check-ready.cjs');
+ const pin={path:'checks/record.json',sha256:'a'.repeat(64)},final={path:'checks/final.json',sha256:'b'.repeat(64)};
+ const make=()=>({readiness:Object.fromEntries(['parts','registration','neutral','usefulExtreme','technicalChecks'].map(k=>[k,{record:k==='technicalChecks'?final.path:pin.path,sha256:k==='technicalChecks'?final.sha256:pin.sha256,...(k==='neutral'?{state:'neutral'}:{}),...(k==='usefulExtreme'?{states:['lift','wrist_in','wrist_out']}:{})}]).concat([['humanAppearance','pending VG2-14']]))});
+ validateReadiness(make(),[pin],final);
+ for(const mutate of [x=>x.readiness.parts=true,x=>x.readiness.registration.sha256='0'.repeat(64),x=>x.readiness.neutral.record='unknown.json',x=>x.readiness.humanAppearance='approved']){const b=make();mutate(b);assert.throws(()=>validateReadiness(b,[pin],final));}
+});
 test('registered extraction anchors stay inside each explicit crop',()=>{
  for(const p of specs)for(const a of Object.values(p.anchors)){assert(a[0]>p.crop[0]&&a[0]<p.crop[2]);assert(a[1]>p.crop[1]&&a[1]<p.crop[3]);}
  assert.equal(specs.filter(s=>s.id.startsWith('hand_')).length,2);
