@@ -508,6 +508,20 @@ movie as an animation baseline.
 | VG2-19 | After both actions and description mapping pass, run one separately bounded pair of 20–30-second standalone scene tests with identical approved rig/art/action versions but two materially different supported descriptions/order/timing. Include rest, both activities, returns and bounded scenery travel within measured coverage. No manual keyframe/rig edit between requests, regenerated character or whole-clip repeat. Validate both complete outputs, absolute-frame repeatability/chunk parity and changed-request dependencies; each clip gets its own explicit one-attempt budget. | VG2-10, VG4-08, VG2-17 | TODO |
 | VG2-20 | User reviews both reuse clips against their original descriptions for motion quality, continuity/contact and actual differences, and decides whether the rigged process warrants minimal production binding. Record limitations and the selected proof runtime; do not infer permanent app-backend adoption, long-film readiness or UI permission. Reject/repair the method before scaling if the same arm defect remains. | VG2-19 | WAITING_USER |
 
+VG2-13 preparation Step 1.1 owner (2026-10-01):
+`/Users/marcoandreose/DEV/lab/melotrail/build/vg2-13-coherent-wave-20261001-b1/`
+(ignored, persistent between checkpoints). `preparation.json` freezes 31 VG2-12
+source/reference pins, the user's local-derivative-only permission, eight target
+IDs and 2-per-target/16-total image attempts, 12 derivatives and three static
+passes. `check-preparation.cjs --check` is read-only and reports missing parts,
+registration, neutral/extreme stills and technical checks as **incomplete**;
+no image calls, parts or static passes have been consumed. Exclusive writer lock
+and pre-dispatch immutable reservations prevent silent allowance refund after
+reopen; the audit rejects unreserved owned outputs and the writer creates reserved
+outputs exclusively without overwrite, rechecking symlink-safe paths at write time.
+An interrupted lock requires explicit reconciliation, not auto-retry.
+This checkpoint does not make VG2-13 DONE or admit VG2-14 appearance approval.
+
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
 `docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.
