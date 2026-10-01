@@ -1,7 +1,9 @@
 # Architecture
 
 Owner: runtime boundaries and persistence. Product behavior and upcoming changes
-live in [PLAN](../PLAN.md); implementation status lives in [TASKS](../TASKS.md).
+live in [PLAN-AUDIO](../PLAN-AUDIO.md) and [PLAN-VIDEO](../PLAN-VIDEO.md);
+implementation status lives in [TASKS-AUDIO](../TASKS-AUDIO.md) and
+[TASKS-VIDEO](../TASKS-VIDEO.md), respectively.
 
 ## Components and dependency direction
 
@@ -89,10 +91,12 @@ source identities and prepared image facts. Unsupported project/plan versions
 reject without migration or artifact rewriting. Proposal persistence is not
 executable readiness: application integration, continuous execution/checkpoints
 and complete export orchestration remain VG4–VG5 work. `VideoAssemblyActionKind`
-still lacks pose sequences and scheduled actions have scalar values; VG4-07 must
-add their representation/compile path through the existing assembly/planner/store/
-preparation owners, with one current contract, pose/timing pins and absolute
-chunk-boundary tests. Runtime pose admission is not episode-schedule support.
+still has scalar scheduled actions and no pose-sequence or rig semantics. After
+the selected standalone rig/reuse proof, VG4-07/09 must scope only the required
+proven-action representation/adapter through existing assembly/planner/store/
+preparation/job/media owners, with one current contract, rig/part/action/timing
+pins and absolute chunk-boundary tests. Runtime held-pose admission is neither
+rig support nor episode-schedule integration.
 Video code cannot write a
 MIDI project or import MIDI application/storage owners. Only the application
 composition root coordinates the two workspaces.
@@ -144,17 +148,28 @@ Audition timbre is not authoritative and does not render audio files.
 
 ## Video isolation and remaining integration
 
-Production order (updated 2026-09-30): finish/review the matching wave/neutral
-kit, then one additional quiet activity; moving scenery join and pose-schedule
-binding → combined 60-second proof/review → full 180-second Tokyo film/editor
-review → selected second-city 20–30-second reuse proof/review → app integration.
+Production order (updated 2026-10-01): standalone coherent parts/rig → reviewed
+five-second wave → reviewed second action → description-driven 20–30-second
+reuse proof/review. Only then scope minimum production rig/action binding and
+moving scenery join → combined 60-second proof/review → full 180-second Tokyo
+film/editor review → selected second-city reuse proof/review → app integration.
 The default/current full target is 180 seconds, not a mandatory 240; the product
-supports 180–300. See [PLAN](../PLAN.md#7-step-by-step-delivery-order) and the
+supports 180–300. See [PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order) and the
 [TABI recipe/evidence](TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30).
-A thin, supervised harness may call the existing Kotlin project/job/media owners;
-it must not introduce a second ledger, scheduler, persistence schema, permanent
-alternate rendering backend or MIDI dependency. Limit pre-pilot engineering to
-required executable bindings, completed-chunk continuation and bounded encoding.
+The user-selected prepared 2D/2.5D method first uses Blender as a standalone proof
+candidate, outside production projects/jobs. New ignored rig/scripts/input data
+are experiment artifacts, not a second durable ledger or a production rig schema.
+Use a fresh directly owned supervisor; do not reuse the failed shared-socket guard
+or mutate consumed packets. Preserve rejected seven-pose footage and all failures.
+Image-generation-assisted missing-parts preparation is external, finite and
+separately admitted; it does not add in-app synthesis/extraction.
+
+After that proof is accepted and the production runtime explicitly chosen, a thin
+harness must use existing Kotlin project/job/media ownership. Scope a lazy rig
+media-stage adapter and typed action binding behind tests; no second scheduler,
+parallel persistence schema or MIDI dependency. The current held-pose API must
+not masquerade as an articulated rig. Limit pre-pilot product engineering to those
+required bindings, verified completed-chunk continuation and bounded encoding.
 Preserve existing planner/store/decoder work; defer app caller cleanup and UI.
 
 For the user's recurring train series, reuse compatible cabin/camera/TABI/props,
@@ -208,8 +223,10 @@ stage, not a second generative provider. Manifest 4/tool 1.2.0 adds `POSE_REPLAC
 entry/return and ≤9000-frame span; each invocation remains ≤300 frames. It replaces the whole cutout and
 applies alpha once, not a dissolve or native articulated interpolation, and rejects
 simultaneous blink/breathing/head/subject-steam controls. Synthetic production-
-imported tests pass; actual neutral/head/alpha/contact still fail. Window/frond/
-foreground mattes must fit the selected cabin and all allowed poses; the accepted
+imported tests and later matching-kit source checks pass, but seven-pose moving
+quality is rejected; the selected rig route is not implemented by this control.
+Window/frond/foreground mattes must fit the selected cabin and every allowed rig
+state as well as any supplied poses; the accepted
 old fixed-head mask is not automatically compatible. Original art/masks/videos
 remain immutable. The Video tab/application composition, visible motion setup and
 full assembly/export remain planned in VG2–VG6. For this series, VG6's full app

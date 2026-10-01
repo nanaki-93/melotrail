@@ -16,6 +16,7 @@ import kotlin.test.assertTrue
 
 class DocumentationIntegrityTest {
     private val repository = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize()
+    private val planningDocuments = listOf("PLAN-AUDIO.md", "PLAN-VIDEO.md", "TASKS-AUDIO.md", "TASKS-VIDEO.md")
     private val retiredGuides = listOf(
         "MIDI_IMPORT_PROCESS.md", "TRACK_PROCESS_WORKFLOW.md", "COMMERCIAL_PROVENANCE.md",
         "COMPATIBILITY_READERS.md", "SPRING_API_RETIREMENT.md"
@@ -23,7 +24,7 @@ class DocumentationIntegrityTest {
 
     @Test
     fun `all local Markdown links in the active documentation resolve`() {
-        val documents = listOf("AGENTS.md", "README.md", "PLAN.md", "TASKS.md").map(repository::resolve) +
+        val documents = (listOf("AGENTS.md", "README.md") + planningDocuments).map(repository::resolve) +
             Files.walk(repository.resolve("docs")).use { paths ->
                 paths.filter { Files.isRegularFile(it) && it.toString().endsWith(".md") }.toList()
             }
@@ -68,12 +69,18 @@ class DocumentationIntegrityTest {
     }
 
     @Test
-    fun `one task queue and concise reference set replace the retired planning suites`() {
+    fun `audio and video planning pairs and concise references replace the combined planning suite`() {
         val index = Files.readString(repository.resolve("README.md"))
-        listOf(
-            "PLAN.md", "TASKS.md", "docs/ARCHITECTURE.md", "docs/MIDI_CONTRACT.md",
+        val rootPlanningDocuments = Files.list(repository).use { paths ->
+            paths.map { it.fileName.toString() }
+                .filter { it.endsWith(".md") && (it.startsWith("PLAN") || it.startsWith("TASKS")) }
+                .sorted().toList()
+        }
+        assertEquals(planningDocuments.sorted(), rootPlanningDocuments)
+        (planningDocuments + listOf(
+            "docs/ARCHITECTURE.md", "docs/MIDI_CONTRACT.md",
             "docs/UI_GUIDELINE.md", "docs/VALIDATION.md", "docs/TABI_VIDEO.md"
-        ).forEach { path ->
+        )).forEach { path ->
             assertTrue(Files.isRegularFile(repository.resolve(path)), "Missing active reference: $path")
             assertTrue(index.contains("]($path)"), "Active reference not indexed: $path")
         }
@@ -87,6 +94,66 @@ class DocumentationIntegrityTest {
             assertFalse(Files.exists(repository.resolve(path)), "Retired documentation machinery restored: $path")
         }
         assertFalse(Files.readString(repository.resolve("build.gradle.kts")).contains("checkDocumentationCoverage"))
+    }
+
+    @Test
+    fun `workstream queues keep their own features dependencies and execution authority`() {
+        val agents = Files.readString(repository.resolve("AGENTS.md"))
+        val build = Files.readString(repository.resolve("build.gradle.kts"))
+        planningDocuments.forEach { name ->
+            assertTrue(agents.contains("]($name)"), "Missing agent authority: $name")
+            assertTrue(build.contains("\"$name\""), "Missing documentation test input: $name")
+        }
+        listOf("AUDIO" to (1..5).map { "AC$it" }, "VIDEO" to (1..6).map { "VG$it" }).forEach { (stream, features) ->
+            val planName = "PLAN-$stream.md"
+            val queueName = "TASKS-$stream.md"
+            val plan = Files.readString(repository.resolve(planName))
+            val queue = Files.readString(repository.resolve(queueName))
+            val otherPrefix = if (stream == "AUDIO") "VG" else "AC"
+            features.forEach { feature ->
+                assertTrue(plan.contains("### Feature $feature —"), "Missing roadmap feature: $feature")
+                assertTrue(queue.contains("## Feature $feature —"), "Missing queue feature: $feature")
+            }
+            assertFalse(Regex("(?m)^#{2,3} Feature $otherPrefix").containsMatchIn(plan + queue))
+            assertTrue(plan.contains("]($queueName)"))
+            assertTrue(queue.contains("]($planName)"))
+            assertTrue(queue.contains("from the current $queueName"), "Wrong implementation prompt authority")
+            val rows = queue.lineSequence().filter { Regex("^\\| (?:CORE|AC[0-9]+|VG[0-9]+|VG-OPT)-[0-9]+ \\|").containsMatchIn(it) }
+                .map { line -> line.split('|').map(String::trim) }.toList()
+            val ids = rows.map { it[1] }
+            assertTrue(ids.isNotEmpty())
+            assertEquals(ids.size, ids.toSet().size, "Duplicate IDs in $queueName")
+            rows.forEach { row ->
+                val id = row[1]
+                assertTrue(id == "CORE-01" || features.any { id.startsWith("$it-") } ||
+                    (stream == "VIDEO" && id.startsWith("VG-OPT-")), "Wrong workstream: $id")
+                assertTrue(row[4] in setOf("TODO", "RUNNING", "REVIEW", "DONE", "WAITING_USER", "BLOCKED", "OPTIONAL"))
+                if (row[3] != "—") row[3].split(", ").forEach { dependency ->
+                    assertTrue(dependency in ids, "$queueName: $id has missing/cross-queue dependency $dependency")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `planning requires non interactive validation without retired UI only task gates`() {
+        planningDocuments.forEach { name ->
+            val text = Files.readString(repository.resolve(name))
+            assertTrue(text.contains("## Non-interactive validation"), "Missing validation scope: $name")
+            assertTrue(text.contains("docs/VALIDATION.md#non-interactive-validation"))
+            listOf(":desktopApp:nativeDesktopCapture", ":desktopApp:nativeInstallSmoke",
+                ":desktopApp:videoInstalledSmoke").forEach { command ->
+                assertFalse(text.contains(command), "Interactive command remains in planning: $name -> $command")
+            }
+        }
+        val audioRows = Files.readString(repository.resolve("TASKS-AUDIO.md"))
+            .lineSequence().filter { it.startsWith("| AC") }.toList()
+        listOf("AC4-02", "AC5-05").forEach { retiredId ->
+            assertTrue(audioRows.none { it.contains(retiredId) }, "Retired UI gate or dependency: $retiredId")
+        }
+        val agents = Files.readString(repository.resolve("AGENTS.md"))
+        assertTrue(agents.contains("headless and non-interactive"))
+        assertTrue(agents.contains("docs/VALIDATION.md#non-interactive-validation"))
     }
 
     @Test

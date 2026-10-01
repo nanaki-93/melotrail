@@ -27,6 +27,14 @@ import kotlin.test.assertTrue
 /** Wall-clock measurements, never a virtual coroutine/test clock or an acoustic benchmark. */
 class MidiCoreResponsivenessTest {
     @Test
+    fun `evidence finds the repository with split planning documents`() {
+        val repository = U07Evidence.repository()
+        assertTrue(Files.isRegularFile(repository.resolve("settings.gradle.kts")))
+        assertTrue(Files.isRegularFile(repository.resolve("PLAN-AUDIO.md")))
+        assertTrue(Files.isRegularFile(repository.resolve("PLAN-VIDEO.md")))
+    }
+
+    @Test
     fun `nearest rank p95 retains the slow tail and rejects invalid measurements`() {
         assertEquals(19.0, U07Evidence.p95((1..20).map(Int::toDouble)))
         assertEquals(19.0, U07Evidence.p95((1..19).map(Int::toDouble) + 10_000.0))

@@ -1,9 +1,10 @@
 # UI guideline
 
 Owner: visual language, composition and interaction. This consolidates the old
-workspace guideline and mockup redesign documents. [PLAN](../PLAN.md) defines
-product behavior; [TASKS](../TASKS.md) assigns delivery. Existing shell/theme/
-primitive work is retained and improved.
+workspace guideline and mockup redesign documents. [PLAN-AUDIO](../PLAN-AUDIO.md)
+and [PLAN-VIDEO](../PLAN-VIDEO.md) define product behavior; their respective
+[TASKS-AUDIO](../TASKS-AUDIO.md) and [TASKS-VIDEO](../TASKS-VIDEO.md) queues assign
+delivery. Existing shell/theme/primitive work is retained and improved.
 
 The existing six-page MIDI workspace is implemented. The app-level Video tab and
 its controls described below are the planned VG3/VG5/VG6 target; this document does
@@ -12,7 +13,7 @@ not claim that they already exist.
 Current content/evidence cross-reference (2026-09-30): the user's selected route
 is a TABI train series with changing city exteriors and activity sequences. The
 [production recipe and actual-kit blockers](TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30)
-and [TASKS](../TASKS.md) distinguish fixture-proven held-pose control from missing
+and [TASKS-VIDEO](../TASKS-VIDEO.md) distinguish fixture-proven held-pose control from missing
 neutral/alpha artwork, executable episode scheduling and cross-city/full-film
 proof. This adds no screen, control, mockup or design approval and does not make
 Tokyo/train/TABI mandatory. VG3 design permission remains separate after full-
@@ -187,7 +188,11 @@ and next safe action. Unknown information is “—”, never plausible sample d
 
 ## Visual proof
 
-Capture all six pages in ready and relevant empty/blocked/error/progress states
+Follow the [non-interactive validation policy](VALIDATION.md#non-interactive-validation).
+No native-window, desktop-capture or live user-walkthrough test is required; design
+review concerns supplied mockups/images, not a mandatory interactive app session.
+
+Render all six pages offscreen in ready and relevant empty/blocked/error/progress states
 at 1536×1024, 1280×900 and 720×900; inspect actual PNGs. Use a multi-section real
 fixture with a draft, acceptance, rest and stale scope. Pin font, density, theme,
 clock and seed. Store small approved target goldens in test resources; build

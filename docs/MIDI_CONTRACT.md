@@ -1,7 +1,8 @@
 # MIDI contract
 
 Owner: supported input, preserved semantics and output. The implemented contracts
-below are verified by PLAN features AC1–AC4; AC5 owns musical acceptance. Historical
+below are verified by [PLAN-AUDIO](../PLAN-AUDIO.md) features AC1–AC4; AC5 owns
+musical acceptance, with status in [TASKS-AUDIO](../TASKS-AUDIO.md). Historical
 implementation labels identify provenance, not tasks to repeat. [Architecture](ARCHITECTURE.md) owns
 persistence; [Validation](VALIDATION.md) owns proof.
 

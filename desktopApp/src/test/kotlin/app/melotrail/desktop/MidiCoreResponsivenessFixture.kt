@@ -185,8 +185,8 @@ internal object U07Evidence {
         .joinToString("") { "%02x".format(it) }
 
     fun repository(): Path = Path.of(System.getProperty("user.dir")).toAbsolutePath().let {
-        if (Files.isRegularFile(it.resolve("PLAN.md"))) it else it.parent
-    }.also { check(Files.isRegularFile(it.resolve("PLAN.md"))) }
+        if (Files.isRegularFile(it.resolve("settings.gradle.kts"))) it else it.parent
+    }.also { check(Files.isRegularFile(it.resolve("settings.gradle.kts"))) }
 
     fun command(vararg args: String): String {
         val process = ProcessBuilder(*args).directory(repository().toFile()).redirectErrorStream(true).start()

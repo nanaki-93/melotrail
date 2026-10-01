@@ -12,54 +12,67 @@ A local Kotlin/Compose Desktop application with two independent creative workflo
 
 The MIDI workflow is implemented: explicit chord durations/source-end padding,
 melody-aware piano, coordinated arrangement plans, targeted repairs, six pages,
-one persistent player and immutable accepted-only MIDI export. Listening, current
-Logic checks, visual acceptance and release approval remain pending. The original
+one persistent player and immutable accepted-only MIDI export. Listening,
+non-interactive technical verification and release approval remain pending.
+Live UI walkthroughs and interactive Logic/editor checks are no longer delivery
+gates; their removal is not a compatibility or usability pass. The original
 5/10 feedback is not an improved score simply because tests pass.
 
 Video has independent project/asset/job storage, prepared-scene validation, an
 owned ComfyUI adapter, pinned media supervision and bounded controlled motion.
 A reviewed 30-second blink/parallax reference, continuous-plan persistence and
 fixture-tested held-pose replacement (manifest 4/tool 1.2.0) exist. The approved
-halfway still is not moving approval: actual neutral/head/alpha/contact fail,
-and continuous episode schedules do not yet represent supplied pose sequences.
+halfway still is not moving approval. Later matching-kit/source checks pass,
+but the user rejects seven-pose arm animation; continuous episode schedules do
+not yet represent articulated rigs or supplied pose sequences.
 The Video tab, moving playback, executable full-duration workflow and complete
 silent export are **not yet delivered**.
 
-**Current priority (updated 2026-09-30): a complete video, then a reusable TABI
-train series—different city exteriors and activity sequences for every episode.**
-First finish the blocked matching-head/consistent-alpha wave kit and review a
-readable moving test; then prove one additional quiet activity. Bind their episode
-schedule, validate compatible window/frond/foreground mattes, prove a moving
-scenery join and measure/review 60 seconds. Deliver/watch the complete 180-second/
-5,400-frame Tokyo film: continuous depth parallax, distinct views about every
-5–10 seconds, quieter travel and reviewed activities with clean neutral returns.
+**Current priority (updated 2026-10-01): prove a reusable 2D/2.5D character rig
+outside Melotrail before implementing its workflow.** The seven-pose Blender
+movie is rejected for inconsistent/clipped arms. Reuse existing TABI references;
+prepare only missing coherent parts/hidden overlaps, using separately bounded
+Pi image generation when needed. First review a five-second rigged wave, then
+one additional quiet action and two description-driven 20–30-second reuse clips.
+No rig, automated description-to-action mapping or new moving approval exists yet.
+
+After that proof, bind the proven actions through existing production owners,
+validate compatible mattes/scenery joins and measure/review 60 seconds. Then
+deliver/watch the complete 180-second/5,400-frame Tokyo film: continuous depth
+parallax, distinct views about every 5–10 seconds, quieter travel and reviewed
+actions with clean neutral returns.
 
 Then select one second city (for example Kyoto, Madrid or Rome), supply its
 finished scenery and materially different activity script, and review a 20–30-second
 reuse proof through the same owners. Only afterward implement the reusable app
 workflow; its full second-city export still needs complete corridor/action
-readiness and whole-film/editor review. Reuse compatible cabin/TABI/props; replace
+readiness and whole-film artifact review. Reuse compatible cabin/TABI/props; replace
 city art and activity choice/order/timing, not merely label or seed. Other city
 packs and integrated controls are not implemented; generic scenarios remain valid.
 Preserve existing art, videos, accepted masks and takes. This update starts no
 artwork/model job, render, spending, implementation or commit. See
-[production order](PLAN.md#7-step-by-step-delivery-order),
-[recipe/current evidence](docs/TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30)
-and [the exact queue](TASKS.md).
+[rigged-video plan](PLAN-VIDEO.md#route-1--rigged-video-proof-before-melotrail-integration),
+[standalone proof tasks](TASKS-VIDEO.md#route-1--standalone-rig-proof-tasks),
+[production order](PLAN-VIDEO.md#6-step-by-step-delivery-order) and
+[recipe/current evidence](docs/TABI_VIDEO.md#selected-coherent-rig-method-2026-10-01).
 
-[PLAN](PLAN.md) describes features CORE, AC1–AC5 and VG1–VG6.
-[TASKS](TASKS.md) is the fresh dependency/status queue. Existing code is reused;
-there is no automatic replay of old tasks or scheduler configuration. The planning
-reset does not authorize implementation, inference, downloads or paid generation.
+Planning is split into two independent workstreams:
+- **Audio/MIDI:** [PLAN-AUDIO](PLAN-AUDIO.md) describes CORE and AC1–AC5;
+  [TASKS-AUDIO](TASKS-AUDIO.md) owns audio dependencies and status.
+- **Video:** [PLAN-VIDEO](PLAN-VIDEO.md) describes CORE and VG1–VG6;
+  [TASKS-VIDEO](TASKS-VIDEO.md) owns video dependencies and status.
+
+Existing code, task states and evidence are preserved. There is no automatic
+replay of old tasks or scheduler configuration. The split does not authorize
+implementation, inference, downloads or paid generation.
 
 ## Run and validate
 
-```bash
-make desktop
-make test
-make build
-git diff --check
-```
+For a user-requested app session, `make desktop` starts the MIDI workspace.
+Validation must not open an interactive window: use the
+[headless test/build invocation](docs/VALIDATION.md#non-interactive-validation)
+and `git diff --check`. The current unfiltered desktop suite contains a real-window
+test, so plain `make test`/`make build` are not the non-interactive validation path.
 
 Use JDK 21 and Kotlin 2.2.21 as configured by Gradle. The MIDI workflow needs no
 Python service, sound library, video model or provider credentials.
@@ -78,11 +91,12 @@ MELOTRAIL_MOTION_FIXTURE_ROOT="$PWD/build/video-motion-fixtures" \
   node --test tools/video-motion/render.test.cjs tools/video-motion/scenery.test.cjs
 ```
 
-Native installation, foreground capture and optional media/model host probes are
-separate checks, not promises made by a normal test pass. See
-[Validation](docs/VALIDATION.md) and [TABI video](docs/TABI_VIDEO.md) for their
-contracts and retained evidence. Inference requires a separately admitted bounded
-request; ordinary startup/tests do not install or load models.
+Live-window, foreground-capture, GUI install/startup and interactive editor tests
+are removed from required validation. Keep headless package/service/offscreen checks
+and human review of supplied musical/video artifacts, without claiming live usability
+or editor compatibility. Historical receipts remain in [Validation](docs/VALIDATION.md)
+and [TABI video](docs/TABI_VIDEO.md). Headless media/model probes still require a
+separately admitted bounded request; ordinary tests do not install or load models.
 
 ## Musical input and output
 
@@ -107,7 +121,9 @@ A finished PNG/JPEG scene is the primary input, with optional externally prepare
 character/background layers, poses, masks and scenery. Motion capabilities are
 validated rather than invented. The target is one continuous 180–300-second
 1920×1080 H.264 MP4 at 30 fps (default 180 seconds), with zero audio streams. Local ComfyUI and controlled
-motion are selected; hosted fallback is optional and needs explicit authorization.
+motion foundations remain; the selected rig method uses Blender as a standalone
+proof candidate, not yet an integrated backend. Hosted fallback remains optional
+and needs explicit authorization.
 No in-app image generation, outfit transfer, whole-clip repeat-to-fill, MIDI
 dependency, soundtrack synchronization or public upload is part of this delivery.
 Separately authorized external artwork preparation for the pilot does not change
@@ -115,8 +131,10 @@ that app boundary. A successful production harness is not VG6 app/release proof.
 
 ## Documentation
 
-- [PLAN](PLAN.md): feature outcomes, current baseline and delivery sequence.
-- [TASKS](TASKS.md): bounded steps, dependencies, acceptance and execution rules.
+- [PLAN-AUDIO](PLAN-AUDIO.md): audio/MIDI outcomes, baseline and delivery sequence.
+- [TASKS-AUDIO](TASKS-AUDIO.md): audio steps, dependencies, status and execution rules.
+- [PLAN-VIDEO](PLAN-VIDEO.md): video outcomes, baseline and delivery sequence.
+- [TASKS-VIDEO](TASKS-VIDEO.md): video steps, dependencies, status and execution rules.
 - [Architecture](docs/ARCHITECTURE.md): runtime, storage and dependency boundaries.
 - [MIDI contract](docs/MIDI_CONTRACT.md): protected input, authority and export.
 - [UI guideline](docs/UI_GUIDELINE.md): existing MIDI design and planned Video flow.

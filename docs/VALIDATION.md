@@ -1,19 +1,68 @@
 # Validation and evidence
 
 Owner: automated checks, real listening/visual acceptance and Logic Pro evidence.
-Implementation status is in [TASKS](../TASKS.md), using PLAN features AC1–AC5 and
-VG1–VG6. Older task IDs and dated status statements below label retained evidence,
+Implementation status is in [TASKS-AUDIO](../TASKS-AUDIO.md) for
+[PLAN-AUDIO](../PLAN-AUDIO.md) features AC1–AC5 and
+[TASKS-VIDEO](../TASKS-VIDEO.md) for [PLAN-VIDEO](../PLAN-VIDEO.md) features VG1–VG6. Older task IDs and dated status statements below label retained evidence,
 not executable queue rows or current-build approval. Do not replay them. The old
 participant/holdout queues are superseded; incomplete gates are not passes.
 
+## Non-interactive validation
+
+Current policy: required validation is **headless and non-interactive**. This
+supersedes every older requirement below for a visible/capturable desktop, native
+window replay/resize, GUI installation/startup smoke, live user journey or Logic/
+Apple-editor import/play session. Those gates are removed, not passed. Retain
+historical procedures, failed captures, receipts and media as evidence only; do
+not replay them. A later explicit user request is required for any UI session.
+
+Keep unit/integration, CLI/file/media, package-inspection, offscreen rendering and
+presentation/keyboard/accessibility-semantics checks. The app UI is still part of
+the product. Do not call offscreen results live usability, installed-GUI startup
+or editor-compatibility proof. Human listening, artwork/motion/mockup decisions
+and release approval remain based on supplied artifacts; agents neither open a
+player/editor for these nor fabricate the user's decision. Headless media/model
+work retains all existing authorization, resource and no-overwrite safeguards.
+
+The current default `:desktopApp:test` includes `MidiCoreNativeResponsivenessTest`,
+which opens a real window even without screen-capture mode. Do not run unfiltered
+`make test`/`make build`. For the currently inspected tree, use a temporary Gradle
+init script to exclude that class and enforce headless JVM tests, without changing
+tracked build wiring or deleting tests:
+
+```bash
+HEADLESS_INIT=$(mktemp "${TMPDIR:-/tmp}/melotrail-headless.XXXXXX")
+printf '%s\n' \
+  'allprojects {' \
+  '  tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {' \
+  '    systemProperty "java.awt.headless", "true"' \
+  '    exclude "**/MidiCoreNativeResponsivenessTest*"' \
+  '  }' \
+  '}' > "$HEADLESS_INIT"
+make GRADLE="./gradlew -I $HEADLESS_INIT" test
+make GRADLE="./gradlew -I $HEADLESS_INIT" build
+git diff --check
+```
+
+Inspect new/changed test wiring before reuse; do not enable live-E2E environment
+flags or invoke native capture/install/desktop launch tasks. Report the excluded
+class and actual executed/cached results; this is a filtered headless pass, not a
+pass of the original unfiltered suite. If another test needs a window, stop and
+scope its headless replacement or disclose its exclusion. Test names containing
+UI/Native do not alone justify exclusion: receipt and offscreen tests stay useful.
+AC4-02 and AC5-05 are retired from the audio queue, not completed. AC5-04/06 and
+VG3/VG6 retain only the non-interactive validation scope in the current queues.
+This documentation change does not remove test sources or implement new runners.
+
 ## Production-first video gates (2026-09-28)
 
-Updated 2026-09-30: prove readable character activities and a complete Tokyo film,
-then a second-city method check before reusable app functionality. The user's
+Updated 2026-10-01: prove a standalone coherent 2D/2.5D rig, two readable actions
+and description-driven short reuse before minimum production binding. Then prove
+a complete Tokyo film and a second-city method check before app functionality. The user's
 selected series keeps TABI in the train, changes the city exterior and gives each
 episode a materially different small-activity sequence. The roadmap is
-[PLAN](../PLAN.md#7-step-by-step-delivery-order); dependencies/status remain in
-[TASKS](../TASKS.md#production-first-priority-2026-09-28), with
+[PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order); dependencies/status remain in
+[TASKS-VIDEO](../TASKS-VIDEO.md#production-first-priority-2026-09-28), with
 [recipe/current evidence](TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30) in TABI.
 Fixture-proven control and static-look approval are not actual-kit or moving passes.
 This update grants no artwork/model/media budget, live admission or UI permission;
@@ -21,14 +70,15 @@ new review decisions below remain pending and generic projects remain supported.
 
 | Production gate | Required evidence and real decision |
 | --- | --- |
-| VG2-08/07 · Readable wave | Finish the blocked matching-neutral/head/single-pass-alpha kit and explicitly approve any changed composed baseline. Verify actual production import, support/contact/occlusion and entry/return before a newly admitted 5–10-second test. Fully decode; user reviews normal-speed gesture/cadence/identity/props/frond edges and clean return. No head pop, ghost fade, old-alpha switching, camera-pan substitute or static-comparison acceptance. DONE VG2-06's nearly invisible breathing is evidence, not the next run. |
+| VG2-12–18/07 · Rigged wave | Approve coherent parts/neutral, prove rig support/joints and guarded colour/media handling, then produce one newly admitted five-second/150-frame wave. Fully decode; user reviews normal-speed identity, arm volume/texture, joint attachment, props/frond/contact and return. No whole-arm swaps, ghost fades or static-only acceptance. Historical VG2-08/11 failures stay blocked; no production import in this standalone gate. |
 | VG2-09/10 · One additional activity | Validate only the selected small non-blink motif's compatible inputs/control and actual contact/entry/return, produce its separately admitted moving proof and record exact user review. A static reading/listening pose or unsupported sip/page turn is not a second demonstrated activity. |
 | VG4-05 · Scenery join | Validate window/frond/foreground mattes against the actual cabin and every allowed pose; the old fixed-head mask is not automatically reusable. Prove a moving offscreen handoff with matching overlap, rigid travel, no seam/hole/wrap, whole requested/shutter coverage and supplied 60-second extents. Account for all selected exterior apertures. Record the user's seam decision; static art/width alone is insufficient. |
-| VG4-07/02 · Executable episode | Persist/compile supplied pose sequences through existing owners; pin activity choice/order/timing/quiet intervals/neutral returns, poses/capabilities/versions and scoped dependencies. Prove absolute chunk/state parity, changed-input invalidation, rejected unknown/conflicting/unsafe controls and 180/240/300s fixtures. Respect current sequence/step/span limits or separately prove an extension. Passing fixtures/plans are not full real-art coverage. |
+| VG4-08, VG2-19/20 · Standalone description/reuse | Two supported scene descriptions produce different 20–30-second action sequences using unchanged rig/art/action versions, without manual keyframe edits. Bound scenery coverage; reject missing actions/props/viewpoints, ambiguity and conflicts. User checks both exact clips against the descriptions. This is not production/import/full-film/app proof. |
+| VG4-07/09/02 · Executable episode | After short proof and explicit runtime choice, persist/compile the proven rig/action semantics through existing owners; pin activity choice/order/timing/rests/returns, rig/parts/capabilities/versions and scoped dependencies. Prove production import/support, exact process/decoder ownership, absolute chunk/state parity, input invalidation and 180/240/300s fixtures. Do not pretend the held-pose contract already supports a rig. |
 | VG5-03/05 · Combined 60 seconds | Scene/pose-compatible masks, two reviewed non-blink activities/returns, deliberate quiet intervals and extended Tokyo scenery in one silent 1080p30 result. Fully decode/check timing/action/scenery/chunk joins, measure stages and aggregate resources, then record normal-speed review. Prove restart after a verified completed chunk while later work remains, not reconciliation of a finished MP4. |
-| VG4-06, VG5-06/07 · Complete Tokyo pilot | Complete supplied corridor/alpha/shutter coverage and a newly admitted 180s/5400-frame batch. Verify continuous moving parallax, distinct passing views about every 5–10 seconds with quiet travel, and the pinned varied two-activity schedule inside the fixed cabin. Isolated tests do not approve long holds/loops. Fully decode; inspect timestamps/first/last/actions/all joins and disclosed reuse. User watches the whole film and imports/plays it in the chosen Apple editor. No app/release pass follows. |
+| VG4-06, VG5-06/07 · Complete Tokyo pilot | Complete supplied corridor/alpha/shutter coverage and a newly admitted 180s/5400-frame batch. Verify continuous moving parallax, distinct passing views about every 5–10 seconds with quiet travel, and the pinned varied two-activity schedule inside the fixed cabin. Isolated tests do not approve long holds/loops. Fully decode; inspect timestamps/first/last/actions/all joins and disclosed reuse. User reviews the supplied whole film without a required editor session. No production-integration/release pass follows. |
 | VG5-08/09/10 · Different episode proof | After full-film review, prepare one selected second-city pack/script as new pins, validate every visible exterior aperture and any new motif, then produce/review a separately admitted 20–30-second reuse clip through the same owners. Change exterior plus activity choice/order/timing/quiet intervals, retaining compatible cabin/TABI/props. A city rename/reseed or Tokyo-art substitution fails; no regenerated/overwritten first film. This is not second-city full coverage/film approval. |
-| VG6-05/06 · Full next-city app film | After separate app/early/installed gates, validate the selected second city's complete corridor/sequence/contact, admit a new full batch, and produce/decode/watch/editor-test one real 180–300s app export. The short reuse clip, first harness film and planning arithmetic cannot substitute. |
+| VG6-05/06 · Full next-city production film | After separate headless app-integration/early/package gates, validate the selected second city's complete corridor/sequence/contact, admit a new full batch, produce/decode one real 180–300s export through production services and obtain whole-artifact review. No live UI/editor test. The short reuse clip, first harness film and planning arithmetic cannot substitute. |
 
 Keep source, rendered lossless PNG and decoded H.264 claims distinct. New motion
 may require new support/mattes and clean plates; declare those regions rather than
@@ -110,7 +160,7 @@ Timing/pose dependencies are fingerprinted; unsafe/missing/rejected poses,
 misregistration and conflicting controls are rejected. Runtime manifest 4/tool
 1.2.0 and the strict Kotlin receipt consumer agree; old/unknown receipts reject.
 Focused JVM, Node motion/scenery 31/31, complete `make test`, `make build` and
-diff checks pass after the two bounded repairs recorded in TASKS.
+diff checks pass after the two bounded repairs recorded in TASKS-VIDEO.
 
 Actual TABI input readiness still fails. Scratch
 `build/vg2-wave-control-a1/static-kit-proof.json` checks 29 protected plus three
@@ -128,6 +178,282 @@ return proof remain necessary. VG2-08 is BLOCKED and VG2-07 WAITING_USER. No
 real-artwork render/encode/decode, new model call, take selection or video
 replacement is authorized or claimed; future footage still needs its own budget
 and real user motion review.
+
+**New matching-kit static appearance decision** (project user; recorded
+2026-09-30T13:00:40Z): **“i approve the new assets”**, responding to the new
+neutral→halfway→wave comparison and the request to approve its left-column
+neutral as the return baseline. This approves static kit 45/46/47 and explicitly
+selects composed neutral **48** as the new return appearance baseline, as shown
+by **49**. Exact SHA-256 pins (under `docs/pictures/video/tabi-assets/train-actions/`):
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `45-matching-neutral-single-pass-alpha-candidate.png` | `33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9` |
+| `46-matching-halfway-single-pass-alpha-candidate.png` | `1523f8575723c7979fc26090c219e3ed2c64b659189400deea9958f47af75985` |
+| `47-matching-wave-single-pass-alpha-candidate.png` | `5e3890233ad57764b0c7b7a0279934d4e1dc9dfd778184f961c0195543660dc5` |
+| `48-matching-neutral-return-baseline-review.png` | `c6dc10f9d03a0a0548645f62594d3f36a6ba5a772e3a0717fb72e96c1a81865b` |
+| `49-matching-neutral-halfway-wave-comparison.png` | `9097314133cb6a7c427495e1750984f71aef451b6020407e5ad475a074227d5c` |
+
+Hashes were freshly verified; the scoped event is
+`build/vg2-08-kit-import-WrIrzi1D/user-artwork-approval.json`. The date is the
+recording time, not an invented exact message timestamp. Old 29/art/videos and
+candidate/rejection receipts remain unchanged. 43/44 are supporting source/guide
+assets, not standalone production poses. No detailed per-edge human report,
+normal-speed motion/cadence/contact review, actual-kit readiness, accepted take,
+render budget or release decision follows from this appearance approval. VG2-08
+still needs production import/support/occlusion/return proof and a separately
+admitted preview; VG2-07 still needs the exact moving artifact's real user review.
+
+**Subsequent exact preview execution decision** (2026-09-30, project user):
+“yes, go with the generation, save the file in  @docs/pictures/video/tests”.
+This approves the one-attempt local held-pose packet SHA
+`2d86850934a47b4a0b1335884b5e70cb3956fc3af4f3d92e834ba55e9e42fb95`,
+not unseen appearance/motion, a take selection or further repair/retry. The new
+[review MP4](pictures/video/tests/vg2-matching-wave-held-217-20260930-fPyZ5vyR.mp4)
+SHA `ef7cb3a041a6e32c8c253542ed2da5b221ed4a0f4fa8e09c7f340b1e957366a6`
+passes actual source/full-decoded checks: 217 silent square-pixel 1080p30 H.264
+frames at uniform PTS; exact three approved lossless supplied stacks and neutral
+return 48; measured decoded worst RGB MAE whole/fixed/arm
+3.138319/3.099911/4.189701 ≤12. One immutable private take stays
+UNREVIEWED/unselected; only its project revision/takeVersions append changes.
+
+**Execution-budget audit FAILS separately:** production encoder validation (2),
+independent decode (2) and production import validation (3) perform **seven**
+full MP4 decoder traversals, versus the packet's ceiling **four**. FFprobe
+`-count_frames`/`-show_frames` are decoder passes, not free metadata-only checks.
+The frozen count was not enforced; do not retroactively redefine/raise it or
+claim ordinary green tests establish compliance. File/take/receipts remain
+preserved. `build/vg2-08-wave-destinations-fPyZ5vyR/decode-pass-admission-audit.json`
+and expected failing `decode-pass-regression.log` retain the concrete breach;
+`execution-preservation-audit.json` verifies remaining pins. No further native
+work, retry or code repair is authorized. VG2-08 is BLOCKED on a newly bounded
+non-live count-guard prerequisite; VG2-07 remains WAITING_USER for actual
+normal-speed gesture/cadence/identity/frond/props/contact/return review of this
+file. This generation permission is **not** that moving acceptance. Full details
+and actual limitations are in [TABI video](TABI_VIDEO.md#vg2-08-admitted-new-held-pose-video--technical-pass-decoder-count-breach-2026-09-30).
+
+**Qualified wave feedback and new artwork allowance** (2026-09-30, project user):
+“the animation is ok, but there's no enough frames, you need to create more assets
+in the middle to make the animation smoother and fluid”, on exact preserved
+`ef7cb3a0…7366a6` MP4 above. Direction is acceptable, but fluidity is a requested
+refinement; no explicit playback speed, per-edge/contact sign-off, take selection
+or final moving acceptance is inferred. “yes, i approve the new generations”
+approves the subsequent artwork-only **4 initial + at most 2 shared corrections**
+proposal, not unseen final appearances, count-guard implementation or rendering.
+All six Pi calls are used; fresh owner `build/vg2-08-fluid-assets-1TFP896e/` records
+scope/source/prompt specs and retained failed variants. New static 51–54 (registered
+1920×1080 cutouts), 55–58 scene reviews and
+[comparison 59](pictures/video/tabi-assets/train-actions/59-wave-seven-pose-static-comparison.png)
+(`7dff03003bfa600aa82e77c1c47bc9e5382628b16f5e76cc19ff425a0421e207`)
+require appearance review. Static zero common-region drift/neutral-48 parity,
+distinct-state checks and a retained 462→0 wrist-clipping regression pass; 1,177
+existing pins stay unchanged at publication (final disposition permits only
+three task-owned documentation updates; 1,174 other pins stay exact). These do
+not prove full imported support/mattes,
+cloth/scale/anatomy continuity or a fluid moving sequence. Current project/take/
+selection/video remain untouched. VG2-08's independent 7/4 decoder-count blocker
+and VG2-07's revised moving review remain open; future repair/render permission
+must be separate. Full pins/limitations are in [TABI video](TABI_VIDEO.md).
+
+**Subsequent static approval** (user, recorded 2026-09-30T18:14:05Z):
+“ok, i approve these poses and assets” closes the 51–54/55–59 static appearance
+wait only. All nine publication hashes match; external approval receipt is
+`build/vg2-08-fluid-assets-1TFP896e/user-static-artwork-approval.json`, binding
+publication `11c17946…fab3b82` and comparison `7dff0300…421e207`. No moving
+acceptance, source import/take selection or native budget is inferred.
+
+**Subsequent non-live repair instruction:** “yes, go for it” answers separate
+count-guard repair, not rendering. New owner
+`build/vg2-08-decoder-guard-NXlF6eF2/` preserves 3,471 current file pins and uses
+only scratch counter/client helpers and passive production-call-graph spies.
+Actual production encoder/probe plus wrapper argv shapes reserve **2+2+3=7**
+on one shared authority; old four rejects before socket/init, eighth before spy.
+Final compile and **10/10** functional tests pass after both bounded fixture
+repairs (missing prepared pin/project mismatch), with all real media/jobs/imports/
+take mutations zero. Seven is a passive fixture ceiling, not live admission or
+retroactive budget widening. No production validation/check is removed.
+
+**Independent exact-owner check fails:** retained `socket-ownership-review.json`
+and expected failing log reproduce a substituted canonical socket forging an
+allowed/public-policy-hash reply: **one spy delegation, zero real reservations,
+zero native delegations**. Server-side inode checks do not bind the client's
+receiver. No artistic or safety pass may be inferred from the earlier green
+functional tests/`independent-review.json`. **VG2-08 BLOCKED**, initial + two
+repairs exhausted. One extra explicitly bounded non-live endpoint-identity/
+authenticated-response repair is needed; no further implementation/media work
+starts. A fresh guarded seven-pose input/preview packet and separate native
+budget still follow afterward. Historical 7/4 breach, valid MP4/unselected take,
+old helpers and approved artwork remain untouched. Full/focused/Node/build/diff
+and protection results are recorded separately from this failure; see
+[TABI details](TABI_VIDEO.md#subsequent-static-approval-and-bounded-decoder-guard-failure-2026-09-30).
+
+### Standalone Blender feasibility checks (2026-10-01)
+
+VG2-11, separately user-requested; not VG2-08 guard repair or native admission.
+Owner `build/vg2-blender-feasibility-owO1rohL/` pins Blender 5.2.2 LTS and ten
+source images. Non-rendering preparation plus an independent .blend reopen check
+verify exact source hashes/dimensions, straight alpha, fixed camera/transforms,
+foreground coverage and one visible supplied pose at all 180 proposed frames.
+Initial reopen checker failed on unnormalized saved relative paths; one local
+checker repair passes without changing the scene. Failed/final logs remain.
+All 3,527 existing file pins match before documentation; no media, project,
+take, production source or old helper is changed. Full test/build/diff and final
+preservation receipts remain separate from this narrow technical scene proof.
+
+The proposed six-second comparison has no launch authority. Before execution,
+validate exact direct-child supervision, phase/global resources and operation
+counts, destination ownership/no overwrite, source-state/alpha/support checks,
+then freeze/admit the executable packet. Count its FFprobe frame-count/PTS scan
+as one real traversal and its FFmpeg full decode as another; zero imports.
+Check all rendered/decoded frames and real normal-speed appearance/cadence.
+The saved scene alone proves no pixels, fluid rig, performance, full-film/app
+readiness or approval. Historical VG2-08 7/4/socket-owner failures remain blocked.
+
+### Blender packet phase-dispatch rejection (2026-10-01)
+
+User “yes, go for it” approves **non-live packet preparation only**. Owner
+`build/vg2-blender-packet-mBMDglBy/` pins 3,545 prior files and contains exact
+seven-stack/coverage/contact proof, a separate 17-strip VSE .blend/check,
+13/13 direct-counter/resource/path data tests and 6/6 numeric pixel tests.
+Owned non-media sandbox fixtures reject outside writes, symlink escapes, fork
+and network; no actual video/codec/model delegation occurs. Both local API repairs
+are exhausted, with initial/repair-1 logs retained. Selected executables and
+10,243 runtime files/inventories plus all native/verifier vectors are frozen by
+packet SHA `be2efe5958ab7ca7dde9de599090d500a5132bf051e33628e026f2b7e5335b5b`.
+
+**Independent exact-candidate failure:** `review_packet.py` rejects phases missing
+from the budget. `phase_regression.py` exercises actual supervisor dispatch with
+data-only callbacks: operations use `validation`; admitted-scope phase key is
+`validationAndCopy`. Actual KeyError follows three spies and one reserved probe,
+**zero native launches**. Retain `phase-dispatch-review.json` and expected failing
+`phase-regression.log`; pin preflight/ordinary green tests do not establish run
+readiness. VG2-11 BLOCKED; no further automatic repair or native admission.
+One extra explicitly scoped non-live successor must align one current phase
+contract, including publication, preserve failed packet/limits, prove this
+regression, freeze and independently review before separate execution approval.
+The 4-GiB aggregate applies to directly owned coordinator/sandboxed processes;
+shared macOS VideoToolbox service RSS cannot be individually attributed. Disclose
+that limitation, retaining host pressure/swap enforcement. No old four ceiling,
+VG2-08 socket/count failure, static/moving approval or full-film/app gate changes.
+
+### Blender extra repair and pre-media resource refusal (2026-10-01)
+
+Exact user event: “yes, I want you to with the repair and also start rendering”.
+Owner `build/vg2-blender-phase-3noEBfTw/` preserves failed predecessor and 3,598
+prior pins. The one-extra phase repair passes four actual-supervisor/data-child
+regressions: old KeyError reproduced, all six exact successor commands dispatched
+to spies, one shared 120s validation/copy deadline, independent 900s expiry and
+no phase alias/budget widening. Guard 13/13, numeric pixel 6/6, unchanged .blend
+reopen, exact-candidate review, focused/Node/full test/build/diff checks pass.
+Final packet `f4e5f829de8331820c3c6c7be12bf59f8e356e79d34dc62676405ed080253afa`
+binds 10,243 runtime files and unchanged content/limits. Separate live receipt
+records the real repair-and-render event, not fabricated moving acceptance.
+
+Authorized `preview.py run` exits 1 on `No NORMAL/free-memory admission`, before
+work-root/claim creation or Blender/encode/decode. No output frames, MP4, take,
+project mutation or review copy. The original refusal sample was not persisted.
+Later read-only diagnostic only: NORMAL, zero swap, free RAM 407,486,464 bytes
+(<3-GiB requirement), free disk 240,287,637,504 bytes. Preserve
+`live-launch.log`, `execution-refusal.json` and admission; do not relabel the
+later observation as the launch reading or infer failed render performance.
+No automatic retry/limit relaxation. VG2-11 WAITING_USER for a new bounded attempt
+after resources improve. 3,595 prior non-document pins stay exact; only these
+three documentation dispositions change. Technical repair pass is separate from
+resource admission and still-pending actual Blender/media/moving evidence.
+
+### Blender renewed attempt: source pass, encoded transfer mismatch (2026-10-01)
+
+User “i free some memory, can you try again” admits one fresh bounded launch of
+unchanged packet `f4e5f829…253afa`. Append-only retry receipt/pins/logs at
+`build/vg2-blender-phase-3noEBfTw/` preserve the prior pre-media memory refusal.
+Three actual NORMAL/no-swap/≥3-GiB-free samples pass. Blender renders 180 frames
+in **18.572s**; every lossless frame passes reviewed-still maximum RGB delta **1**,
+exact fixed/contact regions between states, exact holds and neutral entry/return.
+Seven distinct source states are not native articulated motion or human approval.
+
+Encode succeeds; saved full FFprobe count/PTS scan confirms one silent 1080p30
+H.264/yuv420p stream, SAR1:1, 180 frames, six seconds and uniform 512-tick PTS
+at 1/15360. **Actual validation fails:** transfer `iec61966-2-1` (sRGB), required
+`bt709`; matrix/primaries bt709. Retained draft `live-comparison/preview.mp4`:
+7,903,472 bytes; SHA `957e5160ecd9f183bcd695698b2bcfc64de6a052afa3c772f89599f5b0ee77ff`.
+No visual color/transfer correctness is inferred and the contract is not relaxed.
+One full MP4 traversal used, out of two; second full decode, decoded-pixel checks,
+publication/import do not run. Total launch **39.378s**, sampled peak owned RSS
+**1,126,596,608 bytes**, peak new storage **681,994,213 bytes**. Failure is not a
+resource-budget breach. No automatic retry, fallback or code/art/project edit.
+
+Read-only `retry-1-result-audit.json` reproduces actual `media_facts` rejection
+using saved probe JSON and rehashes every source frame; zero extra native calls.
+Preserve outputs and all old evidence. VG2-11 BLOCKED pending separately admitted
+encoding-only color handling and validation using saved source frames; do not
+blindly retag, lower the check or regenerate frames unnecessarily. 3,646 prior
+non-document pins remain exact, with only these three documentation dispositions
+changed. Ordinary focused/full/build/diff checks remain separate from this media
+failure, actual normal-speed user review and full-film/app/release acceptance.
+
+### Actual user rejection of Blender arm motion (2026-10-01)
+
+User rejects draft SHA `957e5160ecd9f183bcd695698b2bcfc64de6a052afa3c772f89599f5b0ee77ff`:
+inconsistent arms and a clipped-arm effect; requests rethinking asset-plus-scene-
+description animation. Exact quote and artifact hash are recorded in
+`build/vg2-blender-phase-3noEBfTw/user-motion-rejection.json`. No viewing speed,
+exact frame indices or additional approval is inferred. This is genuine negative
+moving evidence, independent of historical static appearance approval and the
+still-failing color-transfer contract. Pixel-fidelity/hold/contact tests do not
+measure anatomical/cloth consistency through motion; their passing results
+cannot supersede the user rejection. No frame-local clipping diagnosis is claimed.
+
+Prior suggestion to fix only encoding is superseded as the next creative step.
+Preserve draft/frames/source artwork and all failures; do not relabel them as
+approved animation or renew generation budgets. Discuss coherent prepared
+character geometry/rig versus generative tradeoffs before scoping another proof.
+Any chosen route needs real moving identity, arm-volume/texture, shoulder/elbow/
+wrist attachment, occlusion and entry/return review, not static comparisons alone.
+Rigging, hidden artwork preparation and new controls need separate authorization;
+none are inferred from “rethink”. No native/artwork/app/project mutation here.
+
+### Route-1 rig acceptance procedure (2026-10-01)
+
+The user selects a prepared 2D/2.5D rig and proof before Melotrail integration;
+this is a method/planning decision, not artifact approval or execution admission.
+The previous seven-pose rejection and colour/count/socket failures are unchanged.
+Apply the current [route tasks](../TASKS-VIDEO.md#route-1--standalone-rig-proof-tasks):
+
+- **Preparation:** record exact source/derived pins, provenance, measured alpha,
+  common view/scale, anchors, hidden overlaps and backing. Review assembled neutral
+  and extremes; neutral 48 remains the reference unless explicitly replaced by a
+  new approved candidate. Preserve all old originals and acceptance decisions.
+- **Rig:** evaluate every frame, including in-betweens, for attachment/support,
+  bounded angles/scale, stable limb lengths, no mesh inversion or unexpected
+  texture drift, explicit occlusion and planted contact. Reopen must reproduce
+  the same absolute-frame state. Freeze numerical tolerances and protected/moving
+  regions before tests; include missing-overlap/clipped-joint negatives. A rig
+  transform is not required to equal an unrelated historical pose's pixels.
+- **Media:** independently establish sRGB input and actual Rec.709 conversion
+  with known transfer-function witnesses. Compare decoded and reference pixels
+  in the same declared colour space, not just tags or unmatched transfer codes.
+  Enforce silent 1920×1080 H.264/yuv420p, SAR1:1, 30fps, expected frame count and
+  uniform PTS. Keep source versus decoded proofs separate. A two-traversal
+  standalone packet has no production import; extra traversals need explicit
+  budget, not relabelling FFprobe scans as metadata. Test guards before native work.
+- **Moving quality:** user watches the new five-second neutral/lift/wrist/lower/
+  neutral gesture at normal speed and can frame-step shoulder/elbow/wrist/cuff,
+  fronds and prop edges. Reject arm length/volume changes, texture or silhouette
+  pops, clipping, rubbery bends, ghosts and abrupt returns even when numeric
+  checks pass. Record exact artifact, date, reported viewing speed and decision;
+  do not invent ratings, frame indices or observations.
+- **Reuse:** separately review the second action and then both description-driven
+  clips. Freeze identical rig/art/action versions across the pair; vary only the
+  declared supported script parameters. Show original text and resolved events.
+  Test unknown/ambiguous/conflicting requests without rendering. A manually
+  translated request is not evidence of an automatic text compiler. Validate
+  absolute chunk/state parity without silently re-rendering extra footage.
+
+A failed wave blocks action-library expansion, longer films and app integration,
+not independent MIDI/fixture work. Each new colour test/render has its own finite
+admission; historical attempts and budgets cannot be reused. Longer films retain
+separate scenery, restart, resource, whole-cut and editor gates. No rig or new
+motion has yet passed this procedure.
 
 ### Episode reuse validation procedure (2026-09-30)
 
@@ -171,8 +497,9 @@ schedule. Rights, color, monetization and final release remain separate decision
 The implemented MIDI workflow still needs manual acceptance. AC4–AC5 refresh and
 review its evidence against the current build. After the production gates above,
 VG3 still requires design permission/approval before UI, and VG6 owns separate
-app-based early/full-video, installed and release review. Harness results cannot
-substitute for those later app gates.
+headless production-integration, early/full-video artifact, package and release
+review. Standalone pilot results cannot substitute for that later production
+integration; a visible GUI is not a validation prerequisite.
 
 **Retained MIDI handoff · 2026-09-13 (original label Q03b).** This packet used
 implementation `c20aecf583`; it does not establish current-build success or the
@@ -185,12 +512,12 @@ procedure below. Preserve the packets; fill copies of their forms.
 
 | Gate | Open / do next |
 | --- | --- |
-| AC5-04/05 · MIDI UI | Refresh six-page comparisons and blank scores (retained starting point: `u07/visual-review/index.html`). Review hierarchy, reference fidelity, keyboard flow and resizing. Run `./gradlew :desktopApp:nativeDesktopCapture` on the visible desktop; the recorded wallpaper failure is not a pass. Frame replay is not compositor proof. |
+| AC5-04 · MIDI presentation | Refresh six-page offscreen comparisons, semantics and service timing (retained starting point: `u07/visual-review/index.html`). No native-window capture, live usability or acoustic-onset session. Historical wallpaper failures stay failures; AC5-05 is removed, not passed. |
 | AC5-01/02/03 · Music | Retained development comparisons (`q01-development/review.md`), set requirements (`q01-evaluation/review.md`), intake (`song-intake-template.json`) and blank scores (`score-template.json`) inform fresh preparation. Five owned/licensed full songs, including three unseen, and real scores are still needed. Supply current MIDI projects, ownership/exposure and settings before freezing; no scores are invented. |
-| AC4-01/02 · Logic | Refresh the current matrix and blank results; the retained starting point (`q02-logic-matrix/review.md`) contains 20 packages plus one expected rejection and 571 hashes. Verify the new packet's own hashes, import complete/separate tracks at bar 1, play, save/close/reopen and record exact Logic version, bars and results. |
-| VG6-01/02 · Early video | After the VG3 app flow works, import finished scene artwork with optional ready layers and enter a motion prompt. Review three real 20–30s clips: base motion, contrasting motion with the same artwork, and replaced finished artwork. No image-generation review is required; actual visual evidence and feedback are still needed. |
-| VG6-05/06 · Complete video | After early approach and installed/UI proof, generate/watch/editor-test one real 3–5-minute silent app video. For this selected series use the prepared second city/different activity script, with complete corridor/contact/sequence readiness and a new full budget; generic scenarios remain supported. Review reference/prompt fidelity, cadence, every join and disclosed reuse. No short-proof substitution, whole-clip repeat or synthetic acceptance. |
-| AC5-07 · MIDI release | After current music, Logic, visual and native-install checks, record the actual release decision and final build. Musical quality remains unmeasured against the original 5/10 feedback. |
+| AC4-01 · MIDI handoff | Refresh the current matrix and verify new hashes, complete/separate-file alignment, controllers and endings through semantic re-import. Retained starting point: `q02-logic-matrix/review.md`. No Logic session; AC4-02 is removed, not passed, and current editor compatibility is unverified. |
+| VG6-01/02 · Early video | After VG3 integration, invoke the app's production services headlessly with finished artwork/layers and motion prompts. Review supplied real 20–30s clips: base motion, changed motion with the same artwork and replacement artwork. Actual artifact feedback remains required, not a live app walkthrough. |
+| VG6-05/06 · Complete video | After early approach, package and headless integration proof, generate one real 3–5-minute silent video through production services and obtain whole-artifact review. Use the prepared second city/different script with full corridor/contact/sequence readiness and a new budget; generic scenarios remain supported. Review fidelity, cadence, joins and reuse. No interactive editor test, short-proof substitution, whole-clip repeat or synthetic acceptance. |
+| AC5-07 · MIDI release | After current listening, semantic MIDI, offscreen visual and package-inspection checks, record the actual release decision and final build, disclosing omitted live UI/editor/installed-startup checks. Musical quality remains unmeasured against the original 5/10 feedback. |
 
 The removed Swift companion demo is superseded historical evidence; it is not
 the V24/V33 product flow and needs no new review. To inspect that old packet, launch
@@ -206,7 +533,8 @@ frame replays, 20-sample timing records, source/build/runtime identities and
 hash-verified MIDI/video artifacts. Automated checks do not establish acoustic
 onset, musical scores, foreground screen capture or human artistic approval.
 Historical packets and failed checks remain preserved. Current MIDI, production-
-pilot and later VG3/VG6 human gates are listed in TASKS; automated agents cannot
+pilot and later VG3/VG6 human gates are listed in TASKS-AUDIO and TASKS-VIDEO;
+automated agents cannot
 complete them or retry absent human evidence as an implementation failure.
 
 ## Scoped Tokyo motion-direction review (2026-09-27)
@@ -613,18 +941,17 @@ historical identities. Preserve the legitimate local, media and ComfyUI probes.
 
 ## Required automated checks
 
-```bash
-make test
-make build
-git diff --check
-```
+Run the filtered test/build commands in
+[Non-interactive validation](#non-interactive-validation), plus `git diff --check`.
 
 Run focused suites for the task as well. `make build` includes Gradle check;
 current document links and retained-reference integrity are JVM tests. No
 function-by-function JSON inventory or Python documentation gate is required.
-Report actual executed versus cached checks. A clean release check must run in
-an isolated checkout and prove native install/startup with no legacy worker,
-sound library, external model or network prerequisite.
+Use the headless invocation above, not unfiltered defaults.
+Report actual executed versus cached checks and every exclusion. A clean release
+check uses an isolated candidate and package/dependency inspection, without
+starting a GUI; headless service composition must need no legacy worker, sound
+library, external model or network prerequisite for MIDI.
 
 | Boundary | Required evidence |
 | --- | --- |
@@ -635,7 +962,7 @@ sound library, external model or network prerequisite.
 | State | Atomic writes, locks, no partial batch use/undo, stale async completion, scoped cancellation/retry, reopening, confined paths and artifact identity |
 | Audition | Real synth/default endpoint, single session, play/pause/seek/loop/mute/solo, no stuck notes/resources, latest-wins preview, zero project writes |
 | Export | Accepted-only snapshot, shared origin/end, channels/track names, allowed expression, manifest digests/privacy, semantic re-import, no overwrite |
-| UI | Real-service six-page workflow, exact data in lanes, focus/keyboard, resize, image comparison failures and real user visual decision |
+| UI | Headless real-service/presentation-state workflow, exact lane data, focus/keyboard semantics, offscreen layouts at supported sizes and image-comparison failures; no live-window usability claim |
 | Cleanup | Actual dependency paths scanned, no legacy routes/schema/audio/worker/Python runtime, verified data deletion and measured reduction |
 
 Keep deterministic fixtures small and owned. Test actual outcomes/invariants;
@@ -655,7 +982,8 @@ audition or export. The app-level Video tab leaves all six MIDI destinations and
 the one persistent MIDI player intact.
 
 Retained local measurements cover short image-to-video, not full-length coherence.
-VG6-01/02 requires three real 20–30-second app clips from finished artwork with
+VG6-01/02 requires three real 20–30-second clips through the app's production
+services invoked headlessly, from finished artwork with
 optional ready layers: base motion, contrasting motion using the same artwork,
 and replaced artwork. No generated-look review is required. VG4/VG5 independently
 prove exact continuous plans and bounded encoding, including a real 60-second
@@ -663,12 +991,12 @@ continuity/resource run before complete 180–300-second output. Subtle-motion r
 is allowed; whole-clip repeat-to-fill is not. Validate cadence at 30 fps and disclose
 native versus converted/upscaled action footage.
 
-VG6-03/04 proves installed behavior and the complete UI with owned/fake inputs,
-preparing current review evidence. VG6-05/06 requires the user to watch a real
-180-second silent app cut (with the product retaining 180–300-second support)
-and every join at normal speed, verify prompt/reference
-fidelity and repetition, then import/play it in the chosen Apple editor. Technical
-checks, file decodability and synthetic clips cannot supply either human decision.
+VG6-03/04 checks packaging and headless service/presentation integration with
+owned/fake inputs, not installed-GUI behavior. VG6-05/06 requires the user to
+review a real 180-second silent artifact and every join at normal speed (retaining
+180–300-second support), verifying prompt/reference fidelity and repetition.
+No interactive Apple-editor session is required. Technical checks, file decodability
+and synthetic clips cannot supply the human artistic/release decision.
 
 Tokyo, train, coffee and TABI are optional examples. Validation follows the
 actual prompt and selected references; it never requires those contents. Local
@@ -705,6 +1033,10 @@ the retained moving media separately: technical checks grant no human approval.
 No native preview ladder receipt is claimed for the VG02 continuation yet.
 
 ### Q03a clean native installation and startup
+
+**Historical procedure, removed from current validation gates.** Do not execute
+its GUI launch steps under the current non-interactive policy. Retained outcomes
+are not reinterpreted as current package or startup proof.
 
 Recovery on 2026-09-13 **PASS**: clean uncached architecture and 22 focused
 startup/install/six-page/frame checks, then 581 full tests, build and the actual
@@ -1111,6 +1443,11 @@ No final-song freeze or human score is claimed.
 
 ## UI and performance acceptance
 
+**Scope:** the live-window, acoustic-onset and interactive walkthrough requirements
+in the retained procedure below are superseded by the non-interactive policy.
+Current checks use offscreen images/semantics and service timing only. Historical
+unmeasured/failing results remain unchanged; no replacement usability pass is claimed.
+
 Follow [UI guideline](UI_GUIDELINE.md). Six ready pages plus relevant empty,
 blocked/error/progress states at 1536×1024, 1280×900 and 720×900. Test short-window
 resize and native scaling. Record actual/expected/diff paths, font/density,
@@ -1139,6 +1476,10 @@ Targets missing on the reference machine require profiling and an explicit
 budget decision with evidence. Agents must not claim measurements they did not run.
 
 ### U07b responsiveness and visual-review preparation
+
+**Historical procedure:** the graphical-host commands and mandatory capture gate
+below are retired, not instructions for current runs. Use the headless selectors
+and exclusions described above; retain old artifacts without replaying UI tests.
 
 Historical recovery evidence: `~/.codex/melotrail-terra/u07b-repair-evidence/u07/`.
 Use the current Q03b packet linked above for final review; the earlier packet
@@ -1324,6 +1665,11 @@ are absent in the rest package. Check playback and Logic save/close/reopen with
 fixed instrument choices. Record the real user's result before release.
 
 ## Logic Pro procedure
+
+**Historical/optional reference, not an active validation or release gate.**
+Current AC4-01 prepares and semantically validates packages without opening Logic;
+AC4-02's interactive procedure is removed. Preserve prior compatibility evidence
+without claiming it applies to the current build or requesting a new live session.
 
 Rerun relevant cases when import/timing/expression, assembly, rests, export or
 workflow handoff changes. GUI-only layout changes need UI validation, not a

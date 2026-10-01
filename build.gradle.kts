@@ -25,7 +25,7 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     // Documentation integrity reads these files directly, so doc edits must invalidate test caching.
-    inputs.files("AGENTS.md", "README.md", "PLAN.md", "TASKS.md")
+    inputs.files("AGENTS.md", "README.md", "PLAN-AUDIO.md", "TASKS-AUDIO.md", "PLAN-VIDEO.md", "TASKS-VIDEO.md")
     inputs.dir("docs")
 }
 

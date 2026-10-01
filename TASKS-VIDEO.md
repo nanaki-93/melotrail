@@ -1,51 +1,79 @@
-# Feature implementation queue
+# Melotrail video implementation queue
 
-Authority: [PLAN.md](PLAN.md). This is the only implementation queue. It starts
-from the current software, not from an empty application. There is no inherited
-completed-task index, attempt diary, branch schedule or automatic execution state.
-Historical evidence stays in the owning references and Git; it is not a second queue.
+This is the only implementation queue for video generation, governed by
+[PLAN-VIDEO.md](PLAN-VIDEO.md). The other workstream has its own
+[TASKS-AUDIO.md](TASKS-AUDIO.md); its acceptance is not a prerequisite here.
+Existing implementation, task IDs, dependencies, states and evidence are retained;
+validation scope follows the non-interactive policy below, without claiming passes.
+Dated evidence describes the original candidate, not a current-build pass.
+Historical filenames in receipts describe their original locations, not active
+planning authorities. No task, automation, commit, model download, inference or
+paid request is authorized by this documentation split.
 
-**This reset is planning-only.** No implementation task or automation is running
-because of this document. No commits, model downloads, inference or paid requests
-are authorized by the reset.
+`CORE-01` is a queue-local baseline reference in each workstream. Its DONE state
+comes from the same historical shared verification, not two separate runs or a
+new pass. Recheck the current candidate on any authorized implementation run;
+there is no dependency on the other queue's artistic or release gates.
+
+## Non-interactive validation
+
+All required tests must be headless; do not open or drive interactive windows.
+Remove live app captures/walkthroughs, native-window/GUI install smoke tests and
+interactive editor import/play checks from the active rows. Use offscreen UI,
+semantics, production-service/composition integration and package inspection.
+Headless Blender/media processes still need their exact bounded admission;
+removing UI tests does not remove media, resource, safety or human artistic gates.
+User review concerns supplied artwork/mockups/video files, not a live app session.
+Older app-window/installed/editor requirements in dated evidence are historical,
+not current dependencies or passes. Follow
+[Validation](docs/VALIDATION.md#non-interactive-validation), which supersedes older
+interactive requirements in owner references. This is a planning change, not
+deletion of test sources or implementation of new headless product capabilities.
 
 ## Production-first priority (2026-09-28)
 
-User decision, updated 2026-09-30: prioritize a complete video and a reusable
-**TABI train series**: a new city exterior and a different sequence of quiet
-activities for each episode. Tokyo remains the first 180-second pilot; Kyoto,
-Madrid and Rome are future choices, not admitted jobs or ready scenery packs.
-**Next creative slice to scope/admit is VG2-08's matching neutral/head/alpha kit**,
-not the already-DONE VG2-06 breathing test and not Video UI. The held-pose control
-is fixture-tested; actual artwork and readable motion remain blocked. Independent
-fixture-only pose-schedule work can be scoped under VG4-07; no work is launched
-by this documentation request.
+**User decision, updated 2026-10-01: route 1, a coherent reusable 2D/2.5D rig,
+proved outside Melotrail before implementing its workflow.** Existing TABI assets
+are the source pool; image generation may supply specifically missing parts after
+a finite preparation budget is agreed. This is the requested video task plan in
+the sole video queue, linked from [the roadmap](PLAN-VIDEO.md#route-1--rigged-video-proof-before-melotrail-integration).
+No implementation, image call or render starts from this planning request.
 
-Follow VG2-08/07 wave repair/review → VG2-09/10 one additional activity and review;
-VG4-05 scenery join → VG4-07 pose-schedule representation → VG4-02 and VG5-01/02
-minimal binding/execution/encoding → VG5-03/05 combined 60-second proof/review →
-VG4-06 full corridor → VG5-06/07 complete Tokyo film/review. Fixture work may
-proceed independently where its own dependencies allow it. The film needs
-continuous far/middle/near travel, distinct Tokyo views about every 5–10 seconds,
-quiet travel and at least two reviewed non-blink activities with clean returns.
-Then VG5-08/09/10 prepares/tests/reviews one selected second city with a materially
-different action script. Only after that short reuse proof resume VG4-01 app
-integration, VG2-03 integration assessment and VG3/VG5 app controls. The later
-VG6 full app export uses the selected second city after its full corridor is ready.
-VG6 still requires fresh app/installed/full-video evidence; a harness pilot does
-not close those gates. The earlier evidence's “next VG4-01” and app-first sequencing
-statements are superseded only as scheduling instructions, not rewritten results.
+The five-second wave is the first go/no-go test—not another seven-pose flipbook.
+**Next: VG2-12**, inspect/freeze a minimum coherent parts kit, reference neutral,
+missing surfaces and exact preparation scope. Follow VG2-13/14 parts/appearance →
+VG2-15 rig → VG2-16/17 supervision/colour proof → VG2-18/07 moving wave/review →
+VG2-09/10 one additional action/review → VG4-08 description mapping → VG2-19/20
+standalone 20–30-second reuse test/review. Only then scope minimum production
+bindings (VG4-07/09), compatible scenery join (VG4-05), VG4-02 and VG5-01/02
+runner/encode → VG5-03/05 reviewed 60 seconds → VG4-06 full corridor → VG5-06/07
+complete 180-second Tokyo film/artifact review. VG5-08/09/10 second-city reuse still
+precedes VG4-01/VG2-03 app integration and VG3/VG5 app controls. No UI, production
+rig schema, permanent backend selection or job-ledger replacement during the
+standalone proof. Generic video scenarios and the 180–300-second target remain.
 
-Existing DONE rows stay DONE; no new proof or human gate is completed by this
-update. Keep the four MP4s, accepted corrected mask, original art and sealed
-receipts unchanged. Use new current-schema private projects/identities, never
-migrate historical projects. No implementation, native/model job, download,
-hosted request, resource-limit change or commit is authorized here.
+The selected series retains a fixed cabin, continuous far/middle/near travel,
+distinct city views about every 5–10 seconds, quiet travel and at least two
+reviewed non-blink activities. Tokyo is the first full film; future cities are
+choices, not ready/admitted packs. A short reuse test is not a complete film,
+app feature, rights decision or release pass.
+
+**Preserved blockers, not prerequisites to repair automatically:** VG2-08 retains
+the 7-of-4 decoder breach and failed socket-owner substitution (initial plus both
+repairs exhausted). VG2-11 retains the successfully reproduced 180 source frames,
+the rejected inconsistent/clipped-arm draft and sRGB/Rec.709 export failure.
+Do not resume their consumed packets, pursue encoding-only polish as a creative
+fix, repair the socket without permission, or mark them DONE after a rig succeeds.
+VG2-12–20 use fresh standalone ownership and directly owned supervision, not that
+socket. Historical static approvals for 45–48 and 51–59 remain static approvals.
+All artwork, masks, frames, videos, failures, projects/takes/selections and sealed
+receipts stay unchanged. Production use later requires its own current-schema
+input/import and process-boundary proof; a standalone pass cannot supply it.
 
 ## How to use this queue
 
-- Feature IDs match PLAN: CORE, AC1–AC5 (audio composition via MIDI) and VG1–VG6
-  (independent video generation). A task such as `VG2-01` is one bounded slice.
+- Feature IDs match PLAN-VIDEO: CORE and VG1–VG6 (independent video generation).
+  A task such as `VG2-01` is one bounded slice.
 - States: `TODO`, `RUNNING`, `REVIEW`, `DONE`, `WAITING_USER`, `BLOCKED`, `OPTIONAL`.
   `TODO` means a new verification/implementation obligation, not that all code is
   absent. Existing preview WIP remains TODO until integrated and validated.
@@ -54,23 +82,20 @@ hosted request, resource-limit change or commit is authorized here.
   require a real decision/input; never retry them merely to rediscover its absence.
 - On an authorized run, recheck the current CORE baseline without replaying completed
   native experiments. Prefer the production-first sequence above, starting with
-  VG2-08's next separately admitted input slice. Take the first ready row within
+  VG2-12's separately scoped coherent-kit inspection. Take the first ready row within
   that sequence, not the lowest task number; never rerun DONE VG2-06 as a shortcut.
-  AC1–AC4 checks, AC5 preparation and independent bounded pilot-support fixtures
-  remain useful during human waits; deferred app tasks do not bypass their new gates.
+  Independent bounded pilot-support fixtures remain useful during human waits;
+  deferred app tasks do not bypass their new gates. Audio work follows its own queue.
 - After full-pilot and second-city reuse review, request VG3-01 design-process
   confirmation separately.
   Do not create mockups or production Video UI until its permission/approval gates
   pass. Approval of this production order is not design permission.
-- AC1–AC4 reuse implemented features. First run their focused checks and inspect
-  current callers. If no defect exists, record verification; do not invent a rewrite
-  or force a code commit. Split any real defect into a bounded task under its feature.
 - Only the coordinator updates status/integration. Default to one writer. Parallel
   agents require an explicit implementation request and disjoint file ownership.
 
 ## Execution and validation contract
 
-1. Read AGENTS, PLAN, README, this row and its owner references. Inspect Git status,
+1. Read AGENTS, PLAN-VIDEO, README, this row and its owner references. Inspect Git status,
    actual consumers/tests and the current candidate before editing. Preserve unrelated
    tracked/untracked changes, source media, current projects and accepted artifacts.
 2. Select exact allowed files from the owners below before implementation. `core`
@@ -80,10 +105,13 @@ hosted request, resource-limit change or commit is authorized here.
 3. Keep one behavior/boundary per task. Split an oversized task here before expanding
    scope. No duplicate job ledger, planner/schema compatibility mode or extra plan,
    inventory, execution log or agent-prompt document.
-4. Every implementation runs its focused tests, `make test`, `make build` and
-   `git diff --check`. Run real native/media checks where required. Ordinary tests
-   use owned fixtures/fakes, never models, hosted jobs or credentials. Fixes require
-   a regression that fails on the old behavior; never weaken checks to get green.
+4. Every implementation runs focused tests, `make test` and `make build` through
+   a verified headless path, plus `git diff --check`. Inspect the task graph first;
+   if defaults open a window, use a filtered headless invocation and record all
+   exclusions rather than claiming a full-suite pass. Separately admitted real
+   media checks must also be windowless. Ordinary tests use owned fixtures/fakes,
+   never models, hosted jobs or credentials. Fixes require a regression that fails
+   on the old behavior; never weaken retained checks.
 5. Use at most one initial implementation attempt plus two bounded repair attempts
    per admitted slice, then preserve the candidate and mark BLOCKED. A larger retry
    budget needs a new explicit run instruction. Usage interruptions resume the same
@@ -132,98 +160,6 @@ test and changes in `LocalVideoBackend.kt`, `VideoMediaProbe.kt`,
 Node checks. If isolation is needed, include task-owned dirty/untracked source
 and inventory exclusions without moving/deleting the original files. No cleanup
 of `.venv*`, `sounds`, `data/audio`, unknown caches or external evidence.
-
-## Feature AC1 — Protected melody and musical authority
-
-Existing implementation; verification and bounded defect correction only.
-
-| ID | Step and completion condition | Depends on | State |
-| --- | --- | --- | --- |
-| AC1-01 | Verify create/open/import, exact source preservation, fixed authority, explicit padding, section operations and unequal/sub-bar harmony. Confirm/cancel/reopen and stale-impact checks preserve previous artifacts; unsupported input fails with actionable guidance. | CORE-01 | TODO |
-
-**Owners:** `core/application/MidiCoreSourceImport.kt`, `MidiCoreProjectLifecycle.kt`,
-`MidiCoreArrangementExtent.kt`, `MidiCoreMusicalAuthority.kt`,
-`MidiCoreAuthoritativeHarmony.kt`, `MidiCoreStructureTimeline.kt`; existing MIDI,
-project and structure owners; `ui/MidiCoreAuthorityDrafting.kt`, `MidiCoreMidiPage.kt`,
-`MidiCoreStructureHarmonyPage.kt`.
-**Focused proof:** `MidiCoreSourceImportTest`, `MidiCoreArrangementExtentTest`,
-`MidiCoreHarmonyTimelineTest`, `MidiCoreOccurrenceTimelineTest`; desktop
-`MidiCoreAuthorityDraftingTest`, `MidiCoreStructureHarmonyPageTest`. Check actual
-fixture coverage before adding tests. No silent quantization, source switch,
-section-driven melody rearrangement or inferred harmony confirmation.
-
-## Feature AC2 — Coherent whole-song arrangement
-
-Existing implementation; musical quality is not yet human-accepted.
-
-| ID | Step and completion condition | Depends on | State |
-| --- | --- | --- | --- |
-| AC2-01 | Verify a confirmed per-occurrence plan drives Chords → Bass → Drums with melody-aware piano, metrical rhythm, repeated-section development and explicit rests. Same inputs replay identically; edits invalidate only used dependencies; cancel/retry preserves completed/accepted work. | AC1-01 | TODO |
-
-**Owners:** `core/arrangement/core/`, `core/application/MidiCoreArrangementPlanProposal.kt`,
-`MidiCoreArrangementPlanEdit.kt`, `MidiCoreArrangementDraft.kt` and their current
-fingerprint/validation consumers.
-**Focused proof:** `MidiCoreMelodyHarmonyAnalysisTest`, `MidiCoreChordGeneratorTest`,
-`MidiCoreBassGeneratorTest`, `MidiCoreDrumGeneratorTest`, `MidiCoreArrangementDraftTest`,
-`MidiCoreComparisonHarnessTest`. Include 4/4, 3/4, 6/8, dense/sustained melody,
-sub-bar changes, boundary continuity, rests and unsupported grids/meters. Prepare
-same-authority comparison MIDI with existing tooling; no musical score is assigned.
-
-## Feature AC3 — Audition, repair and acceptance
-
-| ID | Step and completion condition | Depends on | State |
-| --- | --- | --- | --- |
-| AC3-01 | Walk the implemented style → plan → full-draft playback path, scoped repair A/B, Use/Undo and reopen. Verify one player, fixed melody/loop position, locks, revision guards, failed-Apply retry and accepted-only export readiness. Record only reproduced defects for repair. | AC2-01 | TODO |
-
-**Owners:** `core/application/MidiCoreArrangementStylePreview.kt`,
-`MidiCoreMusicalRepair.kt`, `MidiCoreReviewAudition.kt`, `MidiCoreAcceptedSongAssembly.kt`,
-`core/audition/`; `ui/MidiCoreArrangePage.kt`, `MidiCoreReviewPage.kt`,
-`MidiCoreWorkspace.kt`, `MidiCoreWorkspaceShell.kt`.
-**Focused proof:** root `MidiCoreArrangementStylePreviewTest`,
-`MidiCoreMusicalRepairAlternativeRankerTest`, `MidiCoreArrangementPlanEditTest`,
-`MidiCoreAcceptedSongAssemblyTest`; desktop
-`MidiCoreArrangePageTest`, `MidiCoreReviewPageTest`, `MidiCoreFocusedWorkflowTest`.
-Preserve the six repair intents, meaningful alternative limit, explicit rests and
-three-action authority-ready draft path. These tests do not measure acoustic onset.
-
-## Feature AC4 — Accepted MIDI export and Logic handoff
-
-| ID | Step and completion condition | Depends on | State |
-| --- | --- | --- | --- |
-| AC4-01 | Refresh the current Logic matrix and semantic export proof, with complete/separate roles, source expression, padding, rests, boundaries and immutable snapshots. Produce new packages and blank human forms tied to this build. | AC3-01 | TODO |
-| AC4-02 | User imports, plays, saves/closes/reopens the applicable matrix in Logic; record exact versions, hashes, alignment/controllers/drums/endings and all failures. No old compatibility pass substitutes for current evidence. | AC4-01 | WAITING_USER |
-
-**Owners:** `core/application/MidiCoreMidiPackageExporter.kt`, accepted assembly,
-`core/midi/adapter/JdkMidiWriter.kt`, `ui/MidiCoreExportPage.kt`; existing Logic
-matrix test/command and `docs/VALIDATION.md`.
-**Focused proof:** `MidiCoreMidiPackageExporterTest`, `MidiCoreAcceptedSongAssemblyTest`,
-`JdkMidiWriterTest`, `MidiCoreLogicMatrixTest`; desktop `MidiCoreExportPageTest`.
-**Preparation:** `./gradlew prepareLogicMatrix -PlogicMatrixDirectory=build/logic-matrix/<new-run>`.
-AC4-02 uses the [Logic procedure](docs/VALIDATION.md#logic-pro-procedure).
-
-## Feature AC5 — Musical usefulness and MIDI release
-
-| ID | Step and completion condition | Depends on | State |
-| --- | --- | --- | --- |
-| AC5-01 | User supplies five owned/licensed full-song current MIDI projects, at least three unseen, with settings, ownership and exposure declarations. Synthetic fixtures cannot fill this set. | — | WAITING_USER |
-| AC5-02 | Freeze the supplied songs/settings before generation and export current comparisons/blank score forms from isolated copies. Keep development cases separate and preserve failed outputs. | AC3-01, AC5-01 | TODO |
-| AC5-03 | Collect genuine piano+melody/full-song scores, exact bad bars and repair times against PLAN/Validation targets. Failed cases create bounded corrective rows and require fresh applicable evaluation. | AC5-02 | WAITING_USER |
-| AC5-04 | Refresh six-page technical visual/performance evidence at all three sizes and actual foreground capture on a capturable host. Retain failures, do not replace approved goldens automatically or relabel frame replay as desktop capture. | AC3-01 | TODO |
-| AC5-05 | User completes the MIDI journey and reviews hierarchy, fidelity, keyboard/resize behavior and audible response; record real per-page decisions and acoustic-onset measurement or its explicit unresolved limitation. | AC5-04 | WAITING_USER |
-| AC5-06 | Prove the current MIDI app installs/starts from a fresh private DMG copy with bundled JVM and no video tools, models, worker, sound library or network. Preserve the user's installed app. | AC4-01, AC5-04 | TODO |
-| AC5-07 | Reconcile final build/engine/export/UI identities with music, Logic, visual and installation evidence; record the actual MIDI release decision and limitations. | AC4-02, AC5-03, AC5-05, AC5-06 | WAITING_USER |
-
-**Owners:** existing `MidiCoreMusicalEvaluation*`, comparison harness, desktop
-visual/responsiveness/install checks, `docs/VALIDATION.md`, `README.md`.
-**Proof:** use the [evaluation commands](docs/VALIDATION.md#frozen-musical-evaluation-commands-q01a),
-`MidiCoreMusicalEvaluationTest`, `MidiCoreComparisonHarnessTest`; desktop
-`MidiCorePinnedVisualTest`, `MidiCoreVisualReviewTest`, `MidiCoreResponsivenessTest`,
-`MidiCoreNativeResponsivenessTest`, `MidiCoreNativeInstallCheckTest`.
-Run `:desktopApp:nativeDesktopCapture` and
-`:desktopApp:nativeInstallSmoke -PnativeInstallDirectory=<new-absolute-directory>`
-on the appropriate host. Reuse the existing preparation tools, not an old artifact
-identity. Manual MIDI reviews stay at the end of unpaid engineering; missing songs
-or scores do not block video development.
 
 ## Feature VG1 — Finished artwork and explicit local setup
 
@@ -352,9 +288,8 @@ Backend technical gates and the controlled 5/20/30-second ladder are recorded
 below. VG2-03 remains REVIEW for integration assessment after full-pilot and
 second-city reuse review;
 its older WAITING_USER paragraphs are historical, not requests to repeat those
-videos. The new priority is scene-compatible character motion beyond the approved
-blink, with a visibly readable revised action under VG2-08 and its own VG2-07
-review.
+videos. The current priority is the standalone rig proof below. The whole-arm
+Blender test is rejected; VG2-07 will review only a new articulated VG2-18 result.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
@@ -364,12 +299,101 @@ review.
 | VG2-04 | Fix ComfyUI node-local progress being persisted as whole-job progress. Keep running work indeterminate until verified completion; cover node resets, reconnect and single immutable publication without weakening store invariants. | VG2-02 | DONE |
 | VG2-05 | Bound controlled renderer resource lifetime between frames without changing pixels, cadence, shutter sampling or native limits; prove event-loop cancellation and a fresh five-second native run. | VG1-02, VG2-02 | DONE |
 | VG2-06 | Prepare the smallest scene-matched character inputs and produce one separately admitted 5–10-second isolated movement beyond blinking, with the rest of the scene fixed. Preserve identity, clothes, props and aligned entry/return poses; retain the approved blink. Report missing layers/control support rather than substituting a pan or unrelated pose. | VG1-03, VG2-02 | DONE |
-| VG2-07 | User reviews the revised VG2-08 moving artifact at normal speed for identity, eyes/gills, props, matte/contact, readable gesture/cadence and clean return. Existing breathing feedback requests repair, not acceptance. Record exact artifact/decision; no automatic selection or full-film approval. | VG2-08 | WAITING_USER |
-| VG2-08 | Finish a new matching-head, consistent-single-pass-alpha neutral/midpoint/wave kit with planted contact, declared approved return baseline and preserved source art. The held-pose control is implemented/fixture-tested, not a real-kit pass. Complete actual-kit import/support/contact/return proof, then seek a fresh one-attempt 5–10-second render/decode/import admission. Reject head pops, mixed alpha policies, ghost fades and blink/breathing/pan substitutes. | VG2-06 | BLOCKED |
-| VG2-09 | After wave review, select and finish only one additional quiet non-blink activity for the Tokyo pilot, sharing the compatible cabin/neutral/props. Validate needed supplied poses/layers, actual control limits, contact/occlusion and entry/return, then produce one separately admitted 5–10-second moving test. Scope any missing control first; do not generate a broad library or infer page-turn/drinking support. | VG2-07 | TODO |
-| VG2-10 | User reviews that second activity's exact moving test and its compatibility with the wave/neutral kit. Accept or request specific repairs before the two-activity combined schedule; this is not full-film approval or automatic take selection. | VG2-09 | WAITING_USER |
+| VG2-07 | User reviews the new VG2-18 rigged wave at normal speed, with frame inspection for anatomy/cloth continuity, attachment, props, matte/contact, cadence and clean return. Record artifact-specific accept or repairs. The seven-pose VG2-11 movie remains rejected; no take selection or full-film approval follows. | VG2-18 | WAITING_USER |
+| VG2-08 | Historical held-pose kit/output and exhausted shared-counter repairs: preserve static/import/source/media passes alongside the 7-of-4 decoder breach and socket-substitution failure. No further execution/repair without separate authorization. Route-1 work does not clear these failures or resume this packet. | VG2-06 | BLOCKED |
+| VG2-09 | After rigged-wave review, select only one additional quiet non-blink action and author it on the same kit/rig, with bounded parameter/contact/occlusion/entry-return checks and one separately admitted 5–10-second test. Prefer an action within the proved view/joints; approve any necessary new parts before use. New capability and broad asset-library work are not implicit. | VG2-07 | TODO |
+| VG2-10 | User reviews that second action's exact moving test, readable movement and compatibility with the approved rig/wave/neutral. Static reading or a blink is not a second demonstrated activity. Accept or request repairs; no full-film approval or automatic selection. | VG2-09 | WAITING_USER |
+| VG2-11 | Historical standalone Blender seven-pose feasibility: source-pixel proof passes, user rejects inconsistent/clipped arms, export transfer check fails. Preserve all evidence and consumed packets; no encoding-only follow-up or automatic repair. Route 1 is selected for a fresh proof under VG2-12–20, not implemented here. | VG2-02 | BLOCKED |
 
-**VG2-08 next input slice, not execution admission:**
+### Route 1 — Standalone rig proof tasks
+
+These rows implement the selected method **only on a future bounded run**. They
+are not a second product workflow or permission to launch an unbounded sequence.
+Every row produces a concrete artifact/check; the user gates decide whether to
+continue. The plan reuses existing reference art, not the rejected seven-pose
+movie as an animation baseline.
+
+| ID | Step and completion condition | Depends on | State |
+| --- | --- | --- | --- |
+| VG2-12 | Inspect the existing TABI source pool and retained preparation; freeze one view/outfit, neutral 48 as starting appearance reference and a five-second/150-frame neutral → lift → two wrist beats → lower → neutral test. Identify exact reusable parts, missing hidden surfaces/hand shapes, joint limits, fixed/contact regions and future output owners. Confirm rights/source provenance and propose the smallest finite artwork/rig/test budgets; no asset creation or native render. | CORE-01 | TODO |
+| VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | TODO |
+| VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | WAITING_USER |
+| VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | TODO |
+| VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | TODO |
+| VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | TODO |
+| VG2-18 | Execute one explicitly admitted five-second/150-frame rigged wave with fixed cabin/head/body contact, encode/probe/full-decode and publish a new validated review copy. Measure stage time/RSS/disk and every frame's geometry/occlusion/edge/colour/PTS/return checks. No automatic retry, import, take selection or short-success-to-full-film promotion. Preserve source PNGs, rig/action/input pins and all failed media. | VG2-17 | TODO |
+| VG2-19 | After both actions and description mapping pass, run one separately bounded pair of 20–30-second standalone scene tests with identical approved rig/art/action versions but two materially different supported descriptions/order/timing. Include rest, both activities, returns and bounded scenery travel within measured coverage. No manual keyframe/rig edit between requests, regenerated character or whole-clip repeat. Validate both complete outputs, absolute-frame repeatability/chunk parity and changed-request dependencies; each clip gets its own explicit one-attempt budget. | VG2-10, VG4-08, VG2-17 | TODO |
+| VG2-20 | User reviews both reuse clips against their original descriptions for motion quality, continuity/contact and actual differences, and decides whether the rigged process warrants minimal production binding. Record limitations and the selected proof runtime; do not infer permanent app-backend adoption, long-film readiness or UI permission. Reject/repair the method before scaling if the same arm defect remains. | VG2-19 | WAITING_USER |
+
+**Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
+new asset derivatives only (publish approved review copies under
+`docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.
+Inspect/reuse the direct supervisor/path/pixel tests in
+`build/vg2-blender-phase-3noEBfTw/` by copy into a new owner; never modify its sealed
+packet, helper files or media. A scratch `.blend`, scripts and input/action data
+are proof artifacts, not a production rig schema or second job ledger. No edits
+to Kotlin/Compose/runtime manifests, no old project/take mutations, no downloads,
+commits or automatic application integration within VG2-12–20.
+
+**Preparation rules:** inspect the actual assets listed in PLAN-VIDEO and their existing
+receipts; names/presence do not prove alpha, anatomy, motion support or rights.
+Preserve common head/body/contact; hidden sleeve/torso/cabin pixels must be supplied
+or separately generated and reviewed. Keep one coherent texture/outline across
+joints. Do not confine animation to the old fixed rectangular arm patch or solve
+clipping with fades. Hand-drawing substitutions, if necessary, have registered
+wrist/volume/contact and their own moving check. Extreme static composites do not
+replace an all-frame rig-support test. Fixed-region tests exclude only the newly
+declared moving/support region; changes to that region are explicit, not a waiver
+of old evidence. A rig may deform/rotate approved parts within its reviewed bounds;
+that is not permission to warp unrelated artwork or expose invented surfaces.
+
+**Image-generation boundary:** the user's current instruction allows this method
+for missing art in principle; VG2-12 names the parts/references and a finite new
+call/correction allowance before VG2-13 spends it. Use Pi `codex_generate_image`,
+not an inferred image-model ID, ComfyUI/CLI fallback or bulk pose library. Read the
+image-generation skill at execution. Verify output dimensions/alpha from pixels,
+retain generation receipts, and stop on exhausted budget or quota/connection/
+incomplete-stream failure without automatic retry. Prior consumed allowances stay
+consumed. Static approval is artifact-specific. No in-app art/extraction feature.
+
+**Native-media boundary:** VG2-16 is non-live. Each VG2-17/18/09/19 media packet must
+name exact commands/operation costs/destinations and fresh admission. For the tiny
+colour proof and five-second wave, propose at most the preceding comparison's
+900s cumulative, 4-GiB aggregate directly owned RSS and 2-GiB new storage, with
+18-GiB disk admission, 10-GiB reserve, three NORMAL/≥3-GiB-free-memory samples and
+no swap growth; assign finite stage limits whose shared clocks cannot renew.
+These are proposal ceilings, not renewed permission, production limits or evidence
+that a rig fits them. For the later second-action and 20–30-second pair, derive
+fresh finite stage/total limits from measured wave time/RSS/source and decoded
+bytes, including all retained clips and staging; do not assume 2 GiB holds longer
+sequences. If estimates exceed an admitted limit, stop and obtain a new explicit
+budget. Account for shared VideoToolbox services as host pressure, not falsely
+attributed owned RSS.
+
+For a standalone PNG→MP4 test with no import, the intended media traversal plan
+is one combined FFprobe count/PTS scan plus one full FFmpeg decode, **two total**;
+PNG source inspection/encoding are separately bounded operations, not MP4 decodes.
+Any extra media capability probe, technical fixture, replay or later production
+import has its own truthful count/admission. Reserve before dispatch, no refunds
+or hidden retries. Colour proof and wave are distinct attempts with distinct
+packets; unused historical allowance cannot be carried over. Use known actual
+conversion, not blind retagging or accepting both transfer tags. Do not re-render
+valid source PNGs to repair only encoding without cause and a new admission.
+
+**Proof required:** fresh focused documentation/architecture tests, applicable
+standalone preparation/rig/supervisor/colour regressions, existing motion suites,
+`make test`, `make build`, `git diff --check`; explicitly admitted native checks
+are separate from fixtures. Rig tests include stable bone lengths, no unexpected
+scale/mesh inversion, declared joint/contact tolerances, texture/edge witnesses,
+neutral return, deterministic absolute-frame evaluation after reopen and changed
+input invalidation. Freeze numeric tolerances before running, retain a clipping/
+misattachment negative and inspect rendered in-betweens. H.264 checks compare in
+a declared common colour space, not raw sRGB versus Rec.709 code values. No numeric
+score substitutes for normal-speed user review in VG2-07/10/20. If the first wave
+is rejected, stop expansion and propose a bounded correction; do not continue to
+the second action or Melotrail anyway.
+
+**VG2-08 historical input slice, not current execution admission:**
 
 1. Freeze approved 40-v2/41-v2/42-v2 and wave 36/37 as read-only appearance
    sources; retain the rejected common-head extraction and all old videos.
@@ -389,6 +413,437 @@ review.
    exhausted earlier implementation/image budgets do not renew themselves.
    VG2-07 owns the resulting normal-speed readability/cadence decision.
 
+VG2-08 Step 1.1 preflight (2026-09-30; HEAD `0ebf3f571a83af15536c1c0d6c5eb3e2bab98d2b`): fresh ignored evidence is `build/vg2-08-preflight-7tKhnLfP/`. `/opt/homebrew/bin/node build/vg2-08-preflight-7tKhnLfP/check-artwork.cjs` (Node 25.8.2/Canvas 0.1.80) passes **historical rejection checks only**, not finished-kit acceptance. `artwork-preflight.json` records before/after hashes: all 29 protected + three approved v2 inputs and five historical evidence files unchanged. It reproduces the 80,646 head/frond and 3,017 single-pass-neutral pixel failures, confirms distinct historical halfway pixels, and rejects a duplicate wave as midpoint. Historical scripts/reports were not run in place or rewritten. The exact-HEAD user manual attestation is credited as user-verified observations, not agent observations; it supplies no new finished-layer paths or artwork budget. Inspection found no new kit/admission. **VG2-08 remains BLOCKED** on supplied finished matching layers or a fresh bounded finishing admission; there is no new composed baseline to approve. No artwork changes, real-artwork project import, native/model/media job or take mutation. Unrelated `.venv*` and `tools/__pycache__/` remain untouched. Focused `VideoAnimationAssetsTest`/`DocumentationIntegrityTest` and fixture generation passed (each 1 executed/5 up-to-date); Node motion/scenery 31/31 passed; `make test` passed (1 executed/13 up-to-date), `make build` passed (14 up-to-date), and `git diff --check` passed. Logs are beside the report; post-documentation gates are recorded separately there. This missing-input gate is not renewed historical admission or VG2-08 completion.
+
+VG2-08 Step 1.2 fresh artwork slice (2026-09-30; user explicitly authorizes
+image-generation assets and step-by-step work): ignored owner
+`build/vg2-08-matching-kit-m9QIEALI/`; only new `train-actions/43`–`50` and
+this queue/TABI additions are published. One Pi image edit supplies a neutral
+cheek-rest arm (actual 1153×1364 RGBA), registered locally at (680,400), 300×355.
+New 1920×1080 layers 45/46/47 share the wave pair's exact tested head/eyes/mouth
+and original un-compensated lower-contact RGBA, with one single-pass policy.
+Two local assembly repairs retain the initial hard sleeve seam as a failing
+regression and restore one mouth-corner pixel; no additional model call.
+`check-static.cjs` passes four in-process production-drawing **still witnesses**:
+exact common/contact/outside-arm pixels, direct-stack parity and exact supplied
+neutral return; composed lower pixels also equal approved 29 exactly. This is
+not a production-imported descriptor, full support/matte proof or moving test.
+All 78 pinned prior inputs/evidence remain unchanged; old mismatched-head and
+legacy-alpha witnesses remain rejected. New neutral review **48** and comparison
+**49** require an explicit appearance/return-baseline decision; approved 29 is
+unchanged (215,464 new-neutral RGB pixels differ by >8/255). See
+[TABI's exact candidate pins](docs/TABI_VIDEO.md#vg2-08-step-12-matching-kit-static-candidates-2026-09-30).
+VG2-08 is WAITING_USER at that gate, not DONE or moving-ready. After approval,
+actual-kit import/reopen/support/occlusion proof and a separate bounded video
+admission remain. No native render/encode/decode, video job, project/take/selection
+mutation, download, production-code change or commit. Focused six-selector JVM
+checks/fixture generation passed (1 executed/5 up-to-date); Node motion/scenery
+31/31 passed; `make test` passed (2m36s, root executed, desktop cached;
+1 executed/13 up-to-date), `make build` passed (14 up-to-date), and both diff
+checks passed. Logs/receipts are in the scratch owner; post-disposition rechecks
+use separate `final-*` logs.
+
+VG2-08 subsequent static appearance decision (project user; recorded
+2026-09-30T13:00:40Z): “i approve the new assets”, responding to comparison 49
+and the request to approve its new neutral return baseline. Fresh hash checks
+match 45/46/47/48/49; approval covers their static matching-kit appearance and
+explicitly selects **48** as the new return appearance baseline, without altering
+29 or old reviews. Receipt: `build/vg2-08-kit-import-WrIrzi1D/user-artwork-approval.json`;
+exact decision/pins are in TABI/Validation. No detailed per-edge manual report,
+moving review, take selection or live budget is inferred. VG2-08 continues under
+the original step-by-step request with a bounded **non-live** import/support/
+contact/occlusion check: new scratch/private project only, one initial attempt
+plus at most two local repairs; no production edits, image job, download, native
+render/encode/decode, ledger submission or commit. 43/44 remain source/guide,
+not standalone motion layers. The actual-kit result follows; separate preview
+binding/admission remains open.
+
+VG2-08 non-live actual-kit checkpoint (2026-09-30):
+`./gradlew -I build/vg2-08-kit-import-WrIrzi1D/compile-host.init.gradle verifyMatchingKitImport`
+passed (2 executed/2 up-to-date), importing seven exact originals into a new
+schema-5 private project at revision 8. Scene descriptor SHA
+`b01cfc9f20204e6958ec0adbff752acaf4ec3937c06324b1534e53aacacd7500`;
+`import-receipt.json` records production reopen, measured alpha, unit placement,
+POSE_REPLACE preparation, scoped fingerprints and eight no-append rejection
+fixtures. No old project was opened for writes. Independent
+`node build/vg2-08-kit-import-WrIrzi1D/check-imported-kit.cjs` passes against
+that exact imported descriptor: 333,354 supplied-state support pixels, 347,823
+with 3-px padding, fully opaque backing, exact tested head/fronds/eyes/mouth,
+fixed lower contact and 3,396 stationary-hand witnesses. Fourteen in-process
+boundary/entry/return **stills** match the reviewed stacks; every proposed
+index's held-state mapping is checked (217 total: 77 neutral/80 halfway/60 wave).
+173,999 opaque foreground witnesses are correct; 1,212 old raised-finger pixels
+are absent in neutral. Painted-character plate, double-alpha, mismatched-head,
+rejected extraction and real-frond-erasure fixtures remain failures. Two bounded
+scratch repairs correct the Video document filename and a frond probe that had
+included changing thumb ink; neither changes approved assets or production code.
+All 91 pinned source/art/evidence files remain unchanged. Proof/limits and
+[imported contact stills](build/vg2-08-kit-import-WrIrzi1D/imported-contact-review.png)
+are in that scratch root. Default importer review metadata remains UNREVIEWED;
+the actual static approval is the separate pinned user event, not a moving pass.
+Focused eight-selector JVM/fixture checks passed (1 executed/5 up-to-date),
+Node 31/31 passed, `make test` passed in 2m32s (root executed, desktop cached;
+1 executed/13 up-to-date), `make build` passed (14 up-to-date), and both diff
+checks passed. Post-disposition gates/pins use separate `final-*` logs.
+VG2-08 is TODO for the
+next non-live obligation: exact real runtime/capability/kit/destination pins,
+verification commands and finite stage/cumulative budgets, then **separate live
+admission**. No final executable request/budget exists yet. No new artwork,
+frame batch, native render/encode/decode, ledger submission, take, selection,
+production change, download or commit. Fixed exterior only; no old-mask/scenery-
+shutter compatibility, articulated native motion or VG2-07 acceptance is claimed.
+
+VG2-08 next non-live proposal slice (2026-09-30; user: “go for the next one”,
+responding to the separate-execution-approval boundary): new ignored owner
+`build/vg2-08-wave-preview-DdsNfBEN/`; same HEAD and preserved WIP. Production
+binding/deny-only fixtures pass with **15 prepared + 12 runtime pins**, actual
+manifest 4/tool 1.2.0/Canvas 0.1.80, and 1,939 loaded class/JAR/resource files
+frozen. Bound executable fingerprint
+`ab5cf6b0e91c7ecd072b0e2db2b3bdefc8ce1444e15d49ee039f9920b0f0d470`;
+preliminary proposal SHA
+`3ee4c9c71a30edbbcfe816fb83846d53944e656366e7a1aab2c9cce68ccab3bc`.
+The proposed 217-frame held sequence is unchanged. One proposed local attempt
+would share 900s total (540 render/180 encode/180 source/decode/import), aggregate
+owned JVM/native-descendant RSS ≤2 GiB, 8-GiB new storage (4 staging/1 outputs/
+3 decoded), 10-GiB reserve, 18-GiB usable-disk and three stable NORMAL ≥3-GiB
+free-memory preflight samples; these are **not admitted budgets**. It proposes
+one unreviewed/unselected take in the already-new private project and a new
+`docs/pictures/video/tests/vg2-matching-wave-held-217-20260930-DdsNfBEN.mp4` only
+after all proof, without old-project/art changes. All live branches deny without
+a separate matched event; no such receipt exists.
+
+Two bounded scratch repairs were used: wrap the native Canvas Path in `listOf`
+(to avoid Kotlin's `Path : Iterable<Path>` flattening), then explicitly project
+non-serializable backend-capability metadata and retain the prior terminal
+fixture ledger. Final binding compile/check passes (3 executed/2 up-to-date),
+Python denial/config/media-guard tests **9/9**, pixel-helper tests **5/5**, and
+read-only source/pin/destination preflight/dry-run pass. Two **deny-only fixture**
+submissions exist across separate retained ledgers; neither ever starts media.
+Independent exact-candidate review then reproduces a **failing destination
+regression**: `review-destinations.py` passes an in-memory changed review target
+under an owned scratch symlink parent; Python preflight accepts it while Kotlin
+reads the original proposal. `destination-review.json`/`.log` retain the failure.
+The real docs directory/proposal/source project were not altered and no MP4 was
+written. Absence-only checks do not establish canonical ancestor ownership or
+cross-host destination agreement. **VG2-08 is BLOCKED**, not native-admission-
+ready; passing ordinary tests do not close this failure. A new explicit bounded
+non-live repair must unify the exact frozen configuration/destinations, reject
+unsafe/changed ancestor chains through publication, add the failing regression,
+re-pin a successor packet and independently review it before asking live approval.
+Do not renew the exhausted repair budget or use the preliminary proposal to run.
+Focused eight-selector JVM/fixtures and Node 31/31 pass; applicable full test/
+build/diff and protection checks use separate final logs in this owner. No
+production edits, artwork/model jobs, downloads, native render/encode/media
+decode, real-job submission, take import/selection/review copy or commit ran;
+appearance/input approval stays valid and VG2-07 still awaits actual footage.
+
+VG2-08 expressly authorized extra repair (2026-09-30; user “yes”, responding
+to **one additional non-live repair**, not rendering): new successor owner
+`build/vg2-08-wave-destinations-fPyZ5vyR/`; original failed packet, 1,049 protected
+files and its one symlink rejection witness remain unchanged. One repair used;
+no additional automatic allowance. Wrapper config now equals the frozen packet;
+Kotlin checks its matching snapshot hash before source/project opens. Both derive
+the same exact destinations and validate fourteen complete existing-ancestor
+identity pins, including inode replacement and dangling/symlink rejection. Guards
+recheck through native delegation/reconciliation/supervision/import/publication;
+review-copy creation uses held parent descriptors, O_NOFOLLOW/O_EXCL and a fixed
+verified-byte hash. Python baseline guards 9/9, destination/publication/passive-JVM
+regressions **14/14** and pixel helpers 5/5 pass, including old guard accepting the
+case while the successor refuses it before Java, and no redirected write when
+an alias is inserted after parent-FD open. Deny-only production binding passes
+(3 executed/2 up-to-date), source/host preflight/dry-run and separate coordinator
+exact-candidate technical review pass. No human artistic approval is inferred.
+15 prepared/12 runtime pins remain; loaded class/JAR/resource count is now 1,941.
+Source/held cadence and executable fingerprint remain
+`ab5cf6b0e91c7ecd072b0e2db2b3bdefc8ce1444e15d49ee039f9920b0f0d470`;
+new request ID is `vg2-matching-wave-live-217-20260930-fPyZ5vyR`.
+Successor [exact proposal](build/vg2-08-wave-destinations-fPyZ5vyR/live-admission-proposal.json)
+SHA `2d86850934a47b4a0b1335884b5e70cb3956fc3af4f3d92e834ba55e9e42fb95`.
+It retains the proposed one attempt/217 held frames/900s shared/2-GiB aggregate
+RSS/8-GiB new storage/10-GiB reserve/18-GiB usable disk/three NORMAL ≥3-GiB
+free-memory samples. New review filename:
+`docs/pictures/video/tests/vg2-matching-wave-held-217-20260930-fPyZ5vyR.mp4`;
+working/ledger is the successor's absent `live-217/`, output the private input
+project's absent `controlled-output-wave-fPyZ5vyR/`. **VG2-08 is WAITING_USER for
+separate exact live approval**, not DONE; all actual media counts remain zero.
+Focused eight-selector JVM/fixtures and Node 31/31 pass; full test/build/diff,
+post-disposition pins and review receipts use this owner's final logs. No native
+budget, new image/model call, production/UI edit, download, commit, real job,
+video/take/selection/review-copy mutation or VG2-07 acceptance follows from “yes”.
+
+VG2-08 explicit execution/result and independent count failure (2026-09-30):
+user **“yes, go with the generation, save the file in  @docs/pictures/video/tests”**
+approves successor SHA `2d868509…42fb95`, not another repair or moving acceptance.
+Exact all-file/count/limit/destination receipt is `live-admission-approved.json`
+in `build/vg2-08-wave-destinations-fPyZ5vyR/`; frozen packet/helpers stay unchanged.
+One request/attempt/render/encode, no retry/model/art job. Production attempt
+`attempt-e3d2fac9-eed1-41f4-a18e-e21a9319b82a` succeeds in **96.018496s**;
+verified review publication finishes in **205.171838s** shared / **106.347075s**
+verification, within the 900s/180s windows. Saved
+[held-pose preview](docs/pictures/video/tests/vg2-matching-wave-held-217-20260930-fPyZ5vyR.mp4),
+**11,055,133 bytes**, SHA
+`ef7cb3a041a6e32c8c253542ed2da5b221ed4a0f4fa8e09c7f340b1e957366a6`:
+217 silent square-pixel 1920×1080 H.264/yuv420p frames, 30fps, PTS i×512 at
+1/15360. All source frames exactly match three supplied approved stacks; source/
+decoded/import rechecks agree. Counts 77 neutral/80 halfway/60 wave; exact entry/
+return 48. Decoded worst RGB MAE whole/fixed/arm **3.138319/3.099911/4.189701**
+(≤12), intended-state minimum margin **19.612521**. 202 decoded RGB variants
+are codec variation, not 202 generated poses or articulated motion. One private
+`take-aa55a6a6-dcc4-425f-9cec-dc6365244846@1` stays UNREVIEWED/unselected;
+project schema 5 revision 8→9 changes only revision/takeVersions. All **1,048**
+other protected files, historical failing symlink, 27 input/runtime pins and
+1,941 loaded class/JAR/resource files remain unchanged. Observed retained new
+storage is **1,972,498,454 bytes**; sampled RSS/pressure/swap/disk/deadline guards
+complete, but no measured peak/time-series is invented.
+
+**Independent admission-count audit FAILS:** exact frozen production paths
+performed seven full MP4 decoder traversals (controlled count+full decode,
+independent count/PTS+PNG decode, import count+full decode+PTS), not the admitted
+four. FFprobe `-count_frames`/`-show_frames` really decode; they cannot be excluded
+retroactively. `decode-pass-admission-audit.json`, `decode-pass-regression.log`
+(expected assertion exit 1), `execution-preservation-audit.json` retain this
+failure alongside unchanged successful media receipts. The count ceiling was
+only descriptive and not enforced. **VG2-08 is BLOCKED** on that narrow workflow
+prerequisite; no more native invocation, retry, limit widening, cleanup, undo,
+selection or code repair is authorized. Preserve the valid file/unreviewed take.
+VG2-07 remains WAITING_USER for its exact normal-speed gesture/cadence/identity/
+frond/props/contact/return decision, independent of the process-budget correction.
+Ordinary focused/full/build/diff outcomes are in `execution-*-checks.log` and
+`post-execution-pins.json`; green tests do not clear this failing count regression.
+
+VG2-08 fluidity artwork follow-up (2026-09-30): user feedback on exact preserved
+MP4 `ef7cb3a0…7366a6`: **“the animation is ok, but there's no enough frames, you
+need to create more assets in the middle to make the animation smoother and
+fluid”**. This is qualified direction approval plus a cadence-refinement request,
+not full moving acceptance, a reported playback speed, take selection or release.
+User **“yes, i approve the new generations”** answers the new **artwork-only**
+4 initial calls + at most 2 shared targeted corrections proposal. Ignored owner
+`build/vg2-08-fluid-assets-1TFP896e/` records exact scope/source pins in
+`artwork-admission.json` and six Pi call/source/prompt specs in
+`generation-receipts.json`. **All six calls used; no more image allowance**.
+Two corrections make the initial over-open release hands more curled/half-open;
+all sources/failures are retained. No API fallback, download, install or new
+video/model-server job. Actual selected outputs are measured **1153×1364 RGBA**
+with transparent corners/background; no chroma-removal pass needed.
+
+New 1920×1080 registered candidates **51 early release / 52 late release /
+53 pre-wave / 54 outward wrist**; scene stills **55–58**;
+[seven-pose comparison 59](docs/pictures/video/tabi-assets/train-actions/59-wave-seven-pose-static-comparison.png)
+SHA `7dff03003bfa600aa82e77c1c47bc9e5382628b16f5e76cc19ff425a0421e207`.
+`assemble-static.cjs` / separate `check-static.cjs` pass four distinct new states,
+exact common tested head/eyes/mouth/fronds/lower/outside-arm RGBA, all **1,177**
+protected source/evidence pins and unchanged supplied neutral-48 scene stack.
+One local registration repair retained the first wrist pose's **462** clipped
+pink-hand pixels as a negative witness; final four registered pink-hand clipping
+counts are zero. Raw registration size is 300×355 at (680,400)/(680,390)/
+(680,366)/(710,365); shared spatial sleeve attachment is not a temporal dissolve.
+A proposed **untimed 15-step** raise/two wrist beats/reversed lower/neutral return
+fits the existing 16-step contract. No timing authority or fluidity is claimed.
+
+These are **appearance-review candidates**, not user-approved assets, production
+imports/support proofs, smoother footage or a new in-app generation feature.
+Review finger anatomy, scale, cuff/cloth continuity and pose progression in 59
+before any later import/cadence proposal. Existing private project stays revision
+9, unselected/unreviewed take and MP4 unchanged; no production/UI/code/count-guard
+repair or commit. VG2-08 remains BLOCKED on the independent 7/4 native-count gate;
+VG2-07 still awaits a revised actually moving artifact/decision. All 1,177 pins match at artwork publication; final disposition permits only the
+three task-owned documentation updates (1,174 other pins stay exact). Applicable
+focused/Node/full/build/diff and final-source checks use this owner's final logs.
+
+VG2-08 subsequent static decision (project user, recorded
+2026-09-30T18:14:05Z): **“ok, i approve these poses and assets”** approves exact
+51–54 and their 55–59 static reviews. All nine published hashes match; external
+receipt `build/vg2-08-fluid-assets-1TFP896e/user-static-artwork-approval.json`
+binds publication SHA `11c17946…fab3b82` and comparison `7dff0300…421e207`.
+This supersedes that appearance wait only, without changing historical receipts,
+asset bytes, metadata review status, source project/take/selection or video.
+No moving acceptance, new image/native budget or import permission is inferred.
+
+VG2-08 count-guard instruction: **“yes, go for it”** answers the request for
+separate **non-live decoder-count guard repair**, not rendering. New owner
+`build/vg2-08-decoder-guard-NXlF6eF2/` records permission and **3,471** protected
+current file pins. Allowed scope: scratch callback/counter helpers, passive
+production regressions and these three documentation owners; no production
+source/main-class edits, model calls, media execution, project/take mutation,
+installation, commits or old-budget change. TASKS-VIDEO bounds one initial + two repairs.
+`decoder_budget.py` keeps one attempt-wide in-memory authoritative counter and
+fsynced irreversible reservation receipts over one local Unix socket, not a job
+ledger. `DecoderGuard.kt` wraps existing injected runners; existing actual
+`VideoControlledMediaStage.encodePreview` and `VideoMediaProbe.validateTake`
+run with data-only spies through `CountGuardHost.kt`. Python clients use the
+same gate. Count and PTS flags together cost one; metadata cannot hide decoding,
+unknown operations reject, partial/copy inputs are conservatively charged,
+phase/global ceilings cannot reset/refund, failures keep reservations, and old
+four rejects before socket/init/delegation. Seven is the actual existing minimum,
+**a passive fixture ceiling, not a newly authorized native budget**.
+
+Two bounded repairs corrected fixture-only missing prepared pins and mismatched
+project ID, retaining both failing logs/fixtures. Final compile and **10/10**
+functional/passive tests pass; captured calls reserve exactly **2 controlled +
+2 independent + 3 import**. Eighth denied before spy; no real FFmpeg/FFprobe,
+compositor, project import or job submission. `independent-review.json` records
+that narrow count result. **Further exact-owner review FAILS**:
+`socket-ownership-review.json` / `.log` retain a new receiver at the same canonical
+socket path returning the public policy hash/allowed flag. Client accepts it:
+**one spy delegation, zero actual reservations, zero native delegations**.
+Server-side inode checking cannot help when the original server never receives
+the request. This is a real missing client endpoint-identity/authenticated-ack
+boundary, not a reason to waive the guard or infer admission readiness.
+
+**BLOCKED; repair allowance exhausted.** No further code repair starts. A newly
+explicit one-extra-repair scope must bind original counter endpoint/ancestors
+and authenticated responses across JVM/Python, preserve the substitution witness
+and all predecessors, and independently recheck before a fresh non-live actual
+seven-pose input/preview packet. That later packet must bind every callback,
+policy/helper/classpath/destination pin and newly disclosed counts/resources;
+separate native approval remains required. No validation traversal is removed,
+old four ceiling widened or old 7/4 breach cleared. Source/evidence/asset/project/
+MP4 pins stay exact except the three task-owned disposition documents. Focused,
+Node/full/build/diff/protection results are in this owner's final logs; ordinary
+green tests do not close the socket-owner failure. VG2-07 remains WAITING_USER
+for future revised actually moving footage.
+
+VG2-11 non-live Blender feasibility (2026-10-01): user installed Blender and
+requested a workflow test. New ignored owner
+`build/vg2-blender-feasibility-owO1rohL/` contains ten source-image pins,
+`prepare_scene.py`, `approved-seven-pose-feasibility.blend` and separate saved
+scene checks. Blender **5.2.2 LTS** launches headlessly: setup takes **4.12s**,
+sampled process RSS **239,779,840 bytes**, zero renders/encodes/MP4 decodes.
+Seven straight-alpha full-size pose planes, masked foreground and fixed
+orthographic camera evaluate the proposed 15-step, 180-frame/6s timeline.
+Reopen initially failed because the checker did not normalize Blender's saved
+relative paths; one checker-only repair passes, retaining the failed log and
+unchanged .blend. All **3,527** prior file pins matched before documentation.
+No production/artwork/project/take/old-guard edits, model/download or commit.
+`preview-scope-proposal.json` is **not authorized or launch-ready**: one render,
+one PNG-to-MP4 encode, exactly two full MP4 traversals, 900s cumulative,
+4-GiB aggregate RSS/2-GiB new storage, fresh review destination. Its direct-child
+supervision/destination/input checks must be independently proven and the final
+packet separately admitted. This establishes automation setup, not rendered
+pixel quality, articulated fluidity, episode performance or a backend change.
+Focused saved-scene/full test/build/diff and preservation logs belong to this
+new owner; VG2-08 remains BLOCKED and VG2-07 revised moving review remains open.
+
+VG2-11 separately authorized packet preparation (2026-10-01): exact user
+“yes, go for it” answers **comparison scope / guarded-packet preparation**, not
+native execution. Owner `build/vg2-blender-packet-mBMDglBy/` preserves 3,545
+current file pins. Ten original images and one static foreground/mask derivative
+prove exact parity with all seven reviewed still stacks; 333,559 union/348,232
+padded support pixels, opaque backing, 173,999 foreground and 3,396 stationary-
+hand witnesses, exact common/fixed/contact and 15-step/180-index mapping pass.
+The original 1-sample 3D alpha setup remains preserved; the new private .blend
+uses deterministic 2D VSE sRGB hard-cut image strips, not stochastic shader alpha.
+Non-rendering construction/reopen plus opacity/misregistration negatives pass.
+Both bounded API corrections are used: `multiply_alpha` is Boolean, not a unit
+multiplier; image-strip `strobe` defaults to zero and is now explicitly one.
+The initial and repair-1 failures remain. Guard data tests 13/13 and numeric
+pixel tests 6/6 pass. Tiny owned fixtures independently prove macOS sandbox
+outside-write/symlink/fork/network denial; no media is generated.
+
+Frozen `packet.json` SHA `be2efe5958ab7ca7dde9de599090d500a5132bf051e33628e026f2b7e5335b5b`
+binds all helpers, scene/art/reviews, 10,243 selected runtime files/inventories,
+exact six operation vectors, destination ancestors, sandbox and original scoped
+limits. It remains **unadmitted and NOT READY** despite read-only preflight:
+independent `review_packet.py` rejects operation phase `validation` against
+budget `validationAndCopy`. `phase-dispatch-review.json` / expected-failing
+`phase-regression.log` reproduce the actual `Supervisor.execute` KeyError after
+three data spies and one irreversible probe reservation; **zero native delegates**.
+Neither count nor budget is waived. **BLOCKED; no automatic repair remains.**
+One additional expressly bounded non-live successor repair must use one current
+phase contract (including publication), preserve this failed frozen packet,
+prove the regression and re-pin/review before requesting final native admission.
+No output frame batch/encode/MP4 decode, import/job/take/UI/source/old-guard edit,
+image call, installation, download or commit. Ordinary focused/full/build/diff
+checks do not close this dispatch failure. Owned-process RSS excludes shared
+out-of-tree macOS VideoToolbox services; disclose that attribution limit alongside
+host pressure/swap safeguards in any final admission. Existing VG2-08 and moving/
+film/app/release gates remain unchanged.
+
+VG2-11 explicit extra repair + execution event (2026-10-01): user says
+“yes, I want you to with the repair and also start rendering”. Successor
+`build/vg2-blender-phase-3noEBfTw/` protects 3,598 old files and preserves the
+failed packet byte-for-byte. One scoped repair unifies `validationAndCopy` in
+operations, guard and budget; rejects mismatches before work and requires
+publication to share that phase. Actual supervisor/data-child tests reproduce
+old KeyError, pass all six successor dispatches, enforce the same 120s through
+copy, reject alias/expanded phase budgets and retain the 900s global ceiling.
+Four phase tests, 13 guard tests, six numeric pixel tests, unchanged-scene reopen,
+exact review/preflight and ordinary focused/Node/full/build/diff checks pass.
+Final packet SHA `f4e5f829de8331820c3c6c7be12bf59f8e356e79d34dc62676405ed080253afa`
+binds 10,243 runtime files; review verifies all 3,598 prior pins unchanged.
+The separate live receipt binds this real user execution event to that hash,
+unchanged six-second/180-frame request, exact operations and 900s cumulative /
+600s render-and-source-check /180s encode /120s validation-and-copy,
+4-GiB owned aggregate RSS, 2-GiB new storage and exactly two maximum MP4 passes.
+No native retry/fallback or further automatic repair; original VG2-08 failures
+and all source/art/project/take/media remain protected.
+
+VG2-11 execution outcome: the single `preview.py run` launch exits 1 in
+`stable_resources`, **before** work-directory/attempt-claim creation or any
+Blender/media invocation: `No NORMAL/free-memory admission`. The original failed
+resource sample was not persisted; do not invent its numbers. Separate later
+read-only diagnostic in `execution-refusal.json` records NORMAL/zero swap,
+**407,486,464 bytes free RAM** versus required **3,221,225,472**, and
+240,287,637,504 bytes free disk. This is the strict free-page gate, not a claim
+that the 48-GiB host cannot run Blender or is under memory pressure. No rendered
+frames, encode, MP4 decode, review copy, job/take/project change or retry. All
+3,595 prior non-document pins remain exact; only the three disposition documents
+change. Repair/code proof stays passing; VG2-11 WAITING_USER for newly admitted
+one-attempt execution after resources improve, not another phase-code repair.
+Keep the original launch/refusal/admission receipts and all predecessors.
+Focused/Node/full test/build/diff checks pass separately; no artistic acceptance.
+
+VG2-11 renewed attempt (2026-10-01): user **“i free some memory, can you try
+again”** explicitly authorizes one fresh launch of the unchanged `f4e5f829…253afa`
+packet, not repair or unlimited retries. Append-only `retry-1-admission.json`
+binds that event, original receipt/refusal and identical operations/limits;
+`retry-1-protected-pins.json` captures 3,649 current files. Original sealed
+admission/log/refusal/candidate remain unchanged. Actual three admission samples
+are NORMAL/zero swap and free RAM **14,544,715,776 /14,597,619,712 /14,626,390,016**
+bytes. The run renders **180 PNGs in 18.572s**, source checks in 10.167s,
+encodes in 1.156s and performs one combined full FFprobe count/PTS scan in 1.154s.
+Total launch 39.378s, sampled peak owned aggregate RSS **1,126,596,608 bytes**,
+peak new storage **681,994,213 bytes**, within limits. No model/art job or import.
+
+Actual Blender source pixels pass every frame: maximum reviewed-still RGB delta
+**1**, exact fixed/contact across states, exact repeated pose holds and neutral
+entry/return. Seven-state counts neutral118/early8/late8/halfway8/prewave8/wave18/
+wrist12. Draft is retained at this owner's `live-comparison/preview.mp4`,
+**7,903,472 bytes**, SHA `957e5160ecd9f183bcd695698b2bcfc64de6a052afa3c772f89599f5b0ee77ff`.
+Saved probe confirms silent H.264/yuv420p 1920×1080/30fps/SAR1:1, 180 uniform
+PTS at 512 ticks/1:15360, exactly six seconds. **Color contract fails only at
+`color_transfer`: actual `iec61966-2-1`, required `bt709`**; matrix/primaries are
+bt709. Treat this as observed tagging/encoding behavior, not an inferred bad
+artwork color or proof of correct conversion. `retry-1-result-audit.json`
+reproduces the rejection from saved JSON and rehashes all 180 source frames,
+with no additional media invocation. One of two decoder reservations used;
+second FFmpeg decode/decoded-pixel validation, publication and import never ran.
+No verified MP4 is copied to docs, no retry or check waiver. **BLOCKED** on a
+separately admitted encoding-only color-handling correction/validation using
+preserved source frames; do not regenerate Blender frames merely for this issue.
+All 3,646 prior non-document pins stay exact; only three disposition documents
+change. Ordinary focused/full/build/diff results remain separate from this media
+failure and pending normal-speed human moving review.
+
+VG2-11 real moving rejection (2026-10-01): user says the animation is “really
+bad”, the arm “is not always the same” and has “an effect of clipped arm”, then
+requests rethinking animation from input assets and a scene description. Exact
+quote/artifact decision is append-only `user-motion-rejection.json` in the Blender
+phase owner, binding draft `957e5160…ee77ff`; no playback speed/frame indices
+were reported. Static approval did not approve anatomy/cloth continuity in motion.
+The ≤1-level source-pixel result remains valid engineering evidence, **not a
+creative pass**: it faithfully reproduces inconsistent supplied whole-arm states.
+Source assembly has a fixed arm patch/shared cloth attachment, not articulated
+joints; the exact frame-local clipping cause is not independently isolated.
+The prior encoding-only next-step suggestion is superseded. Preserve the rejected
+movie/frames/art rather than finish this clip as the desired animation. Discussion
+only: coherent externally finished character parts/hidden overlap, bounded rigged
+actions and descriptions translated into supported timelines may be evaluated;
+no automatic extraction, invented hidden artwork, new rig/schema, control-limit
+expansion or backend selection is approved. First choose the preparation/animation
+method and a small moving-quality proof; no further generation or implementation
+starts from this request. Existing color/count/security blockers remain recorded.
+
 VG2-09/10 reuse the existing import/preparation/controlled-media owners and small
 new derived inputs. Looking toward the window or adjusting headphones are
 possible briefs, not existing motion capabilities. Static reading/listening
@@ -396,9 +851,11 @@ poses alone do not count as activity proof. Select one motif before preparing
 its assets; any reproduced code prerequisite gets its own exact-file slice here.
 
 **Current evidence:** [TABI evidence/next step](docs/TABI_VIDEO.md#current-evidence-and-immediate-next-step-2026-09-30)
-records manifest 4/tool 1.2.0, Node 31/31 and prior focused/full/build checks,
-32 unchanged protected/approved pins, head/alpha failures and the no-render
-boundary. This plan update closes no technical or human gate.
+records manifest 4/tool 1.2.0 and Node 31/31. Historical head/alpha failures
+remain rejections of the old kit. The new exact-artifact appearance decision and
+fixed-scene production import/non-live input proof above close those bounded
+input gates only; they do not provide native footage, preview admission, moving
+review or completion of VG2-08.
 
 VG2-06 Step 1.1 candidate (2026-09-28; inspection only): gentle seated inhale/exhale
 using the existing ≤2-pixel subject `breathing` control, **not yet motion-ready**.
@@ -1579,7 +2036,7 @@ not a test dependency or permission implied by this planning reset.
 | VG3-05 | Wire finished-scene/optional-layer import, thumbnails, visible placement/anchors, motion prompt, duration and setup/capability guidance. Replacements/reopen preserve originals and unaffected selections; no JSON, outfit-transfer or Generate look UI. | VG1-01, VG3-04 | TODO |
 | VG3-06 | Wire production Generate/Cancel/Retry/recovery and take review/selection. Show real stage/progress or unknown state; duplicate clicks, tab changes, late results and restart cannot lose selections or start duplicate work. | VG2-03, VG3-05 | TODO |
 | VG3-07 | After the production pilot, finish review/integration of the existing bounded off-UI-thread decoder and one silent preview session. Preserve its WIP; verify accurate seek/frame-step, corrupt-file errors and owned-process teardown. | VG2-02, VG5-07 | TODO |
-| VG3-08 | Expose moving take playback with play/pause/seek/frame-step and resize through that decoder. Prove actual frames in an app-window capture and stop preview on departure without creating a MIDI player. | VG3-06, VG3-07 | TODO |
+| VG3-08 | Expose moving take playback with play/pause/seek/frame-step and resize through that decoder. Verify decoded-frame delivery, presentation state, offscreen rendering at supported sizes and teardown on departure without opening a window or creating a MIDI player. | VG3-06, VG3-07 | TODO |
 
 VG3-07 integration check (2026-09-26, pending independent review): candidate
 `27b670cc94e9d19e23d3913cd4a4ecaa5a18d438` plus uncommitted backend repair and this evidence note;
@@ -1624,9 +2081,10 @@ VG3 completion remain open; the queue status awaits review.
 
 **Focused proof:** new `MelotrailAppShellTest`, `VideoWorkspaceTest`,
 `VideoInputFlowTest`, `VideoGenerationFlowTest`, `VideoPreviewDecoderTest`,
-`VideoPreviewTest`; retain `MidiCoreDesktopCompositionTest` and MIDI visual tests.
-`make video` becomes functional only after VG3-04. Capture empty/ready/blocked/
-progress/error states at 1536×1024, 1280×900 and 720×900; inspect actual images.
+`VideoPreviewTest`; retain `MidiCoreDesktopCompositionTest` and windowless MIDI
+visual tests. Test composition/semantics and offscreen empty/ready/blocked/progress/
+error states at 1536×1024, 1280×900 and 720×900; inspect resulting PNGs, not desktop
+captures. `make video` remains a product launch command, not a validation command.
 No production surface may outrun VG3-03 approval; material changes need renewed review.
 
 ## Feature VG4 — Continuous scene planning
@@ -1635,21 +2093,33 @@ No production surface may outrun VG3-03 approval; material changes need renewed 
 | --- | --- | --- | --- |
 | VG4-03 | Scope preparation dependencies to their declared consumed components; keep shared/unspecified dependencies global, reject incomplete or invalid declarations and preserve unaffected pending chunks and completed takes. Bounded prerequisite split from VG4-01. | VG2-02 | DONE |
 | VG4-04 | Persist immutable continuous-plan proposals under the existing Video project lock, with exact source/descriptor pins, append-only versions, revision guards, confined publication and verified reopen. A saved proposal is not executable readiness or a render checkpoint. | VG2-02, VG4-03 | DONE |
-| VG4-05 | Prepare a coherent Tokyo extension and scene/pose-compatible window/foreground/frond mattes; the accepted old fixed-head mask does not automatically fit the replacement kit. Prove one offscreen join in a separately admitted moving test, with supplied 60-second coverage at approved speed/scale, exact overlap, measured alpha/shutter margins and all selected visible window apertures accounted for. Record user seam review before DONE. | VG2-07, VG1-02 | TODO |
-| VG4-07 | Add the missing held-pose episode-schedule representation/compilation through existing VideoAssembly/Planner/Store and preparation/descriptor owners, behind fixtures. Pin activity order, timing, holds, neutral returns, every consumed pose and control/version; preserve absolute chunk/state parity and scoped invalidation. Respect one sequence/3–16 steps/≤9000-frame span and forbidden simultaneous subject controls, or scope a bounded prerequisite before extending them. No new episode schema/ledger, UI, artwork or live run. | VG4-03, VG4-04 | TODO |
-| VG4-02 | Bind the continuous plan/clock and the reviewed two-activity episode schedule to executable camera/depth/occlusion/subject/effect state for the runner, without app callers. Validate every frame/shutter of the requested proof range and full coverage before full render; carry support/state and reject changed inputs. A short-range pass is not full-plan readiness. | VG4-03, VG4-04, VG4-05, VG4-07, VG2-10 | TODO |
+| VG4-05 | After the short rig/reuse decision, prepare a coherent Tokyo extension and rig-compatible window/foreground/frond mattes; the old fixed-head mask does not automatically fit the full moving envelope. Prove one offscreen join in a separately admitted moving test, with supplied 60-second coverage at approved speed/scale, exact overlap, measured alpha/shutter margins and all selected exterior apertures accounted for. Record user seam review before DONE. | VG2-20, VG1-02 | TODO |
+| VG4-07 | After accepted standalone proof and explicit production-runtime choice, add only its required action/rig representation and compilation through existing VideoAssembly/Planner/Store and preparation/descriptor owners, behind fixtures. Pin rig/parts/action versions, parameters, timing/rests/returns and all dependencies; reject missing/conflicting/out-of-range inputs. Keep one current contract, scoped invalidation and 180/240/300s absolute-frame fixtures. Do not label rig motion POSE_REPLACE, silently extend its 3–16-step contract, or add a parallel episode schema/ledger. No UI or native job. | VG4-03, VG4-04, VG2-20 | TODO |
+| VG4-08 | Standalone description-to-action proof: implement a small explicit supported vocabulary mapping exact descriptions to the reviewed rig actions, absolute timing, bounded speed/amplitude, rests and compatible scenery. Show the interpretation; fixture-test two distinct briefs plus unsupported action/viewpoint/prop, ambiguous timing and channel conflict. No generated code execution, arbitrary prompt-to-film claim, LLM/provider addition, production schema or UI. Agent/manual mappings remain labelled until automated mapping is actually tested. | VG2-10 | TODO |
+| VG4-09 | Adapt the proven rig renderer as a narrowly owned controlled media stage through existing request/job/process/result owners after VG4-07. Prove current-schema rig/part import/support, all-frame occlusion, fingerprints, real dispatch via fakes, cancellation/reopen/stale result/no-overwrite and exact decoder reservations including validation/import. Do not reuse the failed socket guard, add another ledger or import the old rejected movie. Native adapter parity gets separate admission before pilot work. | VG4-07, VG2-02 | TODO |
+| VG4-02 | Bind the continuous plan/clock and the reviewed two-action episode schedule to executable camera/depth/occlusion/rig/effect state for the runner, without app callers. Validate every frame/shutter of the requested proof range and full coverage before full render; carry absolute state/support and reject changed inputs. A short-range pass is not full-plan readiness. | VG4-03, VG4-04, VG4-05, VG4-07, VG4-09, VG2-10 | TODO |
 | VG4-06 | After the combined 60-second review, extend the proven scenery method to the full 180-second corridor. Plan distinct passing views about every 5–10 seconds with quieter authored scenery between; pin all selected far/middle/near tiles/joins and verify complete alpha/trajectory/shutter/occlusion coverage and bounded decoded-asset memory. Do not count padding or repeated fragments as scenery. | VG4-05, VG5-05 | TODO |
 | VG4-01 | After full-pilot and second-city reuse review, integrate the proven exact-frame workflow into app callers. Retain shared clock/seed, episode-specific action schedule, component reuse and chunks; move required prompt/fingerprint/estimate behavior behind tests before retiring exclusive short-shot/repeat callers/fields/tests. Preserve historical assets. | VG2-02, VG4-03, VG4-04, VG4-07, VG5-07, VG5-10 | TODO |
 
-Current scheduling: VG4-02 no longer waits for VG4-01's app integration. It is the
-minimal executable binding required by the production pilot, reusing the existing
-planner/store/renderer rather than creating another planner or persistence schema.
+Current scheduling (2026-10-01): standalone VG4-08/VG2-19/20 must prove descriptions
+and rig reuse before VG4-07/09 production binding. VG4-08 owns only new ignored
+proof scripts/data/tests; it must not create a durable production plan/ledger.
+VG4-07/09 later own current `VideoAssembly.kt`, `VideoAssemblyPlanner.kt`,
+`VideoAssemblyStore.kt`, `VideoScenePreparation.kt`, request/descriptor and media-
+stage/result-import boundaries and mirrored tests, split further before admission
+if necessary. Use the existing owned-process supervisor and lazy adapter boundary;
+production admission/import is not the standalone two-traversal packet.
+
+VG4-02 does not wait for VG4-01's app integration. It is the minimal executable
+binding required by the pilot, reusing existing planner/store/process ownership
+rather than creating another planner or persistence schema.
 All target-duration fixture checks remain required. The 60-second probe has its
 own exact range and pins; it neither changes the 180–300-second product contract
 nor grants readiness to uncovered parts of a full plan. VG4-01 remains deferred
 until VG5-07 and VG5-10; its earlier “next” statements below describe prior scheduling.
 
-VG4-07 prerequisite finding (2026-09-30): `VideoAssemblyActionKind` currently
+VG4-07 historical prerequisite finding (2026-09-30; held-pose scope superseded
+by the route-1 row above, not an instruction to implement both paths): `VideoAssemblyActionKind` currently
 contains BLINK, BREATHING, HEAD_GESTURE, STEAM and SCENERY_TRAVEL, not a supplied
 pose sequence; `VideoAssemblyAction` uses a scalar `value`. The new runtime
 control therefore does not already supply a persisted/executable episode script.
@@ -1798,7 +2268,7 @@ No full-render proof is claimed by planning 9,000 frames.
 | VG5-03 | Run one separately admitted real combined 60-second proof with validated scene/pose-compatible masks, two reviewed non-blink activities/returns and extended Tokyo scenery. Demonstrate restart after a verified completed chunk while later work remains; measure stages/memory/aggregate disk, inspect all action/scenery/chunk joins and preserve old artifacts. | VG5-02 | TODO |
 | VG5-05 | User reviews the exact 60-second combination at normal speed for character fidelity/contact, activity readability/cadence/order, quiet intervals, frond/window edges, scenery seams and repetition. Record accept or specific repairs before full production. | VG5-03 | WAITING_USER |
 | VG5-06 | With full corridor coverage, reviewed scene-compatible TABI action art/mattes and a newly bounded batch admission, produce one real continuous 180-second/5,400-frame silent 1080p30 pilot through the supervised runner. Keep the cabin fixed around moving far/middle/near parallax and a pinned episode schedule of at least two reviewed non-blink activities and deliberate neutral/rest intervals across the cut; inspect action intervals, passing views and quieter intervals. If the isolated test's art/control cannot support that schedule, prepare/review additional scene-compatible motion inputs before this batch, not a camera pan or motionless hold. Fully decode/verify it, retain native/output facts and honest component reuse, and publish only to a new destination. Not an app-delivery claim. | VG4-06, VG5-05, VG5-02 | TODO |
-| VG5-07 | User watches the entire three-minute Tokyo pilot and all action/scenery/chunk joins, passing views and quiet intervals, then imports/plays it in the chosen Apple editor. Record artifact-specific recipe acceptance or repairs. This unlocks second-city preparation, not VG6 completion, rights or release. | VG5-06 | WAITING_USER |
+| VG5-07 | User reviews the supplied entire three-minute Tokyo pilot and all action/scenery/chunk joins, passing views and quiet intervals. Record artifact-specific recipe acceptance or repairs; no interactive editor import/play test. This unlocks second-city preparation, not VG6 completion, rights or release. | VG5-06 | WAITING_USER |
 | VG5-08 | After pilot review, user selects one next city and a materially different activity script. Prepare only its needed exterior/pose inputs as new pinned references/scene/plan, retaining compatible cabin/TABI/props and first-film bytes. Validate all visible exterior apertures, depth/overlap/shutter/contact and 20–30-second coverage; validate any new motif through its own small moving proof before combination. Broader artwork/control work needs separate bounded slices/admission. | VG5-07 | TODO |
 | VG5-09 | Produce one separately admitted real 20–30-second second-city reuse proof through the same project/assembly/job/media owners. Change exterior plus activity choice/order/timing, disclose holds/reuse and fully decode/check joins/resources; no city-special-case backend, identical-film reseed or first-film regeneration. | VG5-08, VG5-02 | TODO |
 | VG5-10 | User reviews that exact reuse clip for distinct city/scenery, materially different activity sequence, consistent TABI/cabin/props, contact/cadence and temporal quality. Record accept or repairs before app integration. A short pass does not approve a second full corridor/film or other cities. | VG5-09 | WAITING_USER |
@@ -1813,8 +2283,9 @@ ordered activities and timing/quiet intervals, not only city label or seed;
 include a different activity when needed to make the story distinct. Reading,
 sipping and page-turning are creative ideas, not proven current controls.
 The same steps apply to later full films: complete corridor/action readiness →
-new exact batch budget → render/check/import → whole-film/editor review. For this
-series, VG6-05/06 delivers the selected second city as the full app-based film;
+new exact batch budget → render/check/import → whole-film artifact review. For this
+series, VG6-05/06 delivers the selected second city through the app's production
+services invoked headlessly;
 the 20–30-second reuse clip is only its early method proof. Generic video projects
 remain valid. Evidence/details live in TABI/Validation, not a new episode schema.
 
@@ -1872,34 +2343,35 @@ render admission before VG5-03. No generation, render, encode, decode, import,
 production change, limit increase or commit occurred in this read-only inspection.
 The corrected source bundle remains available for future newly fingerprinted jobs.
 
-## Feature VG6 — Installed delivery and real-video acceptance
+## Feature VG6 — Packaging and real-video acceptance
 
-These are later **app** gates. VG5-07 approves the preliminary production recipe,
-not these app clips, installed behavior or release. Preserve all existing review
-requirements; run them through the integrated app after the pilot-led workflow
-has been implemented. TABI-in-a-train is the user's current series; Tokyo is the
-first pilot and the selected second city supplies the later complete app film.
+These are later **production-integration and artifact** gates. VG5-07 approves the
+preliminary recipe, not these later clips or release. Exercise the actual service
+composition wired to the integrated app through headless tests after the pilot-led
+workflow is implemented; no GUI walkthrough, installed-window smoke or capture.
+TABI-in-a-train is the user's current series; Tokyo is the first pilot and the
+selected second city supplies the later complete production film.
 Neither is a mandatory preset or the only scenario the eventual app supports.
 
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
-| VG6-01 | With selected usable artwork/rights and an explicitly bounded host run, prepare three real 20–30-second app clips: base motion, contrasting motion with fixed art, replaced art with other compatible settings fixed. Record requests, pins, resources and limitations, without hidden scripts/JSON. | VG3-08 | TODO |
+| VG6-01 | With selected usable artwork/rights and an explicitly bounded headless host run, prepare three real 20–30-second clips through the production services wired to the app: base motion, contrasting motion with fixed art, replaced art with other compatible settings fixed. Record invocation, requests, pins, resources and limitations; no GUI session or substitute rendering pipeline. | VG3-08 | TODO |
 | VG6-02 | User reviews all three clips at normal speed against supplied appearance and requested motion; record fidelity, temporal stability, object/effect/scenery coherence and actual decision. Failed local quality may inform an optional hosted proposal, not silent fallback. | VG6-01 | WAITING_USER |
-| VG6-03 | Prove private installed-app MIDI startup/export without optional tools and configured Video preview/export/cleanup. Resolve explicit Python/Node/Canvas/FFmpeg paths, package/setup strategy and notices; include motion regressions in normal validation. | VG5-04 | TODO |
-| VG6-04 | Complete owned-fixture UI/end-to-end checks: import → prompt → generate → cancel/retry/reopen → full review/export, all target durations and three viewports, missing-input failures, keyboard/accessibility/performance and unchanged MIDI. Prepare current final-review evidence. | VG6-03 | TODO |
-| VG6-05 | After early approach acceptance, produce a real 3–5-minute app export from selected artwork/prompt under a new bounded run. For the selected TABI series, use the second city/different action script from VG5-10 only after its complete corridor/sequence/contact readiness; the short reuse clip is not full-film proof. Retain identities/resources/rejected takes/honest reuse; generic scenarios and all product durations remain supported. | VG6-02, VG6-04, VG5-10 | TODO |
-| VG6-06 | User watches the entire cut/joins, accepts fidelity, prompt adherence, continuous motion and repetition, then imports/plays it in the chosen Apple editor. Record the final video release decision; music placement and publication remain external. | VG6-05 | WAITING_USER |
+| VG6-03 | Inspect a private package, bundled runtime/dependencies and notices without launching its GUI. Verify MIDI composition/export without optional tools and configured Video preview/export/cleanup through headless integration. Resolve explicit Python/Node/Canvas/FFmpeg paths and setup strategy; include motion regressions in windowless validation. Do not claim installed GUI startup proof. | VG5-04 | TODO |
+| VG6-04 | Complete owned-fixture headless service/presentation-state checks: import → prompt → generate → cancel/retry/reopen → full review/export, all durations, offscreen rendering at three viewports, missing-input failures, keyboard/accessibility semantics, performance and unchanged MIDI. No live window, desktop capture or interactive walkthrough. Prepare current artifact-review evidence. | VG6-03 | TODO |
+| VG6-05 | After early approach acceptance, produce a real 3–5-minute export from selected artwork/prompt through the same production service composition under a new bounded headless run. For the TABI series, use the second city/different script from VG5-10 only after full corridor/sequence/contact readiness; the short reuse clip is not full-film proof. Retain identities/resources/rejected takes/honest reuse; generic scenarios and all durations remain supported. | VG6-02, VG6-04, VG5-10 | TODO |
+| VG6-06 | User reviews the supplied entire cut/joins for fidelity, prompt adherence, continuous motion and repetition. Record the final video release decision and untested live UI/editor/installed-startup limitations; no interactive editor test. Music placement and publication remain external. | VG6-05 | WAITING_USER |
 
 **Owners:** VG6-01/05 use existing production services, not one-off product scripts;
-VG6-03 owns `desktopApp/build.gradle.kts`, native install checks, proposed
-`ui` test owner `video/VideoInstalledAppCheck.kt`, architecture rules and notices;
-VG6-04 owns new `VideoEndToEndTest`, `VideoVisualTest` and reviewed technical
-resources; decisions/evidence summaries live in `docs/VALIDATION.md`,
+VG6-03 owns package configuration/inspection, headless composition checks,
+architecture rules and notices; no new GUI installed-smoke command is planned.
+VG6-04 owns headless `VideoEndToEndTest`, offscreen `VideoVisualTest` and reviewed
+technical resources; decisions/evidence summaries live in `docs/VALIDATION.md`,
 `docs/TABI_VIDEO.md`, `README.md`.
-**Proof:** register and run a bounded `:desktopApp:videoInstalledSmoke` with a new
-private install destination (this command does not exist yet); run the named
-E2E/visual suites, full gates and actual app captures. Synthetic fixtures establish
-technical integrity only. VG6-02 does not block VG4/VG5 or installed/UI engineering.
+**Proof:** inspect the actual private package without launching a GUI; run the
+headless service/semantics/offscreen suites and retained full technical gates.
+Synthetic fixtures establish technical integrity only. VG6-02 does not block
+VG4/VG5 or package/UI implementation.
 A full-generation failure creates a scoped corrective task and keeps acceptance open.
 
 ## Optional feature — Explicitly selected hosted video fallback
@@ -1917,7 +2389,7 @@ or quote historical prices as a current budget. Local success does not require i
 ## Evidence and blocker handling
 
 - This queue intentionally carries no old completed IDs or commit chronology.
-  Existing capability ownership is summarized in PLAN; Validation/TABI retain
+  Existing capability ownership is summarized in PLAN-VIDEO; Validation/TABI retain
   source evidence without authorizing old work.
 - For every reproduced failure, add a feature-scoped row with the failing case,
   exact owners, regression and dependent gate. Do not expand a verification row
@@ -1931,8 +2403,8 @@ or quote historical prices as a current budget. Local success does not require i
 ## Reusable implementation prompt
 
 ```text
-Implement or verify only <TASK-ID> from the current TASKS.md, after all its
-listed dependencies and authorizations are satisfied. Read PLAN, README, AGENTS,
+Implement or verify only <TASK-ID> from the current TASKS-VIDEO.md, after all its
+listed dependencies and authorizations are satisfied. Read PLAN-VIDEO, README, AGENTS,
 Architecture and the task's relevant MIDI/UI/Validation/TABI owner references.
 Inspect the exact current candidate, callers and tests; preserve unrelated WIP.
 Use <ALLOWED-FILES> and <CANDIDATE-PATH>. Reuse implemented behavior; do not replay
@@ -1941,8 +2413,11 @@ with the coordinator before expanding ownership. Do not edit queue status, launc
 other agents, commit, download models, run inference, upload or spend unless the
 run explicitly authorizes that action. Keep MIDI authority/source/acceptance/export
 safe and video storage/runtime independent. Add regression tests for defects.
-Run focused tests, make test, make build, git diff --check and applicable bounded
-motion/native checks, or name exactly which checks require the coordinator host.
+Run focused tests and make test/build only through a verified headless path,
+plus git diff --check and separately admitted headless motion/media checks.
+If defaults open a window, use a filtered headless invocation and report exclusions.
+Do not open/drive UI, capture the desktop, start a GUI installer or require an
+interactive editor walkthrough. Human review of supplied artifacts remains separate.
 Return the task, changed files, actual check results, evidence identity/paths,
 remaining limitations and next blocker. Never turn technical tests into a musical,
 visual, Logic or release approval. Preserve a failed candidate for bounded repair.
