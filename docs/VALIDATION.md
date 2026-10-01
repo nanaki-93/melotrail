@@ -449,6 +449,18 @@ Apply the current [route tasks](../TASKS-VIDEO.md#route-1--standalone-rig-proof-
   translated request is not evidence of an automatic text compiler. Validate
   absolute chunk/state parity without silently re-rendering extra footage.
 
+VG2-13 preparation decision (project user, subsequent to the VG2-12 inspection):
+the user states they generated the TABI assets in
+`docs/pictures/video/tabi-assets/` with ChatGPT and authorizes local derivative
+parts preparation with up to **two image attempts per named missing asset**.
+The eight targets and 16-call aggregate ceiling are recorded in
+[TABI video](TABI_VIDEO.md#vg2-13-source-decision-and-bounded-preparation-authorization)
+and [TASKS-VIDEO](../TASKS-VIDEO.md#route-1--standalone-rig-proof-tasks).
+This is a user-reported source/derivative-use decision for the local proof,
+not independent licensing or commercial/publication clearance, a new-part
+appearance approval, an admitted media run or a technical validation pass.
+VG2-14 still requires review of the actual assembled neutral and extremes.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

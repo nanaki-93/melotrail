@@ -443,6 +443,29 @@ rig, native media, project or take was made or changed. This is a kit freeze at
 proposal level, not VG2-13 readiness, a rig-quality pass or a rights decision.
 Only the queue coordinator may change VG2-12 status after reviewing the checks.
 
+VG2-13 user preparation authorization (subsequent to the VG2-12 proposal): the
+project user states they generated the TABI assets in
+`docs/pictures/video/tabi-assets/` with ChatGPT and authorizes proceeding with
+**local coherent-wave parts preparation and derivatives** from those supplied
+assets. This is the user's source/provenance and derivative-use decision for this
+proof, not independent verification of upstream terms, third-party content or
+commercial/publication rights. The allowance is **at most two image-generation
+attempts per named missing asset**, including any correction, with no automatic
+retry of a failed/quota-interrupted attempt. Freeze the following eight targets:
+separate upper sleeve; separate forearm; cuff/wrist overlap; neutral hand; wrist-
+beat hand; hidden shoulder/elbow overlap; revealed torso/cabin backing; rig-state
+foreground occlusion. That is at most **16 calls total**, only where pinned
+existing pixels cannot supply the surface; no new target, extra hand state or
+expanded call count without another explicit decision. Reuse approved-look
+source pixels first, retain raw results/failures and source pins, and keep the
+proposed 12-derivative/three-local-static-pass ceilings from the kit proposal
+unless separately revised. The earlier 2-initial + 1-correction image-call
+proposal is superseded **only for these eight targets**; the ignored
+`kit-proposal.json` remains an immutable historical proposal. This admission
+is not a licence certificate or appearance approval of new parts/neutral/extremes,
+not permission to publish commercially, and does not admit Blender evaluation,
+video/media work, production imports or later tasks. VG2-14 still needs an exact-
+artifact user decision. The coordinator alone changes task status.
 
 These rows implement the selected method **only on a future bounded run**. They
 are not a second product workflow or permission to launch an unbounded sequence.
@@ -487,9 +510,9 @@ declared moving/support region; changes to that region are explicit, not a waive
 of old evidence. A rig may deform/rotate approved parts within its reviewed bounds;
 that is not permission to warp unrelated artwork or expose invented surfaces.
 
-**Image-generation boundary:** the user's current instruction allows this method
-for missing art in principle; VG2-12 names the parts/references and a finite new
-call/correction allowance before VG2-13 spends it. Use Pi `codex_generate_image`,
+**Image-generation boundary:** the user's subsequent VG2-13 preparation decision
+above admits only the eight named surfaces and two attempts each (16 maximum),
+not a general asset library or renewal of old allowances. Use Pi `codex_generate_image`,
 not an inferred image-model ID, ComfyUI/CLI fallback or bulk pose library. Read the
 image-generation skill at execution. Verify output dimensions/alpha from pixels,
 retain generation receipts, and stop on exhausted budget or quota/connection/

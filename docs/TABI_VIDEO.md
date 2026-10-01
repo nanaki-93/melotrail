@@ -107,6 +107,29 @@ obtain exact assembled neutral/extreme appearance approval, including any
 change from 48. Media needs separate pinned packet/admission and moving review.
 No art, rig, video, import, or take was produced by either inspection step.
 
+### VG2-13 source decision and bounded preparation authorization
+
+After the VG2-12 inspection, the project user states they generated the TABI
+assets in `docs/pictures/video/tabi-assets/` with ChatGPT and authorizes local
+coherent-wave parts preparation using those supplied assets. This records the
+user's provenance/derivative-use decision for this proof; upstream terms,
+third-party content and commercial/publication rights are not independently
+verified or cleared. The earlier `kit-proposal.json` is retained unchanged as a
+historical **unadmitted proposal**; its 2-initial + 1-correction image-call cap
+is superseded for VG2-13 by **two attempts total per named missing asset**, where
+needed. The finite list is separate upper sleeve, forearm, cuff/wrist overlap,
+neutral hand, wrist-beat hand, hidden shoulder/elbow overlap, revealed torso/cabin
+backing and rig-state foreground occlusion: eight targets, **16 calls maximum**.
+An interrupted/failed attempt counts; no automatic retries, new target or extra
+hand state. Reuse pinned pixels before spending calls; retain raw outputs and
+failures. The proposed 12 derivative files and three local static passes remain
+ceilings unless explicitly revised. Original assets and neutral 48 remain
+unchanged. No new parts or checks have yet been produced under this permission.
+New neutral/extreme appearances still require the user's exact-artifact VG2-14
+decision; Blender, video/media, production imports, commercial publication and
+later gates have no admission from this message. See the [VG2-13 admission and
+queue status](../TASKS-VIDEO.md#route-1--standalone-rig-proof-tasks).
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,
