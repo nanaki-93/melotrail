@@ -1,0 +1,361 @@
+{
+  "schema": "standalone-static-proof-1",
+  "parts": [
+    {
+      "id": "forearm_separate",
+      "receipt": {
+        "id": "2f7938fd47f36e120b64c61faff47317",
+        "kind": "derivative",
+        "ordinal": 6,
+        "target": "forearm_separate",
+        "destination": "parts/forearm_separate_assembly_v1.png"
+      },
+      "sha256": "d0c4f08f3935c9c6c307bc577a684b397e438337428ceb37bada7172f5b47132",
+      "width": 160,
+      "height": 154,
+      "alpha": {
+        "zero": 10172,
+        "partial": 796,
+        "opaque": 13672,
+        "bounds": [
+          4,
+          5,
+          155,
+          149
+        ]
+      },
+      "source": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+      "sourceSha256": "5e3890233ad57764b0c7b7a0279934d4e1dc9dfd778184f961c0195543660dc5",
+      "crop": [
+        772,
+        583,
+        932,
+        737
+      ],
+      "mask": "M 798 588 Q 829 619 864 628 Q 898 638 926 610 Q 933 661 902 701 Q 869 739 824 731 Q 780 730 778 686 Q 771 638 798 588 Z",
+      "anchors": {
+        "elbow": [
+          56,
+          110
+        ],
+        "wrist": [
+          102,
+          36
+        ]
+      },
+      "alphaPolicy": "source alpha <=8 cleared, >=245 opaque; clipped to explicit selected contour; no RGB painting"
+    },
+    {
+      "id": "cuff_wrist_overlap",
+      "receipt": {
+        "id": "14c283e0384a4c401a45eaafde40402a",
+        "kind": "derivative",
+        "ordinal": 7,
+        "target": "cuff_wrist_overlap",
+        "destination": "parts/cuff_wrist_overlap_assembly_v1.png"
+      },
+      "sha256": "4d78248725825b5309e72261f45e9c08409cb4b4b8e64fb919b5f8dabfd13c4d",
+      "width": 140,
+      "height": 123,
+      "alpha": {
+        "zero": 8221,
+        "partial": 585,
+        "opaque": 8414,
+        "bounds": [
+          5,
+          2,
+          135,
+          116
+        ]
+      },
+      "source": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+      "sourceSha256": "5e3890233ad57764b0c7b7a0279934d4e1dc9dfd778184f961c0195543660dc5",
+      "crop": [
+        807,
+        515,
+        947,
+        638
+      ],
+      "mask": "M 845 517 Q 832 524 820 540 Q 805 565 818 590 Q 835 616 866 626 Q 904 639 925 613 Q 943 592 943 567 Q 940 548 923 536 L 908 554 Q 880 567 858 553 Q 839 542 845 517 Z",
+      "anchors": {
+        "base": [
+          67,
+          96
+        ],
+        "hand": [
+          76,
+          35
+        ]
+      },
+      "alphaPolicy": "source alpha <=8 cleared, >=245 opaque; clipped to explicit selected contour; no RGB painting"
+    },
+    {
+      "id": "hand_neutral",
+      "receipt": {
+        "id": "b3466d626242395b96bea8f79c4fe328",
+        "kind": "derivative",
+        "ordinal": 8,
+        "target": "hand_neutral",
+        "destination": "parts/hand_neutral_assembly_v1.png"
+      },
+      "sha256": "55f40c4029d04e65d7f931da88cc5db99dca0f64dbb9cb5cb928fa40fc79e41b",
+      "width": 78,
+      "height": 84,
+      "alpha": {
+        "zero": 3166,
+        "partial": 215,
+        "opaque": 3171,
+        "bounds": [
+          4,
+          6,
+          73,
+          80
+        ]
+      },
+      "source": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+      "sourceSha256": "33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9",
+      "crop": [
+        777,
+        505,
+        855,
+        589
+      ],
+      "mask": "M 808 532 Q 802 522 814 515 Q 829 507 840 518 Q 855 533 846 550 Q 838 564 832 576 Q 816 590 800 580 Q 781 574 781 560 Q 782 546 798 539 Z",
+      "anchors": {
+        "wrist": [
+          38,
+          72
+        ]
+      },
+      "alphaPolicy": "source alpha <=8 cleared, >=245 opaque; clipped to explicit selected contour; no RGB painting"
+    },
+    {
+      "id": "hand_wrist_beat",
+      "receipt": {
+        "id": "310ec5b5db0a7416f42df650f4cc927f",
+        "kind": "derivative",
+        "ordinal": 9,
+        "target": "hand_wrist_beat",
+        "destination": "parts/hand_wrist_beat_assembly_v1.png"
+      },
+      "sha256": "77b5e222a0652c183bd9b808eeb56bb591ba5cb10ac4ea57357f6a7462e222b1",
+      "width": 116,
+      "height": 132,
+      "alpha": {
+        "zero": 7205,
+        "partial": 748,
+        "opaque": 7359,
+        "bounds": [
+          7,
+          7,
+          110,
+          124
+        ]
+      },
+      "source": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+      "sourceSha256": "5e3890233ad57764b0c7b7a0279934d4e1dc9dfd778184f961c0195543660dc5",
+      "crop": [
+        840,
+        433,
+        956,
+        565
+      ],
+      "mask": "M 855 515 Q 844 498 850 482 Q 858 470 866 485 L 870 455 Q 871 438 882 441 Q 896 441 891 474 Q 892 444 902 441 Q 918 441 915 461 L 907 484 Q 918 454 929 459 Q 943 465 933 485 L 923 503 Q 934 478 944 484 Q 956 491 944 512 L 923 540 Q 918 550 913 557 L 880 555 Q 860 546 855 515 Z",
+      "anchors": {
+        "wrist": [
+          43,
+          117
+        ]
+      },
+      "alphaPolicy": "source alpha <=8 cleared, >=245 opaque; clipped to explicit selected contour; no RGB painting"
+    },
+    {
+      "id": "hidden_shoulder_elbow_overlap",
+      "receipt": {
+        "id": "d35cf05dfda6c05029a87df8d72f1c12",
+        "kind": "derivative",
+        "ordinal": 10,
+        "target": "hidden_shoulder_elbow_overlap",
+        "destination": "parts/hidden_shoulder_elbow_overlap_assembly_v1.png"
+      },
+      "sha256": "fb51a410627d4112ca6c906fcff564bd521519529f0f6e0791f93089e810465f",
+      "width": 128,
+      "height": 64,
+      "alpha": {
+        "zero": 3132,
+        "partial": 384,
+        "opaque": 4676,
+        "bounds": [
+          4,
+          4,
+          124,
+          60
+        ]
+      },
+      "source": "parts/upper_sleeve_candidate_v1.png",
+      "sourceSha256": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54",
+      "anchors": {
+        "shoulder": [
+          32,
+          32
+        ],
+        "elbow": [
+          96,
+          32
+        ]
+      },
+      "purpose": "Two hidden circular fabric support patches; no new anatomy. World size fixed at registration."
+    },
+    {
+      "id": "revealed_torso_cabin_backing",
+      "receipt": {
+        "id": "bdb54aff8a39abd54db86a65f75f6783",
+        "kind": "derivative",
+        "ordinal": 11,
+        "target": "revealed_torso_cabin_backing",
+        "destination": "parts/revealed_torso_cabin_backing_assembly_v1.png"
+      },
+      "sha256": "696db9b84ad8b9cfa62164c620e9ad5d14e4b5e120ba86aaabde1dc9386355ef",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600,
+        "bounds": [
+          0,
+          0,
+          1920,
+          1080
+        ]
+      },
+      "reference": "docs/pictures/video/tabi-assets/train-actions/48-matching-neutral-return-baseline-review.png",
+      "referenceSha256": "c6dc10f9d03a0a0548645f62594d3f36a6ba5a772e3a0717fb72e96c1a81865b",
+      "eraseMask": "M 805 506 Q 833 499 850 516 Q 862 535 860 554 Q 886 574 897 610 Q 915 647 903 690 Q 894 722 862 733 Q 827 744 808 730 L 805 703 Q 785 680 779 659 L 769 644 Q 785 622 794 598 Q 792 582 785 576 Q 773 562 782 544 Q 787 535 805 529 Z",
+      "panelSource": "attempts/revealed_torso_cabin_backing-3.png",
+      "panelSha256": "b71ae995f9ec811c71767e55f2d50a07eb96123c4c26c58cd0791854adb90ebb",
+      "role": "Fixed five-second scene backing with original arm removed only inside the declared mask; not neutral48 used as a body layer or a long-film scenery solution.",
+      "protected": "Exact decoded RGB outside the explicit erase mask; old head/props/contact remain unchanged outside it."
+    }
+  ],
+  "states": [
+    {
+      "id": "neutral",
+      "value": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          817.0132658264608,
+          694.9921436704899
+        ],
+        "wrist": [
+          833.041330294322,
+          609.3469386125645
+        ],
+        "upperAngle": 59.36,
+        "forearmAngle": -79.4,
+        "wristAngle": 0,
+        "hand": "neutral",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      }
+    },
+    {
+      "id": "lift",
+      "value": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          846.9023808570248,
+          665.8042021825947
+        ],
+        "wrist": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "upperAngle": 32,
+        "forearmAngle": -65,
+        "wristAngle": 0,
+        "hand": "open",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      }
+    },
+    {
+      "id": "wrist_in",
+      "value": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          846.9023808570248,
+          665.8042021825947
+        ],
+        "wrist": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "upperAngle": 32,
+        "forearmAngle": -65,
+        "wristAngle": -12,
+        "hand": "open",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      }
+    },
+    {
+      "id": "wrist_out",
+      "value": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          846.9023808570248,
+          665.8042021825947
+        ],
+        "wrist": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "upperAngle": 32,
+        "forearmAngle": -65,
+        "wristAngle": 12,
+        "hand": "open",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      }
+    }
+  ],
+  "foreground": {
+    "path": "build/vg2-character-art-a3/full-foreground.png",
+    "sha256": "e9d69d59f21ecac1d15561487c193d19d3cef2e65ca2970a1669c062dec9e93a",
+    "width": 1920,
+    "height": 1080,
+    "alpha": {
+      "zero": 1896985,
+      "partial": 2616,
+      "opaque": 173999
+    }
+  },
+  "upperSleeve": {
+    "path": "parts/upper_sleeve_candidate_v1.png",
+    "sha256": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54",
+    "anchors": {
+      "shoulder": [
+        628,
+        264
+      ],
+      "elbow": [
+        635,
+        984
+      ]
+    }
+  },
+  "readiness": "Unreviewed derivatives; static support checks and appearance pending. Not an app schema."
+}

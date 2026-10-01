@@ -1,0 +1,12 @@
+✔ static articulated poses keep identical limb lengths, shoulder and scale (1.122208ms)
+✔ unsupported articulation and extra hand states reject rather than extrapolate (0.402541ms)
+✔ admitted colour cleanup removes pink donor contamination but preserves emerald and leopard RGB (0.439166ms)
+✔ registered extraction anchors stay inside each explicit crop (0.075791ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 69.183792

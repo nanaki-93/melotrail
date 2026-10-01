@@ -1,0 +1,25 @@
+{
+  "receipt": {
+    "id": "a11ebb7f4e7a32c782cacd1a4d0b62b1",
+    "kind": "attempt",
+    "ordinal": 2,
+    "target": "revealed_torso_cabin_backing",
+    "destination": "attempts/revealed_torso_cabin_backing-2.png"
+  },
+  "raw": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/raw/01a0f82e-63fc-71ee-b347-c66087a4612a/ig_0dafa537f34c43d0016abe8900037c87d0b6448bf900f5c2ce.png",
+  "sha256": "86828a956dac93c2331c7d402e3275b682f51345c82ff91ff29a3401c8354f00",
+  "width": 1254,
+  "height": 1254,
+  "alpha": {
+    "zero": 1177138,
+    "partial": 394796,
+    "opaque": 582,
+    "bounds": [
+      97,
+      39,
+      1041,
+      1245
+    ]
+  },
+  "disposition": "Rejected silhouette: elongated bent sleeve-like panel, not the requested broad torso backing. Retained, not used. One bounded correction remains for this target."
+}

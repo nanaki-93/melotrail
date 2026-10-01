@@ -1,0 +1,21 @@
+{
+  "activeOwner": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z",
+  "startingConsumption": {"attempt": 1, "derivative": 5, "staticPass": 0},
+  "scope": "Standalone static parts assembly only; no Blender, video, production imports or artwork approval.",
+  "reuse": {
+    "forearm_separate": "Extract the visible emerald forearm from source 47, keep its painted silhouette, add separate hidden elbow overlap from the existing generated sleeve texture. No whole-arm pose swapping.",
+    "cuff_wrist_overlap": "Extract the leopard cuff from source 47; one cuff shared by both hand states.",
+    "hand_neutral": "Extract the closed cheek-rest hand from source 45, register the wrist independently of the arm.",
+    "hand_wrist_beat": "Extract the open hand from source 47, register the wrist independently of the arm. No extra hand shape.",
+    "hidden_shoulder_elbow_overlap": "Derive hidden green joint support from the already generated upper-sleeve interior. Explicit masked texture reuse, not painted new anatomy. Alpha and overlap remain subject to static checks and later all-frame evaluation.",
+    "rig_state_foreground_occlusion": "Reference the pinned full-foreground PNG without copying or changing it. Verify new candidate joint/hand states against it; no prior compatibility assumed."
+  },
+  "missing": {
+    "revealed_torso_cabin_backing": "Cabin 28 provides existing clean background. Original moving arm hides part of TABI's right green coat flank. A specifically generated flank patch is needed; composite only within that newly declared support region, preserving original pixels elsewhere. Reuse source 47 for revealed cheek pixels rather than generating face/head."
+  },
+  "plannedDerivativeFiles": 6,
+  "plannedStaticPasses": 1,
+  "registration": "Proposed pixel anchors, rigid lengths and useful pose limits must be tested and presented for VG2-14 approval; not approval to animate.",
+  "remainingAllowanceAfterPlannedWork": {"derivatives": 1, "staticPasses": 2},
+  "stop": "Retain every failure. No exhausted target retry or additional target. Ask user at asset review, or if a required missing surface exceeds admitted scope."
+}

@@ -1,0 +1,11 @@
+✔ static articulated poses keep identical limb lengths, shoulder and scale (0.958709ms)
+✔ unsupported articulation and extra hand states reject rather than extrapolate (0.352209ms)
+✔ registered extraction anchors stay inside each explicit crop (0.073958ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63.91825

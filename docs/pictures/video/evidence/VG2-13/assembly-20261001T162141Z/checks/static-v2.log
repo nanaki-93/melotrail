@@ -1,0 +1,322 @@
+{
+  "variant": "v2",
+  "receipt": {
+    "id": "c6a455387d8afa21a511a4a9e1abdd52",
+    "kind": "staticPass",
+    "ordinal": 2,
+    "destination": "states/assembled_review_v2.png"
+  },
+  "sha256": "3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825",
+  "checks": [
+    {
+      "state": "neutral",
+      "geometry": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          817.0132658264608,
+          694.9921436704899
+        ],
+        "wrist": [
+          833.041330294322,
+          609.3469386125645
+        ],
+        "upperAngle": 59.36,
+        "forearmAngle": -79.4,
+        "wristAngle": 0,
+        "hand": "neutral",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      },
+      "handAnchor": [
+        821.7766518902653,
+        560.0562516579969
+      ],
+      "seam": [
+        {
+          "joint": "shoulder",
+          "at": [
+            772,
+            619
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "elbow",
+          "at": [
+            817.0132658264608,
+            694.9921436704899
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "forearmCuff",
+          "at": [
+            833.041330294322,
+            609.3469386125645
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "hand",
+          "at": [
+            821.7766518902653,
+            560.0562516579969
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "8b2e4c47e3e216c4d7f6aa89cae58b856d7f277a89e3cbe94c27f700b916568d",
+      "motionEnvelope": [
+        748,
+        415,
+        995,
+        752
+      ]
+    },
+    {
+      "state": "lift",
+      "geometry": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          846.9023808570248,
+          665.8042021825947
+        ],
+        "wrist": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "upperAngle": 32,
+        "forearmAngle": -65,
+        "wristAngle": 0,
+        "hand": "open",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      },
+      "handAnchor": [
+        885.0733081474566,
+        536.2921752901528
+      ],
+      "seam": [
+        {
+          "joint": "shoulder",
+          "at": [
+            772,
+            619
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "elbow",
+          "at": [
+            846.9023808570248,
+            665.8042021825947
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "forearmCuff",
+          "at": [
+            883.7259905881457,
+            586.835716276063
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "hand",
+          "at": [
+            885.0733081474566,
+            536.2921752901528
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "a425b3d688278d8477f2dd541b2daa35ede28877a9b802bb576578e2ce06f635",
+      "motionEnvelope": [
+        748,
+        415,
+        995,
+        752
+      ]
+    },
+    {
+      "state": "wrist_in",
+      "geometry": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          846.9023808570248,
+          665.8042021825947
+        ],
+        "wrist": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "upperAngle": 32,
+        "forearmAngle": -65,
+        "wristAngle": -12,
+        "hand": "open",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      },
+      "handAnchor": [
+        874.5352729599149,
+        537.1165498562794
+      ],
+      "seam": [
+        {
+          "joint": "shoulder",
+          "at": [
+            772,
+            619
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "elbow",
+          "at": [
+            846.9023808570248,
+            665.8042021825947
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "forearmCuff",
+          "at": [
+            883.7259905881457,
+            586.835716276063
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "hand",
+          "at": [
+            874.5352729599149,
+            537.1165498562794
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "7f6a0a99d3a419f0bc9f60ed8d576220a0191d1bec40b337c9c387dbdb7c86a3",
+      "motionEnvelope": [
+        748,
+        415,
+        995,
+        752
+      ]
+    },
+    {
+      "state": "wrist_out",
+      "geometry": {
+        "shoulder": [
+          772,
+          619
+        ],
+        "elbow": [
+          846.9023808570248,
+          665.8042021825947
+        ],
+        "wrist": [
+          883.7259905881457,
+          586.835716276063
+        ],
+        "upperAngle": 32,
+        "forearmAngle": -65,
+        "wristAngle": 12,
+        "hand": "open",
+        "upperLength": 88.32326986700618,
+        "forearmLength": 87.13208364316787
+      },
+      "handAnchor": [
+        895.5524590925095,
+        537.676795999929
+      ],
+      "seam": [
+        {
+          "joint": "shoulder",
+          "at": [
+            772,
+            619
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "elbow",
+          "at": [
+            846.9023808570248,
+            665.8042021825947
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "forearmCuff",
+          "at": [
+            883.7259905881457,
+            586.835716276063
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        },
+        {
+          "joint": "hand",
+          "at": [
+            895.5524590925095,
+            537.676795999929
+          ],
+          "holes": 0,
+          "minAlpha": 255
+        }
+      ],
+      "outsideChanges": 0,
+      "nonOpaque": 0,
+      "rgbaSha256": "e859f2f76f5e7e2f95f6083e421a913f5bf47cdce67f1d80ee117c63c8ffb932",
+      "motionEnvelope": [
+        748,
+        415,
+        995,
+        752
+      ]
+    }
+  ],
+  "upperScale": 0.12266541101984492,
+  "forearmScale": 1,
+  "cuffScale": 0.82,
+  "handScales": {
+    "neutral": 1,
+    "open": 0.85
+  },
+  "appearance": "UNREVIEWED",
+  "technicalPass": true,
+  "limitations": [
+    "Only four static states, not a 150-frame rig evaluation or moving approval.",
+    "New arm silhouette, shoulder, cuff size and neutral hand registration differ from reference48 and require explicit review.",
+    "No continuous hand-opening transition has been proved. Two supplied hand drawings only."
+  ]
+}

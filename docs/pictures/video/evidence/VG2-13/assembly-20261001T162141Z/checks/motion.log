@@ -1,0 +1,39 @@
+✔ supplied pose sequence replaces without ghosting or neutral-silhouette clipping and returns exactly (496.928ms)
+✔ pose sequences reject missing neutral return, invalid timing, misregistration, rejection and ambiguous controls (1.240417ms)
+✔ pose sequence frame output still verifies every source pin before claiming output (6.211959ms)
+✔ rejects unsafe range endpoints and invocations above the 300-frame bound (0.367084ms)
+✔ renders actual importer descriptors at exact unit and nonunit placements for every component (14.739792ms)
+✔ renders real importer scenery-only static and moving environments without stretching or dummy controls (8.444833ms)
+✔ uses absolute section state across a split join and reaps only cancelled chunk outputs (269.861041ms)
+✔ renders imported transparent three-plane pixels with opaque backing and fixed foreground (4.97875ms)
+✔ derives exact far-to-near pixels independent of plane order and keeps the near feature faster (2.245ms)
+✔ preserves absolute blink, breathing, head, steam, and foreground pixels across a scenery-section activation (8.085125ms)
+✔ rejects mismatched supplied section overlap before claiming output (3.330583ms)
+✔ rejects every selected rejected scenery dependency before creating output (1.011875ms)
+✔ uses actual importer mask representations for exact head selection and alpha occlusion coverage (8.891334ms)
+✔ effect-only static source preserves the finished composition and recorded foreground occlusion (1.978583ms)
+✔ steam follows its transformed subject source while the production foreground remains on top (10.208875ms)
+✔ bounded PNG rendering yields between frames without changing pixels or absolute time (15.294084ms)
+✔ asynchronous cancellation stops before the next PNG and removes only owned output (4.599791ms)
+✔ cancellation on the last frame yield wins before receipt publication (4.124291ms)
+✔ VG2 breathing control has independently neutral endpoints, interior motion and bounded absolute travel (234.275625ms)
+✔ rejects duplicate subject controls and keeps every admitted state inside declared bounds (4.265417ms)
+✔ rejects malformed production descriptors and unsupported face controls (0.587709ms)
+✔ rejects matching-digest artifact links and linked roots before creating output (3.05825ms)
+✔ transparent depth overlays never establish opaque trajectory coverage (2.448792ms)
+✔ admits full-length 30 fps camera trajectories without constructing frame batches (29.962417ms)
+✔ rejects malformed supplied camera integers and unsafe trajectory arithmetic (0.354834ms)
+✔ rejects late full-trajectory gaps, shutter-boundary gaps, and incompatible resume receipts (7.745292ms)
+✔ admits real importer source sections with absolute world placement and deterministic handoff state (1.593042ms)
+✔ derives canonical far-to-near order and faster near travel independent of request order (0.231167ms)
+✔ requires and verifies complete receipt state at a source-section boundary (3.74325ms)
+✔ admits scenery-only static chunks but rejects uncovered moving ranges (0.510167ms)
+✔ rejected scenery dependencies fail pure admission for every authoritative component kind (0.295ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1248.774541

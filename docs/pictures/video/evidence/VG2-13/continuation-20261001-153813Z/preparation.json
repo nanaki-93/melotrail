@@ -1,0 +1,733 @@
+{
+  "schema": 1,
+  "owner": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z",
+  "sourceOwner": "build/vg2-12-pool-20261001-a1/inspection.json",
+  "sourceInspectionSha256": "1c7171145076715e3df3ec33be1c2d78ed1913d4e56c304710a539edcebcbea6",
+  "sources": [
+    {
+      "path": "docs/pictures/video/tabi-assets/character-profile/tabi-character-profile.png",
+      "sha256": "1c63aa8f579634eff5f8c6864e97882513feba381c1e2380ae66018800f9d238",
+      "width": 1086,
+      "height": 1448,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 1572528
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png",
+      "sha256": "01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e",
+      "width": 1664,
+      "height": 936,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 1557504
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/10-waving-hello.png",
+      "sha256": "3429a363598b58c93477075eda366aa6602239f97a485eb6896b9d142e1c79b7",
+      "width": 1254,
+      "height": 1254,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 1572516
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/28-breathing-rebuilt-cabin-review-candidate.png",
+      "sha256": "922ff5afd87417c9ba653b327d4b00007670981c99d1d927c20f4ea596769e14",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/35-wave-isolated-no-lipstick-guide.png",
+      "sha256": "f8d1493887067a3afb9a14dc16890a3f7a94bbad2d2e2360cd2667940d0dddd1",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1675855,
+        "partial": 397699,
+        "opaque": 46
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/36-wave-fixed-lower-alpha-review-candidate.png",
+      "sha256": "e0d146605258fa1c200c08df4c29d403c4492bf19beec0ecfcfb0bcb3a88e1b7",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1740324,
+        "partial": 333209,
+        "opaque": 67
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/37-wave-fixed-lower-review-candidate.png",
+      "sha256": "d503b6c65c83091de42cd9b9fd7909906aa824fe86e7d60d504145fa5f46444a",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/38-wave-halfway-arm-model-source.png",
+      "sha256": "b75f75fdf4b627864a34ae6a0323f81dc579bb7f10174b32beea53945fb10c45",
+      "width": 1153,
+      "height": 1364,
+      "alpha": {
+        "zero": 1217410,
+        "partial": 354359,
+        "opaque": 923
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/39-wave-halfway-arm-alpha-candidate.png",
+      "sha256": "7e64f7c9e6e9cb8902ceb26253bb63703537f883bc414670f154687078eb75b8",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 2051138,
+        "partial": 1391,
+        "opaque": 21071
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/40-wave-halfway-seated-alpha-candidate-v2.png",
+      "sha256": "7039302f84c4a8571e0231fbfa7581ef9e3dc4ddf7b2357387e6e3593252d11e",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1752343,
+        "partial": 299957,
+        "opaque": 21300
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/41-wave-halfway-scene-review-candidate-v2.png",
+      "sha256": "1e24238cddcff8c61a660628dca98fd9e0509b8d35de1afbfdc74403a4f2e72c",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/42-wave-neutral-halfway-raised-comparison-v2.png",
+      "sha256": "022343e69230183f4118da9dbbd84b7141c66449cbe624df406e85d5063d5619",
+      "width": 1800,
+      "height": 968,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 1742400
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/43-neutral-cheek-rest-arm-model-source.png",
+      "sha256": "c20dba059aefc5fed28aac0380cfe7e890afbedca35d308b3ca6fbed08acf56a",
+      "width": 1153,
+      "height": 1364,
+      "alpha": {
+        "zero": 1247588,
+        "partial": 324293,
+        "opaque": 811
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/44-neutral-cheek-rest-arm-registered-guide.png",
+      "sha256": "c70d77872d7bff06c98bbb00fa3838c41436712a77079d842468acd3b2d1a0a8",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 2052774,
+        "partial": 20823,
+        "opaque": 3
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+      "sha256": "33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1755910,
+        "partial": 311378,
+        "opaque": 6312
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/46-matching-halfway-single-pass-alpha-candidate.png",
+      "sha256": "1523f8575723c7979fc26090c219e3ed2c64b659189400deea9958f47af75985",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1752343,
+        "partial": 299957,
+        "opaque": 21300
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/47-matching-wave-single-pass-alpha-candidate.png",
+      "sha256": "5e3890233ad57764b0c7b7a0279934d4e1dc9dfd778184f961c0195543660dc5",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1740324,
+        "partial": 333209,
+        "opaque": 67
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/48-matching-neutral-return-baseline-review.png",
+      "sha256": "c6dc10f9d03a0a0548645f62594d3f36a6ba5a772e3a0717fb72e96c1a81865b",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/49-matching-neutral-halfway-wave-comparison.png",
+      "sha256": "9097314133cb6a7c427495e1750984f71aef451b6020407e5ad475a074227d5c",
+      "width": 1800,
+      "height": 968,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 1742400
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/50-matching-kit-contact-review.png",
+      "sha256": "b53ff899962783eaac8270204f9484d730c43f37c10e1554a39ebcd172eae6f6",
+      "width": 1800,
+      "height": 730,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 1314000
+      }
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/59-wave-seven-pose-static-comparison.png",
+      "sha256": "7dff03003bfa600aa82e77c1c47bc9e5382628b16f5e76cc19ff425a0421e207",
+      "width": 2100,
+      "height": 770,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 1617000
+      }
+    },
+    {
+      "path": "build/vg2-character-art-a3/full-foreground.png",
+      "sha256": "e9d69d59f21ecac1d15561487c193d19d3cef2e65ca2970a1669c062dec9e93a",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1896985,
+        "partial": 2616,
+        "opaque": 173999
+      }
+    },
+    {
+      "path": "build/vg2-character-approval-20260929/full-foreground-coverage.png",
+      "sha256": "0dbc32a26c4fb0ff4f8f388e041d95e9f038509850f2772ade1545a4f07f81fa",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1896985,
+        "partial": 0,
+        "opaque": 176615
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-early-layer.png",
+      "sha256": "3de20537d15ff86598949c2577e49b5e6fb229f622452ef78c08fe3d2ee88956",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1750103,
+        "partial": 323143,
+        "opaque": 354
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-late-layer.png",
+      "sha256": "c15de61428584f09a08575851baf5590c0a7d15d414cc68224a067464e2fb755",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1747927,
+        "partial": 323230,
+        "opaque": 2443
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/pre-wave-layer.png",
+      "sha256": "e13ae06f6ba41d66d33b45d86b118bd2663f0ed9d57f7b4c1e8cd500b3274bef",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1747638,
+        "partial": 323092,
+        "opaque": 2870
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/wrist-out-layer.png",
+      "sha256": "11d83ef673a7c3531389e840244544c6099749172531f5a5088e8051942300a5",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1742225,
+        "partial": 330615,
+        "opaque": 760
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-early-review.png",
+      "sha256": "1350db94c6246a382ae684467c814ce3e7e822075ad41ad0ac85e3b46f2c4fba",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/release-late-review.png",
+      "sha256": "6c3c99080ad1656a1b8b034c4a63a18c1b884a4d09f1296a4ced345a45aa52bf",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/pre-wave-review.png",
+      "sha256": "04ff12183b0e436f1703f2ef561e94ef07c1fd58d1f2a9d756a58c614f94f5c7",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    },
+    {
+      "path": "build/vg2-08-fluid-assets-1TFP896e/candidate-v2/wrist-out-review.png",
+      "sha256": "c5aad3b708746b31481635535f628e34d0cc38fb67b74ee4cce59641102763a0",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 0,
+        "partial": 0,
+        "opaque": 2073600
+      }
+    }
+  ],
+  "referenceNeutral": "docs/pictures/video/tabi-assets/train-actions/48-matching-neutral-return-baseline-review.png",
+  "permission": "User-reported ChatGPT TABI source ownership; local proof derivatives only; no independent upstream/commercial/publication clearance or appearance approval",
+  "targets": [
+    "upper_sleeve_separate",
+    "forearm_separate",
+    "cuff_wrist_overlap",
+    "hand_neutral",
+    "hand_wrist_beat",
+    "hidden_shoulder_elbow_overlap",
+    "revealed_torso_cabin_backing",
+    "rig_state_foreground_occlusion"
+  ],
+  "limits": {
+    "attemptsPerTarget": 2,
+    "attemptsTotal": 16,
+    "derivativeFiles": 12,
+    "staticCandidatePasses": 3
+  },
+  "readiness": {
+    "parts": null,
+    "registration": null,
+    "neutral": null,
+    "usefulExtreme": null,
+    "technicalChecks": null,
+    "humanAppearance": "pending VG2-14"
+  },
+  "fixedFoundation": {
+    "referenceRole": "opaque appearance reference only; never a body layer",
+    "cabinStatus": "opaque candidate; revealed areas not certified clean",
+    "torsoStatus": "selected unaffected islands only; obscured torso unresolved",
+    "unresolved": [
+      "Face and chin from source 45 are isolated through y=606; cheek pixels differing in 46/47 at the hand boundary are excluded. No hand or joint pixels are claimed as fixed; hidden face/neck under the hand or collar is unresolved.",
+      "Torso under neutral arm and sleeve is obscured; selected visible islands are not a complete body layer.",
+      "Cabin 28 is opaque but its exposed-under-arm areas have not been certified clean; no backing derivative exists.",
+      "Lower contact is copied from source 45, including pixels hidden by the foreground table in composed 48; contact in a new composite remains untested."
+    ],
+    "raster": {
+      "width": 1920,
+      "height": 1080,
+      "origin": "top-left",
+      "pixelCenters": "x+0.5,y+0.5",
+      "bounds": "half-open",
+      "alpha": "straight RGBA"
+    },
+    "pins": {
+      "cabin": "922ff5afd87417c9ba653b327d4b00007670981c99d1d927c20f4ea596769e14",
+      "subject": "33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9",
+      "neutral": "c6dc10f9d03a0a0548645f62594d3f36a6ba5a772e3a0717fb72e96c1a81865b"
+    },
+    "neutralDecodedAlpha": {
+      "zero": 0,
+      "partial": 0,
+      "opaque": 2073600,
+      "bounds": [
+        0,
+        0,
+        1920,
+        1080
+      ]
+    },
+    "supersededHead": {
+      "path": "parts/fixed_head_fronds.png",
+      "sha256": "61fdcf0d61460b012528915f525e4514450a0e476c03acc258aec86f6efe5c12",
+      "reason": "first reserved derivative cuts face below eyes at y=515; retained, not reused or refunded"
+    },
+    "parts": [
+      {
+        "id": "fixed_head_fronds",
+        "path": "parts/fixed_head_fronds_face.png",
+        "crop": [
+          340,
+          198,
+          900,
+          607
+        ],
+        "regions": [
+          [
+            340,
+            198,
+            900,
+            475
+          ]
+        ],
+        "polygons": [
+          [
+            [
+              600,
+              475
+            ],
+            [
+              867,
+              475
+            ],
+            [
+              851,
+              490
+            ],
+            [
+              834,
+              509
+            ],
+            [
+              816,
+              519
+            ],
+            [
+              805,
+              530
+            ],
+            [
+              786,
+              541
+            ],
+            [
+              759,
+              551
+            ],
+            [
+              735,
+              566
+            ],
+            [
+              721,
+              589
+            ],
+            [
+              712,
+              606
+            ],
+            [
+              703,
+              589
+            ],
+            [
+              690,
+              571
+            ],
+            [
+              674,
+              553
+            ],
+            [
+              647,
+              542
+            ],
+            [
+              616,
+              528
+            ],
+            [
+              600,
+              515
+            ]
+          ],
+          [
+            [
+              340,
+              475
+            ],
+            [
+              620,
+              475
+            ],
+            [
+              620,
+              519
+            ],
+            [
+              602,
+              525
+            ],
+            [
+              580,
+              525
+            ],
+            [
+              545,
+              527
+            ],
+            [
+              510,
+              525
+            ],
+            [
+              480,
+              520
+            ],
+            [
+              455,
+              531
+            ],
+            [
+              418,
+              534
+            ],
+            [
+              390,
+              522
+            ],
+            [
+              360,
+              516
+            ]
+          ],
+          [
+            [
+              850,
+              475
+            ],
+            [
+              900,
+              475
+            ],
+            [
+              900,
+              505
+            ],
+            [
+              850,
+              514
+            ]
+          ]
+        ],
+        "sharedPoseSources": [
+          46,
+          47
+        ],
+        "source": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+        "sourceSha256": "33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9",
+        "placement": [
+          340,
+          198
+        ],
+        "width": 560,
+        "height": 409,
+        "sha256": "b776b878fa8453a5993e654a3741f7162130b8d7fcd03250019378e8c5243d6b",
+        "decodedAlpha": {
+          "zero": 91116,
+          "partial": 137904,
+          "opaque": 20,
+          "bounds": [
+            1,
+            4,
+            560,
+            407
+          ]
+        },
+        "protectedRgbaSha256": "a2bc0923dc2bb39b6d47f6287426eefca6f17b368d702fc63038535d6bc8cc85"
+      },
+      {
+        "id": "unaffected_torso_islands",
+        "path": "parts/unaffected_torso_islands.png",
+        "crop": [
+          360,
+          620,
+          465,
+          750
+        ],
+        "regions": [
+          [
+            375,
+            620,
+            465,
+            690
+          ],
+          [
+            360,
+            690,
+            435,
+            750
+          ]
+        ],
+        "source": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+        "sourceSha256": "33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9",
+        "placement": [
+          360,
+          620
+        ],
+        "width": 105,
+        "height": 130,
+        "sha256": "8985e87f978634f09e2a0be6fcb5c00333287bd88902729fe7467cedaabd2226",
+        "decodedAlpha": {
+          "zero": 4094,
+          "partial": 9556,
+          "opaque": 0,
+          "bounds": [
+            0,
+            0,
+            105,
+            130
+          ]
+        },
+        "protectedRgbaSha256": "c041f761936a23c88bb498145f0a8ba4da31a837d705034d66181158962425a1"
+      },
+      {
+        "id": "lower_contact",
+        "path": "parts/lower_contact.png",
+        "crop": [
+          190,
+          760,
+          751,
+          990
+        ],
+        "regions": [
+          [
+            190,
+            760,
+            751,
+            990
+          ]
+        ],
+        "source": "docs/pictures/video/tabi-assets/train-actions/45-matching-neutral-single-pass-alpha-candidate.png",
+        "sourceSha256": "33a02b0a603adb42c43512b01531906aa41351e2c6e0678283b4e90e1437e3a9",
+        "placement": [
+          190,
+          760
+        ],
+        "width": 561,
+        "height": 230,
+        "sha256": "ed44e4d56c8de14e0495992a6b5a993d5111091c5a5a4665c9f458e115d362b2",
+        "decodedAlpha": {
+          "zero": 69341,
+          "partial": 59651,
+          "opaque": 38,
+          "bounds": [
+            0,
+            0,
+            561,
+            228
+          ]
+        },
+        "protectedRgbaSha256": "9cab23b86477c5814d376d8a0404df03e2179988ad7d8fd72d981612cec335df"
+      }
+    ]
+  },
+  "predecessor": {
+    "owner": "build/vg2-13-coherent-wave-20261001-b1",
+    "files": [
+      {
+        "path": "preparation.json",
+        "sha256": "f9d51b127a9960b134578f92417c39efbf36099fe1aa800a7a116cee139194d6"
+      },
+      {
+        "path": "check-preparation.cjs",
+        "sha256": "2da7cb83d53e9ba0f9a5dd95abba92bb5fa6561f5d521141189b37889d557b78"
+      },
+      {
+        "path": "preparation.test.cjs",
+        "sha256": "fe220657f2f096ddaff7b0fc81798bca01fdbbbc411464f6b903d62146d31fa8"
+      },
+      {
+        "path": "journal/adb8b05a406859ab2b08f4592e395dbb.json",
+        "sha256": "1237e4c4ed3e61dc2495b314a5dfa9c6023cde8b93d850141d2ede0d53c303e6"
+      },
+      {
+        "path": "journal/c095eb6a36ed6c514fd7a07378f2730b.json",
+        "sha256": "c5474c9da07f083923cc3eacde2ffba5dfc3aa6da8fef56d5e257625efdbf891"
+      },
+      {
+        "path": "journal/dbfbf2f7852ffb75e4f039324b8a5f1b.json",
+        "sha256": "595766288f40f5e38d7c2dab85e47e7b05d4f26a3ff08f9f4f01829be9933194"
+      },
+      {
+        "path": "journal/ec16665da7892a3fa9c6e9501d4d6a81.json",
+        "sha256": "72a3bc2b3e17226b7af86b163d03a11643774d3517c394bd6026398a24c46a65"
+      },
+      {
+        "path": "parts/fixed_head_fronds.png",
+        "sha256": "61fdcf0d61460b012528915f525e4514450a0e476c03acc258aec86f6efe5c12"
+      },
+      {
+        "path": "parts/fixed_head_fronds_face.png",
+        "sha256": "b776b878fa8453a5993e654a3741f7162130b8d7fcd03250019378e8c5243d6b"
+      },
+      {
+        "path": "parts/lower_contact.png",
+        "sha256": "ed44e4d56c8de14e0495992a6b5a993d5111091c5a5a4665c9f458e115d362b2"
+      },
+      {
+        "path": "parts/unaffected_torso_islands.png",
+        "sha256": "8985e87f978634f09e2a0be6fcb5c00333287bd88902729fe7467cedaabd2226"
+      }
+    ]
+  }
+}

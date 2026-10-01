@@ -1,0 +1,25 @@
+{
+  "receipt": {
+    "id": "55c1bb4bdd54bcb6e2d027702649161a",
+    "kind": "attempt",
+    "ordinal": 3,
+    "target": "revealed_torso_cabin_backing",
+    "destination": "attempts/revealed_torso_cabin_backing-3.png"
+  },
+  "raw": "docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/raw/01a0f82e-63fc-71ee-b347-c66087a4612a/ig_00e21170e847b4f3016abe8964895487d0951ec2b7f65f5a2c.png",
+  "sha256": "b71ae995f9ec811c71767e55f2d50a07eb96123c4c26c58cd0791854adb90ebb",
+  "width": 1254,
+  "height": 1254,
+  "alpha": {
+    "zero": 848668,
+    "partial": 723330,
+    "opaque": 518,
+    "bounds": [
+      0,
+      0,
+      1208,
+      1254
+    ]
+  },
+  "disposition": "Broad cloth panel candidate; use only cropped fabric within declared hidden-flank support, not a new head/body/cabin. Unapproved until assembled review. Backing target image allowance exhausted (2/2)."
+}

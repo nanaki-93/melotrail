@@ -1,0 +1,16 @@
+{
+  "integrity": "PASS",
+  "staticStates": 4,
+  "consumption": {
+    "attempt": 3,
+    "derivative": 12,
+    "staticPass": 2
+  },
+  "reviewSha256": "3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825",
+  "appearance": "PENDING VG2-14",
+  "limitations": [
+    "Only four static states, not a 150-frame rig evaluation or moving approval.",
+    "New arm silhouette, shoulder, cuff size and neutral hand registration differ from reference48 and require explicit review.",
+    "No continuous hand-opening transition has been proved. Two supplied hand drawings only."
+  ]
+}

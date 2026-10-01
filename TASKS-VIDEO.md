@@ -563,6 +563,38 @@ this step's commit. VG2-13 is still incomplete: remaining parts, registration,
 neutral/extreme composites and support/seam checks precede VG2-14 user review.
 No Blender, video encode/decode, app integration or take mutation occurred.
 
+VG2-13 assembled-parts checkpoint (2026-10-01): tested HEAD `ee21c341b`
+plus task-owned preparation files and the preserved pre-existing documentation
+changes. Evidence: `docs/pictures/video/evidence/VG2-13/assembly-20261001T162141Z/`.
+Reused sources 45/47 for two hands, forearm and one cuff; reused the existing
+upper-sleeve texture for hidden shoulder/elbow support and pinned foreground
+without another derivative. Two backing image attempts produced one rejected
+sleeve-shaped panel and one broad cloth candidate; both raw outputs remain.
+The first assembled sheet exposed an extraneous pink donor fragment and a
+clipped revealed cheek despite passing joint-centre checks. The final derivative
+atlas corrects those parts and restores cheek pixels from source 47, not generated
+face art; the original derivatives and first sheet remain unchanged. New colour
+and exact donor-pixel negatives retain failing-before witnesses.
+The corrected four-state sheet is
+`docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v2.png`
+(SHA `3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825`).
+Static neutral/lift/wrist-in/wrist-out keep fixed limb lengths, supported joint
+centres, opaque output and zero changes outside the declared support envelope.
+This is not all-frame coverage, a cloth/hand-transition pass or human approval;
+new neutral placement/cuff scale and exposed backing must be reviewed explicitly.
+Consumption: **3/16 image attempts, 12/12 derivative files, 2/3 static passes**;
+backing target is exhausted at 2/2. Further derivative files require a new allowance.
+A 91-pin local kit record binds source art, helpers, parts, review sheets and
+Canvas dependencies; historical build inputs remain required, not relocated.
+Seventeen focused Node tests and 31 production motion tests pass; focused JVM
+architecture/documentation/fixture selectors pass (1 executed/5 up-to-date).
+Filtered `make test` and `make build` pass (each 1 executed/13 up-to-date);
+`MidiCoreNativeResponsivenessTest` excluded, not passed. Diff check passes;
+owned temporary init removed and writer locks released. The verified continuation
+manifest/helpers/inherited receipts are now included as task-owned prerequisites;
+unrelated nine-file documentation WIP and local environments remain untouched.
+Next: reconcile readiness and request exact-artifact VG2-14 review. No rig/media run.
+
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
 `docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.

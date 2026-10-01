@@ -1,0 +1,69 @@
+{
+  "receipt": {
+    "id": "43ef0e546719bfb053041c6c4dbb4ce6",
+    "kind": "derivative",
+    "ordinal": 12,
+    "target": "revealed_torso_cabin_backing",
+    "destination": "parts/corrected_parts_atlas_v2.png"
+  },
+  "sha256": "202cff830d00f1c846bbf822a4bff196508292925c71a94ecf8393def2d9effc",
+  "regions": {
+    "forearm_separate": [
+      0,
+      1100,
+      160,
+      154
+    ],
+    "cuff_wrist_overlap": [
+      200,
+      1100,
+      140,
+      123
+    ],
+    "revealed_torso_cabin_backing": [
+      0,
+      0,
+      1920,
+      1080
+    ]
+  },
+  "diagnostics": {
+    "forearm_separate": {
+      "skinPixelsBefore": 84,
+      "skinPixelsAfter": 0
+    },
+    "cuff_wrist_overlap": {
+      "skinPixelsBefore": 134,
+      "skinPixelsAfter": 0
+    }
+  },
+  "cheekWitnesses": [
+    [
+      815,
+      517
+    ],
+    [
+      820,
+      515
+    ],
+    [
+      825,
+      510
+    ]
+  ],
+  "sources": [
+    {
+      "path": "parts/forearm_separate_assembly_v1.png",
+      "sha256": "d0c4f08f3935c9c6c307bc577a684b397e438337428ceb37bada7172f5b47132"
+    },
+    {
+      "path": "parts/cuff_wrist_overlap_assembly_v1.png",
+      "sha256": "4d78248725825b5309e72261f45e9c08409cb4b4b8e64fb919b5f8dabfd13c4d"
+    },
+    {
+      "path": "parts/revealed_torso_cabin_backing_assembly_v1.png",
+      "sha256": "696db9b84ad8b9cfa62164c620e9ad5d14e4b5e120ba86aaabde1dc9386355ef"
+    }
+  ],
+  "scope": "One atlas file contains corrections for three already admitted parts; counts as the final derivative file (12/12). No new target or image call. Original derivatives and failed first static sheet remain immutable."
+}
