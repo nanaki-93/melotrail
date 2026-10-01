@@ -1,0 +1,23 @@
+{
+  "reviewer": "project user",
+  "recordedAtUtc": "2026-10-01T17:07:16Z",
+  "candidateCommit": "fea11332b8c449d0d60b70ee87c33a04d5b41c1d",
+  "artifact": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/states/assembled_review_v2.png",
+  "sha256": "3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825",
+  "decision": "REJECTED",
+  "verbatimFeedback": "the assembled_review_v2.png is not good enough, around the hand there's some slop and clip around the arm",
+  "scope": "Rejects the presented assembled static candidate. Does not approve the changed neutral, useful extremes, parts, rig or moving footage.",
+  "localization": "Hand surroundings and arm clipping reported. Exact pixel locations, affected pose subset and root cause have not been established; do not invent them from this review.",
+  "technicalLimitation": "Prior opaque-output, fixed-length and joint-centre samples do not establish clean complete hand/cuff/arm contours or overlap support. Their historical passes remain, but cannot authorize rigging after this rejection.",
+  "preservedConsumption": {"imageAttempts": 3, "derivativeFiles": 12, "staticPasses": 2},
+  "repairProposalNotAuthorized": {
+    "scope": "Read-only localization against source45/47, local hand/cuff/forearm matte and overlap correction using existing pinned pixels, full-contour/edge regressions and new static review sheets. Preserve head, cabin, props, contact and all existing candidates.",
+    "additionalDerivativeFiles": 4,
+    "additionalStaticPassAllowance": 2,
+    "proposedAggregateLimits": {"imageAttempts": 16, "derivativeFiles": 16, "staticPasses": 5},
+    "attemptPolicy": "One initial local repair plus at most two bounded corrections, within the file/pass limits; then stop.",
+    "newImageCalls": 0,
+    "rigEvaluationOrMediaRuns": 0,
+    "permission": "Awaiting explicit user allowance; no repair or allowance reset was executed."
+  }
+}

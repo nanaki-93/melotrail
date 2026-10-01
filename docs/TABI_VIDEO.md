@@ -159,6 +159,20 @@ new allowance. User review is pending: approve these specific parts/new neutral/
 extremes or identify repairs. VG2-14 is not passed, and no Blender rig, video,
 production import or selected take was created by this preparation.
 
+### VG2-14 rejection of assembled v2 (2026-10-01)
+
+The project user rejects the v2 sheet above: “the assembled_review_v2.png is not
+good enough, around the hand there's some slop and clip around the arm”. Exact
+artifact SHA remains `3d132f82d2a099b9495e7ed70837442e919146be7cab8659fe4c267e3d2e8825`;
+receipt: `pictures/video/evidence/VG2-14/rejection-20261001T170716Z/review.json`.
+This supersedes the pending-review disposition, not the immutable pixels or old
+technical receipts. No changed-neutral/parts/extreme approval exists. The reported
+hand-area defects and arm clipping need localization and contour/overlap checks;
+passing joint-centre samples was insufficient. Do not treat them as a rig fix or
+proceed to Blender. VG2-13 is reopened for bounded correction, VG2-14 is blocked,
+and the exhausted 12-file derivative allowance requires an explicit extension.
+The queue contains a finite local-only repair proposal; it has not been executed.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

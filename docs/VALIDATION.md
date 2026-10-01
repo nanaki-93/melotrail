@@ -477,6 +477,19 @@ new arm/cuff/hand proportions, exposed coat/cheek and raised/wrist extremes.
 No reviewer/date/decision is recorded yet. No Blender or media run is admitted by
 this static handoff; VG2-14 still gates the later rig proof.
 
+VG2-14 actual user decision (2026-10-01): **REJECTED**, for the v2 artifact
+and SHA immediately above. Verbatim feedback: “the assembled_review_v2.png is not
+good enough, around the hand there's some slop and clip around the arm”. Retained
+receipt: `pictures/video/evidence/VG2-14/rejection-20261001T170716Z/review.json`.
+The earlier pending status is superseded; no viewing speed, exact pixels, pose
+subset or numeric ratings were supplied. Preserve prior fixture/static passes,
+but do not infer complete contour quality or acceptance from joint-centre and
+opaque-output checks. The next candidate must address the reported hand/arm
+boundaries with source comparisons and full-edge/overlap regressions before a
+new human decision. No rig evaluation, video or new asset creation is authorized
+by this review record; the queue requests a finite extension of the exhausted
+local derivative allowance. Old artifact bytes and consumed budgets are unchanged.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain
