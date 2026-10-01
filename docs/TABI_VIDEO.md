@@ -80,8 +80,32 @@ publication hashes; the originally published `train-actions/51`–`58` paths are
 absent here and were not recreated. Source creator/licence and permission to
 make/use derivatives are unresolved; static approvals are neither rights nor
 moving suitability. Joint overlaps, exposed backing and hand transitions remain
-missing/unverified. Step 1.3 still needs to freeze the minimum kit, geometry,
-limits and proposed budgets; no art/rig/video was produced by this inspection.
+missing/unverified. Step 1.3's data-only proposal is `build/vg2-12-pool-20261001-a1/kit-proposal.json`
+(checked by `check-kit.cjs`). It fixes one side-on seated outfit and the 150-frame
+30-fps neutral → lift (30) → wrist beats (60, 90) → lower (120) → identical
+neutral (149) schedule. Raster coordinates use 1920×1080 top-left origin and
+half-open boxes. Cabin 28, subject 45 and retained foreground are candidate
+pixel donors for fixed head/body/contact, plate and occlusion; 48 is the opaque
+approved composed reference, not a separable rig part. Old [748,435,980,750)
+is only a supplied-pose change witness, **not** a safe articulated-motion bound.
+Rotating support, safe joint angles and shoulder/elbow/wrist pivots are unknown
+until separately approved parts/extremes exist; no geometry is invented. Missing
+separated sleeve/forearm/cuff/hand, hidden shoulder/elbow/wrist overlap, revealed
+torso/cabin backing and rig-state occlusion remain individually listed. The
+proposal sets exact protected-source equality, conditional 1-pixel attachment
+and 0.5% length/scale drift targets, subject to registration, not current passes.
+It proposes 2 initial + 1 correction image calls/12 derivatives/3 static passes,
+a non-rendering 150-frame/120-second/4-GiB-RSS/512-MiB rig evaluation, and
+**separate**, unadmitted one-attempt tiny-colour and wave ceilings of 900 seconds,
+4 GiB owned RSS, 2 GiB new storage and two counted MP4 traversals each (18 GiB
+disk admission, 10 GiB reserve, three NORMAL samples with ≥3 GiB free and no
+swap growth). None is execution permission or a measured feasibility claim.
+Before any preparation: identify creators/licences/derivative and commercial
+rights for exact chosen sources; decide the named missing parts and finite
+artwork allowance. Before rig evaluation: register pivots/limits/support and
+obtain exact assembled neutral/extreme appearance approval, including any
+change from 48. Media needs separate pinned packet/admission and moving review.
+No art, rig, video, import, or take was produced by either inspection step.
 
 ## TABI train-series recipe (2026-09-30)
 

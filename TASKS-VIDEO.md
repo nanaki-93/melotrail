@@ -421,8 +421,27 @@ transparent full cutouts/independent arm drawings are not coherent rig parts.
 Hidden shoulder/elbow/wrist support, backing and hand transitions remain unproven;
 creator/licence/derivative rights are unresolved. Static look approval does not
 approve motion, parts or rights. The prior seven-pose movie remains rejected,
-and the count/socket/colour failures stay blocked. VG2-12 remains TODO until the
-separate minimum-kit/limits/budget proposal; no artwork or native media was made.
+and the count/socket/colour failures stay blocked. VG2-12 Step 1.3 proposal (2026-10-01; pending coordinator disposition):
+`build/vg2-12-pool-20261001-a1/kit-proposal.json` binds the frozen source
+inspection and 48; `check-kit.cjs` asserts source-pin consistency, reusable-versus-
+missing surfaces, unknown anchors/envelope/angle limits, 150-frame timing and
+finite unadmitted ceilings. Same side-on seated emerald-sleeve/leopard-cuff view;
+28/candidate 45 supply possible cabin/head/torso/lower contact pixels and the
+retained foreground supplies possible fixed occlusion. Separate sleeve, forearm,
+cuff/wrist, hand states, shoulder/elbow hidden overlaps, revealed torso/cabin
+backing and rig-state occlusion are **not prepared**. The old arm rectangle is a
+static witness, not a safe rotating envelope. Proposed 2 initial + 1 correction
+image calls, 12 derivatives and 3 local static passes require a separate finite
+allowance; 150-frame non-rendering rig evaluation proposes 120s/4 GiB owned RSS/
+512 MiB storage; each of the later tiny-colour and wave packets proposes at most
+one attempt, 900s/4 GiB RSS/2 GiB storage and two MP4 traversals, with 18 GiB
+disk admission, 10 GiB reserve, three NORMAL/≥3 GiB-free samples and no swap
+growth. **None is admitted.** Source-specific rights/derivative permissions,
+exact missing-part targets/allowance, registered pivots/limits/support, reviewed
+neutral/extremes and later separate native admissions remain decisions. No art,
+rig, native media, project or take was made or changed. This is a kit freeze at
+proposal level, not VG2-13 readiness, a rig-quality pass or a rights decision.
+Only the queue coordinator may change VG2-12 status after reviewing the checks.
 
 
 These rows implement the selected method **only on a future bounded run**. They
