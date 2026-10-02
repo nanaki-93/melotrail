@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-10-02T07:55:29.462460+00:00",
+  "scope": "Documentation and artifact-specific human acceptance only; production and test sources unchanged.",
+  "focusedTests": [
+    {
+      "class": "app.melotrail.documentation.DocumentationIntegrityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "app.melotrail.architecture.TargetArchitectureRulesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "result": "PASS",
+  "headless": true,
+  "excluded": "MidiCoreNativeResponsivenessTest; desktop suite not requested.",
+  "command": "env JAVA_HOME=/Users/marcoandreose/.sdkman/candidates/java/21.0.11-tem ./gradlew --no-daemon --console=plain --init-script docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/scripts/headless.init.gradle :test --tests '*DocumentationIntegrityTest' --tests '*TargetArchitectureRulesTest'",
+  "logSha256": "8faa30610143303525330d44fd2ea366142b606935ad61e5e64aa4100921033c",
+  "fullBuildAndTest": "Not repeated for this documentation-only update; prior finishing-run results remain historical.",
+  "mediaModelLaunches": 0,
+  "newDecodes": 0,
+  "gitDiffCheck": "PASS"
+}

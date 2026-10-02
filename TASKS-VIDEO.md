@@ -427,7 +427,8 @@ code changed, so full `make test`/`make build` were not repeated for this reset.
 | --- | --- | --- | --- |
 | VG2-23 | Inspect existing scene/action references and prepare initial scene-matched drink/read/watch and additional Tokyo scenery reference candidates in the user-requested asset folders. Keep the original scene/props/style, pin sources/results and disclose missing registration/motion capability. This row delivers static candidates, not animation-ready layers or artistic approval. | VG2-21 | DONE |
 | VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | REVIEW |
-| VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-24 | TODO |
+| VG2-28 | Retain human approval of the exact ComfyUI head/watch clip and full-frame 1080p finishing workflow as the reference for subsequent action tests. This splits the accepted checkpoint from VG2-24's remaining breathing and fixed-scene obligations; it does not approve those obligations or the full film. | VG2-23, VG2-02 | DONE |
+| VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-28 | TODO |
 | VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | TODO |
 | VG2-27 | Review the exact breath/head/watch, drink and read clips at normal speed and relevant in-betweens. Record identity/style, attachment, contact, prop continuity, cadence and return decisions for every required activity. Repair rejected actions before the full film; no test score or static candidate substitutes. | VG2-24, VG2-25, VG2-26 | WAITING_USER |
 
@@ -557,6 +558,22 @@ architecture focused checks pass (60 tests). Headless filtered `make test` and
 desktop tests; native-window test excluded). Production/test sources are unchanged;
 the later real ComfyUI graph and all-frame checks validate the new media path.
 Validation scope and report hashes are in the new run's `checks/validation.json`.
+
+VG2-28 acceptance (2026-10-02): the project user says “this is good, we should
+continue with the next step, how should we proceed?”, accepting the exact
+ComfyUI Full-HD head/watch movie above. Its SHA-256 was rechecked; the clip and
+workflow are pinned in
+`docs/pictures/video/evidence/VG2-24/accepted-head-watch-20261002T075334Z/checks/user-acceptance.json`.
+This completes the appearance/motion checkpoint and makes VG2-25 the next short
+action test: cup reach → lift → sip → table return, with the same ComfyUI finish.
+Start from an approved cup-on-table scene; the approved drinking still is an
+appearance reference, not proof that the single-image workflow consumes two images.
+Use one fresh bounded execution packet and review the hands, cup, face and return
+before VG2-26 reading. This documentation update launches no native job.
+VG2-24 remains REVIEW for independent breathing and fixed-scene integration;
+VG2-27 still depends on all required actions. The 60-second combination, varied
+180-second corridor and repeat join retain their existing gates. The accepted
+25fps clip does not change the planned 1080p30 delivery or prove cadence conversion.
 
 ### Route 1 — Standalone rig proof tasks
 

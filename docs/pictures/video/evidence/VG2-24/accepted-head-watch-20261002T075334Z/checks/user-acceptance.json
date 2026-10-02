@@ -1,0 +1,39 @@
+{
+  "task": "VG2-24",
+  "checkpoint": "VG2-28",
+  "reviewer": "project user",
+  "recordedAt": "2026-10-02T07:53:34.341876+00:00",
+  "quote": "this is good, we should continue with the next step, how should we proceed?",
+  "decision": "Accept the supplied ComfyUI head/watch preview and Full-HD finish as the reference for subsequent short action tests.",
+  "movie": {
+    "path": "docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/review/tabi-head-watch-comfy-1080p.mp4",
+    "sha256": "fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b",
+    "width": 1920,
+    "height": 1080,
+    "fps": 25,
+    "frames": 129,
+    "durationSeconds": 5.16
+  },
+  "workflow": {
+    "path": "docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/workflow/finish-full-frame-api.json",
+    "sha256": "c304343b1190027ad7a86ab156cf42df43a56eaa26a9dd39cdcf2f23a0781966"
+  },
+  "scope": "Artifact-specific human approval of the presented motion and appearance. Preserve the original source and saved full-frame ComfyUI finishing method.",
+  "remaining": [
+    "Independently readable gentle breathing",
+    "Stable cabin/props and independently moving Tokyo panorama",
+    "Drinking and reading action proofs and review",
+    "60-second combination, complete 180-second film and end-to-start join"
+  ],
+  "nextStep": {
+    "task": "VG2-25",
+    "scope": "One short ComfyUI cup reach, lift, sip and return test using approved scene artwork, followed by the proven Full-HD finish and review of hands, cup, face and table contact. Prepare a fresh bounded execution packet before launch.",
+    "status": "Planned; no generation or encode performed in this approval update."
+  },
+  "unchangedRequirements": [
+    "Full film remains 180 seconds at planned 1080p30; conversion from native 25fps requires separate cadence validation.",
+    "Media remain local; only checks and documentation are versioned.",
+    "VG2-24 remains REVIEW for its unproved requirements; VG2-27 and assembly dependencies remain open."
+  ],
+  "nativeLaunches": 0
+}

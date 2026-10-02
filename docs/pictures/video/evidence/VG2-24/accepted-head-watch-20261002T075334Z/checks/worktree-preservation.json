@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-10-02T07:56:06.479382+00:00",
+  "originalUnstagedChangesPreserved": true,
+  "originalNumstat": [
+    "16\t0\tAGENTS.md",
+    "6\t2\tPLAN-AUDIO.md",
+    "6\t2\tPLAN-VIDEO.md",
+    "8\t1\tREADME.md",
+    "16\t4\tTASKS-AUDIO.md",
+    "53\t13\tTASKS-VIDEO.md",
+    "6\t2\tdocs/ARCHITECTURE.md",
+    "9\t0\tdocs/TABI_VIDEO.md",
+    "60\t1\tdocs/VALIDATION.md"
+  ],
+  "selectedFilesOnly": true,
+  "scratchPath": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-accepted-head-watch-pyyxm21r",
+  "scratchRemoved": true,
+  "mediaCommitted": false,
+  "generationOrEncodeStarted": false
+}

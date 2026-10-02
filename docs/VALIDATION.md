@@ -190,6 +190,19 @@ native-window test excluded). No production/test source or wiring changed during
 the ComfyUI continuation; the final focused suite plus actual graph/media checks
 cover that update. Exact validation scope is retained in its `checks/validation.json`.
 
+**Human Full-HD head/watch acceptance (2026-10-02):** the project user says “this
+is good, we should continue with the next step, how should we proceed?” This
+accepts the exact `comfy-fullhd-20261002T071508Z/review/tabi-head-watch-comfy-1080p.mp4`
+with reverified SHA-256
+`fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b`.
+Receipt and workflow hash:
+`docs/pictures/video/evidence/VG2-24/accepted-head-watch-20261002T075334Z/checks/user-acceptance.json`.
+VG2-28 closes this artifact-specific motion/appearance checkpoint, enabling the
+next short drinking proof. It does not infer independent breathing, rigid
+scenery/props, other actions, 25-to-30fps cadence conversion or full-film/loop
+acceptance. VG2-24 remains REVIEW for its remaining requirements. No native
+process, new decode, generation or encode ran for this acceptance record.
+
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
 verifier checks 68 local file pins, including both exact reference MP4s and every

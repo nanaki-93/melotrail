@@ -183,6 +183,18 @@ retains the original generated scenery and prop drift, not the separate Sumida
 panorama or a completed rigid corridor. VG2-24 is REVIEW for the exact new movie;
 the three-minute film and seamless six-minute duplication remain unproved.
 
+On 2026-10-02 the user accepts this exact ComfyUI Full-HD preview: “this is good,
+we should continue with the next step, how should we proceed?” The rechecked movie
+and workflow hashes are retained in
+`pictures/video/evidence/VG2-24/accepted-head-watch-20261002T075334Z/checks/user-acceptance.json`.
+VG2-28 records the accepted head/watch and finishing checkpoint; VG2-25 drinking
+is next, followed by VG2-26 reading, using the same complete-frame ComfyUI finish.
+Prove reach/lift/sip/table return in a short test before extending duration.
+Independently readable breathing, fixed cabin/prop support, moving Tokyo joins
+and the full-film repeat remain open; VG2-24 and the combined-action review retain
+those obligations. The native-25fps short proof does not change the 1080p30 film
+target. No new generation or encode is included in this acceptance update.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the
