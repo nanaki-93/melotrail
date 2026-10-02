@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.midi.domain.SemanticMidiTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.471Z" hostname="Marcos-MacBook-Pro.local" time="0.0">
+  <properties/>
+  <testcase name="rational beat conversion is exact where possible and otherwise rounds nearest with ties up()" classname="app.melotrail.midi.domain.SemanticMidiTest" time="0.0"/>
+  <testcase name="event identity and value ranges reject unsafe semantic data()" classname="app.melotrail.midi.domain.SemanticMidiTest" time="0.0"/>
+  <testcase name="semantic sequence applies the documented stable ordering and protects caller collections()" classname="app.melotrail.midi.domain.SemanticMidiTest" time="0.0"/>
+  <testcase name="generated ordering keys are stable after semantic priority and source keys()" classname="app.melotrail.midi.domain.SemanticMidiTest" time="0.0"/>
+  <testcase name="sequence retains all supported semantic event categories()" classname="app.melotrail.midi.domain.SemanticMidiTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

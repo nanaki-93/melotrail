@@ -1,0 +1,20 @@
+{
+  "status": "PREPARED",
+  "files": [
+    {
+      "path": "TASKS-VIDEO.md",
+      "taskAddedLines": 44,
+      "originalWorktreeDiffPreserved": true
+    },
+    {
+      "path": "docs/TABI_VIDEO.md",
+      "taskAddedLines": 37,
+      "originalWorktreeDiffPreserved": true
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "taskAddedLines": 35,
+      "originalWorktreeDiffPreserved": true
+    }
+  ]
+}

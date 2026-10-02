@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreInvalidationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.433Z" hostname="Marcos-MacBook-Pro.local" time="0.006">
+  <properties/>
+  <testcase name="role-prefixed settings invalidate only that role()" classname="app.melotrail.arrangement.core.MidiCoreInvalidationTest" time="0.001"/>
+  <testcase name="unchanged authority has no impact and scoped changes explain their dimensions()" classname="app.melotrail.arrangement.core.MidiCoreInvalidationTest" time="0.001"/>
+  <testcase name="async generation completion is admitted only for the exact authority and inputs()" classname="app.melotrail.arrangement.core.MidiCoreInvalidationTest" time="0.003"/>
+  <testcase name="chorus-only harmony edit targets chorus and its accepted dependents()" classname="app.melotrail.arrangement.core.MidiCoreInvalidationTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

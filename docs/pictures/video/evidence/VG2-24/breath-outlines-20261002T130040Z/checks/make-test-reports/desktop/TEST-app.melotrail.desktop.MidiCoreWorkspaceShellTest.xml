@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreWorkspaceShellTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:05:22.986Z" hostname="Marcos-MacBook-Pro.local" time="0.32">
+  <properties/>
+  <testcase name="player controls use the workspace compact rectangular shape and occurrence target uses its real section name()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.0"/>
+  <testcase name="target navigation has exactly six accessible destinations and no legacy labels()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.027"/>
+  <testcase name="page scroll and navigation selection are preserved by project destination and reset on project switch()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.052"/>
+  <testcase name="wide target shell meets measured top-band rail and contextual-inspector bounds()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.047"/>
+  <testcase name="collapsed player remains outside page scrolling in short compact and wide windows()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.052"/>
+  <testcase name="collapsed player keeps transport and position visible within the compact height and discloses target controls()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.027"/>
+  <testcase name="repair comparison player names the alternative with melody and exposes both roles()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.022"/>
+  <testcase name="compact layout keeps all target navigation reachable without old routes()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.029"/>
+  <testcase name="destination controls preserve keyboard focus and activation semantics()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.024"/>
+  <testcase name="wide layout uses a rail and compact layout uses a horizontally traversable row()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.012"/>
+  <testcase name="target shell source contains no superseded navigation owner or route()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.003"/>
+  <testcase name="compact target shell uses a 56 dp top band and context disclosure()" classname="app.melotrail.desktop.MidiCoreWorkspaceShellTest" time="0.022"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

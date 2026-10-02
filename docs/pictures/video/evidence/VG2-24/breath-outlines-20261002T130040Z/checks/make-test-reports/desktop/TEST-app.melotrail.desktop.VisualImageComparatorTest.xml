@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.VisualImageComparatorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:05:23.365Z" hostname="Marcos-MacBook-Pro.local" time="0.559">
+  <properties/>
+  <testcase name="single pixels alpha and dimension changes cannot hide in any font allowance()" classname="app.melotrail.desktop.VisualImageComparatorTest" time="0.017"/>
+  <testcase name="missing baseline fails without creating an expected image()" classname="app.melotrail.desktop.VisualImageComparatorTest" time="0.001"/>
+  <testcase name="comparator rejects shifted real panels wrong primary fill pill corners and removed real lanes()" classname="app.melotrail.desktop.VisualImageComparatorTest" time="0.541"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

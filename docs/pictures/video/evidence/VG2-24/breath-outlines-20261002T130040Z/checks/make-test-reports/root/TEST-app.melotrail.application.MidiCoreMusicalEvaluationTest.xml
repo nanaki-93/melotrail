@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreMusicalEvaluationTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:19.342Z" hostname="Marcos-MacBook-Pro.local" time="4.724">
+  <properties/>
+  <testcase name="synthetic partial tuned unowned and duplicated cases cannot become final evidence()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.305"/>
+  <testcase name="source changes after freeze do not retarget immutable evaluation inputs()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.412"/>
+  <testcase name="generation failure is retained with the complete set and never converted to a rest or omitted()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.402"/>
+  <testcase name="accepted baseline is copied exactly and source candidates acceptances and exports are preserved()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="1.071"/>
+  <testcase name="settings hash changes with seed and instrument mapping while source identity stays fixed()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.376"/>
+  <testcase name="unsupported project schema and altered original MIDI reject freeze without rewriting artifacts()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.129"/>
+  <testcase name="empty supplied set reports all five songs and three unseen missing through the real command()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.231"/>
+  <testcase name="final census counts supplied unseen declarations separately from seen and development()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.073"/>
+  <testcase name="real command freezes before generation and reproduces packages without changing supplied work()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.719"/>
+  <testcase name="symlink frozen artifacts output aliases and destinations inside projects are rejected()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.363"/>
+  <testcase name="changed source manifest runtime and settings are rejected without touching previous outputs()" classname="app.melotrail.application.MidiCoreMusicalEvaluationTest" time="0.641"/>
+  <system-out><![CDATA[Evaluation rejected: The same melody cannot count as multiple final songs or appear in both development and final sets
+Frozen set SHA-256: 193d474d7e0e9ca7ff7f98b14525b634f3d704d0f13021f8e46462e667f5a55c. Retain this hash for export; review.md records missing songs. No generation or listening has occurred.
+Evaluation rejected: Listening loops exceed the confirmed arrangement
+Prepared 1/2 cases. Missing final songs: 5/5; missing unseen songs: 3/3. Listening: UNSCORED. See review.md and evaluation.json.
+Evaluation rejected: Baseline generation seed/style differs from the requested evaluation settings; preserve the original seed/style or omit this mismatched baseline
+Evaluation rejected: The supplied baseline snapshot is missing
+Evaluation rejected: Baseline must cover every active scope; an export with deselected roles is not a full comparison
+Evaluation rejected: Unsupported MIDI Core project version '0'
+Evaluation rejected: Artifact digest does not match: source/original.mid
+Frozen set SHA-256: 352a3d95a65b50694dc3b9d5215206b17a2e55c2f845581053267e46d553c4f4. Retain this hash for export; review.md records missing songs. No generation or listening has occurred.
+Prepared 0/0 cases. Missing final songs: 5/5; missing unseen songs: 3/3. Listening: UNSCORED. See review.md and evaluation.json.
+Q01 empty-set preparation (no final songs supplied): /Users/marcoandreose/DEV/lab/melotrail/build/q01-evaluation/preparation-6278101249209294090/packages
+Frozen set SHA-256: a6c89634eeaf216fd7efd7b190f3371cc0ad2f241bd6a362e1a2a2484a2748a8. Retain this hash for export; review.md records missing songs. No generation or listening has occurred.
+Frozen set SHA-256: a6c89634eeaf216fd7efd7b190f3371cc0ad2f241bd6a362e1a2a2484a2748a8. Retain this hash for export; review.md records missing songs. No generation or listening has occurred.
+Prepared 1/1 cases. Missing final songs: 5/5; missing unseen songs: 3/3. Listening: UNSCORED. See review.md and evaluation.json.
+Prepared 1/1 cases. Missing final songs: 5/5; missing unseen songs: 3/3. Listening: UNSCORED. See review.md and evaluation.json.
+Evaluation rejected: Evaluation output must be outside every supplied project or frozen set
+Evaluation rejected: Evaluation inputs cannot use symlinks: development/repeated-chorus-bridge/input/source/original.mid
+Evaluation rejected: Evaluation output must be outside every supplied project or frozen set
+Evaluation rejected: Evaluation destination already exists; choose a new directory
+Evaluation rejected: Frozen case repeated-chorus-bridge has a changed file: input/source/original.mid
+Evaluation rejected: Frozen set digest differs; preserve this set and use the original freeze hash
+Evaluation rejected: Frozen source/settings/baseline identity is inconsistent
+Evaluation rejected: Engine/runtime versions differ from the frozen set; freeze a new evaluation and retain prior results
+Prepared 1/1 cases. Missing final songs: 5/5; missing unseen songs: 3/3. Listening: UNSCORED. See review.md and evaluation.json.
+Evaluation rejected: Evaluation destination already exists; choose a new directory
+Evaluation rejected: Evaluation destination already exists; choose a new directory
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

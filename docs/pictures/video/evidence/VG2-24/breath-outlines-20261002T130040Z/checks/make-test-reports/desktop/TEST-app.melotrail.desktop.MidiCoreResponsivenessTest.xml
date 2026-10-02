@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreResponsivenessTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:55.226Z" hostname="Marcos-MacBook-Pro.local" time="10.935">
+  <properties/>
+  <testcase name="record twenty cold warm full song and cancellation samples through the workspace()" classname="app.melotrail.desktop.MidiCoreResponsivenessTest" time="10.643"/>
+  <testcase name="three four and six eight prepare and generate through normal dispatchers()" classname="app.melotrail.desktop.MidiCoreResponsivenessTest" time="0.276"/>
+  <testcase name="rapid previews cancel the old worker and publish only the latest single session()" classname="app.melotrail.desktop.MidiCoreResponsivenessTest" time="0.016"/>
+  <testcase name="nearest rank p95 retains the slow tail and rejects invalid measurements()" classname="app.melotrail.desktop.MidiCoreResponsivenessTest" time="0.0"/>
+  <testcase name="evidence finds the repository with split planning documents()" classname="app.melotrail.desktop.MidiCoreResponsivenessTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

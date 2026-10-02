@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.482Z" hostname="Marcos-MacBook-Pro.local" time="0.022">
+  <properties/>
+  <testcase name="partial project write preserves the last known-good document and recovery evidence()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.001"/>
+  <testcase name="target tree publishes verifies saves and reopens every artifact kind()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.006"/>
+  <testcase name="missing referenced artifact prevents project replacement()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.0"/>
+  <testcase name="immutable republish is idempotent but a different-content collision preserves the first bytes()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.002"/>
+  <testcase name="traversal and symlink parents cannot escape the project root()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.001"/>
+  <testcase name="missing and digest-mismatched artifacts are rejected()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.001"/>
+  <testcase name="versioned arrangement plan reopens without changing protected artifacts()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.007"/>
+  <testcase name="reopen verifies referenced digests before returning state()" classname="app.melotrail.project.adapter.MidiCoreArtifactStoreTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

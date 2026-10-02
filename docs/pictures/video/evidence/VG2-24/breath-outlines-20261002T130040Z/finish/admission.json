@@ -1,0 +1,117 @@
+{
+  "task": "VG2-24",
+  "createdAt": "2026-10-02T13:29:42.100260+00:00",
+  "sourceHead": "d6be842436df7aa10556a6395219c63c8f9fa4e2",
+  "authorization": {
+    "quote": "Run the shorter breathing take",
+    "interpretation": "One full-frame ComfyUI RealESRGAN 1080p finish of the newly generated 97-frame/3.88s take, within the approved 35-minute/2-GiB combined scope."
+  },
+  "native": {
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "wholeRunnerLimitSeconds": 600,
+    "observedProcessTreeRssLimitBytes": 34359738368,
+    "ownedEvidenceAndSessionLimitBytes": 536870912,
+    "minimumFreeDiskBytes": 21474836480,
+    "videoEncodes": 1,
+    "postExportVerificationTraversals": 2
+  },
+  "workflow": {
+    "source": "New 768x448 breathing candidate, 97 frames/25fps, 3.88s",
+    "upscaler": "Installed RealESRGAN x2plus",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "resize": "Complete-frame Lanczos with crop disabled, same slight aspect adjustment as accepted preview",
+    "encoding": "ComfyUI SaveVideo H264 CRF16 sRGB silent",
+    "disclosure": "Enhanced motion, not native-1080 synthesis. Original generated camera/scenery/prop movement retained; no masks or external compositing."
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/request.json",
+      "bytes": 790,
+      "sha256": "d4adb65271893b6d416d533112179d84e34da3835f3178c29ae04654d824bef3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/scripts/ComfyFinish.java",
+      "bytes": 6705,
+      "sha256": "01a3fc9a4482027e035d9942b51022f0660452a9bc405fdcba9be02fa9ac9d6f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/scripts/MediaStage.java",
+      "bytes": 1475,
+      "sha256": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/scripts/check-frame-continuity.cjs",
+      "bytes": 3539,
+      "sha256": "f30b279aa8a9fc9fb61e782c1ad5f8d661e00a29cfc2e7d9436970efd6e6849c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/scripts/run.py",
+      "bytes": 7118,
+      "sha256": "eac13c049853348f3794406890d7aec7a8520993b4cf567aeedc397a3088951a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/scripts/verify-media.py",
+      "bytes": 3710,
+      "sha256": "5355683706be426b81736b62bc330db4e10fbe82845e53cd779d617140fcb67c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/workflow/finish-full-frame-api.json",
+      "bytes": 801,
+      "sha256": "c304343b1190027ad7a86ab156cf42df43a56eaa26a9dd39cdcf2f23a0781966"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/review/tabi-breath-native.mp4",
+      "bytes": 938699,
+      "sha256": "282ad13fb9b983a68f2adbe0a88b38ed7521e6b84a9a52d372e4ed00b7439bd1"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ActionPilot.class",
+      "bytes": 19680,
+      "sha256": "8fb3508e8810ca694ab2959bfbf4faeb89d5f7d5530816877f7f81d0aaff3c87"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/BreathRepairPilot.class",
+      "bytes": 19703,
+      "sha256": "d2749ac89edb0b605285a1cfc143d396b04993cc3f118adafc142d8bd8e4d2b6"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/CheckBreathRequest.class",
+      "bytes": 1681,
+      "sha256": "0682457f6ac9aedb172dadb73e1ea8e5748aeaaf89c206d0aeacc7c2e3001729"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ComfyFinish.class",
+      "bytes": 13414,
+      "sha256": "a997864d9e23850634c14f5799c8a5cd949147b05e896da24b72e0455fb65e19"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/MotionTools.class",
+      "bytes": 5225,
+      "sha256": "b5f5bf388b6095d2750f47e9d008a993a6f01ac266bac5ca03177b09dc8a9df0"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/NarrowBreathAdmission.class",
+      "bytes": 4882,
+      "sha256": "6e9d9b284f7711235d59c445e9359e4a3ae8c419aef17b2e9a04883d92176863"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/upscale_models/RealESRGAN_x2plus.pth",
+      "bytes": 67061725,
+      "sha256": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb"
+    }
+  ]
+}

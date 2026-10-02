@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreCandidateLifecycleTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:02.089Z" hostname="Marcos-MacBook-Pro.local" time="0.066">
+  <properties/>
+  <testcase name="rejects stale authority and marks dependent candidates without deleting evidence()" classname="app.melotrail.application.MidiCoreCandidateLifecycleTest" time="0.008"/>
+  <testcase name="candidate publication rejects malformed or non-chords boundary metadata()" classname="app.melotrail.application.MidiCoreCandidateLifecycleTest" time="0.004"/>
+  <testcase name="publishes immutable candidates and enforces review state transitions()" classname="app.melotrail.application.MidiCoreCandidateLifecycleTest" time="0.027"/>
+  <testcase name="captures accepted candidate digests and reports old snapshot stale after authority change()" classname="app.melotrail.application.MidiCoreCandidateLifecycleTest" time="0.026"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

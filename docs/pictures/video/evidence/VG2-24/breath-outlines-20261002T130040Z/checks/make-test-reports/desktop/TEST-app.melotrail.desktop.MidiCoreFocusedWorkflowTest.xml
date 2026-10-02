@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:30.328Z" hostname="Marcos-MacBook-Pro.local" time="6.823">
+  <properties/>
+  <testcase name="compact whole-song rest inventory and immutable handoff use real services()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="0.486"/>
+  <testcase name="real mixed draft Use Undo and reuse are atomic and preserve Review selection loop()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="0.088"/>
+  <testcase name="reference-wide whole-song rest inventory and immutable handoff use real services()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="0.387"/>
+  <testcase name="reference-wide six target pages complete a real MIDI Core workflow and reopen an immutable export()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="1.98"/>
+  <testcase name="compact six target pages complete a real MIDI Core workflow and reopen an immutable export()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="1.302"/>
+  <testcase name="wide six target pages complete a real MIDI Core workflow and reopen an immutable export()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="1.581"/>
+  <testcase name="wide whole-song rest inventory and immutable handoff use real services()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="0.398"/>
+  <testcase name="ready authority reaches an audible full draft in three Arrange actions()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="0.063"/>
+  <testcase name="real musical repair covers neighboring scopes and atomically accepts matching dependencies()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="0.494"/>
+  <testcase name="real rejected tempo map reaches scoped MIDI findings without binding source artifacts()" classname="app.melotrail.desktop.MidiCoreFocusedWorkflowTest" time="0.044"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

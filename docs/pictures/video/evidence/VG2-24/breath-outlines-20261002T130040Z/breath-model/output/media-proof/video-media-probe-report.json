@@ -1,0 +1,121 @@
+{
+    "schema": "melotrail-video-media-probe-report",
+    "version": 1,
+    "status": "PASSED",
+    "distributionId": "ffmpeg-9.0.1-macos-arm64-melotrail-1",
+    "installation": "separately-installed-local-tools",
+    "sourceUrl": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa",
+    "sourceRevision": "bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa",
+    "sourceSha256": "fb1931fd4eb29297ee1c1017a24f800c4d8fbea35b4f2aaeb28308a48a9149b4",
+    "ffmpegSha256": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+    "ffprobeSha256": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264",
+    "buildOptions": [
+        "--prefix=/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1",
+        "--disable-everything",
+        "--disable-autodetect",
+        "--disable-network",
+        "--disable-gpl",
+        "--disable-nonfree",
+        "--disable-version3",
+        "--disable-doc",
+        "--disable-debug",
+        "--disable-shared",
+        "--enable-static",
+        "--disable-avdevice",
+        "--disable-ffplay",
+        "--enable-ffmpeg",
+        "--enable-ffprobe",
+        "--enable-protocol=file,pipe",
+        "--enable-demuxer=mov,image2",
+        "--enable-muxer=mp4,image2,null",
+        "--enable-decoder=h264,png,mjpeg,rawvideo",
+        "--enable-encoder=h264_videotoolbox,png,rawvideo",
+        "--enable-parser=h264,png",
+        "--enable-filter=scale,format,fps,trim,setpts,select,testsrc2,color,null",
+        "--enable-videotoolbox",
+        "--enable-zlib"
+    ],
+    "notices": [
+        "FFmpeg: LGPL-2.1-or-later; ../notices/COPYING.LGPLv2.1 and ../notices/LICENSE.md; exact source archive preserved with build receipt.",
+        "Apple system zlib and VideoToolbox frameworks are dynamically linked system dependencies; no additional third-party dylibs bundled.",
+        "Separately installed local tools; no FFmpeg binary distributed with Melotrail. Future binary distribution requires matching source and notices."
+    ],
+    "input": {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/output/publication/generated/vg2-24-breath-shorter/attempt-654c1f94-299f-4dab-ae5a-4075fc7785b4/c921386a-d17f-3b3a-9928-74b678a6d9e2-vg2-24-breath-shorter_00001_.mp4",
+        "sha256": "282ad13fb9b983a68f2adbe0a88b38ed7521e6b84a9a52d372e4ed00b7439bd1",
+        "videoCodec": "h264",
+        "width": 768,
+        "height": 448,
+        "durationSeconds": 3.88,
+        "frameRate": 25.0,
+        "decodedFrameCount": 97,
+        "audioStreamCount": 0
+    },
+    "firstFrame": {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/output/media-proof/first-frame/first-frame.png",
+        "sha256": "ab606e1a2e7b505b402a1699ba46f6ee06d90f90f846a5aefef3025836b61f93"
+    },
+    "seekFrame": {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/output/media-proof/seek-frame/seek-frame.png",
+        "sha256": "1bbdb5187210946115707afaa5361bf832ea1a0cbe77e23ee6b6d97100c44ebc",
+        "seekSeconds": 1.0
+    },
+    "encodedVideo": {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/output/media-proof/silent-h264-encode/encoded-silent.mp4",
+        "sha256": "b9bbe390cc107c10ffdc02ec9f496650bece679ff63158ca694df918639e051c",
+        "videoCodec": "h264",
+        "width": 768,
+        "height": 448,
+        "durationSeconds": 3.88,
+        "frameRate": 25.0,
+        "decodedFrameCount": 97,
+        "audioStreamCount": 0
+    },
+    "operations": [
+        {
+            "name": "ffmpeg-version",
+            "exitCode": 0,
+            "elapsedMillis": 12
+        },
+        {
+            "name": "ffprobe-version",
+            "exitCode": 0,
+            "elapsedMillis": 12
+        },
+        {
+            "name": "input-metadata",
+            "exitCode": 0,
+            "elapsedMillis": 88
+        },
+        {
+            "name": "input-decode",
+            "exitCode": 0,
+            "elapsedMillis": 37
+        },
+        {
+            "name": "first-frame",
+            "exitCode": 0,
+            "elapsedMillis": 70
+        },
+        {
+            "name": "seek-frame",
+            "exitCode": 0,
+            "elapsedMillis": 72
+        },
+        {
+            "name": "silent-h264-encode",
+            "exitCode": 0,
+            "elapsedMillis": 225
+        },
+        {
+            "name": "encoded-metadata",
+            "exitCode": 0,
+            "elapsedMillis": 100
+        },
+        {
+            "name": "encoded-decode",
+            "exitCode": 0,
+            "elapsedMillis": 37
+        }
+    ]
+}

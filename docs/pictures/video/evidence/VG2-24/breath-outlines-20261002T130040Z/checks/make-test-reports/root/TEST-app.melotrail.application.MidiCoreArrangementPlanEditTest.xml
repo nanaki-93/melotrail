@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreArrangementPlanEditTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:01.323Z" hostname="Marcos-MacBook-Pro.local" time="0.316">
+  <properties/>
+  <testcase name="repair intents have bounded versioned plan settings()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.017"/>
+  <testcase name="structure replacement waits for plan confirmation and rejects its stale session()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.175"/>
+  <testcase name="repair preview identifies locked affected work without mutating accepted source or candidate bytes()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.022"/>
+  <testcase name="confirmed plan edit serializes concurrent acceptance and snapshot writes instead of losing them()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.025"/>
+  <testcase name="confirmed purpose and phrase edits preserve protected source bytes()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.014"/>
+  <testcase name="a shared occurrence-plan input invalidates that occurrence and its bounded neighbors for every role()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.01"/>
+  <testcase name="a no-op confirmed plan edit has stable hashes and does not write a new revision()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.012"/>
+  <testcase name="a confirmed plan edit previews and invalidates only affected locked work without rewriting evidence()" classname="app.melotrail.application.MidiCoreArrangementPlanEditTest" time="0.039"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

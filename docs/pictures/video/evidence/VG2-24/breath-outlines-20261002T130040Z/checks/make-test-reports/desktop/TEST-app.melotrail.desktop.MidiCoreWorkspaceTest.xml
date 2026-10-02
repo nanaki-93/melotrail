@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreWorkspaceTest" tests="29" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:05:23.306Z" hostname="Marcos-MacBook-Pro.local" time="0.059">
+  <properties/>
+  <testcase name="busy generation can be cancelled without replacing the last known good state()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.003"/>
+  <testcase name="thrown generation after confirmation retains saved plan and retries only the draft()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.003"/>
+  <testcase name="rejected import keeps scoped validation in the workspace without changing the project()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="reviewed plan confirms and starts the full draft in the third Arrange action()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.003"/>
+  <testcase name="song-map selection preserves the selected section and loops its authoritative range in the shared player()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="confirmed purpose and phrase edits require an impact preview before the workspace saves them()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.004"/>
+  <testcase name="Review audition prepares candidate and accepted arrangement scopes without project mutation()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.002"/>
+  <testcase name="project close and authority changes stop and clear the active MIDI target()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="real position observation updates only while playing and stops after pause()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.002"/>
+  <testcase name="missing last project explains recovery without manufacturing a project location()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.0"/>
+  <testcase name="musical repair preview is write-free and apply keeps candidate acceptance explicit()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.006"/>
+  <testcase name="stale completion is rejected when the admitted project revision changes()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="atomic export cannot be cancelled and its actual result reaches the workspace()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="complete draft intent preserves retry identity after a scoped incomplete result()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="export collision preserves the current project and offers the same safe retry()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="position observer stops after a device loss reported during playback()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="whole-draft use routes a locked scope to its Review section and role()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.002"/>
+  <testcase name="failed operation retries the same intent and restart rehydrates persisted target state()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="arrangement extent intent is routed through the workspace use case()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="locked musical repair is blocked before its plan can be written()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.003"/>
+  <testcase name="intent routing exposes target blockers and keeps authority draft unsaved()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.002"/>
+  <testcase name="rejected replacement attempt does not obscure the accepted source()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="rapid style previews are latest-wins and a device failure retains the selected style()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.004"/>
+  <testcase name="authority draft requires explicit discard before closing project()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.002"/>
+  <testcase name="source audition is asynchronous and preserves project state on device failure()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="occurrence audition prepares a separate MIDI occurrence scope()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="cancel at draft preparation or playback boundary stops playback and keeps confirmed plan()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.004"/>
+  <testcase name="position observer remains single through section navigation and is disposed when the project closes()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.001"/>
+  <testcase name="arrangement-plan proposal stays session-only until one explicit confirmation and clears on cancel and close()" classname="app.melotrail.desktop.MidiCoreWorkspaceTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

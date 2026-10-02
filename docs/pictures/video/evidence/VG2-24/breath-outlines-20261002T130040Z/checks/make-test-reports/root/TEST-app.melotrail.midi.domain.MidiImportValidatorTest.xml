@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.midi.domain.MidiImportValidatorTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.465Z" hostname="Marcos-MacBook-Pro.local" time="0.004">
+  <properties/>
+  <testcase name="classifies accepted awaiting-authority and rejected imports with stable findings()" classname="app.melotrail.midi.domain.MidiImportValidatorTest" time="0.002"/>
+  <testcase name="keeps polyphony and chromatic melody as advisories()" classname="app.melotrail.midi.domain.MidiImportValidatorTest" time="0.0"/>
+  <testcase name="blocks malformed timing and unsafe note pairing on every source track()" classname="app.melotrail.midi.domain.MidiImportValidatorTest" time="0.0"/>
+  <testcase name="infers the sole melody channel and blocks its unclosed notes()" classname="app.melotrail.midi.domain.MidiImportValidatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

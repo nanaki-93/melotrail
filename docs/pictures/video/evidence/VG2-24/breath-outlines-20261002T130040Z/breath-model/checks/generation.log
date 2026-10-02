@@ -1,0 +1,17 @@
+SESSION=/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-ea63d729-d1b9-48f7-ae3d-9134ec2469ba
+SUBMITTED=attempt-654c1f94-299f-4dab-ae5a-4075fc7785b4
+OBSERVATION=15 state=ACTIVE
+OBSERVATION=30 state=ACTIVE
+OBSERVATION=45 state=ACTIVE
+OBSERVATION=60 state=ACTIVE
+OBSERVATION=75 state=ACTIVE
+OBSERVATION=90 state=ACTIVE
+ACTION_PILOT_PASSED video=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/output/publication/generated/vg2-24-breath-shorter/attempt-654c1f94-299f-4dab-ae5a-4075fc7785b4/c921386a-d17f-3b3a-9928-74b678a6d9e2-vg2-24-breath-shorter_00001_.mp4 sha256=282ad13fb9b983a68f2adbe0a88b38ed7521e6b84a9a52d372e4ed00b7439bd1
+MEDIA_FACTS=VideoMediaMetadata(videoCodec=h264, width=768, height=448, durationSeconds=3.88, frameRate=25.0, decodedFrameCount=97, audioStreamCount=0)
+MEDIA_REPORT=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/output/media-proof/video-media-probe-report.json
+RUNTIME_FINAL=STOPPED
+ELAPSED_MILLIS=238864
+REQUEST_UNCHANGED=true
+IMAGE_UNCHANGED=true
+GRAPH_UNCHANGED=true
+GUIDE_UNCHANGED=true

@@ -1,0 +1,21 @@
+{
+  "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery",
+  "backing": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/fixed-cabin-cup-free-v2-1080p.png",
+  "backingSha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "batches": [
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-3.png",
+      "sourceSha256": "95abd7c403afaebd76952aa3fdc80f0c7993d47bf838e1b26138e2da17c5f468",
+      "graph": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/workflow/last-batch.json",
+      "graphSha256": "bf4d80b56be4c26aa34215ccdeb916da8c6b4160d5d088af152b2a3b57f8ed0a",
+      "firstFrame": 97,
+      "frames": 33,
+      "promptId": "c7458401-21ce-4cf4-909c-3dbfcbccca6c",
+      "clientId": "3f7f6a5c-3c1b-4ae5-9140-05b3fccfeaaa",
+      "attemptId": "fb2ac2e9-97f3-4887-ac07-e1d7edc7ec0a",
+      "ownershipToken": "6bb5125f-fc2f-438c-974c-5a9cccb2c250",
+      "fingerprint": "b57402bdbbceab4fc9113328b7c8e260ab7d2664aa8e3e907c38c062acff6310"
+    }
+  ]
+}

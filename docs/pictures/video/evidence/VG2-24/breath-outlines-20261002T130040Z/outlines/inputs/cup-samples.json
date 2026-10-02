@@ -1,0 +1,20 @@
+[
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/inputs/neutral-cup.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/neutral-cup",
+    "allInstances": true,
+    "seeds": []
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/inputs/drink-start-cup.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/drink-start-cup",
+    "allInstances": true,
+    "seeds": []
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/inputs/drink-end-cup.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/drink-end-cup",
+    "allInstances": true,
+    "seeds": []
+  }
+]

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoJobCoordinatorTest" tests="31" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:54:12.805Z" hostname="Marcos-MacBook-Pro.local" time="2.114">
+  <properties/>
+  <testcase name="cancellation after durable admission but before launch prevents initial and retry backend invocation()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.192"/>
+  <testcase name="a pre-acknowledgement cancellation response cannot release newly acknowledged work()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.056"/>
+  <testcase name="recovery closing an unclaimed admission fences a suspended launch caller()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.034"/>
+  <testcase name="newline prompt cannot impersonate an additional durable dependency pin()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.05"/>
+  <testcase name="hosted reservation is atomic across store instances and unknown submission retains maximum cost()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.031"/>
+  <testcase name="rejected submission atomically records no-start and releases its hosted reservation for explicit retry()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.041"/>
+  <testcase name="late completion is retained on its attempt and cannot replace the newer output()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.066"/>
+  <testcase name="ancestor rebinding fails even when the original admission directory is moved back beneath it()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.051"/>
+  <testcase name="new MIDI markers and protected root rebinding block existing job stores before control writes()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.049"/>
+  <testcase name="retry is explicit bounded and starts only after conclusive no-work reconciliation()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.067"/>
+  <testcase name="setup capability is declarative and unavailable models prevent durable admission()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.006"/>
+  <testcase name="invalid completed output paths preserve active attempt and previous successful output()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.088"/>
+  <testcase name="durable intent precedes submit and restart reconciles the same owned attempt without resubmission()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.028"/>
+  <testcase name="controlled media policy is immutable fingerprinted and required on reopen()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.314"/>
+  <testcase name="unknown observation during pending submission keeps local slot until late acknowledgement is owned and stopped()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.039"/>
+  <testcase name="late submit responses preserve acknowledged running and stopped work()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.227"/>
+  <testcase name="controlled requests are durably deduplicated by fingerprint and backend capability()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.123"/>
+  <testcase name="moving scenery cannot start the first invocation mid trajectory without a continuation receipt()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.001"/>
+  <testcase name="executable descriptor round trips and rejects changed bindings unsafe numbers and unsupported ledger()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.036"/>
+  <testcase name="invalid immediate completion preserves durable submission ownership and blocks another local launch()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.042"/>
+  <testcase name="ComfyUI workflow bindings and owned pins survive uncertain submission for restart reconciliation()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.022"/>
+  <testcase name="crashes after admission and after launch claim recover without automatic resubmission()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.173"/>
+  <testcase name="durable pose sequence descriptors reject missing return unsafe timing rejection and combined subject controls()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.001"/>
+  <testcase name="confirmed stop without acknowledgement retains ambiguous hosted reservation until no-start tombstone()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.052"/>
+  <testcase name="launch claim winning before invocation retains admission through cancellation and unknown recovery()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.098"/>
+  <testcase name="controlled steam binding requires the resolved anchor in the output canvas space()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.001"/>
+  <testcase name="root rebind at atomic publication preserves original ledger and staged recovery without writing rebound location()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.063"/>
+  <testcase name="deduplication never returns another project's job and conflicting IDs never reach backend()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.026"/>
+  <testcase name="identical controlled scenes from different projects receive distinct durable attempts()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.053"/>
+  <testcase name="replaced admission root cannot create controls or admit another local job()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.047"/>
+  <testcase name="stale running observation cannot regress a newer confirmed cancellation()" classname="app.melotrail.video.VideoJobCoordinatorTest" time="0.034"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

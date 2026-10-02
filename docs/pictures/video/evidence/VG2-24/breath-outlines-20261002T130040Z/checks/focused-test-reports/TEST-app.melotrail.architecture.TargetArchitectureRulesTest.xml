@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.architecture.TargetArchitectureRulesTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:51:50.140Z" hostname="Marcos-MacBook-Pro.local" time="0.135">
+  <properties/>
+  <testcase name="target source tree obeys the MIDI Core dependency policy()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.053"/>
+  <testcase name="MIDI export and video launcher do not dispatch to a Swift soundtrack application()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.011"/>
+  <testcase name="domain desktop and MIDI adapter violations are rejected()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.002"/>
+  <testcase name="video project boundaries reject domain IO and cross-workspace dependencies()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.0"/>
+  <testcase name="MIDI application has no audio production or worker runtime()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.031"/>
+  <testcase name="legacy data payloads and their application consumers remain removed()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.018"/>
+  <testcase name="MIDI Core entrypoints do not depend on rejected application workflows()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.009"/>
+  <testcase name="ImageIO is confined to the video image filesystem adapter()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.0"/>
+  <testcase name="only MIDI Core musical generation and no model adapters remain()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.008"/>
+  <testcase name="exclusive Qwen and schema V4 fixtures are removed with their owners()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

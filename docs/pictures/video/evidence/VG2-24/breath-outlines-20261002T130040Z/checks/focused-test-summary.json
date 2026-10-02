@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "totals": {
+    "tests": 81,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "app.melotrail.architecture.TargetArchitectureRulesTest",
+      "sha256": "ee1f9a22ce5249dffb5d4b2f35cd808c24664f0d9274df3851f86e32ed8e2970",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.documentation.DocumentationIntegrityTest",
+      "sha256": "8e4f477de5733125748a19e0d0c50ab5bb661bad51b711ebd223aa39373e804e",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.ComfyVideoClientTest",
+      "sha256": "8741c75d72ed591fd27d55fa488eb8fac9c37bd7164644eb5e10380b85554c44",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.ComfyVideoRuntimeTest",
+      "sha256": "847a8fe3ed5128aba045f9ae4b73c43ac105afe3a25a0faf86b105d162b9ebbe",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.LocalVideoBackendTest",
+      "sha256": "651ad709a4f899c68621f25656f2f711c6eaaa4a50d28b44fee21f787747e0ff",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "excludedNativeWindowTest": "**/MidiCoreNativeResponsivenessTest*"
+}

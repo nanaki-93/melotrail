@@ -1,0 +1,60 @@
+{
+  "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof",
+  "backing": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/fixed-cabin-cup-free-v2-1080p.png",
+  "backingSha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "batches": [
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-0.png",
+      "sourceSha256": "3f2f6a86c7d9f03fe7e3fc8440b8a524e3c9bf54cb417b8c4afd098020e99029",
+      "graph": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-0.json",
+      "graphSha256": "a700f839a3d554afbca0a7b38c3b8e6e67057a6b0b556c55466b750cc829b1d4",
+      "firstFrame": 1,
+      "frames": 32,
+      "promptId": "22380368-2402-4f2a-acb2-d34fe6ea948d",
+      "clientId": "56862c38-f732-4306-8753-7795ea637a59",
+      "attemptId": "f368068c-0569-41d6-9d92-203bd370bc65",
+      "ownershipToken": "053f44dd-9c4f-4e6a-ab66-e01f0f1341ac",
+      "fingerprint": "03986ef3e566b9fb16ae371906905787f05585f092ddaf30e3178d02ac083ca0"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-1.png",
+      "sourceSha256": "971ea2310c9a6b4d6035b0fe958e89bc9d9f612e612ec48792eff262f121de9d",
+      "graph": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-1.json",
+      "graphSha256": "4ee9fa7abd534d1acd6378b83199ec062b2d5f676628bb7f92960482a113edc2",
+      "firstFrame": 33,
+      "frames": 32,
+      "promptId": "a12f6506-5359-472e-90e2-ac4d688d0830",
+      "clientId": "9b58f674-4388-48d8-a932-a8b263af8a8a",
+      "attemptId": "4695fa33-1b8a-4f21-846f-63c3063fd87e",
+      "ownershipToken": "971732d9-5a2e-4c23-92eb-0d24e68215b4",
+      "fingerprint": "9f4a6a9fb3c51c74e4accc834e6addaddc6943de0fd785e5673081eee9a319ad"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-2.png",
+      "sourceSha256": "e0face6eb55fb3cc7d2a039b46578d2396a70d8c81ae764f71067d998fb66d48",
+      "graph": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-2.json",
+      "graphSha256": "a62a9738cfaf92e379ebdf0174968f13e350c89f5133c8af6d2a76e0cc5f628d",
+      "firstFrame": 65,
+      "frames": 32,
+      "promptId": "97d9f5e6-9988-4c8b-a104-c3cf4429784b",
+      "clientId": "145df212-45a9-4d05-9877-3d2de4539382",
+      "attemptId": "6f77215a-27c5-4bc4-8279-b20eb3fad3ee",
+      "ownershipToken": "0eabee9e-28a8-476d-8ca1-a22b5824047d",
+      "fingerprint": "c2720611a6330ad7a83680ecbc9e7488563e63893c002cba8151530d4949b983"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-3.png",
+      "sourceSha256": "95abd7c403afaebd76952aa3fdc80f0c7993d47bf838e1b26138e2da17c5f468",
+      "graph": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-3.json",
+      "graphSha256": "6ae47d07737ef593ba1cb03e82054c4208141f1fc7addf70c3c930765e733b53",
+      "firstFrame": 97,
+      "frames": 33,
+      "promptId": "35ed410a-2d6c-428c-afbc-e4744cc9364e",
+      "clientId": "868ffb9d-2154-4945-9f8d-41f7488c6d6e",
+      "attemptId": "fa121104-1367-488a-8072-31e7aabeca3d",
+      "ownershipToken": "cfbc0a97-5bcb-4132-b334-dae85714cae2",
+      "fingerprint": "a81f21d222e8d8814b5257aff8472e9b56e79bf5a87ae19237709fd5cc2201a9"
+    }
+  ]
+}

@@ -248,6 +248,43 @@ pins its unchanged bytes and graphs. VG2-26 is DONE for this human-reviewed
 checkpoint; minor transition detail variation remains disclosed. This authorizes
 the next VG4-05 scenery step, without closing breathing/fixed-scene or full-film gates.
 
+### Breathing and moving-outline preparation (2026-10-02)
+
+The first-point continuation is retained in
+`pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/`.
+After the initial memory stop and explicit user approval of a shorter attempt,
+ComfyUI produces a 97-frame, 3.88-second breathing candidate. Full-frame ComfyUI
+RealESRGAN finishing yields silent 1920×1080 at exact 25fps:
+`finish/review/tabi-breath-comfy-1080p.mp4`, SHA-256 `8c49fbbf6e71fca7ce74b2754d3cd1550c9584c0b939ab5564444a8be57746d2`.
+It retains the neutral chin-rest pose with small head/shoulder, blink and mouth
+motion. This is enhanced native 768×448 motion and awaits human breathing review;
+its generated cabin/prop drift is not a fixed-scene pass.
+
+New local artwork and derived alpha/RGBA sequences are saved in
+`pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/`.
+The candidate cabin is empty of TABI and cup, keeps the corrected notebook/pen,
+and supplies revealed backing pixels. Current backing candidates are
+`fixed-cabin-v2-1080p.png` and `fixed-cabin-cup-free-v2-1080p.png`.
+Watch, drink and reading each have 129 moving masks; breathing has 97. Semantic
+silhouettes, protected interiors and narrow edge refinement preserve source RGB.
+Separate cup contours/flow support pickup and return. Earlier colour-threshold
+cutouts remain rejected history. The masks are candidates: small frond/window
+and table-edge remnants remain subject to visual review.
+
+The full fixed-cabin ComfyUI graph reaches its 8-GiB process cap in batch four,
+after three complete batches. The truncated last APNG is not selected. A finite
+last-batch recovery succeeds after explicit user approval, reusing the first
+96 frames. The resulting review movie is
+`fixed-cabin-recovery/review/tabi-drink-fixed-cabin-comfy-1080p.mp4`,
+SHA-256 `a645e8cd015a8b59249ad09c09fd9e29d532768d3d665a4434f50e3a952894fc`.
+It is silent 1920×1080 at exact 25fps/5.16s. All 129 ComfyUI composite frames
+preserve the fixed cabin outside moving support and agree with source RGB/alpha
+within 1/255; the encoded movie passes full decode and face-content checks.
+Human review of breathing and fine outline/contact edges remains pending.
+This does not complete the 60-second combination, 180-second corridor, 30fps
+delivery, repeat join or any integrated Video-tab feature. All original assets/accepted
+movies are preserved; new media stay local and only helpers/checks/docs are versioned.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the

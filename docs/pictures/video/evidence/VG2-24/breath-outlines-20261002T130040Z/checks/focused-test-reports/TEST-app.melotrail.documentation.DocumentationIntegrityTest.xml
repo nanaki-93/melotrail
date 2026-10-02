@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.documentation.DocumentationIntegrityTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:51:50.277Z" hostname="Marcos-MacBook-Pro.local" time="0.234">
+  <properties/>
+  <testcase name="obsolete documentation and its exclusive readers remain retired()" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.013"/>
+  <testcase name="audio and video planning pairs and concise references replace the combined planning suite()" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.067"/>
+  <testcase name="owned MIDI fixtures remain byte exact()" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.009"/>
+  <testcase name="planning requires non interactive validation without retired UI only task gates()" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.002"/>
+  <testcase name="link audit detects missing files while allowing anchors and external links(Path)" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.005"/>
+  <testcase name="all local Markdown links in the active documentation resolve()" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.082"/>
+  <testcase name="supplied UI and current TABI references and recorded Logic captures stay byte exact()" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.036"/>
+  <testcase name="workstream queues keep their own features dependencies and execution authority()" classname="app.melotrail.documentation.DocumentationIntegrityTest" time="0.016"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.project.MidiCoreProjectSchemaTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.477Z" hostname="Marcos-MacBook-Pro.local" time="0.005">
+  <properties/>
+  <testcase name="candidate piano boundary digest round trips and malformed evidence is invalid()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.001"/>
+  <testcase name="malformed arrangement plans fail before they can become authority()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.0"/>
+  <testcase name="source import and protected melody identity are atomic()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.0"/>
+  <testcase name="derived records cannot exist before their source and authority()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.001"/>
+  <testcase name="arrangement plans must retain the exact authoritative occurrence identity()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.0"/>
+  <testcase name="unsupported and future project versions are classified unsupported without migration()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.0"/>
+  <testcase name="v4 project encodes and decodes versioned arrangement authority()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.001"/>
+  <testcase name="missing required fields and unconfined artifact paths are invalid()" classname="app.melotrail.project.MidiCoreProjectSchemaTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

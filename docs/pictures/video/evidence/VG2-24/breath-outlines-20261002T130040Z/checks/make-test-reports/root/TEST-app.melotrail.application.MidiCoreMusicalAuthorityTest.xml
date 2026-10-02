@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreMusicalAuthorityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:19.326Z" hostname="Marcos-MacBook-Pro.local" time="0.015">
+  <properties/>
+  <testcase name="explicit fixed authority persists imported timing suggestions and reopens unchanged()" classname="app.melotrail.application.MidiCoreMusicalAuthorityTest" time="0.005"/>
+  <testcase name="chromatic melody remains advisory after project key confirmation without source mutation()" classname="app.melotrail.application.MidiCoreMusicalAuthorityTest" time="0.003"/>
+  <testcase name="a source tempo map is rejected before it can become fixed project authority()" classname="app.melotrail.application.MidiCoreMusicalAuthorityTest" time="0.002"/>
+  <testcase name="typed authority primitives enforce Standard MIDI and enharmonic boundaries()" classname="app.melotrail.application.MidiCoreMusicalAuthorityTest" time="0.001"/>
+  <testcase name="missing source timing is resolved only by explicit user confirmation()" classname="app.melotrail.application.MidiCoreMusicalAuthorityTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

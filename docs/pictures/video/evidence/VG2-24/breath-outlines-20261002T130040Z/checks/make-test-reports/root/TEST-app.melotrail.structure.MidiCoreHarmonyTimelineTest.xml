@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.structure.MidiCoreHarmonyTimelineTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.506Z" hostname="Marcos-MacBook-Pro.local" time="0.001">
+  <properties/>
+  <testcase name="changing project key never substitutes or transposes an authoritative symbol()" classname="app.melotrail.structure.MidiCoreHarmonyTimelineTest" time="0.0"/>
+  <testcase name="valid sub-bar and repeated occurrence windows resolve at exact boundaries()" classname="app.melotrail.structure.MidiCoreHarmonyTimelineTest" time="0.0"/>
+  <testcase name="parses slash extensions and keeps chromatic chord tones authoritative()" classname="app.melotrail.structure.MidiCoreHarmonyTimelineTest" time="0.001"/>
+  <testcase name="reports missing gaps overlaps outside windows invalid symbols and order()" classname="app.melotrail.structure.MidiCoreHarmonyTimelineTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

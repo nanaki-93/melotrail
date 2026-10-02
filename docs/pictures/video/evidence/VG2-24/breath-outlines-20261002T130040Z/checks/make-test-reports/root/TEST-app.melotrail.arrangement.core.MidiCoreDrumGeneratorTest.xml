@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.393Z" hostname="Marcos-MacBook-Pro.local" time="0.028">
+  <properties/>
+  <testcase name="intro context leaves accepted bass offbeats to the authored sparse groove()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="complete groove alternatives are scoped repeatable and distinct()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="repeat family varies one complete compatible groove deterministically()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.002"/>
+  <testcase name="steady planned groove preserves intro and outro support ceilings()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="zero density is deliberate silence while offgrid context remains unmodified()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="GM pitches channel energy purpose and profile velocities remain deterministic()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="density selects a whole compatible groove variant rather than deleting authored steps()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="intent advisory ignores restrained and ineligible compound pickups()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="confirmed phrase pickup realizes a fill only at a two bar next-section transition()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.0"/>
+  <testcase name="matches phrase fill golden sequences at the occurrence boundary()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.002"/>
+  <testcase name="pickup into quiet next intro or outro suppresses fills and final bar bass kicks()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.002"/>
+  <testcase name="three development fixtures yield two complete deterministic drum alternatives()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.003"/>
+  <testcase name="phrase fills stay in the final bar and never cross the occurrence boundary()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="accepted bass attacks can add deterministic offbeat kick intent()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="generates every complete groove with both MIDI drum profiles()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.002"/>
+  <testcase name="matches complete groove golden sequences without arbitrary hit deletion()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.002"/>
+  <testcase name="one bar harmony edge and quiet intro do not infer a style fill or bass pickup()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="confirmed shared groove uses compound pulses on the six eight grid()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="confirmed shared groove drives bounded bass kick support on the three four grid()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="drum catalog exposes every supported groove and fill exactly once()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.0"/>
+  <testcase name="bass-aware kicks are restrained per bar and never crowd an explicit final-bar fill()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <testcase name="direct fill selection uses a complete section-aware companion groove()" classname="app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

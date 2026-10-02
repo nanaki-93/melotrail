@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.WorkstationPrimitivesTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:05:23.937Z" hostname="Marcos-MacBook-Pro.local" time="0.079">
+  <properties/>
+  <testcase name="primary and secondary controls retain focus and activate with enter and space()" classname="app.melotrail.desktop.WorkstationPrimitivesTest" time="0.039"/>
+  <testcase name="adjacent action hit boxes do not overlap and use the measured compact radii()" classname="app.melotrail.desktop.WorkstationPrimitivesTest" time="0.011"/>
+  <testcase name="real primary pixels and keyboard outline match full pinned images()" classname="app.melotrail.desktop.WorkstationPrimitivesTest" time="0.016"/>
+  <testcase name="compact primitive gallery exposes every target control state and long text()" classname="app.melotrail.desktop.WorkstationPrimitivesTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

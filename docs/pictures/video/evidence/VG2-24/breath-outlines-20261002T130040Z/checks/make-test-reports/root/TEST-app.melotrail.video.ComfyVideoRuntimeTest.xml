@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.ComfyVideoRuntimeTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:30.674Z" hostname="Marcos-MacBook-Pro.local" time="3.427">
+  <properties/>
+  <testcase name="owned launch uses resolved Python with explicit venv imports and private directories()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.012"/>
+  <testcase name="connections become stale after stop and restart()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.017"/>
+  <testcase name="throwing health probes after readiness use three consecutive failures then reap()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.034"/>
+  <testcase name="occupied port is refused before any process is launched or signalled()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.031"/>
+  <testcase name="rejected critical-pressure start is recoverable without launching()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.009"/>
+  <testcase name="stop during prelaunch waits for ownership registration then cancels and reaps()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.008"/>
+  <testcase name="bounded inference timeout cancels server and releases only its own slot()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.009"/>
+  <testcase name="health response requires the exact launch marker without sending it to listener()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.017"/>
+  <testcase name="critical pressure cancels owned server while warning pressure remains allowed()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.015"/>
+  <testcase name="completed process with suppressed cleanup failure remains owned and blocks restart()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.014"/>
+  <testcase name="same-port replacement cannot receive a standard Comfy mutation after URI validation()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.011"/>
+  <testcase name="competing compatible HTTP listener winning after precheck is never accepted or signalled()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.011"/>
+  <testcase name="attempt leases reject copied sessions and stale keys or handles without releasing new work()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.017"/>
+  <testcase name="failed child startup is surfaced and cleaned without accepting unrelated health()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.022"/>
+  <testcase name="connection validates the documented operation namespace()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.009"/>
+  <testcase name="readiness timeout cancels and reaps its process and a clean restart works()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.017"/>
+  <testcase name="resource sampler exception after readiness fails cancels and reaps the owner()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.021"/>
+  <testcase name="inference admission and stop serialize so stopped owner cannot acquire a late slot()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.071"/>
+  <testcase name="runtime issues an owned HTTP and WebSocket connection only for its exact session()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="0.039"/>
+  <testcase name="delayed failed startup cleanup retains ownership until a later close reaps it()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="2.015"/>
+  <testcase name="delayed normal stop retains ownership and forbids a second server until reaped()" classname="app.melotrail.video.ComfyVideoRuntimeTest" time="1.025"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

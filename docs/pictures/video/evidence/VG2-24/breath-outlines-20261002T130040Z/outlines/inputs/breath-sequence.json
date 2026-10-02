@@ -1,0 +1,1263 @@
+[
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0001.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0001",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0001",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0002.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0002",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0002",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0003.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0003",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0003",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0004.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0004",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0004",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0005.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0005",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0005",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0006.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0006",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0006",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0007.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0007",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0007",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0008.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0008",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0008",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0009.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0009",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0009",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0010.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0010",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0010",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0011.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0011",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0011",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0012.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0012",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0012",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0013.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0013",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0013",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0014.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0014",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0014",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0015.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0015",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0015",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0016.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0016",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0016",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0017.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0017",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0017",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0018.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0018",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0018",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0019.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0019",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0019",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0020.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0020",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0020",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0021.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0021",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0021",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0022.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0022",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0022",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0023.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0023",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0023",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0024.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0024",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0024",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0025.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0025",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0025",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0026.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0026",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0026",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0027.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0027",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0027",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0028.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0028",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0028",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0029.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0029",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0029",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0030.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0030",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0030",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0031.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0031",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0031",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0032.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0032",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0032",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0033.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0033",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0033",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0034.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0034",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0034",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0035.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0035",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0035",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0036.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0036",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0036",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0037.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0037",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0037",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0038.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0038",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0038",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0039.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0039",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0039",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0040.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0040",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0040",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0041.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0041",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0041",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0042.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0042",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0042",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0043.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0043",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0043",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0044.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0044",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0044",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0045.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0045",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0045",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0046.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0046",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0046",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0047.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0047",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0047",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0048.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0048",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0048",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0049.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0049",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0049",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0050.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0050",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0050",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0051.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0051",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0051",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0052.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0052",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0052",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0053.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0053",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0053",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0054.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0054",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0054",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0055.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0055",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0055",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0056.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0056",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0056",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0057.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0057",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0057",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0058.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0058",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0058",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0059.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0059",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0059",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0060.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0060",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0060",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0061.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0061",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0061",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0062.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0062",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0062",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0063.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0063",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0063",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0064.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0064",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0064",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0065.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0065",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0065",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0066.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0066",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0066",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0067.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0067",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0067",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0068.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0068",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0068",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0069.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0069",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0069",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0070.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0070",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0070",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0071.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0071",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0071",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0072.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0072",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0072",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0073.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0073",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0073",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0074.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0074",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0074",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0075.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0075",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0075",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0076.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0076",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0076",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0077.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0077",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0077",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0078.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0078",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0078",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0079.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0079",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0079",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0080.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0080",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0080",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0081.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0081",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0081",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0082.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0082",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0082",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0083.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0083",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0083",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0084.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0084",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0084",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0085.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0085",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0085",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0086.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0086",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0086",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0087.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0087",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0087",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0088.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0088",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0088",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0089.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0089",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0089",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0090.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0090",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0090",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0091.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0091",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0091",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0092.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0092",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0092",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0093.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0093",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0093",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0094.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0094",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0094",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0095.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0095",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0095",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0096.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0096",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0096",
+    "reviewBlue": false
+  },
+  {
+    "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0097.png",
+    "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/sequence-raw/breath-0097",
+    "allInstances": true,
+    "seeds": [
+      [
+        0.28,
+        0.65
+      ]
+    ],
+    "refined": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0097",
+    "reviewBlue": false
+  }
+]

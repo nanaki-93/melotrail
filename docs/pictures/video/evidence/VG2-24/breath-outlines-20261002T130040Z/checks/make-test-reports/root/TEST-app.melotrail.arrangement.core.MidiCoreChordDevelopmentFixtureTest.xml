@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.339Z" hostname="Marcos-MacBook-Pro.local" time="0.015">
+  <properties/>
+  <testcase name="repeated harmony develops deterministically from the explicit section policy()" classname="app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest" time="0.002"/>
+  <testcase name="retains a common pitch and limits matched voice movement at an exact chord boundary()" classname="app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest" time="0.001"/>
+  <testcase name="chord rhythm catalog is complete unique and bar-bounded()" classname="app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest" time="0.0"/>
+  <testcase name="does not publish a colliding fallback voicing when no complete chord voicing is melody safe()" classname="app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest" time="0.001"/>
+  <testcase name="three development fixtures yield two valid distinct chord alternatives with exact harmony()" classname="app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+{
+  "exitCode": 143,
+  "stopReason": "sampled owned RSS limit",
+  "elapsedSeconds": 28.531,
+  "peakSampledOwnedRssBytes": 9670049792,
+  "observedPids": [
+    48537,
+    48830
+  ],
+  "note": "RSS samples exclude some Metal/GPU allocations; production pressure/swap safeguards remain unchanged."
+}

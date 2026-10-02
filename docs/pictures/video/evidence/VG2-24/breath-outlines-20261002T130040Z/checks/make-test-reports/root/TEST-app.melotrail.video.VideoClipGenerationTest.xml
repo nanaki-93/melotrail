@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoClipGenerationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:44.603Z" hostname="Marcos-MacBook-Pro.local" time="0.675">
+  <properties/>
+  <testcase name="flat admission verifies one finished image and pinned short route before durable fake submission()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.12"/>
+  <testcase name="immutable take bytes survive source replacement and reopen without implicit selection()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.011"/>
+  <testcase name="invalid or JavaScript unsafe controlled ranges cannot form a durable request()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.001"/>
+  <testcase name="capabilities and durable projections remain read only and distinguish blockers and unknown progress()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.019"/>
+  <testcase name="cancellation interrupts immutable take hashing and copying before publication()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.234"/>
+  <testcase name="replacement appends a distinct version and preserves earlier take()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.017"/>
+  <testcase name="identifier-only import rejects wrong project revision attempt and output before touching media()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.009"/>
+  <testcase name="identifier-only controlled import publishes a verified take from persisted scene and output root()" classname="app.melotrail.video.VideoClipGenerationTest" time="0.263"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

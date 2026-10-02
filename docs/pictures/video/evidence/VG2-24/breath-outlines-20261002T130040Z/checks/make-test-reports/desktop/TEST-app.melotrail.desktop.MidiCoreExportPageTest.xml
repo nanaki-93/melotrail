@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreExportPageTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:29.990Z" hostname="Marcos-MacBook-Pro.local" time="0.337">
+  <properties/>
+  <testcase name="Export never labels an empty structure ready()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.027"/>
+  <testcase name="Export keeps MIDI publication independent of video and preserves saved snapshots()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.034"/>
+  <testcase name="Export destination is rendered through the focused workspace shell()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.017"/>
+  <testcase name="Export explains missing acceptance rather than exposing a ready publish action()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.015"/>
+  <testcase name="Export inventory distinguishes accepted whole-song rest and its lock from an omitted missing role()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.023"/>
+  <testcase name="Export source contains no audio release controls()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.002"/>
+  <testcase name="Export readiness checks scoped authority even when candidate status still says accepted()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.017"/>
+  <testcase name="Export publishes a new package only after each required role occurrence is accepted()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.016"/>
+  <testcase name="Export identifies stale accepted evidence before publishing()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.014"/>
+  <testcase name="Export accepts a current planned rest as complete scoped work()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.017"/>
+  <testcase name="Export source makes no GarageBand support claim()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.0"/>
+  <testcase name="Export shows atomic progress without offering a cancellation it cannot honor()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.014"/>
+  <testcase name="Export exposes immutable snapshot hashes files reveal action retry and DAW guidance()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.093"/>
+  <testcase name="Export retains an earlier snapshot result and reports failed folder reveal()" classname="app.melotrail.desktop.MidiCoreExportPageTest" time="0.045"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,3 @@
+Exception in thread "main" java.lang.IllegalArgumentException: Composed image must be a direct child of the request parent's owned inputs directory
+	at app.melotrail.video.ComfyVideoHostProbe.validateRequest$melotrail_test(ComfyVideoHostCheck.kt:355)
+	at BreathRepairPilot.main(BreathRepairPilot.java:35)

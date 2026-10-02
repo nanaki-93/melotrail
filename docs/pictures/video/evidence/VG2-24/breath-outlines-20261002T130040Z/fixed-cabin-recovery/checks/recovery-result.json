@@ -1,0 +1,20 @@
+{
+  "status": "TECHNICAL_PASS_REVIEW_PENDING",
+  "authorization": "Finish the remaining batch",
+  "totalProcessingSeconds": 59.89121116600093,
+  "reusedOriginalFrames": 96,
+  "newComfyFrames": 33,
+  "newMotionGenerations": 0,
+  "reviewEncodes": 1,
+  "movie": "review/tabi-drink-fixed-cabin-comfy-1080p.mp4",
+  "sha256": "a645e8cd015a8b59249ad09c09fd9e29d532768d3d665a4434f50e3a952894fc",
+  "nativeGraphOwner": "ComfyVideoRuntime / ComfyVideoClient",
+  "nativeEncodeOwner": "VideoMediaProcess",
+  "originalFourBatchResourceResult": "FAILED_RETAINED",
+  "humanApproval": false,
+  "reviewedDecodedFrames": [
+    25,
+    65
+  ],
+  "visualNotes": "Connected hands and a single lifted cup visible in inspected frames. Cabin and corrected notebook remain fixed. Fine frond/window and contact edge remnants remain subject to human review."
+}

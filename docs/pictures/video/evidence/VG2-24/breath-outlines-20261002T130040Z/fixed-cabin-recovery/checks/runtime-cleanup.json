@@ -1,0 +1,39 @@
+{
+  "recordedAt": "2026-10-02T13:50:18.072127+00:00",
+  "runtimeState": "STOPPED",
+  "observedPidsGone": [
+    57476,
+    57532
+  ],
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-46aa06b7-cac6-4903-898b-394f81bb597c",
+  "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/runtime-session",
+  "files": [
+    {
+      "path": "input/backing.png",
+      "bytes": 2921398,
+      "sha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5"
+    },
+    {
+      "path": "input/layer-0.png",
+      "bytes": 99635438,
+      "sha256": "95abd7c403afaebd76952aa3fdc80f0c7993d47bf838e1b26138e2da17c5f468"
+    },
+    {
+      "path": "output/fixed-cabin-last-batch_00001_.png",
+      "bytes": 37424291,
+      "sha256": "58ec6534a170933a52a48d8cae4a909efee5a400ba6ae114f81f1467d19cc795"
+    },
+    {
+      "path": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "a9ea16fc85bbe1100dfab889c441a60fd45fddd9dcacbe7a7838aa4d748266a7"
+    },
+    {
+      "path": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "allCopiesVerified": true,
+  "ownedSessionRemoved": true
+}

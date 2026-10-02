@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoMotionDescriptorFixtureTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:54:30.668Z" hostname="Marcos-MacBook-Pro.local" time="1.302">
+  <properties/>
+  <testcase name="emit deterministic production importer bundles for controlled motion pixel comparisons()" classname="app.melotrail.video.VideoMotionDescriptorFixtureTest" time="1.302"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

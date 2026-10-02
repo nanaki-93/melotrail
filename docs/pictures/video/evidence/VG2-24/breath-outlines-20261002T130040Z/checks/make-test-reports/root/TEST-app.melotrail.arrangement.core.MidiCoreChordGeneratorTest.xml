@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" tests="31" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.354Z" hostname="Marcos-MacBook-Pro.local" time="0.039">
+  <properties/>
+  <testcase name="sustain-aware activity keeps answer attacks out of a pedaled melody span()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="expands complete curated chord rhythms without changing harmony()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.003"/>
+  <testcase name="rejects rootless selection when bass does not supply the root()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="phrase breath selects a complete silent bar across its own harmony window()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.002"/>
+  <testcase name="dense protected melody selects one held support shape instead of pulsing through it()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="seed and curated pattern identity produce repeatable distinct alternatives()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="dense bar keeps support use across an offbeat chord change()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.002"/>
+  <testcase name="keeps slash identity and bass space with the bounded candidate pool()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="ranks sustained accented close melody clashes below passing tension without blocking either()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="answer attacks wait for melody space and a phrase ending keeps its final beat clear()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="weights a real M02 suspension held across a chord boundary by its downbeat prominence()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.002"/>
+  <testcase name="uses authored three-four attacks without carrying a fourth four-four beat into the next bar()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.0"/>
+  <testcase name="returns a scoped rejection when authoritative boundaries are off the generation grid()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="dense support has explicit three-four and compound six-eight bar realizations()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="triple and compound meters leave a full inter-phrase bar without shifting the next attack()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="six-eight phrase ending rests the final compound pulse()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.0"/>
+  <testcase name="sustained support clips offbeat harmony while retaining the next metrical bar()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="rejects a piano boundary that is not the adjacent current authority input()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.0"/>
+  <testcase name="generates every authoritative chord extension inside the bounded register()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.0"/>
+  <testcase name="builds a bounded legal pool with open guide tone and reduced piano choices()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="keeps four-four rhythm phase across an offbeat harmonic change and clips the outgoing chord()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="moves piano above low protected melody register pressure()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="explicit lower-register repair shifts voicing center without changing legal range()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="root omission requires continuous bass coverage in the pool and actual generation()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.002"/>
+  <testcase name="carries an explicit adjacent phrase boundary through the bounded lookahead search()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.002"/>
+  <testcase name="uses compound six-eight grouping at a nonstandard PPQ with bounded short sections()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="uses protected melody and accepted bass space when selecting a voicing()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.0"/>
+  <testcase name="honors slash-bass inversion and carries nearby voice leading across sub-bar changes()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="uses a safe reduced voicing when every complete extension doubles protected melody anchors()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <testcase name="unsupported comping meters never fall back to four-four()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.004"/>
+  <testcase name="retains the declared slash bass when reduced voicing is required()" classname="app.melotrail.arrangement.core.MidiCoreChordGeneratorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

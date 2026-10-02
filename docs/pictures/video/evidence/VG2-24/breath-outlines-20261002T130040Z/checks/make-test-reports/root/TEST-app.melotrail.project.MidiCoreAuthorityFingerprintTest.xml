@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.project.MidiCoreAuthorityFingerprintTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.472Z" hostname="Marcos-MacBook-Pro.local" time="0.004">
+  <properties/>
+  <testcase name="generation fingerprint binds generator and accepted dependency inputs()" classname="app.melotrail.project.MidiCoreAuthorityFingerprintTest" time="0.0"/>
+  <testcase name="arrangement plan inputs are role scoped and no-op stable()" classname="app.melotrail.project.MidiCoreAuthorityFingerprintTest" time="0.002"/>
+  <testcase name="chorus harmony changes only chorus scoped hashes()" classname="app.melotrail.project.MidiCoreAuthorityFingerprintTest" time="0.001"/>
+  <testcase name="arrangement end changes timing identity before sections are defined()" classname="app.melotrail.project.MidiCoreAuthorityFingerprintTest" time="0.0"/>
+  <testcase name="each authority dimension changes its canonical fingerprint()" classname="app.melotrail.project.MidiCoreAuthorityFingerprintTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

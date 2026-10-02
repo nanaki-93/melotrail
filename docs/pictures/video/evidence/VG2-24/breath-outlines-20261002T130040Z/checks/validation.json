@@ -1,0 +1,61 @@
+{
+  "status": "TECHNICAL_PASS_REVIEW_PENDING",
+  "recordedAt": "2026-10-02T14:00:21.830674+00:00",
+  "focusedTests": 81,
+  "makeTest": {
+    "root": 794,
+    "desktop": 239,
+    "desktopExecution": "UP-TO-DATE"
+  },
+  "makeBuild": "PASS; root tests executed, desktop build/test up-to-date",
+  "excludedNativeWindowTests": [
+    "**/MidiCoreNativeResponsivenessTest*"
+  ],
+  "visibleUiValidation": false,
+  "mediaLocalOnly": true,
+  "modelGeneration": "Actual ComfyUI, accepted768x448native then full-frame ComfyUI1080p finish",
+  "fixedCabin": "Actual core ComfyUI RGB/alpha composition, one local media encode",
+  "humanBreathingAndEdgesApproval": false,
+  "reviewClips": [
+    "finish/review/tabi-breath-comfy-1080p.mp4",
+    "fixed-cabin-recovery/review/tabi-drink-fixed-cabin-comfy-1080p.mp4"
+  ],
+  "checks": [
+    {
+      "path": "checks/focused-test-summary.json",
+      "sha256": "1cd2eb50b5e5eb529b95940ec0ff0c9b83b8a34cc6be29ef0b054f1da0002673"
+    },
+    {
+      "path": "checks/make-test-summary.json",
+      "sha256": "47c8d0f664aa81e0f4e250087f2961d567676c64c0e58746d9400618e4baefd7"
+    },
+    {
+      "path": "checks/make-build-summary.json",
+      "sha256": "6d2a59390a36fe87b494a777e60acab4677087b47bd0e2e881c38265c1f3f12c"
+    },
+    {
+      "path": "checks/python-syntax.json",
+      "sha256": "288ee9d1417ca4e0620dd05a56538b53f773ce739f53966c4724ce6dc1d518e0"
+    },
+    {
+      "path": "checks/protected-inputs.json",
+      "sha256": "333f27eb802f93a25baa7732a3afd4ceacd3a43da8b3516c087c807e9ee380b9"
+    },
+    {
+      "path": "checks/storage-and-runtime-cleanup.json",
+      "sha256": "6181f110c638f544bc559f7655ad49549097fff3a2635900bd6de023ed5c2d07"
+    },
+    {
+      "path": "checks/build-output-cleanup.json",
+      "sha256": "5bb360d502fbd75db5a3a54effaedab3d081393a2c09a420e4cea6142e73573f"
+    },
+    {
+      "path": "checks/scratch-cleanup.json",
+      "sha256": "211a2f043199b84337d6727eb7c6a1b02605b25ddb0e0a3f9b2ca15a180260f1"
+    },
+    {
+      "path": "checks/unrelated-changes-preservation.json",
+      "sha256": "b4dda4077fcafd5c9916144958faf9dc69c8afdc2c5c9dd44b08bfed6ec953d7"
+    }
+  ]
+}

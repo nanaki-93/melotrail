@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.067Z" hostname="Marcos-MacBook-Pro.local" time="0.004">
+  <properties/>
+  <testcase name="repair attempt cannot admit more than three generated candidates()" classname="app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest" time="0.0"/>
+  <testcase name="candidate matching audible baseline is rejected as cosmetic()" classname="app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest" time="0.002"/>
+  <testcase name="dependency refresh explicitly identifies matching baseline without a new isolated choice()" classname="app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest" time="0.001"/>
+  <testcase name="empty repair scope stops with a same-scope retry reason()" classname="app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest" time="0.0"/>
+  <testcase name="stale and rejected candidates remain evidence instead of repair choices()" classname="app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest" time="0.001"/>
+  <testcase name="ranking keeps at most three timing and pitch distinct repair choices()" classname="app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

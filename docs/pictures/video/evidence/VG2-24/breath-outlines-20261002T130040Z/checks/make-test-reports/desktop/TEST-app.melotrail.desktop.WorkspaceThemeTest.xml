@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.WorkspaceThemeTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:05:23.925Z" hostname="Marcos-MacBook-Pro.local" time="0.012">
+  <properties/>
+  <testcase name="target MIDI roles vector icons and semantic states map to shared tokens()" classname="app.melotrail.desktop.WorkspaceThemeTest" time="0.001"/>
+  <testcase name="theme showcase is deterministic and exposes non color state labels()" classname="app.melotrail.desktop.WorkspaceThemeTest" time="0.01"/>
+  <testcase name="target visual tokens provide the measured MIDI palette and readable contrast()" classname="app.melotrail.desktop.WorkspaceThemeTest" time="0.0"/>
+  <testcase name="typography and application identity are explicit and available offline()" classname="app.melotrail.desktop.WorkspaceThemeTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

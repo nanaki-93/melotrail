@@ -1,0 +1,16 @@
+SESSION=/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-4370223c-8f3a-428e-a8f7-dba81b28bca7
+SUBMITTED=attempt-d7fb9aa8-c239-48b3-b09e-dd33f66719bb
+OBSERVATION=15 state=ACTIVE
+OBSERVATION=30 state=ACTIVE
+OBSERVATION=45 state=ACTIVE
+OBSERVATION=60 state=ACTIVE
+OBSERVATION=75 state=ACTIVE
+RUNTIME_FINAL=STOPPED
+ELAPSED_MILLIS=200238
+REQUEST_UNCHANGED=true
+IMAGE_UNCHANGED=true
+GRAPH_UNCHANGED=true
+GUIDE_UNCHANGED=true
+Exception in thread "main" java.lang.IllegalStateException: Owned runtime left READY: app.melotrail.video.adapter.ComfyVideoRuntimeException: Stopping pinned ComfyUI while ComfyUI was running because memory pressure is critical.
+	at ActionPilot.require(ActionPilot.java:25)
+	at ActionPilot.main(ActionPilot.java:97)

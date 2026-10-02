@@ -1,0 +1,23 @@
+{
+  "state": "PREPARED_NOT_AUTHORIZED",
+  "scope": "One fresh ComfyUI runtime for frames 97\u2013129 only; preserve three completed immutable batches. Then one 129-frame local MP4 encode and two bounded decode/probe traversals. No motion inference or rerender of completed batches.",
+  "maxTotalSeconds": 300,
+  "maxRssBytes": 8589934592,
+  "maxNewFilesBytes": 1073741824,
+  "automaticRetries": 0,
+  "originalResourceGateRemainsFailed": true,
+  "preservedBatches": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/review/batch-0.png",
+      "sha256": "8e3c7ba59ef64c4f168a1a38664cb0fd5ed7d7dfaa217f9f3e6617cc19e8c42e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/review/batch-1.png",
+      "sha256": "82f10229571c20dbd728cb7a2ec28d7f820c0351738c98138b15fecb34521220"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/review/batch-2.png",
+      "sha256": "272ffd76994a35192bb2cecf29aa085b5067c2872aeefbe2daf8e733d2608c78"
+    }
+  ]
+}

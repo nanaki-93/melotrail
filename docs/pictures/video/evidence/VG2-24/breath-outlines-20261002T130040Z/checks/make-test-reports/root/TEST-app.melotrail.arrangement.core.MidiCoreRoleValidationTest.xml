@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.445Z" hostname="Marcos-MacBook-Pro.local" time="0.01">
+  <properties/>
+  <testcase name="scoped ensemble validation preserves melody space and blocks crowded chord bass register()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.001"/>
+  <testcase name="drums require percussion channel and curated GM starter pitches()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.001"/>
+  <testcase name="scoped drum bass intent is advisory while excessive aggregate onset density blocks()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.001"/>
+  <testcase name="chords and bass use the exact authoritative harmony including chromatic chords()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.001"/>
+  <testcase name="validation evidence is deterministic regardless of event order()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.0"/>
+  <testcase name="valid chords bass and drums candidates pass their role policies()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.001"/>
+  <testcase name="common candidate policies return typed rejection findings()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.001"/>
+  <testcase name="duplicate and density violations reject while deliberate silence is valid()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.001"/>
+  <testcase name="protected anchor collision blocks while close non-anchor collision remains advisory()" classname="app.melotrail.arrangement.core.MidiCoreRoleValidationTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

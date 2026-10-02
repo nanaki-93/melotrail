@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoResultImportTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:37.804Z" hostname="Marcos-MacBook-Pro.local" time="0.014">
+  <properties/>
+  <testcase name="backend publication roots are disjoint and pinned bytes are required()" classname="app.melotrail.video.VideoResultImportTest" time="0.007"/>
+  <testcase name="symlinked parents files and protected root aliases never resolve()" classname="app.melotrail.video.VideoResultImportTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

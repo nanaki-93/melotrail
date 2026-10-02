@@ -1,0 +1,1 @@
+{"at": "2026-10-02T13:22:21.708034+00:00", "elapsedSeconds": 0.033, "pressureCode": "1", "swap": "total = 3072.00M  used = 2047.62M  free = 1024.38M  (encrypted)", "ownedProcessTreeRssBytes": 6668288, "ownedStorageBytes": 4409633, "processes": [{"pid": 40252, "parent": 40176, "rssBytes": 6668288, "command": "/Users/marcoandreose/.sdkman/candidates/java/21.0.11-tem/bin/java"}]}

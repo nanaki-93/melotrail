@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreCandidateGenerationTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:01.882Z" hostname="Marcos-MacBook-Pro.local" time="0.206">
+  <properties/>
+  <testcase name="accepted role evidence enriches only a regenerated role occurrence without rewriting dependencies()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.037"/>
+  <testcase name="stale completion is rejected after generation and before publication()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.012"/>
+  <testcase name="publishes one deterministic immutable candidate for every core role()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.04"/>
+  <testcase name="concurrent requests bind at most one candidate and reject the stale completion()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.022"/>
+  <testcase name="retries a generated candidate after a collision without replacing existing evidence()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.022"/>
+  <testcase name="failed project save preserves last good state and published candidate evidence()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.016"/>
+  <testcase name="validation rejection never publishes a malformed-grid candidate()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.012"/>
+  <testcase name="cancellation before generation leaves no project or candidate artifacts()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.01"/>
+  <testcase name="cancellation after immutable publication keeps inspectable evidence but does not bind it()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.014"/>
+  <testcase name="published comping preserves a complete inter-phrase rest and immutable source on replay()" classname="app.melotrail.application.MidiCoreCandidateGenerationTest" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

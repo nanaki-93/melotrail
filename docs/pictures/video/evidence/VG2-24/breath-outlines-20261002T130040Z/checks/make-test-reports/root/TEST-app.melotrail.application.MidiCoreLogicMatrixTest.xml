@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreLogicMatrixTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:03.688Z" hostname="Marcos-MacBook-Pro.local" time="15.072">
+  <properties/>
+  <testcase name="export omits bank hints while preserving the protected source and expression()" classname="app.melotrail.application.MidiCoreLogicMatrixTest" time="0.069"/>
+  <testcase name="refuses existing or linked output and leaves failed staging unpublished()" classname="app.melotrail.application.MidiCoreLogicMatrixTest" time="0.106"/>
+  <testcase name="semantic verification rejects shifted notes channels controllers and end boundaries()" classname="app.melotrail.application.MidiCoreLogicMatrixTest" time="0.057"/>
+  <testcase name="manifest and package inventory corruption cannot be represented as verified evidence()" classname="app.melotrail.application.MidiCoreLogicMatrixTest" time="0.065"/>
+  <testcase name="failed source import leaves a partial run unpublished and prior output untouched()" classname="app.melotrail.application.MidiCoreLogicMatrixTest" time="0.101"/>
+  <testcase name="brief sub-bar source uses sustained candidates without changing its exact harmony()" classname="app.melotrail.application.MidiCoreLogicMatrixTest" time="0.049"/>
+  <testcase name="prepares current complete matrix through the command and reproduces packages()" classname="app.melotrail.application.MidiCoreLogicMatrixTest" time="14.623"/>
+  <system-out><![CDATA[Prepared current Logic matrix: /Users/marcoandreose/DEV/lab/melotrail/build/test-results/q02-logic-matrix/run-11897500497464070252/packet
+Automated preparation only. Logic import/playback/reopen: PENDING_USER; coordinator checks are separate.
+Q02a prepared packet (Logic result pending): /Users/marcoandreose/DEV/lab/melotrail/build/test-results/q02-logic-matrix/run-11897500497464070252/packet
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

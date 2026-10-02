@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-10-02T13:29:04.284741+00:00",
+  "runtimeState": "STOPPED",
+  "observedPidsGone": [
+    41882,
+    42261,
+    42913,
+    45410
+  ],
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-ea63d729-d1b9-48f7-ae3d-9134ec2469ba",
+  "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-model/runtime-session",
+  "files": [
+    {
+      "path": "input/breath-guide.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "input/neutral-scene.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "output/vg2-24-breath-shorter_00001_.mp4",
+      "bytes": 938699,
+      "sha256": "282ad13fb9b983a68f2adbe0a88b38ed7521e6b84a9a52d372e4ed00b7439bd1"
+    },
+    {
+      "path": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "0f66dc719f62c548fbe62636b3e9724de9bf49117bbaa1614935f1160be1b174"
+    },
+    {
+      "path": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "allCopiesVerified": true,
+  "ownedSessionRemoved": true
+}

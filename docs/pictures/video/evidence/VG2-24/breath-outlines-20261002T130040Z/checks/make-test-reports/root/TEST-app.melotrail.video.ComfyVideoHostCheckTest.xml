@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.ComfyVideoHostCheckTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:30.375Z" hostname="Marcos-MacBook-Pro.local" time="0.299">
+  <properties/>
+  <testcase name="host submission failure exposes persisted status phase and backend cause()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.004"/>
+  <testcase name="host generation input uses production pinned graph binding and canonical fingerprint()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.016"/>
+  <testcase name="bundled graph exposes only generic named host bindings()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.002"/>
+  <testcase name="host preflight accepts disjoint protected roots without creating outputs or inspecting setup()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.003"/>
+  <testcase name="host rejects protected MIDI roots above equal to or below request evidence before setup()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.009"/>
+  <testcase name="request decoder rejects unowned extension fields()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.0"/>
+  <testcase name="independent host telemetry refuses an unrepresentable swap count()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.173"/>
+  <testcase name="host output refuses a collision()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.001"/>
+  <testcase name="independent host telemetry preserves pressure levels and 64 bit used swap with read only calls()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.001"/>
+  <testcase name="host rejects protected MIDI roots above equal to or below media tools before setup()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.012"/>
+  <testcase name="successful production coordinator recovery passes repeated terminal cancellation host proof without backend work()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.07"/>
+  <testcase name="independent host telemetry refuses failed and truncated native reads()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.0"/>
+  <testcase name="host rejects protected MIDI roots above equal to or below application support before setup()" classname="app.melotrail.video.ComfyVideoHostCheckTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

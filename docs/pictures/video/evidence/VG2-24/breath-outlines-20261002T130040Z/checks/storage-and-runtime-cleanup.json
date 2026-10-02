@@ -1,0 +1,46 @@
+{
+  "status": "MEASURED",
+  "evidenceBytes": 2440024671,
+  "assetBytes": 1745716893,
+  "perStageBytes": {
+    "breath-model": 81546911,
+    "checks": 375374,
+    "finish": 261955263,
+    "scripts": 1786,
+    "breath-repair": 4410555,
+    "fixed-cabin-proof": 1005174630,
+    "breath-repair-prepared": 40201,
+    "outlines": 161053961,
+    "fixed-cabin-recovery": 916434193,
+    "generation": 9031797
+  },
+  "outlinesAndAssetsBytes": 1906770854,
+  "outlinesStorageObservationLimitation": "Historical raster guard sampled evidence/outlines only; derived asset directory was measured afterwards, not monitored live. Combined current outline evidence and assets remain below the admitted 4 GiB.",
+  "runtimeCleanup": [
+    {
+      "stage": "generation",
+      "receiptSha256": "a1e984c5416fe3f1c7ef3a1a191fcac382f74c0a97cfa05388dcab6fbbc0117e",
+      "externalSessionRemoved": true
+    },
+    {
+      "stage": "breath-model",
+      "receiptSha256": "2550e04a60a12f3c7bdd31712653ba068f5a909447b4fa1be834f1870f2ad0a0",
+      "externalSessionRemoved": true
+    },
+    {
+      "stage": "finish",
+      "receiptSha256": "8d22a5b0798d2b5c8af541dc7e47b73c5f7b4cf9db9020e6fe393ed1f58fccee",
+      "externalSessionRemoved": true
+    },
+    {
+      "stage": "fixed-cabin-proof",
+      "receiptSha256": "c524c93a54adaeddf306b305109e0721e0a6143c263f733639fda5527f828a23",
+      "externalSessionRemoved": true
+    },
+    {
+      "stage": "fixed-cabin-recovery",
+      "receiptSha256": "491784ed45e54134b42523e946f22a4eaa96c526cde4dc5fc3b0db6583799bb0",
+      "externalSessionRemoved": true
+    }
+  ]
+}

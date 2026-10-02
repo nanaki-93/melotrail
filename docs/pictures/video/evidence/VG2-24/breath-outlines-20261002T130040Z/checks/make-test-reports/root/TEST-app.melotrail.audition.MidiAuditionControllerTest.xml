@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.audition.MidiAuditionControllerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.455Z" hostname="Marcos-MacBook-Pro.local" time="0.004">
+  <properties/>
+  <testcase name="selects every supported scope and rejects seek and loop boundary violations()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.001"/>
+  <testcase name="supersedes rapid sessions and ignores an old completion callback()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.0"/>
+  <testcase name="switches a live output at the exact current tick without losing transport masks()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.001"/>
+  <testcase name="returns recoverable device errors and keeps project bytes untouched()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.001"/>
+  <testcase name="observes the actual active transport position without creating another playback session()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.0"/>
+  <testcase name="controls play pause seek loop mute solo and deterministic cleanup()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.0"/>
+  <testcase name="position observation releases a lost device and leaves no active playback()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.001"/>
+  <testcase name="failed playback never publishes playing state and repeated lifecycle leaves every session closed()" classname="app.melotrail.audition.MidiAuditionControllerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

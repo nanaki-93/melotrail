@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoMediaProcessTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:54:14.990Z" hostname="Marcos-MacBook-Pro.local" time="15.678">
+  <properties/>
+  <testcase name="launches pinned executable with literal Unicode and spaced arguments in private cwd()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.065"/>
+  <testcase name="bounds missing EOF cleanup after a native timeout()" classname="app.melotrail.video.VideoMediaProcessTest" time="3.211"/>
+  <testcase name="early parent exit terminates and reports its live descendant()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.514"/>
+  <testcase name="bounds unconfirmed completion after native output overflow()" classname="app.melotrail.video.VideoMediaProcessTest" time="3.09"/>
+  <testcase name="fixture PID readiness stays absent until empty and partial writes complete()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.029"/>
+  <testcase name="failed native launch closes each pipe once despite descriptor reuse()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.031"/>
+  <testcase name="media probe retains input and partial evidence on reported disk exhaustion()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.029"/>
+  <testcase name="media probe rejects malformed manifest types before launch or output creation()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.04"/>
+  <testcase name="reports launch nonzero disk and signal failures with bounded diagnostics()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.308"/>
+  <testcase name="bounds and drains noisy stdout and stderr without hanging()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.123"/>
+  <testcase name="rejects bad executable paths pins and existing jobs before launch()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.021"/>
+  <testcase name="cancellation before or racing launch creates no surviving child()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.022"/>
+  <testcase name="exit racing group signal clears Darwin EPERM only after confirmed cleanup()" classname="app.melotrail.video.VideoMediaProcessTest" time="3.689"/>
+  <testcase name="interruption during run and cleanup preserves cancellation and reaps native child()" classname="app.melotrail.video.VideoMediaProcessTest" time="3.119"/>
+  <testcase name="times out and cancels only its owned process group()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.28"/>
+  <testcase name="fixture cleanup preserves another invocation token()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.056"/>
+  <testcase name="owned process memory growth terminates the native group instead of exceeding its persisted ceiling()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.47"/>
+  <testcase name="media probe confines literal local input and creates distinct owned artifacts()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.027"/>
+  <testcase name="media probe rejects URLs missing tools and existing outputs before launch()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.024"/>
+  <testcase name="retains exited leader identity until owned group signaling finishes()" classname="app.melotrail.video.VideoMediaProcessTest" time="0.527"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

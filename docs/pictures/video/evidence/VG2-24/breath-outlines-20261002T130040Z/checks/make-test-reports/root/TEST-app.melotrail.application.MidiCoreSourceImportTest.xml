@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreSourceImportTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.096Z" hostname="Marcos-MacBook-Pro.local" time="0.026">
+  <properties/>
+  <testcase name="renamed non MIDI input leaves project and artifact tree unchanged()" classname="app.melotrail.application.MidiCoreSourceImportTest" time="0.001"/>
+  <testcase name="duplicate import preserves the first immutable source and project document()" classname="app.melotrail.application.MidiCoreSourceImportTest" time="0.005"/>
+  <testcase name="imports supported SMF sources as immutable bytes with inspection report and track summaries()" classname="app.melotrail.application.MidiCoreSourceImportTest" time="0.008"/>
+  <testcase name="failed final project save cleans new import artifacts and preserves prior project()" classname="app.melotrail.application.MidiCoreSourceImportTest" time="0.004"/>
+  <testcase name="rejects multiple note-bearing tracks without publishing source artifacts()" classname="app.melotrail.application.MidiCoreSourceImportTest" time="0.002"/>
+  <testcase name="source mutation between inspection and copy is rejected and removes unbound bytes()" classname="app.melotrail.application.MidiCoreSourceImportTest" time="0.004"/>
+  <testcase name="rejects multiple note-bearing channels in the sole melody track()" classname="app.melotrail.application.MidiCoreSourceImportTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

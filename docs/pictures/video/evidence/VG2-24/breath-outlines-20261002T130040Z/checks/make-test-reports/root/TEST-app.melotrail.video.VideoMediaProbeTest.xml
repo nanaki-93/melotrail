@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoMediaProbeTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:54:14.919Z" hostname="Marcos-MacBook-Pro.local" time="0.071">
+  <properties/>
+  <testcase name="remux rejects changed frame count geometry cadence duration and extra streams()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.021"/>
+  <testcase name="preview tool admission shares manifest and reported build checks without media work()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.002"/>
+  <testcase name="remux rejects an altered intermediate presentation timestamp with identical stream metadata()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.005"/>
+  <testcase name="derivative truncation or mutation cannot publish a validation receipt()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.005"/>
+  <testcase name="bounded preview metadata refuses truncated output before parsing()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.001"/>
+  <testcase name="already silent media retains its original bytes with no remux()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.002"/>
+  <testcase name="truncation and source mutation fail without publication()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.004"/>
+  <testcase name="cancellation reaches the process and hashing boundary()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.002"/>
+  <testcase name="invalid rational streams zero frames and missing timing reject()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.009"/>
+  <testcase name="audio tail does not extend video timing and original identity is measured()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.002"/>
+  <testcase name="side data bearing frame output preserves timestamps and permits a verified remux()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.003"/>
+  <testcase name="zero start normalization is explicit and unsupported codec or changed source rejects()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.008"/>
+  <testcase name="native sized audio is remuxed and both byte identities and timing are independently verified()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.003"/>
+  <testcase name="validation cancellation propagates before launch and through derivative decode()" classname="app.melotrail.video.VideoMediaProbeTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

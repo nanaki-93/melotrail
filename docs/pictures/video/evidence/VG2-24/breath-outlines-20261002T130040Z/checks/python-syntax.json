@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "scripts": [
+    "breath-model/scripts/decode-native.py",
+    "breath-model/scripts/run.py",
+    "breath-repair/scripts/decode-native.py",
+    "breath-repair/scripts/run.py",
+    "breath-repair-prepared/scripts/decode-native.py",
+    "breath-repair-prepared/scripts/run.py",
+    "finish/scripts/run.py",
+    "finish/scripts/verify-media.py",
+    "fixed-cabin-proof/scripts/prepare.py",
+    "fixed-cabin-proof/scripts/run.py",
+    "fixed-cabin-recovery/scripts/assemble.py",
+    "fixed-cabin-recovery/scripts/run.py",
+    "generation/scripts/check-guided-graph.py",
+    "generation/scripts/decode-native.py",
+    "generation/scripts/run.py",
+    "outlines/scripts/bounded.py",
+    "outlines/scripts/check-backing-interiors.py",
+    "outlines/scripts/check-breath-cup.py",
+    "outlines/scripts/check-sequence.py",
+    "outlines/scripts/prepare-support.py",
+    "outlines/scripts/refine-initial.py",
+    "outlines/scripts/refine-repair1.py",
+    "outlines/scripts/refine.py",
+    "outlines/scripts/repair-backing.py",
+    "scripts/retain-session.py"
+  ],
+  "nativeLaunches": 0
+}

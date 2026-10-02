@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-10-02T13:48:02.388559+00:00",
+  "classPins": {
+    "ActionPilot.class": "8fb3508e8810ca694ab2959bfbf4faeb89d5f7d5530816877f7f81d0aaff3c87",
+    "CheckBreathRequest.class": "0682457f6ac9aedb172dadb73e1ea8e5748aeaaf89c206d0aeacc7c2e3001729",
+    "ComfyMasks.class": "d71d0f8a831581e41d4c1ee3b0d80d6f828e49ac9ca601330d2b19746fa1614e",
+    "NarrowBreathAdmission.class": "6e9d9b284f7711235d59c445e9359e4a3ae8c419aef17b2e9a04883d92176863",
+    "ComfyFinish.class": "a997864d9e23850634c14f5799c8a5cd949147b05e896da24b72e0455fb65e19",
+    "MediaStage.class": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e",
+    "MotionTools.class": "b5f5bf388b6095d2750f47e9d008a993a6f01ac266bac5ca03177b09dc8a9df0",
+    "ComfyMasksSingle.class": "d5661f651b17e4f6415b599c7a50e2ace32f0eef9d1c07a7d0c4c675b3aa79cd",
+    "BreathRepairPilot.class": "d2749ac89edb0b605285a1cfc143d396b04993cc3f118adafc142d8bd8e4d2b6"
+  },
+  "admissionSha256": "cd70ed49920b355077f2a94dac48b38826b622304c319bf507359e02b0487bf3",
+  "commandOwner": "ComfyMasksSingle via production ComfyVideoRuntime/ComfyVideoClient"
+}

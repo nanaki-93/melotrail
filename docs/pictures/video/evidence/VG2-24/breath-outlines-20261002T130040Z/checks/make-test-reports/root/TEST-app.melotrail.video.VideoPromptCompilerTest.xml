@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoPromptCompilerTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:37.797Z" hostname="Marcos-MacBook-Pro.local" time="0.007">
+  <properties/>
+  <testcase name="total cut duration does not change the compiled clip prompt or its consumed dependencies()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.001"/>
+  <testcase name="explicit prompt template version and output configuration change request identity()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.0"/>
+  <testcase name="unsupported primary text produces no backend text input()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.0"/>
+  <testcase name="contrasting prompts and changed immutable assets produce distinct dependency fingerprints()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.001"/>
+  <testcase name="outfit image and explicit role changes alter identity while unrelated inputs stay pinned()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.001"/>
+  <testcase name="reference overflow and conflicting duplicate roles never disappear from the binding report()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.001"/>
+  <testcase name="unsupported capacity roles and user guidance stay visible and block inference()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.0"/>
+  <testcase name="multiple character outfit and scenery pictures bind independently with role-scoped guidance()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.001"/>
+  <testcase name="guideline decoder rejects unknown versions and prompt validation permits line endings but not binary controls()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.0"/>
+  <testcase name="character outfit and scenery groups may each be absent()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.0"/>
+  <testcase name="model workflow settings capability and exact resource bytes are fingerprinted()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.001"/>
+  <testcase name="multiline free-form prompt and user refinements remain exact and precede generic guidance()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.0"/>
+  <testcase name="finished artwork motion compilation binds one exact look and forbids appearance redesign()" classname="app.melotrail.video.VideoPromptCompilerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

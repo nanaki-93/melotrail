@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.422Z" hostname="Marcos-MacBook-Pro.local" time="0.011">
+  <properties/>
+  <testcase name="equivalent scoped requests have stable hashes and explicit seeds affect identity()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.002"/>
+  <testcase name="an unrelated plan edit preserves a reusable scoped piano boundary()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.004"/>
+  <testcase name="context enforces role profile pattern and fill boundaries()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.001"/>
+  <testcase name="factory scopes harmony melody and accepted dependency evidence to one occurrence()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.0"/>
+  <testcase name="confirmed plan resolves scoped groove neighbor and repeat inputs deterministically()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.002"/>
+  <testcase name="explicit piano boundary changes the chords context fingerprint without reading accepted state()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.001"/>
+  <testcase name="catalog exposes only core role patterns and complete authored steps()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.0"/>
+  <testcase name="tick grid rejects unrepresentable authored subdivisions()" classname="app.melotrail.arrangement.core.MidiCoreGenerationContextTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

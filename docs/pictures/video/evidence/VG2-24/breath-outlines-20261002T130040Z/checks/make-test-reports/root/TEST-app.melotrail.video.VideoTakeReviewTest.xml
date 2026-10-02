@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoTakeReviewTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:41.345Z" hostname="Marcos-MacBook-Pro.local" time="0.144">
+  <properties/>
+  <testcase name="explicit unreviewed selection and clearing survive reopen without approving or changing takes()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.022"/>
+  <testcase name="multiple decisions persist in append order and never change selection()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.017"/>
+  <testcase name="selected take must be deselected before rejection including direct saves()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.017"/>
+  <testcase name="selection rejects duplicate missing and rejected members atomically without changing prior choices()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.029"/>
+  <testcase name="stale revision invalid take and malformed event leave bytes unchanged()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.014"/>
+  <testcase name="failed publication unsupported schema and corrupted media preserve previous state()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.014"/>
+  <testcase name="selection reopens and verifies artifacts and revision before publishing()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.017"/>
+  <testcase name="direct saves cannot forge malformed references duplicate IDs or rewrite history()" classname="app.melotrail.video.VideoTakeReviewTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

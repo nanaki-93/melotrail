@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreAuthoritativeHarmonyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:01.843Z" hostname="Marcos-MacBook-Pro.local" time="0.038">
+  <properties/>
+  <testcase name="blocking harmony findings leave project bytes unchanged()" classname="app.melotrail.application.MidiCoreAuthoritativeHarmonyTest" time="0.009"/>
+  <testcase name="binds explicit sub-bar chromatic harmony and reopens it unchanged()" classname="app.melotrail.application.MidiCoreAuthoritativeHarmonyTest" time="0.008"/>
+  <testcase name="authority edit persists while previewing the affected candidate()" classname="app.melotrail.application.MidiCoreAuthoritativeHarmonyTest" time="0.012"/>
+  <testcase name="save failure preserves the prior empty harmony authority()" classname="app.melotrail.application.MidiCoreAuthoritativeHarmonyTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.440Z" hostname="Marcos-MacBook-Pro.local" time="0.005">
+  <properties/>
+  <testcase name="reports ambiguous bend limitations deterministically with no project writes()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.001"/>
+  <testcase name="keeps compound intervals suspensions and chromatic chords explainable without replacing harmony()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.001"/>
+  <testcase name="weights an offbeat note by the strongest beat crossed during its overlap()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.0"/>
+  <testcase name="analyzes exact quarter beats at PPQ 25 without requiring sixteenth subdivisions()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.001"/>
+  <testcase name="weights held accented semitone tension above a short passing tone()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.0"/>
+  <testcase name="derives pickup rest phrase repetition sustain and polyphony context without source mutation()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.001"/>
+  <testcase name="distinguishes the secondary 6 8 group accent from unaccented eighth notes()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.001"/>
+  <testcase name="keeps each pickup beat and partial final beat separate before the regular bar()" classname="app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

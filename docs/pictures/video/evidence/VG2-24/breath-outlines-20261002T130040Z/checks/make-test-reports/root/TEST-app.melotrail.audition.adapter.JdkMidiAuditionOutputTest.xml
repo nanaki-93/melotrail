@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.audition.adapter.JdkMidiAuditionOutputTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.460Z" hostname="Marcos-MacBook-Pro.local" time="0.665">
+  <properties/>
+  <testcase name="routes authoritative tempo meter and safe live transport rebuilds through MIDI only()" classname="app.melotrail.audition.adapter.JdkMidiAuditionOutputTest" time="0.659"/>
+  <testcase name="default preview opens and closes the managed audible synthesizer()" classname="app.melotrail.audition.adapter.JdkMidiAuditionOutputTest" time="0.002"/>
+  <testcase name="preserves an explicit output failure code from the JVM boundary()" classname="app.melotrail.audition.adapter.JdkMidiAuditionOutputTest" time="0.001"/>
+  <testcase name="maps an unavailable JVM sequencer to a recoverable device result()" classname="app.melotrail.audition.adapter.JdkMidiAuditionOutputTest" time="0.001"/>
+  <testcase name="closes a partially opened default synthesizer after failure()" classname="app.melotrail.audition.adapter.JdkMidiAuditionOutputTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

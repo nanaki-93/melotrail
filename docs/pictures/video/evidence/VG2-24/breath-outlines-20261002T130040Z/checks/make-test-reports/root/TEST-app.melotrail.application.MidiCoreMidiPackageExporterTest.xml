@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreMidiPackageExporterTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:18.761Z" hostname="Marcos-MacBook-Pro.local" time="0.564">
+  <properties/>
+  <testcase name="omits an all-song accepted rest while retaining source and active-role boundaries()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.031"/>
+  <testcase name="published package remains immutable after subsequent project changes()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.047"/>
+  <testcase name="uses deterministic MIDI hashes for equal inputs()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.062"/>
+  <testcase name="cleans tampered staging and refuses silent overwrite()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.039"/>
+  <testcase name="redacts source paths and removes a package when snapshot persistence fails()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.042"/>
+  <testcase name="exports later bass entry after accepted intro rest at its exact song position()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.043"/>
+  <testcase name="exports every development source fixture with portable semantic packages()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.142"/>
+  <testcase name="refuses missing and unaccepted role evidence without changing project state()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.021"/>
+  <testcase name="refuses stale accepted evidence()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.031"/>
+  <testcase name="omits disabled generated roles and records portable role enablement()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.032"/>
+  <testcase name="exports padded whole-song boundaries without changing preserved source bytes()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.037"/>
+  <testcase name="publishes a complete package records snapshot and reopens it()" classname="app.melotrail.application.MidiCoreMidiPackageExporterTest" time="0.035"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

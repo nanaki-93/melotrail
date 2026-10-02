@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreDesktopStartupCheckTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:29.973Z" hostname="Marcos-MacBook-Pro.local" time="0.016">
+  <properties/>
+  <testcase name="ordinary launcher takes no check path and packaged main accepts native arguments()" classname="app.melotrail.desktop.MidiCoreDesktopStartupCheckTest" time="0.002"/>
+  <testcase name="startup output never reuses an existing directory or changes its evidence(Path)" classname="app.melotrail.desktop.MidiCoreDesktopStartupCheckTest" time="0.005"/>
+  <testcase name="unrealized window and unclosed session cannot become successful startup evidence(Path)" classname="app.melotrail.desktop.MidiCoreDesktopStartupCheckTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

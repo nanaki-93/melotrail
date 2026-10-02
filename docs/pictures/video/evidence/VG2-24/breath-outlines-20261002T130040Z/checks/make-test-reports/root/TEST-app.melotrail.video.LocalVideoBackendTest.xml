@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.LocalVideoBackendTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:34.103Z" hostname="Marcos-MacBook-Pro.local" time="4.62">
+  <properties/>
+  <testcase name="repeated completion preserves published bytes when the source at the same name changes()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.016"/>
+  <testcase name="pending HTTP 500 cancellation waits for durable acknowledgement then recovery releases both admissions()" classname="app.melotrail.video.LocalVideoBackendTest" time="1.651"/>
+  <testcase name="controlled motion fingerprint binds prompt controls range seed and consumed runtime pins()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.021"/>
+  <testcase name="binding and consumed dependency changes alter canonical request fingerprint()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.001"/>
+  <testcase name="image free keyframe identity binds project workflow and geometry without requiring a reference()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.026"/>
+  <testcase name="changed reference pin and unbound fingerprint fail before slot or HTTP mutation()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.001"/>
+  <testcase name="reconstructed backend recovers interrupted history and releases exact runtime lease()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.52"/>
+  <testcase name="pinned host graph uses shared production binding and rejects changed slots graph and image before transport()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.008"/>
+  <testcase name="non-object workflow is rejected before acquiring a slot or submitting()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.002"/>
+  <testcase name="node progress resets survive durable reconciliation and reconnect before one publication()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.07"/>
+  <testcase name="submit binds pinned owned files and completion publishes one immutable verified result()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.002"/>
+  <testcase name="preexisting null-primary clip fingerprint survives persisted uncertain job recovery()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.036"/>
+  <testcase name="coordinator rejects forged Comfy fingerprints before deduplication or backend invocation()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.027"/>
+  <testcase name="Comfy identity scopes the exact consumed image to its project without changing graph slots()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.001"/>
+  <testcase name="production flat binding pins exact primary guidance and runtime before fake transport()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.003"/>
+  <testcase name="ComfyUI rejects typed controlled motion without leasing or submitting()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.001"/>
+  <testcase name="ambiguous acknowledgement reconstructs stable identity without a duplicate submit()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.001"/>
+  <testcase name="enqueued HTTP 500 retains runtime and V16 admission until reconstructed backend publishes same job()" classname="app.melotrail.video.LocalVideoBackendTest" time="1.595"/>
+  <testcase name="stale runtime and missing durable binding retain unknown recovery()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.003"/>
+  <testcase name="same Comfy image in two projects gets two durable jobs and separate backend submissions()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.058"/>
+  <testcase name="completion during interrupt remains publishable by V16 recovery and releases runtime lease()" classname="app.melotrail.video.LocalVideoBackendTest" time="0.57"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

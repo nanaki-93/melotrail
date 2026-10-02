@@ -526,6 +526,41 @@ old helpers and approved artwork remain untouched. Full/focused/Node/build/diff
 and protection results are recorded separately from this failure; see
 [TABI details](TABI_VIDEO.md#subsequent-static-approval-and-bounded-decoder-guard-failure-2026-09-30).
 
+**VG2-24 breathing/outline preparation (2026-10-02):** evidence owner
+`docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/`. The initial local breathing attempt is stopped
+on critical host memory pressure. User-approved shorter generation succeeds in
+251.009s, peak sampled RSS 25,715,097,600 bytes; the 1080p ComfyUI finishing runner
+succeeds in 71.377s, peak 7,615,545,344 bytes. Two earlier non-native harness
+rejections are retained and covered by admission regression checks. No model
+retry occurs without explicit user approval; production pressure/swap guards
+remain unchanged. Every successful owned runtime session is copied, hash-verified
+and its external temporary original removed.
+
+The 97-frame silent H.264 movie is 1920×1080, 25fps/3.88s, zero start, BT.709
+matrix/primaries and sRGB transfer. Full decode and exact timestamps pass.
+All-frame face comparison has maximum mean RGB difference 5.5809/255 and minimum
+99.6004% within 40/255; a face-dropout negative is rejected. These checks do not
+award breathing quality, rigid cabin/prop behavior, a loop or native-1080 detail.
+The three accepted action sequences yield 387 candidate moving silhouettes with
+unchanged source RGB and protected face interiors; the dropped-face negative and
+adjacent area checks pass. A neutral mask, new backing and 97 breathing masks are
+also retained under the user-requested asset folder. Human appearance review remains.
+
+The fixed-cabin proof's fourth ComfyUI batch exceeds the 8-GiB sampled RSS limit
+(9,670,049,792 bytes). Three complete APNG batches and the truncated last file
+remain as evidence; all observed PIDs are absent and only the owned runtime
+session is removed after verified preservation. The resource gate is FAILED,
+not retroactively passed. The user explicitly authorizes the final-batch recovery.
+A fresh owned runtime completes in 26.474s (peak sampled process RSS 933,691,392
+bytes; Metal allocations are not fully represented by RSS). All 129 frames
+match the independent alpha formula within 1/255, with the cabin fixed outside
+moving support and a dropped-face negative rejected. One 1080p H.264 review
+encode passes exact 25fps/5.16s timing, full decode, minimum 34.75 dB PSNR and
+maximum face MAE 2.534/255. Recovery processing totals 59.891s and retained files
+are below 1 GiB, including the hash-verified stopped runtime session.
+No new motion inference or automatic retry occurs. Queue status remains REVIEW;
+no full-film or app-delivery claim follows from this preparation.
+
 ### Standalone Blender feasibility checks (2026-10-01)
 
 VG2-11, separately user-requested; not VG2-08 guard repair or native admission.

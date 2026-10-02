@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreArrangementDraftTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:00.673Z" hostname="Marcos-MacBook-Pro.local" time="0.639">
+  <properties/>
+  <testcase name="planned rest survives cancellation retry and atomically uses and undoes with candidates()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.073"/>
+  <testcase name="invalid style does not mutate project or publish a partial draft()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.013"/>
+  <testcase name="locked rest with changed authority requires unlock before rest replacement()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.082"/>
+  <testcase name="inactive plan scope rejects candidate acceptance and draft selection()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.082"/>
+  <testcase name="locked candidate can unlock after inactive plan edit for atomic rest use and undo()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.078"/>
+  <testcase name="locked replacement and changed authority reject draft acceptance without a partial write()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.05"/>
+  <testcase name="locked planned rest unlock is revision guarded and permits atomic mixed replacement()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.07"/>
+  <testcase name="full draft requires an explicitly confirmed plan before any candidate is published()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.012"/>
+  <testcase name="multi-occurrence retry regenerates mismatched piano boundary and completed draft use rejects it()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.095"/>
+  <testcase name="reactivating upstream rest invalidates downstream candidate and rejects direct acceptance()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.04"/>
+  <testcase name="retry preserves but does not reuse a retained candidate from an older generator version()" classname="app.melotrail.application.MidiCoreArrangementDraftTest" time="0.042"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

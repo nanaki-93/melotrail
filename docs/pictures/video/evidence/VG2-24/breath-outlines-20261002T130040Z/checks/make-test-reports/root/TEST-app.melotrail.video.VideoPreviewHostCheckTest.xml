@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoPreviewHostCheckTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:54:35.549Z" hostname="Marcos-MacBook-Pro.local" time="61.373">
+  <properties/>
+  <testcase name="frame evidence covers every boundary and authored phase and rejects discontinuity()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.004"/>
+  <testcase name="preflight validates owned pins and finite persisted per-job policy without launching a job()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.005"/>
+  <testcase name="fixture process cannot execute before durable controlled admission and default probe is opt in()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.413"/>
+  <testcase name="per-job disk accounting excludes immutable earlier jobs but bounds current import()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.002"/>
+  <testcase name="native evidence rejects cadence jitter and reset motion despite matching average rate()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.001"/>
+  <testcase name="missing unsafe occupied or overlapped paths and unavailable supervision reject before tool launch()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.006"/>
+  <testcase name="reconstructed recovery rejects changed output and noncurrent attempt without overwriting takes()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="25.667"/>
+  <testcase name="sequential production-service ladder retains budgets receipts and failure without retry()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.001"/>
+  <testcase name="production controlled backend output resolves in the guarded importer()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.007"/>
+  <testcase name="three complete production imports publish measured unselected immutable takes()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="26.438"/>
+  <testcase name="production import cancellation preserves first take and stops the remaining ladder()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="8.77"/>
+  <testcase name="budget guard remains active during blocked guarded import and cancels its owned attempt()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.056"/>
+  <testcase name="guarded import native children receive a hard group RSS ceiling()" classname="app.melotrail.video.VideoPreviewHostCheckTest" time="0.0"/>
+  <system-out><![CDATA[VIDEO_PREVIEW_PROBE_COMPLETED output=/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/preview-host-check-16960510202450680186/fresh (technical fixture; real host proof/review is separate)
+SYNTHETIC_PREVIEW_WIRING_EVIDENCE root=/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/preview-host-check-16960510202450680186
+VIDEO_PREVIEW_PROBE_COMPLETED output=/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/preview-host-check-15092947165216595263/fresh (technical fixture; real host proof/review is separate)
+SYNTHETIC_PREVIEW_WIRING_EVIDENCE root=/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/preview-host-check-15092947165216595263
+SYNTHETIC_PREVIEW_WIRING_EVIDENCE root=/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/preview-host-check-8991260886342317238
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

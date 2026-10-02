@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoScenePreparationTest" tests="28" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:37.891Z" hostname="Marcos-MacBook-Pro.local" time="3.379">
+  <properties/>
+  <testcase name="unsupported preservation guidance rejects motion before a dispatchable input exists()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.108"/>
+  <testcase name="finished look review remains explicit at admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.119"/>
+  <testcase name="consumed pose review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.114"/>
+  <testcase name="selected capability review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.117"/>
+  <testcase name="consumed mask review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.11"/>
+  <testcase name="consumed foreground review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.116"/>
+  <testcase name="consumed scenery coverage review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.116"/>
+  <testcase name="unsupported prepared controls never reach controlled job admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.134"/>
+  <testcase name="referenced landmark review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.104"/>
+  <testcase name="transitive depth relation review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.107"/>
+  <testcase name="pending controls track clean plate pose and anchor dependencies independently()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.122"/>
+  <testcase name="review identities and consumed relation rejection are stable under reorder()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.13"/>
+  <testcase name="replacement look cannot be paired with an older prepared scene pin()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.05"/>
+  <testcase name="flat image cannot satisfy blink and redesign requests replacement before dispatch()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.037"/>
+  <testcase name="asset controls disclose compositor gaps without claiming execution readiness()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.116"/>
+  <testcase name="consumed effect anchor review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.124"/>
+  <testcase name="controlled admission reopens project scene and runtime before reaching ledger()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.443"/>
+  <testcase name="supplied pose sequence binds every pose timing review and exact neutral return()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.117"/>
+  <testcase name="transitive layer and mask rejection cannot hide behind approved direct targets()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.114"/>
+  <testcase name="persisted rejected reference cannot be admitted by a forged approved look()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.128"/>
+  <testcase name="reopened ready assets compile exact controlled motion and scoped fingerprints()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.123"/>
+  <testcase name="composition closure tracks foreground masks and transitive relations without invalidating flat input()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.111"/>
+  <testcase name="reimported clean plate invalidates pending pose but retains unrelated work and earlier scene()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.154"/>
+  <testcase name="inspiration and wrong-role imports cannot become finished scenes on reopen()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.041"/>
+  <testcase name="rejected components outside the consumed closure do not affect reviews or fingerprints()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.11"/>
+  <testcase name="consumed occlusion relation review controls admission()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.102"/>
+  <testcase name="landmark and layer sharing an id keep separate review identities()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.104"/>
+  <testcase name="controlled semantic compiler preserves compositor operation types and rejects ambiguous motion()" classname="app.melotrail.video.VideoScenePreparationTest" time="0.103"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

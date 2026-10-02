@@ -1,0 +1,62 @@
+{
+  "jdk": "/Users/marcoandreose/.sdkman/candidates/java/21.0.11-tem",
+  "runtimeClasspath": "checks/runtime-classpath.txt",
+  "compiledClassesWereDisposable": true,
+  "mediaAndClassFilesNotVersioned": true,
+  "javaSources": [
+    {
+      "path": "breath-model/scripts/BreathRepairPilot.java",
+      "sha256": "97292ab021a2638e27bfbdc234f30d3224c27b052c1ba73e083635022939c3ef"
+    },
+    {
+      "path": "breath-model/scripts/CheckBreathRequest.java",
+      "sha256": "2411e4761150d43d5265fb51d5a38697e09d36b495758b89563cd413c62152a0"
+    },
+    {
+      "path": "breath-model/scripts/NarrowBreathAdmission.java",
+      "sha256": "a5ba37013030d932addabf43259d23d98d23d0707dba9d658c90a4a9bd07af6b"
+    },
+    {
+      "path": "breath-repair/scripts/BreathRepairPilot.java",
+      "sha256": "a9747204c2f181a57613aad945452e78842601624c9ed3b8d33dfedcea4287a4"
+    },
+    {
+      "path": "breath-repair/scripts/CheckBreathRequest.java",
+      "sha256": "f240019c16c041f03a2dda0cc2be5707f2f9b5d42737ed3d34bd5558e7b08694"
+    },
+    {
+      "path": "breath-repair-prepared/scripts/BreathRepairPilot.java",
+      "sha256": "a9747204c2f181a57613aad945452e78842601624c9ed3b8d33dfedcea4287a4"
+    },
+    {
+      "path": "finish/scripts/ComfyFinish.java",
+      "sha256": "01a3fc9a4482027e035d9942b51022f0660452a9bc405fdcba9be02fa9ac9d6f"
+    },
+    {
+      "path": "finish/scripts/MediaStage.java",
+      "sha256": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d"
+    },
+    {
+      "path": "fixed-cabin-proof/scripts/ComfyMasks.java",
+      "sha256": "66d50ba9feaf5b33d091d9917e3a6dd5fc754a5fc5d6d81ac8a1f21b33c9689f"
+    },
+    {
+      "path": "fixed-cabin-recovery/scripts/ComfyMasksSingle.java",
+      "sha256": "4991d6247ee4185e879475e7f08ac064f77974ab135e64e4bf049954ea01a3ce"
+    },
+    {
+      "path": "generation/scripts/ActionPilot.java",
+      "sha256": "2765418fa1b3413ca295e9cd64c15910102e9190432b7f95d815dfe6c6aa37e7"
+    },
+    {
+      "path": "generation/scripts/MotionTools.java",
+      "sha256": "9ac343b53c6db47f1938e093a95c4da5070cdd8cf9761a97f90550f2dfc14a09"
+    }
+  ],
+  "rasterDependencies": {
+    "python": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/comfyui/v0.35.0/.venv/bin/python",
+    "opencvHeadless": "4.11.0.86, isolated --target dependency; removed at cleanup",
+    "swift": "System Xcode Swift and Vision framework, revision 1, offscreen image requests only"
+  },
+  "recipe": "Compile only the source group needed by its selected runner against runtime-classpath.txt into a fresh private classes directory. Retained failed and corrected harness versions share some class names: never compile all Java sources together. Runtime/client/backend/job/media ownership stays in repository production classes."
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.LocalVideoProfileTest" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:38.724Z" hostname="Marcos-MacBook-Pro.local" time="1.254">
+  <properties/>
+  <testcase name="report and take cannot be ancestors of each other even when both are absent()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.013"/>
+  <testcase name="model staging rejects disk shortage and cancellation without touching source()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.005"/>
+  <testcase name="symlink followed by dot-dot cannot substitute tool model or reference pins()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.004"/>
+  <testcase name="absent Unicode components fail portable naming policy before any write()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.003"/>
+  <testcase name="request JSON rejects unsupported versions unknown fields and relative paths()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.002"/>
+  <testcase name="candidate evidence cannot masquerade as measured or selected facts()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.001"/>
+  <testcase name="symlink followed by dot-dot cannot redirect report take or output directory()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.003"/>
+  <testcase name="existing duplicate and input-containing output locations are rejected without replacement()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.002"/>
+  <testcase name="mutating CLI success preserves installed models and records private sidecars()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.353"/>
+  <testcase name="mutating CLI failure preserves keyframe models and derived evidence()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.316"/>
+  <testcase name="missing and mismatched tool model and reference pins fail actionably()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.002"/>
+  <testcase name="staging verifies actual copied bytes and rejects missing model fallback()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.005"/>
+  <testcase name="distinct portable siblings retain spelling under existing Unicode directories()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.003"/>
+  <testcase name="outputs cannot escape their directory through an existing symlink ancestor()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.002"/>
+  <testcase name="bundled profile is explicitly candidate and contains no invented evidence()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.0"/>
+  <testcase name="mutating CLI cancellation preserves keyframe models and derived evidence()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.515"/>
+  <testcase name="Unicode directory aliases use existing file identity or reject an absent Unicode component()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.004"/>
+  <testcase name="canonical output aliases and nested paths through symlink ancestors are rejected()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.004"/>
+  <testcase name="real request with multiple reference roles writes unsupported report before launch()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.003"/>
+  <testcase name="complete owned request validates pins and remains NOT_RUN without touching inputs or outputs()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.002"/>
+  <testcase name="request bounds profiles takes prompt and reference bindings()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.002"/>
+  <testcase name="all pin and output fields reject ordinary dot and dot-dot components without writes()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.006"/>
+  <testcase name="absent case-only output aliases and ancestors are rejected without writes()" classname="app.melotrail.video.LocalVideoProfileTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,1467 @@
+{
+  "status": "PASS",
+  "breathFrames": 97,
+  "cupFrames": 129,
+  "rgbUnchanged": true,
+  "faceDropoutNegativeRejected": true,
+  "breathMaxAdjacentAreaChangeFraction": 0.01855987279878228,
+  "cupSupportNeverErasesCharacter": true,
+  "artisticApproval": false,
+  "breathPins": [
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0001.png",
+      "sourceSha256": "3c3e826bb169cedf4e6ca267b87e80deee9469dcfae3656caede8c6cb6ea17b6",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0001/mask.png",
+      "maskSha256": "0ca9a86569fa6f061baa9624045a9c3a05ec6aa11264114543aacf47e32d4e98",
+      "rgbaSha256": "0df8785aebec18a9aa5d7f10bc6a417931c3a3171179a5aafe6801780bfc9d91"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0002.png",
+      "sourceSha256": "942d417633e8623ce7256bc4dc4685540626cbe4f0cd89bce9012fad9ecf5a26",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0002/mask.png",
+      "maskSha256": "842fe826de64291872765339d5b982d358f7aaa1e825705e94e5947f2b0ed1c8",
+      "rgbaSha256": "f4c589f57f464f0f420e4657ab43ae98378bdba53e6e8a17b9a36165f8c2a823"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0003.png",
+      "sourceSha256": "4626f5989288910890bf56fc6fe1c3fd184e32d4d1b45feae70a0add5a468aa1",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0003/mask.png",
+      "maskSha256": "59e353ef2599c43785f9752a300869e3f3bb3e948d4cc7fa723047b9a48ad8e2",
+      "rgbaSha256": "fc5d95646af8a628b0ac11c804b72c52927536d87f237e0d2e266894f221ed19"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0004.png",
+      "sourceSha256": "a9d7f7fa398d34ac3035bcf79317d58f3b57c519b59fbe5b31e0b5c88848e56c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0004/mask.png",
+      "maskSha256": "8b1cdc653f1e100c918ef7715f6ee37bed832bba2a871efc1efd126336058db0",
+      "rgbaSha256": "cea6b4d09233f90808ed237968198972aa3b7b6633ada961ac379eb1646bf27f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0005.png",
+      "sourceSha256": "e76780f2b07794890f91c6ad183e9661926dccbeddf90ad37b843c62026e958c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0005/mask.png",
+      "maskSha256": "ab719d33f9bf5cea9ca48527ae1e6624a44882e1cf7aa4cc2f2cfc7bac02fa06",
+      "rgbaSha256": "7dba5887300eab7fd0c6c05457a5a9f81715e5462368af7cc2ef2621944679b8"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0006.png",
+      "sourceSha256": "4ad15f1832068c160f902c51df5a49c0f4d3e087ebbd99327998fae0a96604b3",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0006/mask.png",
+      "maskSha256": "3a674ce3463866c1c8bb513c6edffc70e9f497e1a520ad84cf560e57ccd21160",
+      "rgbaSha256": "f852f32cac184da0922d6daa8cf149333eac7606accff4a48183df33010de595"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0007.png",
+      "sourceSha256": "d06e024ba082e6c5a9609e40bfa37de2ccdfcbe67606c256e109c666cae544d1",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0007/mask.png",
+      "maskSha256": "4dfb69f055f928e4268e23da462abfee7a18c008f26be84d18d934d0f1816c0b",
+      "rgbaSha256": "097049ebc5ea827f012d913ee5f243187a67a3b1523687dd299f7e68125e9259"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0008.png",
+      "sourceSha256": "dbf5635078acd84af1f6ddc8ccc8b1d72f13d2e0eced74255834d352e25f107a",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0008/mask.png",
+      "maskSha256": "735819dac938bae69fd51661db48d80eeb68b45592d5a79a93a4e2b0f3ded591",
+      "rgbaSha256": "fd51230525d1f54b1161e024590750f1a1c5b39ea2f216b4ef35d40c4cae9f8f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0009.png",
+      "sourceSha256": "7c42d74b1bce3c73627480c11adb02b07ba36bd2065ef8cf32824196816815b1",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0009/mask.png",
+      "maskSha256": "eb9cb4332c308297d73d0ea0a7af81dbea5069dc1eae1576f62378ea0b9bb6f8",
+      "rgbaSha256": "298eb33fd422602218daf46b864131d058a9e54f65aa29915235cc1eda7a6a73"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0010.png",
+      "sourceSha256": "5afdc9a5d8674838bf17f053bdc1589b64645d46d54b7431902a3d9f3e7712d0",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0010/mask.png",
+      "maskSha256": "b8c06d9b84ef0a9d730b582d9300f79055d7c85175f8c596745882fc890714ee",
+      "rgbaSha256": "d0dffee4cb74b61b90b42b2d3a384ba4ba6d660bd4383456d183b881c6a4b008"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0011.png",
+      "sourceSha256": "83f693db981651ce28acef041d2456d88f5d1367d1fb9d4e80edd26357a90da7",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0011/mask.png",
+      "maskSha256": "5449fa62a6bfb7025db8930ef700648666aa85a7f887f570a01f7b33e3b07994",
+      "rgbaSha256": "389cddeb95c33652f6177548a60365b6aaf2d729c954ee7e871819dea772413b"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0012.png",
+      "sourceSha256": "79a59f477eb3fbad319cff38f3d14bd69ba3403e18d00f87d8bee5dbf741e579",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0012/mask.png",
+      "maskSha256": "9393e0fe9b3fee45950a59ee0c76e68c934f3f62e665a489008c514945cdfcfd",
+      "rgbaSha256": "3d6c89133808c32cf9d129024efe0b573af6302fd6c429af31328ce64eb6af5d"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0013.png",
+      "sourceSha256": "aa9d6f7efef5baa4cd34e5aa893c9c04e9f80b0042558568897e7e5dd8f2967d",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0013/mask.png",
+      "maskSha256": "1611a025e06a841d99e48c492616778afbd316b3c7a21b2e934b6aae3b9e9adc",
+      "rgbaSha256": "6b0f4ced8c9569cbda2579b51ade9c42e736d6bb57869001e64ab28ea2767d5e"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0014.png",
+      "sourceSha256": "947247639499832a74c2a2261223c387d53119fe834e333ccffb08d40b841b4a",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0014/mask.png",
+      "maskSha256": "72938a00c75b8f6ee2bd93828b8178a83133f2be0a676395ac7fb4b19c4f8eed",
+      "rgbaSha256": "0e5992039619744d4c10b836356dbdab70619d7820dcc3a6e7e75ef73fc7f4cc"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0015.png",
+      "sourceSha256": "fe624a72beef7ea823f1549c0218969e3e4969b8b7d9d93e12e32628f710999f",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0015/mask.png",
+      "maskSha256": "796c43fa0c112761f1eebab0e8c1738bb875e2664da4e4a187e570cd640736f8",
+      "rgbaSha256": "0281e1ef56c9a39eec67b7fe586c2a650151f1c3058d4009223e095879e12e19"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0016.png",
+      "sourceSha256": "0c7bacbbf9c13afd12e448e9d0eec35081a4bd11842da149529185eb0da042db",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0016/mask.png",
+      "maskSha256": "3cc0cc0139026a8a474bca8660ba81b00b07d633b053a590f5d046a8019af4de",
+      "rgbaSha256": "362e524b357ee6ca5ede14f63da1265a106ffbe0e8d575e6f2c761aa98113e4e"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0017.png",
+      "sourceSha256": "c1091b59d8fe6bec5c749261c286e5b236974489c284ee03acdf0fe8ba45bdf9",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0017/mask.png",
+      "maskSha256": "9762f639b7b200210fc0555d92d6f4a6c9c4ea9d27a6edb0e1a03f3b7d18fdb0",
+      "rgbaSha256": "3f10619867b379133fd943371f4a02c14b408814379c6ba4d617550598c844a3"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0018.png",
+      "sourceSha256": "70f5faa30aa4ff62e005a9f60f5de9938e897fd8efa2c5f0811e53e637b53267",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0018/mask.png",
+      "maskSha256": "139840ca0835cf9cbd9a8cae790116ebc66d0acfd285a13917ab53335dbb314b",
+      "rgbaSha256": "7097eab4a61c4d5135ea406349164777cd56f1152c1fc63a275a02e9e56b37a5"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0019.png",
+      "sourceSha256": "9af1c77ed35a262cce96fbd31ab0f9c95588e0ba14106ea1432754df7a752a01",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0019/mask.png",
+      "maskSha256": "d46bbb88d5740b4fc4211993b70e077ebf4b34a260353d6ce37f5bd986fe5f77",
+      "rgbaSha256": "5cbd58a843aef4672977557861840e84f3605cfa69a6b33d10d20e205bd1c14b"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0020.png",
+      "sourceSha256": "b334c3027e5ea6e17881644989f9dc2958824c3ede94e14e26d9cd9cb6f0219a",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0020/mask.png",
+      "maskSha256": "ce5fd2647b7cb26a9896fd8be49d1182ae4aacec1e5857525d7f62ff02293a80",
+      "rgbaSha256": "14fb1100c7668a57949518a02545adb767156b96636ea4642324d3359bb31654"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0021.png",
+      "sourceSha256": "6cf2e3c9e27f4416e694ee6e9762f90830694d72b3c15210e3686bac7a1a77e8",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0021/mask.png",
+      "maskSha256": "69e199a0364583ec244d422c1e06105df672130a84df6f0da656bc0e55b4ff34",
+      "rgbaSha256": "ea096d8c64bda6751373e6c6423512ffb649d8c8f32edde310aea936ef74637a"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0022.png",
+      "sourceSha256": "11b18fc841e74bfb854abc11310c84d7a9e8406848e776aca08cf96d8eb2c7d7",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0022/mask.png",
+      "maskSha256": "5786c4a40dcae94ab714482ebc6caf867b79653e37e0e80d5eb99c094e50904c",
+      "rgbaSha256": "73af2dc689a5400873949986aae12660c72a5d3009c170049661dc35a8da591e"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0023.png",
+      "sourceSha256": "6a70bf303b9b34b2808147e40d273cf39e5a086a9ea9575338d7006dc4889f21",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0023/mask.png",
+      "maskSha256": "3cc1b03a065895ecbd96712bd6cf2489ed22e1a0149388144efc2bf79ed2971e",
+      "rgbaSha256": "4b654ad0abcea45fe6118342d5cf5a16efda3bae70518fd513e31d223129ddca"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0024.png",
+      "sourceSha256": "7ce3a25992ffc6fcfb383fcd12332bdcf6966c6bf7bdc253ad7a538a2282c92a",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0024/mask.png",
+      "maskSha256": "4368396cd02e2ab29f9f6ba34c2fa28d932729d8fc1f83eebaff372ff88057cf",
+      "rgbaSha256": "804b7bc42761e274f3c8731f0981abe3771cafaae612841ba02a438b0ab3f011"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0025.png",
+      "sourceSha256": "16560f379fe40a9d153a126b6e7bce59a7759cceeb4a252ce6c3783c522e1707",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0025/mask.png",
+      "maskSha256": "3e107103d3653a34d2b418e4b46f05901e22230811fdd54a5137584b06303a3f",
+      "rgbaSha256": "f587dd2af37bab3422f0a10678403558797fb1a408b0709b10ce806fbf6550d6"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0026.png",
+      "sourceSha256": "fefebd3b0b534a1968205d8eab6a97fe0a54c4d51133670f99ea588b1f307468",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0026/mask.png",
+      "maskSha256": "32b584928ce42d44d0ab9299e14824ff437178bb4bd2a5b8bdcd577a0b11f38e",
+      "rgbaSha256": "af4b29fe1a2bc0dfde9cbb4ee2bbbe8bbbc58d807c3069f6de01356902ec158a"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0027.png",
+      "sourceSha256": "21e29ee74a3b5f9bdfdf77691be5173064083e8049a9ff0af1a3263f5f80794b",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0027/mask.png",
+      "maskSha256": "04648e515cebe01d1fa0e3e36d4c0bae334db1826bb288305871d0d3d267a3f5",
+      "rgbaSha256": "97a27365e8582a628de290b75f3142c21d5a583ac2d1e137a1d76101ec04a2dd"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0028.png",
+      "sourceSha256": "29dfa543b8d7124e4054719b2c94d9d3d1bf7cd2963e2db0af6442d48b4070da",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0028/mask.png",
+      "maskSha256": "b85fa38d5498e0270751ac6cd198be2e3e0c35d38cc385769731056c57f50fe0",
+      "rgbaSha256": "023461df84be44cbbdc28c1923375cef756a9eb707ba0636b6e4d630efb1005e"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0029.png",
+      "sourceSha256": "02d894f75bc1650ca1c9b124d3a20ceaf1472f2483c42f924b7de31f177204ac",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0029/mask.png",
+      "maskSha256": "7a2e9bf6f8dddf8f235fe517d722aacda8d2821d6074e0f54eb05a729050e56e",
+      "rgbaSha256": "e298c84fb8a4b9818b1cb41881bc9ffd530b73245f044d8c9d2d508e391a6861"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0030.png",
+      "sourceSha256": "0389bf5f1a01e2ac7519487f073b948ddc7901ca92254fc41c215bfbaa488ca5",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0030/mask.png",
+      "maskSha256": "d730d1359e150ec0873e3f3019729962d581448c0fcdf27fb2122898225f25ed",
+      "rgbaSha256": "9cdd52a56c99e8beff13a52e6c5b5d74199a2f41d59d92502ae4873066043ac8"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0031.png",
+      "sourceSha256": "dc7c5d4c2aa9f472102c1fca344004c5f21b326b669a2187b8be7ebec422cba7",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0031/mask.png",
+      "maskSha256": "d7d0f779ef9c628794316d21dfd7c3cf619d68eede809de159af1b60d1f09396",
+      "rgbaSha256": "93486a60e6fe03652803c79ceeb828feef1880918bda41779672031458bcea46"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0032.png",
+      "sourceSha256": "bd6e7eeb02a5ec698ed314fb7f2a54b0431830c1a2beacce7a3ff4e7d8ffd326",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0032/mask.png",
+      "maskSha256": "b0c5fb6b769449026e4bc47acb3b16eb01a9d60537da3b34b4c3adf1c2a7fe7f",
+      "rgbaSha256": "9114dad3b9417c8039ad8043f1bbd75f0cebe4859f3f49f0bb73f8911ef6647e"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0033.png",
+      "sourceSha256": "5fed5618b8769ea386bf8c89a04267e4e2b0c937cbd6ed2e8d1ab244abffb420",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0033/mask.png",
+      "maskSha256": "b5ea1c33b8e0261dc60c2fa365b897e2909d33a50d5adf4cbd0b0ec1ad5e0530",
+      "rgbaSha256": "7be0ba050b923316016a26207b795c62c96d90f20ce11e737c6b37e3d452243f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0034.png",
+      "sourceSha256": "90bce668f2ef41212dca07979b13907f0abe6487f1f9ae18e4b0fd623e10603f",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0034/mask.png",
+      "maskSha256": "8d5b541ae3b733f91302d76d248e8b26294cd7a14d2a1ccbd20c6bbc6eeb9fcd",
+      "rgbaSha256": "fc5cf0744c37a478fcee1e01ab76def538af7f3eafaf278b23f6d26315f22530"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0035.png",
+      "sourceSha256": "65c3d5f5b64636d208aeaa9e954fc6adcf160d126fd7bacecde0f176b02878ce",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0035/mask.png",
+      "maskSha256": "54c5232af58462799f2252af5491d4fdf1078344c9110d18211729f0de13fcd5",
+      "rgbaSha256": "d27e58393fb45611b9b431610b783f38f5b9cf1efcc8b9d6748af53e42d53d70"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0036.png",
+      "sourceSha256": "4ccd0f3dd5dffb3e77d19dfffcaf1aa714b2e76bcac27f80dd06927b50e1071e",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0036/mask.png",
+      "maskSha256": "5144b44b04f314ce2e2960bec7bc61800589a0867ae5ef5ddc82278938f5e3ee",
+      "rgbaSha256": "014ad173e327064475db8358370a71b289bc2f46e1eb2ebb38f0007ceb68f82f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0037.png",
+      "sourceSha256": "a73cfd08cc0839e59b9e439cedcbbe7e66be77ebe163b13f4cb069ed5020b3c3",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0037/mask.png",
+      "maskSha256": "645d23d1d33b8ad1f38c00162a9416b0ac128746ba319c12555281c8a8727433",
+      "rgbaSha256": "272e3edcecf7aa77e30dea58951c371e7d476fc147810aae17f267a5c65f729a"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0038.png",
+      "sourceSha256": "82fdd73c5143566711718640f2ab71936913765e619c3e39b64f3b95dc66beac",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0038/mask.png",
+      "maskSha256": "d0ee99dc4fa78f3976d149439cdcb291cb8ba52fe34ee41433757b8b749db6ea",
+      "rgbaSha256": "7bf7dd05482e7ec635e74c69850486c48af5b73cb74612208108557c31e12462"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0039.png",
+      "sourceSha256": "7ba36ddfb82b78f40fe93cf241f13f33bcb8fbacc06e46121c9e41b8b89dafca",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0039/mask.png",
+      "maskSha256": "f840050bfe0e57b3e4edbd18953fc97303f610364f43aab193a55ae89d7d4057",
+      "rgbaSha256": "ec2ce60c630b2e9c44e765ea1b8ddccd82b4637ff6b2d451c51f70f98c31c0ce"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0040.png",
+      "sourceSha256": "24c07c4fa4529cd395a2d2fff4794a788b46144511f7eea0b63cc66742014497",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0040/mask.png",
+      "maskSha256": "9edd966646659ee13511e5d20b1f697d18616e709734b402fe1f7aee946f4d23",
+      "rgbaSha256": "aaa704f69c9d474350be5bb83f2c96edeaa3857ef42698ba019c40e67948a547"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0041.png",
+      "sourceSha256": "5d259fa7c39cf390899ae3edb27de64012e33c57fe16b6c195d604dda246868c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0041/mask.png",
+      "maskSha256": "ec8e627c4c090c763931de3195d75f99d41382b5157634fd36ffa8c9cac21d1a",
+      "rgbaSha256": "e24c168e52dcc9198e71a3df0b4e7ce3a8c05e6750e565dfa080af53605cec5c"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0042.png",
+      "sourceSha256": "b8890bb459c7d619e47c6a521e5fe1bd40f8c120c9becabf2d14279fe5983831",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0042/mask.png",
+      "maskSha256": "fcc3977d0e605e687be6223fe9f76957d78880f928ff891fa60cc201c185c4df",
+      "rgbaSha256": "34d08f1a1bd6d1c684fdf9f2d39475ae1883a7fa62de8dfc77e25b9057cde6bf"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0043.png",
+      "sourceSha256": "d006a72602a520b7eeea26c0d002bd26d67e2e26799075d973272f4049feb3f9",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0043/mask.png",
+      "maskSha256": "363d8576eb750e21b4dc950313312e5f3213e40db72d2e5887026d350bb72b0e",
+      "rgbaSha256": "74a25c84412030d92d02227a2190d14148b015d1dcb9b63b9e76213f45eace51"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0044.png",
+      "sourceSha256": "52c917e1dc243e3dc60cb670e285cd4a51aee5e5276fb5353149425cf9151a28",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0044/mask.png",
+      "maskSha256": "2852d7e491bfea0bed7ef5e41560dceb45ed42e820844afba69322fdff075911",
+      "rgbaSha256": "40dd43c12a4328ed5f1b491d59673a4377b243fafd8af1d315d669f4712a250f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0045.png",
+      "sourceSha256": "ecf47d4cb27735560d87fd1b824ca541de5f9d3a64d349d397c71879dfbdb010",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0045/mask.png",
+      "maskSha256": "1a89d9afef15f460f1f26d8bb62ad786a2e6817a3971e677445d998363977334",
+      "rgbaSha256": "c36223fcd7dfd2e447f392f8b5c63760430454fc3140775bfd24c4cc8e41e869"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0046.png",
+      "sourceSha256": "c4a7ec13ab27d33adcf9d8ff8e8874742a4551f7e4b3096c67033642c6fb7700",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0046/mask.png",
+      "maskSha256": "f5c805136e1bd7f6768399d06c6609fe18bdc4d5349a5ab2c4e387cf9d5f6bff",
+      "rgbaSha256": "81dab2a88848bced7e4b735711d33e698b08123adec287233feb41fcecf1f3b1"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0047.png",
+      "sourceSha256": "8cb24fc27d4e7c779b682f0e4392d75911e335603989b91966d8edc68ad70023",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0047/mask.png",
+      "maskSha256": "fa4c7ae1ed69b4299c29c5c3f4bb2a5ec076480607102f38a0c959e30a9d2999",
+      "rgbaSha256": "d15fee5f795d9c4773814d036db28768d0afb0a0353ab6292257956aff9ec063"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0048.png",
+      "sourceSha256": "37646b9dd88f1be76ea5b1c4ea179e6acf2d042edd8e086b046e8940827db954",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0048/mask.png",
+      "maskSha256": "4f9d733a6ccc47a6a49d3e67943e144a678e9260357b46d9d3a709f68b4c10df",
+      "rgbaSha256": "43d012142c3ec7fffc92c668b2e1ec213c83e979ead3325e800f72ea264300d7"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0049.png",
+      "sourceSha256": "e09e0cbc6cf219e0548d082ecbf355b680038b4702d376c8cdce9476a0db5a53",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0049/mask.png",
+      "maskSha256": "dcb3dbcfacd1d46ff1e713add1fb5b4d6ca7a2600f81543e1f8eaf86a5e83bc0",
+      "rgbaSha256": "b549436958b4f5e4bd2849daa4889929decc5dcf4e67e21e75dda4383e2c373c"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0050.png",
+      "sourceSha256": "1a90ff9e65f8f78689b6aa46c8284c7f3a16589bd89cdb677532dbc0f719e982",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0050/mask.png",
+      "maskSha256": "296882497b165aa666b28387f58b29840aa9b5b30731addc1ece14e9838cf948",
+      "rgbaSha256": "b67789342c6a522b588457fb399bca13da65f715f508e003adf54e91f18fb6fd"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0051.png",
+      "sourceSha256": "79628431bce71b64e4e746db9d2065e3f1a9052ba4fb45f4375f4f36580e9c3e",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0051/mask.png",
+      "maskSha256": "44f75825a166037e3ec388118537ce9627ef256b7d7af10a9df253f6ed96a4cc",
+      "rgbaSha256": "1978cf7a02b956cc8675a46bfb57906f6073b9dbe0b0d45eae823f3f9512a149"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0052.png",
+      "sourceSha256": "67b41e8f501bac3ebebe199a88dbf9259e6c5abd11899f55f8fd9d0f654f3c8e",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0052/mask.png",
+      "maskSha256": "fccead5131100a727b07160c17467ac01fb67a34598420c9f4c6e819fb65873e",
+      "rgbaSha256": "15d02a2f397e0a74814eddea6731218f8f2af07d1733444658b87e89f670bde6"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0053.png",
+      "sourceSha256": "3f69181c283bdb59558917655c5ff26535d4e513a551e60833b2d1f4bb41680e",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0053/mask.png",
+      "maskSha256": "db7dda858aa99bcb8d3a48b7feeeb6cee7e864a2d8a3f610723b459667ca335a",
+      "rgbaSha256": "9ee654a1f9276fb8d4a5a336aa9156aaf79ad25166c1f91d297aef5307ac5128"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0054.png",
+      "sourceSha256": "5ad109cdb2950d9709cfcc08c1bd56381a789d460867255a5d37778ce8e93f78",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0054/mask.png",
+      "maskSha256": "13ae96f3da202e331ee178ecf20c0ee9714749776f0693843f0b108177b8efcd",
+      "rgbaSha256": "90abdbe69bda6045f9d4b99e6bcd90f49e535a005bcd35e557f02ddc381b07de"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0055.png",
+      "sourceSha256": "c57a9f8b4ed5eff25dcdd6381d6e4a150188970a94b2ddb49ddccfcff39854bb",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0055/mask.png",
+      "maskSha256": "9c8973e88f64fb1564849105f1688cf49781e1fe00c2a8fe9a8f41b050339abb",
+      "rgbaSha256": "cd1783bc92f012a5d59b87ad58b5ab581942780a1de098f4979521202ed7cbf3"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0056.png",
+      "sourceSha256": "e7fcb4985980af17c33542f05de8edbef04583f27663896f4d37e6dbece5d551",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0056/mask.png",
+      "maskSha256": "49f650620d1ab0ff32ee2a7964e1da9d9c22a973cf481cc36b18e40215184cfc",
+      "rgbaSha256": "2f23bdd0a6a241057b7acdba9b2680710c177c75f9647326c8f9ac2039c9af5f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0057.png",
+      "sourceSha256": "01a2d3698f1ccb119a736c039f34577bc0e9bd4c5718cb00e7172e902a81ca9c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0057/mask.png",
+      "maskSha256": "8ba9162dc753b3aa7dda4a33f6405f67ae86fb2093cecb274bb24e3b630ea93b",
+      "rgbaSha256": "14dd7dbb8ea5c5078d26148807d477184241e1cd4ee70c2e65c2f3d0f59b9fe4"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0058.png",
+      "sourceSha256": "3235d76405910adf6db285058965becc0b74f6b77fe18b678ae604d79ac5a88e",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0058/mask.png",
+      "maskSha256": "2c3e88875cc1cec7a935202c8511e52f2a653ae76b3512d43a54cd60f3a1dd5e",
+      "rgbaSha256": "e9bb7158fd55257ac70a218e3530b15449d52a3c1f371496f0d8335232ed6912"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0059.png",
+      "sourceSha256": "4a3dea4ff036db0934169f4200a32a2c6a3ca1acacb4a941824f9bb32ce4af6f",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0059/mask.png",
+      "maskSha256": "e4328ee855e3ad039d3ca27ccc004c0f9bc5491fcfcc8f32eeb2abf05f46dc78",
+      "rgbaSha256": "afc76339e1977353c808ab18b5860cd53a31d9c674dc36c3a7f042b664d42023"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0060.png",
+      "sourceSha256": "fc6ce86e5ac18b0b7cc3ab4f2e6231dfc4bae2ad2cf95e8f6bebfa519b8b0ab7",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0060/mask.png",
+      "maskSha256": "ecb612f18dbdb4961366bab77eb9c997423d1d149bd005148fdb396f606427e6",
+      "rgbaSha256": "3b09178f4878a94a421b3790a122348fb2bd4e5bb91ea24e96482dc32f7e8487"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0061.png",
+      "sourceSha256": "413ee67c3533ae74ea05e267b5aa3306af047492e9ddf9cf9d9223d145b17792",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0061/mask.png",
+      "maskSha256": "51e404213791182e4d1d2c3f9d4415050c0d84df1e7614d278d81dcadbfdd4bd",
+      "rgbaSha256": "07d38d50b94d89ea914264293a9c6e10caf3ba3859dd26d4febb0fc056b5b213"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0062.png",
+      "sourceSha256": "e4ff6827876170d374a976da9fc44549678b83e7bb87f9c78aa108f1f8483ae1",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0062/mask.png",
+      "maskSha256": "a84995a41475771a38521a7ce232b85b2967770443942c818fa2a9e5ba18cebd",
+      "rgbaSha256": "bf5f3deffc670a36d741314d72fa433fd4cede237dec630756ec0474e99c4667"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0063.png",
+      "sourceSha256": "64719b39c210b7d20e4bca6096a21bae175a298cb6408a8252bf6dffb0cd572c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0063/mask.png",
+      "maskSha256": "8a9d486957fcdd69f4cf42d5a06896d5a1d98ffe88b3ad86f6bf4b0911111e72",
+      "rgbaSha256": "b3744e1c173f1e66fdf509ef72aaa97f707a020a2880cf216bf66cc9d14259c5"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0064.png",
+      "sourceSha256": "ac885476c6556079b1475d3706cf336b509cc5ae1e93f03b5a2db1c89f6de963",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0064/mask.png",
+      "maskSha256": "4b81b6c42ff7fb51db02b833f720f78b777cb02daebcc15e72a12278687c7374",
+      "rgbaSha256": "605a8b7ea38e6a10740e268e86b0bfa00d67527d1472dff8f05fb4425d070f37"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0065.png",
+      "sourceSha256": "cc5fa7f4bf300e9d33cd7675d9601c2998e399d7feeb635846feca1701e0b82a",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0065/mask.png",
+      "maskSha256": "c9cc9a6a59aa4ada1ee8bf61fe7273ac7967562c5723336aea9d2ae990edc7d2",
+      "rgbaSha256": "110aecf97d591ef5ef93de9acd3f7215e062cf673bee4a79a6bfe2ad9a12c3ed"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0066.png",
+      "sourceSha256": "23b6165f342bb791fd1bc466253985d9fb482dbdcd704b714884996264f73c3d",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0066/mask.png",
+      "maskSha256": "7c33cd84a6a64ba4ee7170a6e1892925328735a2022ae21683184306f237c96d",
+      "rgbaSha256": "e5cc2539ae17e338d92734baeb93ecf28d20fd166768a1fbb26cd60da35d3898"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0067.png",
+      "sourceSha256": "ea683c8cf2b7c6884c68a2aa4646998598176bc58b2398238e3d769cd23529e3",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0067/mask.png",
+      "maskSha256": "cb26416a3add93f2f0814120437a87e62c94cb4c1444fcf4cdce86d09f6e4f31",
+      "rgbaSha256": "808a369016ce6a0652a183b1a83c8509504a23a7d93df85c2c8a298554fda5c1"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0068.png",
+      "sourceSha256": "5f484259a3e4b564700800072e32ffacf8fb9acc9b871d1f21b5ab44f9f6e88c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0068/mask.png",
+      "maskSha256": "1e52e93cacf68a3f66dfc54101c8e6e18d3a1aeb21c3aa7adbe2a36f61e92201",
+      "rgbaSha256": "4d534333f35c5972533249ad0c0d652778a3c81a6b39ad2fff95d5d1fdca51c2"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0069.png",
+      "sourceSha256": "d8f505c4534e228d43a7eda809347838a9181190bc6236627470aff46b12060b",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0069/mask.png",
+      "maskSha256": "36d7a93870e2b868936ca5bd8c587f3fb25bd1f0dcc1e7d5b206bad68b7bb749",
+      "rgbaSha256": "02b6b3c05e75578f3ec4da5cd20485926ef9b0e2aba9420854bb39ad1976758a"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0070.png",
+      "sourceSha256": "f302049e8bdc89156277832791e5856e625555b7b9d76bf1831af1d8e7285cea",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0070/mask.png",
+      "maskSha256": "52fb829f822165878946ac524611832cfc20cc67cbcb0eb8d39c9529b2c2f91b",
+      "rgbaSha256": "e47b4073bfcee052c5e6666ffeedb1130913186a05c2692324efd2f2970c5632"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0071.png",
+      "sourceSha256": "6b93e44ef00b7fa3233eb9eb810b0b901a596004ec0f1e4dcc31fcedf1ff5af3",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0071/mask.png",
+      "maskSha256": "98ed4614afd859b07b00f99118408810b0828af5d6918e9921e29806ba2ef472",
+      "rgbaSha256": "5bea22782c5c0ef080e14e976962c81edc55e46bfd754abb6ce47621374503b0"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0072.png",
+      "sourceSha256": "58de4f7ed167e6c5e38a273e6f6f4e3ffc65f6c870e4a0846673e417be73a3bc",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0072/mask.png",
+      "maskSha256": "1b8ec8fb715bd95020fad00f65dc301b93ddce669055e28839d2d6cda21a369e",
+      "rgbaSha256": "d30bae2044013f855f15c690e0e68a2b13b76d5ce7207a35ef6ae29dd5bcbba2"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0073.png",
+      "sourceSha256": "b8f218d665ce9b7e89856b82c2dda9c205504cf740d68a51136336a6831ecbec",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0073/mask.png",
+      "maskSha256": "5072db54a94788b41d260f4899dae50ce880f76500cbbd3af474aec8c1b053c1",
+      "rgbaSha256": "c71ec270bc41f4b8690cab2b1bda83e0f9d846942e0592542fcdbbfad2d51a52"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0074.png",
+      "sourceSha256": "887f630ff0ecabbef6b27db2ae0ddfc9a79e934eae768767b019c184663e4584",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0074/mask.png",
+      "maskSha256": "44a80e23a8b32f5c06ca66aed891bb76ab0f74a897a8f0f634ab6df7f17c46a6",
+      "rgbaSha256": "ad598dfa14497901aebfa748e078ebaf5b000a9a32370e6f5180b1dcce081b8d"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0075.png",
+      "sourceSha256": "fa70dffa19c45316752bbaf214f1ff7a3618539bcc75fd0093dea559717211b9",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0075/mask.png",
+      "maskSha256": "bbc05fab68a5bdb732f38fa2a9e4138da5deb623dc9c8d7a4f7bd837b3e2c8a0",
+      "rgbaSha256": "213f6277e8c4be634d6bfc841da301b762d8c37eef53deb3118b02b3a53b22bc"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0076.png",
+      "sourceSha256": "439b0253239bea49de7dcab7e82101d4334ebb191865f28911fdafe39eea9bbd",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0076/mask.png",
+      "maskSha256": "53d81af7d4dd76cbeb3880fca6f5fa2b5fbdadda1ef22af14ca796992a0ed076",
+      "rgbaSha256": "5281dcbf34e2b65851c75ffbc570d6b0c56daa9366655517b735575c577e5f73"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0077.png",
+      "sourceSha256": "3c0d9da2c0a7cf0bb79823a7806016dd303bf3c45c860bf200d3b908948002ea",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0077/mask.png",
+      "maskSha256": "e45bb5507fe8f4cfdc86fb080ddbc7e35a73b15bda805cac55bb3844fbf8c461",
+      "rgbaSha256": "709ccaa84dab7f0444964fc7bdd050208ed29119d0b5099169b6a0455d913089"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0078.png",
+      "sourceSha256": "7ab028d016a4e0ba714f73b60ee94efdcbbed74944d039ad2b096311fa12617c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0078/mask.png",
+      "maskSha256": "63d7018c149306859a0e6bee480bd641dae768c4abf75b26b224f6a54b1870e8",
+      "rgbaSha256": "331be899541f0e68b518d4673493d0e4f875ea5469d90d35c73668e4c66655fa"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0079.png",
+      "sourceSha256": "29558b4ef6e6a4a6bbfe42c35366c705d14771f5ae45133666312f2d2f686e00",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0079/mask.png",
+      "maskSha256": "a6f9fe193a1d7fa98d3742a87b9b64e07eb1c1d5a3a5655af785c19df9289740",
+      "rgbaSha256": "b31633addbf61a92e7a9707f8921fa0b66a1369735666667b11a084d04d9e9c0"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0080.png",
+      "sourceSha256": "cac0231626bba4edeba5ca9964a17d581b73d3003d398eac30d7eff6dd5eeb3c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0080/mask.png",
+      "maskSha256": "030f54b0d3b3e50362660471220b2049c6c1bdea389877592b683c96082509fe",
+      "rgbaSha256": "c0651cee7a17c0a5cbaf632d0928b8314c90a664c4c1b9f8abec45d775f60242"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0081.png",
+      "sourceSha256": "340f35f5e62fff0308c6435a24171631294de9a5a00c38b6cb73ec168d248b17",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0081/mask.png",
+      "maskSha256": "4839fe95624e00e351087a51d89caf7a39ef0498d541ba9da1e0148efbb8e5cc",
+      "rgbaSha256": "fc9c544c608f844c5f35ffe06a0af82a3cb912a7f8c80ae889e20f8b4d0707ac"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0082.png",
+      "sourceSha256": "c53c6f35ab2c85d00eaa33745b43ff978f4f84cdceeb5e8c8bdbf3dae9535a28",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0082/mask.png",
+      "maskSha256": "840c78b578e400dc07ab339e7b4792f2ebf49c50ac237db02c182633d8c2eef4",
+      "rgbaSha256": "981dffc83604f22ebc4cc0224d1c705ae3a60c7e86298aead8481564048fc529"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0083.png",
+      "sourceSha256": "dc0b29972f7dfdf50c8c1a67d44a0539e3acc6bf51a1577b6c6b43e1227c78d0",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0083/mask.png",
+      "maskSha256": "451c8249ed407663dee040f3944573d51fb6e0ad4cf725d3ad867961d98ec380",
+      "rgbaSha256": "44499e0c20d5e8bf8306bcea7ba8bbfced417380b4385b67ab984d3afe3845e0"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0084.png",
+      "sourceSha256": "6601c55399f1a84a9af297e359c0ce5003d1b92f87db090b5fa878a8b7ccb84d",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0084/mask.png",
+      "maskSha256": "52799de839fa1e6789a4f04205427895b4af5e658a98568184e354ab30fe9735",
+      "rgbaSha256": "2d4874f7fb810ddef64ad76f7f4fa6f7f85d2913966d5047d984951973e51fbb"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0085.png",
+      "sourceSha256": "48740d2f4920d8f8d079fc12352565ba5271e7b32e6499910ad7fccdc8b0eb3a",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0085/mask.png",
+      "maskSha256": "228e1f9deebce77608589efde5ab2132cc0ec31caae746284682e569d7172b9b",
+      "rgbaSha256": "e4ed013ee9feb46776e372bd69b9686866fc1f27fed20381f68ed1d779c3111e"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0086.png",
+      "sourceSha256": "a6a068877924f27b8469fd4faf393f4a068c9a11b2772edc2c0d48c800f42b4c",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0086/mask.png",
+      "maskSha256": "1c3889c5145ec77ced931f72be21a93fad0155d2eb1e92ea6d1a2f6395a4c1d9",
+      "rgbaSha256": "0652d496506b4eb94b71cca5975d33c3fd57e80c54aa6d0117a32dd1f02c5a69"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0087.png",
+      "sourceSha256": "73a108f8fbab6345a7ac5e6e529f244f80920528bdfd885f6faca0aeec2a7b2b",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0087/mask.png",
+      "maskSha256": "c637fe7d23a5959bb0b62a5f109c33b5f85d3c4ba995a98333f5c8b153f169c5",
+      "rgbaSha256": "534dbcb3545da0866df440562cf83c466c620927d51c363b25c61b2e737caf3f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0088.png",
+      "sourceSha256": "a50b0b60444776ac6774c74b9e8155720b2c9ac7877fc92d0af4d2ed12eb1b36",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0088/mask.png",
+      "maskSha256": "206e3fb62ad2d0fc2564255c95e27fb04b28f350c5ab806c0c50bc83f040b28a",
+      "rgbaSha256": "1c2cd91d16c0171f9df57c42dd33bd2c0689f1b513114b645c3d30f2c9d204d7"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0089.png",
+      "sourceSha256": "49087e61f49b341873f305b93370010ee8a389859c70970396b81a44c8211763",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0089/mask.png",
+      "maskSha256": "911769eda8be6dc12ba00d357d7acefdb0ca805b7f795e58406fd248262ed99c",
+      "rgbaSha256": "f8465ea4f4a13efaee813b1178e3c130252e55c4deb539cc1833c9e5c1426aa7"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0090.png",
+      "sourceSha256": "59190e59a4a7532d025da7d3ef2dc36353b0e07d8ed74ca3ceee2bf45de37602",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0090/mask.png",
+      "maskSha256": "87c8826071346ce45977e431fc79f1b7ee546d3158954c4b4ce5c6082c92df4a",
+      "rgbaSha256": "3701ccfb80b5cb7b7d6455a55597ed647e4aed77e817ae0a42ea477a19ab1a4e"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0091.png",
+      "sourceSha256": "79e1d94fbe41b8152d007f8cabfd2332e0a02fde8d774d0e7e28b7bcf5a47aa4",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0091/mask.png",
+      "maskSha256": "f271df65a28c183ca9584e25a9239806d9d4ebac288d922d996605e64c4a1557",
+      "rgbaSha256": "3ec961de91cfa8abf44dfcbd9793cd95bf886fe880e4a324e724dd09f05032ea"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0092.png",
+      "sourceSha256": "d4cb38fdf5ff2e2fed2db5e483a29c447636fb1c51c26a81e61d46997fc2cd51",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0092/mask.png",
+      "maskSha256": "2f3bfe988ffaa9af5dd725ee0f7012a64dabc256d1c4e6a200b6f326a7e87e00",
+      "rgbaSha256": "2f7e990d222bc0ba8a5f6ba3d09341004d5f1c7863ce9acf53c10b4c9370835d"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0093.png",
+      "sourceSha256": "db657785055219f6c84999f6213107be31123a0df8bfecf9d46eec8944975a2d",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0093/mask.png",
+      "maskSha256": "dc53fab92fdcd610dae3f0c565dce235b02cbf351c92eedd4281217974af8e25",
+      "rgbaSha256": "e8f06da4f71787048afd7830e46634b83e87f28f5319694c587a890010e0df84"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0094.png",
+      "sourceSha256": "e8bfd3a751fe0ee52dafcc2552ddf21844721f33fd9a0d83033337d0f9b3ec94",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0094/mask.png",
+      "maskSha256": "8615f203a1d3f497646a9e6fb6f9f40c6ad0abca8d9e3d24b3501e89e203a3ad",
+      "rgbaSha256": "b20855033419b696181da7de0e8bbbfca6d721ae270c488703e31cafa0a1f943"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0095.png",
+      "sourceSha256": "b5b88aded9f975a0ad7aecc7241396f4cc9209ce067378ab055454405710f22b",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0095/mask.png",
+      "maskSha256": "484664423c10e7bcd494ae49bf21b06aa77a3ff05ea90d5a6451bdca6cf2a571",
+      "rgbaSha256": "fc230db7a85c3846704df67fb96d2a8952df954ecb35c291deb998926951d891"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0096.png",
+      "sourceSha256": "050bc82c89309215d1541820033c8719a015672e245d12896f0ae0811fac5b2e",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0096/mask.png",
+      "maskSha256": "eb0cebf587279792ff5b9be1a1573a0d9f5d3f15294b61ddbcd05388a9a1e14a",
+      "rgbaSha256": "1e5883bf4d2b62eded0485b1446abbd8a2595db64276ecb57bd50ed48da7885f"
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/frames/frame-0097.png",
+      "sourceSha256": "ef67e6a7673b98ed2f44a466faebe57f7c02a4ff07cf835c8bfc3b8e81bfcf1f",
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/breath/frame-0097/mask.png",
+      "maskSha256": "51f6cf4b0aeb33907d5886fe9ff0fb4d992eccc256fb7df50dbd27082edfcdb2",
+      "rgbaSha256": "fc137960a2f408bb56192b0d0a149ca4e0bd7d498037b16188fc96dfdd90d9bb"
+    }
+  ],
+  "cupPins": [
+    {
+      "frame": 1,
+      "maskSha256": "e9a1129c6f4d7d82cf87a49202ba3a5f957032b86d4c74ff0efcb1c0fcc018e2",
+      "rgbaSha256": "57b451e3df1afa03c767bc9734e7872e80b8e3289d44ea377e4c5c1bfe8d3352",
+      "extraCupPixels": 16554
+    },
+    {
+      "frame": 2,
+      "maskSha256": "ba74b6fbfe9b881e3042d6d0fef22d3bde138b2050863da5c1b32fce00251be2",
+      "rgbaSha256": "7725a568bc155259a34a07899800fc20f9027d072d0caa8571294a2167416daf",
+      "extraCupPixels": 16714
+    },
+    {
+      "frame": 3,
+      "maskSha256": "32b04c60c0e33d2b307d9441b0789211aacd40108fec7373f7408d31af5eb0af",
+      "rgbaSha256": "5d1142f31405040fd12aebb061dbb543771f465c093fb63506301d611756d365",
+      "extraCupPixels": 16744
+    },
+    {
+      "frame": 4,
+      "maskSha256": "306b4ec3da1e86a5a676180a50358f43fe3ae8354b90c0e66805f93950e50e27",
+      "rgbaSha256": "f9b25056bb96b473c544b1add3b39a2304f8f9b6a629d0384b4a21ed2a83e1d1",
+      "extraCupPixels": 16760
+    },
+    {
+      "frame": 5,
+      "maskSha256": "0bc8741cc91c1e36c82b1dfb936461f5c8572fe7bce61d32bcfd9529799c8a4b",
+      "rgbaSha256": "4661bc43e2de18079b788a0fb73d47321a8f8a9e78c2645c25955c3953c5dc16",
+      "extraCupPixels": 16829
+    },
+    {
+      "frame": 6,
+      "maskSha256": "7c44cc92686c3bd9595ec8e21b9393dd878ca73baf9cfbb241a798d46522e147",
+      "rgbaSha256": "5b67c5afe2c235b6b1264ad184edfcc8e92a5f2d02f2683e632890f7822e38f1",
+      "extraCupPixels": 16919
+    },
+    {
+      "frame": 7,
+      "maskSha256": "9f0e1b5473b0ce476339c7c2e87e584def535e18a7a18cc2b1ecac23dff3cd3e",
+      "rgbaSha256": "e910f0cf427e17bbdb40b4682ed3b9c9775ff9c2e26b4a8601e550827aeeddde",
+      "extraCupPixels": 16935
+    },
+    {
+      "frame": 8,
+      "maskSha256": "e09df295b3a85cef63f646d2716dc4cb64963159e3bda5e2e9eb767b047dcf16",
+      "rgbaSha256": "c37173823b58d8ef949aa5b2d2bd9ebc728dbbbb6748555972f36afcdfd431c6",
+      "extraCupPixels": 16962
+    },
+    {
+      "frame": 9,
+      "maskSha256": "bf3e2270ae3450962ed4ebded7291bfe0168555ce973e94031fcb7887ea2dcff",
+      "rgbaSha256": "b5d574b2510c68193938ddb365eefbb3563a4590127eef4be296d3129f8abace",
+      "extraCupPixels": 16922
+    },
+    {
+      "frame": 10,
+      "maskSha256": "ccca50689f8a7eba7becebe3b97722664093d53fa7e70c56b8813722eb49bf93",
+      "rgbaSha256": "f01deba51b0245017e7aecd5352199e2de91fd863f56149453f24703819eaa8a",
+      "extraCupPixels": 16987
+    },
+    {
+      "frame": 11,
+      "maskSha256": "52ccdc315cede651281f3d50c68abf2a2f66a5bb7ef79a838bf07780c3005a48",
+      "rgbaSha256": "110d261318b6c4503750755467352cae17b84b756e991337c744c75ef475f46f",
+      "extraCupPixels": 16732
+    },
+    {
+      "frame": 12,
+      "maskSha256": "150cb83c096260937a69e922b94f72715a74d80210da3f6ee10fcd08b6a87ed6",
+      "rgbaSha256": "9341055aec2832fdf10c1dda4bb8a385b0b4d7efcc3af502ddaf23afbc3d9708",
+      "extraCupPixels": 16754
+    },
+    {
+      "frame": 13,
+      "maskSha256": "caad2493da9baa56ee5dd6d8467095860aac5b2b5e9f45e320e83e2b3faf1705",
+      "rgbaSha256": "a89033fc8dfcbc2db22004ae1f05a68014c5b2015f64eafe2d27246f891e2eac",
+      "extraCupPixels": 16762
+    },
+    {
+      "frame": 14,
+      "maskSha256": "7fff6d5bed9b63b8d1cd48ea55a226875bda6eb59ef76b646c44a29f375e51c1",
+      "rgbaSha256": "5468d5f281b75f80bd3b852f6f8efd1b8bd7edee35aaffac30899388ee72395a",
+      "extraCupPixels": 16857
+    },
+    {
+      "frame": 15,
+      "maskSha256": "26322639023e4e90bf499a4a83fbdeb2c11d72ffdf0014b332922d69d7973de6",
+      "rgbaSha256": "a82ba025f584c4463563c924409d0d687ac0fa97271841036ddae80f129a820d",
+      "extraCupPixels": 16704
+    },
+    {
+      "frame": 16,
+      "maskSha256": "98a17f16efb5c66c52c6a36a626d98ed2a66edd3ce62b67bfe6389a890f9e98d",
+      "rgbaSha256": "25be1498a9c3f6a326e2911157144483e56d97fe25d24478fdbdba84c48a7a03",
+      "extraCupPixels": 16725
+    },
+    {
+      "frame": 17,
+      "maskSha256": "fbb37a4ea17c2ba2fbed2887ac9437e5d5f578a87f345d7ea3ee61cbd5fd7c43",
+      "rgbaSha256": "78a91c75f3a7dda865d7b158ffc9bd7ab9a6d89b332fbe8f383b9a1e555f0464",
+      "extraCupPixels": 17019
+    },
+    {
+      "frame": 18,
+      "maskSha256": "084ea53989f9ef725ee633816a83fe5109f5ea5f67b33141e715bedd319ccb2c",
+      "rgbaSha256": "09c03e33c5931140c00ebb126571bbb8ac433eb9960553c94674fa7f40440634",
+      "extraCupPixels": 17136
+    },
+    {
+      "frame": 19,
+      "maskSha256": "798e67292eb25ecf1c6d152ecf975889bf9f8473112b4036f2b4ff5d655a576a",
+      "rgbaSha256": "eb119e21f5a5f5f1ea1db1d528c20c9f106d3ce1810ed56debe348f806fcfc63",
+      "extraCupPixels": 16931
+    },
+    {
+      "frame": 20,
+      "maskSha256": "25978688936449e8a9db90e9f6d66bd529d97160df86c246f4bd6ba975c860b4",
+      "rgbaSha256": "842d784b63ca88515ec4bdfa3a1795d79725acc6224d2fc6571f18dcc1c54b10",
+      "extraCupPixels": 16970
+    },
+    {
+      "frame": 21,
+      "maskSha256": "8e35d0d664e20d84b9ba49cd61ea23e7bc00e0a62d6bdc8a4843275cf28cfd78",
+      "rgbaSha256": "ca5581e48138afcb72b666e98da798c99aa898c567c747889340ae23452542c9",
+      "extraCupPixels": 16780
+    },
+    {
+      "frame": 22,
+      "maskSha256": "f0395275058d05553ab0174edb8e2e7772fed935a80fe5d1c124de151364afb7",
+      "rgbaSha256": "f3abf3836a83015f566900d28f57536e522e607da194541c69711468620f8994",
+      "extraCupPixels": 16736
+    },
+    {
+      "frame": 23,
+      "maskSha256": "fee3729608687c7588573f74c05ca6637f07f0c0b1b4d5e5cbbf36986d983042",
+      "rgbaSha256": "9d54a1f02fc80c5bb52c923ad7418e15ca704b1a2dd2510d57ea80fa4c795e28",
+      "extraCupPixels": 16320
+    },
+    {
+      "frame": 24,
+      "maskSha256": "891522d508d5f80da304ec6160418bc7bed8f20a9731ab0b6855e5ff88303f69",
+      "rgbaSha256": "c1af2a8b88a30eed15065bd9e009a6c0b8c2e86e2bb7e9d94d90c376392f4be5",
+      "extraCupPixels": 15643
+    },
+    {
+      "frame": 25,
+      "maskSha256": "c720f2d602d7da4d2ef1334e19d97c9c3a3bda713413737a8b241985459663cb",
+      "rgbaSha256": "a933180266fb0d9894ba70976e774bef42f8a8c62cbd7cb7c50ca0b5b76a6565",
+      "extraCupPixels": 16563
+    },
+    {
+      "frame": 26,
+      "maskSha256": "ada03416cdfd9cab4dae10764f3909eda1be10dd68425010f9a8b509fd4bdf34",
+      "rgbaSha256": "536b84f4d81aec5e3361f9f7e87ff2b018a5ca42c2d8a543dd7ee7e1677792c2",
+      "extraCupPixels": 12512
+    },
+    {
+      "frame": 27,
+      "maskSha256": "5fc380a87afffc4dc906f91903a035e91097603c01117ec726f3ae6746eb2fb4",
+      "rgbaSha256": "3dfd72f0dfc73e672963e1d20d01e30f43f1c74203976a660faee19166e5caec",
+      "extraCupPixels": 1281
+    },
+    {
+      "frame": 28,
+      "maskSha256": "d77cae8eb825d9d42d6489014c5b1e27001de8627a5db9cbc9ba4ee5088c068e",
+      "rgbaSha256": "3ca1b9d019ba0033259e3b9957a09891c8ce98771dd4fcb380860a0b3c08b72c",
+      "extraCupPixels": 1358
+    },
+    {
+      "frame": 29,
+      "maskSha256": "9090a2277f393b46db6b3c6bdbd83a97839bd5dd90c4f46d9745540593e28756",
+      "rgbaSha256": "95417be99cc01e63ab7191c38cca884b424bbabe589b141b697ddf5006febae0",
+      "extraCupPixels": 1742
+    },
+    {
+      "frame": 30,
+      "maskSha256": "107731f9faa68a936fdf773410f5d87f238b8806675bbf6c5708443566da0fe7",
+      "rgbaSha256": "77d6073af3ddd7156257c4f103efdac8956f8ba3534c7f1b7b0e52b34af4416c",
+      "extraCupPixels": 1828
+    },
+    {
+      "frame": 31,
+      "maskSha256": "ff5db50468f78d5141ac91d3991895017979b7f35d09e61e7dbac45937892d16",
+      "rgbaSha256": "847cd426dbeddfce7dc975bc026d97c11edddd839d8d2dcc7f7c236e5f68615a",
+      "extraCupPixels": 1834
+    },
+    {
+      "frame": 32,
+      "maskSha256": "d2726258560c8525257dde0e765ba3cbf729b7608b4e2764eb0a539d6883ffb5",
+      "rgbaSha256": "c0fbe9078bd2e62e28e8362b42d7681361b14405dd9052b3cacc20233525933a",
+      "extraCupPixels": 1906
+    },
+    {
+      "frame": 33,
+      "maskSha256": "00ae8d85849d28e1f265dc7e9f483cbaefc201cacc3e568d324cbe5b3d81f4ab",
+      "rgbaSha256": "0936daa0f10a33e74764b90a5a6267428b03ef0095beb7d7788e259ebab7e7ff",
+      "extraCupPixels": 2390
+    },
+    {
+      "frame": 34,
+      "maskSha256": "4df7626b4fecfa332c31e0e5adf9c4938909cb0f25b8b83bb749fff9c4da87e1",
+      "rgbaSha256": "ec9d58df937f71ebcf5e81fcc29cadbf51883c61c865e4ed0470399ccb79a980",
+      "extraCupPixels": 2507
+    },
+    {
+      "frame": 35,
+      "maskSha256": "50a958e50d4497a2df02ccf288edb12268b0e07ca4ae3a65887ee29725a88f9a",
+      "rgbaSha256": "f81fa9e0b245f933f4b0e3f8d0ce5a009972d63833df2c82dccbaae1aee50aea",
+      "extraCupPixels": 3317
+    },
+    {
+      "frame": 36,
+      "maskSha256": "1bd106a8ed27963424cfaba6177341c12fd710a8b341fc57f1592ba49330051f",
+      "rgbaSha256": "27e23ec6915d78df3f0cc0ad45d0bc108cda9b7a9c04976d62186817f2d8ebb1",
+      "extraCupPixels": 3299
+    },
+    {
+      "frame": 37,
+      "maskSha256": "c9cce303f29c39f8da0be4e87108e00ebce8340ceca79e08b179f367e98deffd",
+      "rgbaSha256": "b69e1996d140dea6d5eb4675a7d4bc40cacb3cd7c25e3930a91a76ae4d680371",
+      "extraCupPixels": 3350
+    },
+    {
+      "frame": 38,
+      "maskSha256": "8d1039bdc915e7ce8970a150a6cbe66d9a7453d76271d8209b78c5cafbd82c73",
+      "rgbaSha256": "9f3324bb9c36e0a55d0daddfc33b32f2221b6b84cb9450396c0e11d00cee6d7c",
+      "extraCupPixels": 3403
+    },
+    {
+      "frame": 39,
+      "maskSha256": "4ee64efaa78d4d4d65dc12a1dd230631613226ae3f7a134628ebdb9bb455611e",
+      "rgbaSha256": "021df6a5abf8d216b8081d12cb245d12f944f31db71d3826b9cbbce27190f82c",
+      "extraCupPixels": 3540
+    },
+    {
+      "frame": 40,
+      "maskSha256": "e269d534e6f50be6a1e1b5c76e88505d7574aaa25951c85caeece726f8a97b59",
+      "rgbaSha256": "35f770d75abe3e997aa442798510790e7275bb3aeff28be680ddbad433d789c6",
+      "extraCupPixels": 3494
+    },
+    {
+      "frame": 41,
+      "maskSha256": "f67537459d5992d23a4b5831f4a84c29bf1a64b79e5c6a9489f0791b810a3e72",
+      "rgbaSha256": "2093a72c1c1e03f32abe23620fd4024e7941a3315ec94c28fc3c26ffdec58216",
+      "extraCupPixels": 3362
+    },
+    {
+      "frame": 42,
+      "maskSha256": "781ab42d57f604cf982df4adc4dc9aab86e345959e410fec9ca4814e355f4bfc",
+      "rgbaSha256": "9c94d51395b80b71000576b058f40dd6819c57535d0eaa9b14a7752e32f5bf96",
+      "extraCupPixels": 3439
+    },
+    {
+      "frame": 43,
+      "maskSha256": "38c3579ab429658fb63e5c3c3a716cf7db0cb0e2ad8175858dc705eb04049ed0",
+      "rgbaSha256": "730aae1f74bce8be5c383bf95f3c464930111d6b853ceb409dc47d5ba272214e",
+      "extraCupPixels": 3664
+    },
+    {
+      "frame": 44,
+      "maskSha256": "eec2159372d72ab1375a5b13d0ba2ef29c663cade4ca32fe08117e11fccee7d2",
+      "rgbaSha256": "18fa39760b07134755727cb2c0b4f08fe25dab6ca89c04257c32e47a3f4bbd7d",
+      "extraCupPixels": 3383
+    },
+    {
+      "frame": 45,
+      "maskSha256": "d9a6a91e84b8a6193b1c4210d3230894f0ebc0831c0810a9391441a51a328e1d",
+      "rgbaSha256": "22250fb49943b0f5060d4ae81a3c6a2e59945636cf92e60ccf5983cee1c360ca",
+      "extraCupPixels": 3487
+    },
+    {
+      "frame": 46,
+      "maskSha256": "35072b24fd514b72162759bf5b90be6169474b909ab360c581af69b4ddd35f56",
+      "rgbaSha256": "be3cce9785c24f064f4384b153371a27ce92516b9512e2b2590c57831ea6e15e",
+      "extraCupPixels": 3450
+    },
+    {
+      "frame": 47,
+      "maskSha256": "90b3db1953c0386638b772a301e528e9ba32b0e495723d632d320d80e3d6ab9e",
+      "rgbaSha256": "cc6c05ddc06433fae76453904bc3f924f497724fb45732d2b81d40fed40002b0",
+      "extraCupPixels": 3441
+    },
+    {
+      "frame": 48,
+      "maskSha256": "0b4bcc8087394d053558a2f908053859930259a608088e98f612402e2692877d",
+      "rgbaSha256": "25f9b2b728001126d5e3129d68a905155a5123afda5479f8e8c13ed05a77846b",
+      "extraCupPixels": 3370
+    },
+    {
+      "frame": 49,
+      "maskSha256": "870b31302d6b4dd7e4e735cb1cdb6f40706c0f0e7ffcf1042b6004d4213d9b97",
+      "rgbaSha256": "56a6d2d59b060f5217bc2e6c4d7b3d15b6efd48aa2bc3f1da307f06e3ff13da8",
+      "extraCupPixels": 3405
+    },
+    {
+      "frame": 50,
+      "maskSha256": "1a4114ae67d18a7df7a461444c67db37a8b5634596bee06abe355b8c27053926",
+      "rgbaSha256": "395547857c1115d78f89d7dfdd71e47902e74b47912cdbb8d0fc46a182177615",
+      "extraCupPixels": 3395
+    },
+    {
+      "frame": 51,
+      "maskSha256": "6a4bcaa241fc093e19a56f3db9a8ee62a2036132a6910dbadb3ae1ffdb910229",
+      "rgbaSha256": "b64e24dd8ec254388f78debc85c45b19c89518fdf8aa358df29be4137f03f1e5",
+      "extraCupPixels": 3415
+    },
+    {
+      "frame": 52,
+      "maskSha256": "c17f9a97d48165495f846c0225ebcae32a6c0ad9651329020ab8aba3b5e69711",
+      "rgbaSha256": "552daa5d3fa6160979d9ccfeeb67450b62a2c2860ffd4e8ac4bb906669e20b6f",
+      "extraCupPixels": 3500
+    },
+    {
+      "frame": 53,
+      "maskSha256": "94fa5b118dedae654f7ac9b741f7bed48984c47890cb09ec1eefa6ebd52e0f0b",
+      "rgbaSha256": "7455da0473cba18768d6d1658b49beaa6c748e916e7839b55bf1c28fe33de619",
+      "extraCupPixels": 3551
+    },
+    {
+      "frame": 54,
+      "maskSha256": "278db4d5c32c961bca98d077c205273af67af5ab517e8c7bda3d8fd8021a7700",
+      "rgbaSha256": "3d40fc2c5b54cd1535949b47726c9d197b27443646105606f8c9f28489965c2c",
+      "extraCupPixels": 3441
+    },
+    {
+      "frame": 55,
+      "maskSha256": "9d82cb3de46788cc3b5231f6872cc1021af91ce5f40ee90fe2849c591327096c",
+      "rgbaSha256": "c34191f5023d2cae99e8e9c50edb80210e84bf5935547040bd08ab8f253e4ff2",
+      "extraCupPixels": 3383
+    },
+    {
+      "frame": 56,
+      "maskSha256": "7d970dee1b411d10884c848b898fd56e2c625fe361a475bdb5f553cd97c062d3",
+      "rgbaSha256": "14f50798b670fb41a65bce8b484802efd64348ce7caaa009684139613aff1699",
+      "extraCupPixels": 3402
+    },
+    {
+      "frame": 57,
+      "maskSha256": "3b083b3bb910dbe8c811e6a2ab994f3e416505e5c8657120aa6da31463cef8e7",
+      "rgbaSha256": "2d20dae66a71031b697e89f54a8551b205dcd420eef7faaf54c3a9f7dcdd168c",
+      "extraCupPixels": 3418
+    },
+    {
+      "frame": 58,
+      "maskSha256": "6957cf82c87739878ccf2653952e1de56c81cce84e3d1f0cdc194daa263a3221",
+      "rgbaSha256": "66e6e7fe0cd7a47d2566cd4541ce99c64666532d3f75ede7dd01a073d3c36f77",
+      "extraCupPixels": 3478
+    },
+    {
+      "frame": 59,
+      "maskSha256": "12f1ea0bcc17bfc5822e2cf55793fae4cce4ae4e91b5b09b64a297dc9ff9c653",
+      "rgbaSha256": "48d74fe0c174541a302311b794ed134bb75b8a66b7ddfb177bb77bb48fc88fdd",
+      "extraCupPixels": 3497
+    },
+    {
+      "frame": 60,
+      "maskSha256": "c15870cb4993a97461e560a528f0dd6322758d27b1cc785a9259635a17f4f4f9",
+      "rgbaSha256": "43bbfd927ad4b0df53a06f21ebe870b8bb591a384373d3f1b9576bf92ba94161",
+      "extraCupPixels": 3487
+    },
+    {
+      "frame": 61,
+      "maskSha256": "7fd2afa09dacd65a3fdf2ce3e99e370c031e1dc680fd08f8a09f48a91b71f687",
+      "rgbaSha256": "23bfaf631615651c63746fdaf100160a8f5c4219a7a80aa272f98b096ea8bebf",
+      "extraCupPixels": 3576
+    },
+    {
+      "frame": 62,
+      "maskSha256": "69af0c3708b88575652c0d4dff2b58664b2824ad3d756386d999d0c811f6ec81",
+      "rgbaSha256": "488128f6e32cb7f6380078f6c4a2e4ae684e0ad10e1a73d2d0dde26e517b96c1",
+      "extraCupPixels": 3507
+    },
+    {
+      "frame": 63,
+      "maskSha256": "13d584d7999e092091b60f63ae0769046b77410e44db95415051b6944b524924",
+      "rgbaSha256": "25b88780870d4526b172fdc99f9cf4db9e050cbf1cbd369da5471e478d621ff6",
+      "extraCupPixels": 3462
+    },
+    {
+      "frame": 64,
+      "maskSha256": "1cbe90d49e50bc5c22ab47e9fb366b03456862fa47602ec7834824ce9d8e7cec",
+      "rgbaSha256": "7ea21005e3778dca9be9732c4a3b800e5d85d3c9367009d150bbbc5453f303cb",
+      "extraCupPixels": 3605
+    },
+    {
+      "frame": 65,
+      "maskSha256": "be3cf3ae65d18c49150767c916763e35809ff421c36fc7e8dbc2d0271d9c934b",
+      "rgbaSha256": "86df5a08b56499a5754a3f26dbfa303d9718d3991e1dea09fb28ef1839072474",
+      "extraCupPixels": 3626
+    },
+    {
+      "frame": 66,
+      "maskSha256": "d3ad9237864a2123d85b475fa5c124c5b2ec46d321dc81b2c4dc5c739c17b002",
+      "rgbaSha256": "1f8b909da863ca6a46ec920db4a0c01d7cae95a230f923d2a6afd6759604b970",
+      "extraCupPixels": 3562
+    },
+    {
+      "frame": 67,
+      "maskSha256": "c27bd7ee645e75af80ddcbe0cc853169968da46db7027201ac9c62423c973656",
+      "rgbaSha256": "142ab45268e0903eb7e0a13b82554651f8be16d64298f0e90629ee84518c7409",
+      "extraCupPixels": 3547
+    },
+    {
+      "frame": 68,
+      "maskSha256": "4edb994788c4c998bce44a32a0b110f1a82a0f1a18af93dd4f63a6076d7bacb3",
+      "rgbaSha256": "7956e258675c547d64fe2dceba201c6fe5585eaf298a1612551c93607552d118",
+      "extraCupPixels": 3530
+    },
+    {
+      "frame": 69,
+      "maskSha256": "3a3ac67949840fc085136179c3e93a5213b0d623d615ce7aee0df18dff651d06",
+      "rgbaSha256": "8dfbc9671e361a762708453b20ad50409664cb3e079699f4d3a79c0047c90d20",
+      "extraCupPixels": 3525
+    },
+    {
+      "frame": 70,
+      "maskSha256": "803b56c7eae4f030ba21fa131efd21b9bb372362de332114a2ac9d669c7350db",
+      "rgbaSha256": "e50072157776c9b3a82509f713f29cc2cc6cb81ef8831641b0e21b2ea158e2e2",
+      "extraCupPixels": 3528
+    },
+    {
+      "frame": 71,
+      "maskSha256": "9f83aac68c4fccb2397bf67e5d8ee750bbc0d39359baeddfa61b92e59ff6f641",
+      "rgbaSha256": "81021a0632597e31f2ca11d27c40593862732150f599feb61fc8ad632f1c429d",
+      "extraCupPixels": 3461
+    },
+    {
+      "frame": 72,
+      "maskSha256": "4ef93746888f5434a78ba555de9995c90eaf2e5611edf0596e7105f655952be8",
+      "rgbaSha256": "139d3cfab1a8b0f69161ec07ee5da6f6f05667ddb6ccff83076b7ef05a840c30",
+      "extraCupPixels": 3448
+    },
+    {
+      "frame": 73,
+      "maskSha256": "57810c1ee59e85276bad1248465ae306ae82dc7445dbfa848574363151a5a2ed",
+      "rgbaSha256": "8907d7749714aaf0074d8ca0fe4e56bf78573a52285211d89c7864e8f5e752bb",
+      "extraCupPixels": 3368
+    },
+    {
+      "frame": 74,
+      "maskSha256": "aa1636879924ef18ab2d6e4a666bb1ffce7183c29441feb0c65bdcb8dca73a0d",
+      "rgbaSha256": "96259cbcf943e69701ddd37ee4bc42fda1efe5172a4fc763ebcc68501e37d1b6",
+      "extraCupPixels": 3352
+    },
+    {
+      "frame": 75,
+      "maskSha256": "d1abcdd9a594f7e109325ed9b71bfc37c5f4ac8a032ef5a7dcece4e02772a557",
+      "rgbaSha256": "77074382690e9953cc52fc4ad85d86c6391edfc4b615acb2c9a926a48d212deb",
+      "extraCupPixels": 3232
+    },
+    {
+      "frame": 76,
+      "maskSha256": "c1794a1cf7792ba91051b9f7af24fa1e44f3c9073804770942f355e4df94dd8e",
+      "rgbaSha256": "2c529e0f9f766145c5690b9b5d19d88e2b220e58fcf173a17eda649bf9ae521a",
+      "extraCupPixels": 3146
+    },
+    {
+      "frame": 77,
+      "maskSha256": "d411e85b9574ef2e8886bbc3f611454a63de8fdb3c0c169b153991cc2c872968",
+      "rgbaSha256": "82cbc09a7f9297723b9e5db4002c4c81c1131076c946fc14eb99a0e60519681a",
+      "extraCupPixels": 2829
+    },
+    {
+      "frame": 78,
+      "maskSha256": "cf697a0f4318af6e6521fc0a56d0c98645db9498315f9bf2420c7bd8fc6b0bde",
+      "rgbaSha256": "de7546b1cebda8b6c11fd424aed7ba377dbd647c0ca6bd3f95779c1c1256c66f",
+      "extraCupPixels": 2632
+    },
+    {
+      "frame": 79,
+      "maskSha256": "f0ce5925070f0fe80777671e01194a942aea67bbd699a4fafd2e177a8e0fce5a",
+      "rgbaSha256": "a81173d478b261578fb544dc1eeadf32a1758ad9e2f21b3af3750f952d22d265",
+      "extraCupPixels": 2617
+    },
+    {
+      "frame": 80,
+      "maskSha256": "71d4dd92ae3f4c2a76670939d34a28ce9c00f9ccdac42cc1af6e1111f6a9c612",
+      "rgbaSha256": "26db75c0955a38e59a61a925b6805e3fce55f2b2fecdb84bc58775f0346f8ee3",
+      "extraCupPixels": 1818
+    },
+    {
+      "frame": 81,
+      "maskSha256": "960b39ccd628702aa5179edae525af18d79fbc052fd9fe2d03af29fb2f7fb549",
+      "rgbaSha256": "8cb6609ed3fc9d0f2cdb2e1f0aac072957f696e5008530c76ff6f58b4e468064",
+      "extraCupPixels": 1760
+    },
+    {
+      "frame": 82,
+      "maskSha256": "38b93e9c6366605fefef07a719fbb41c2e03dc669460ba845a5ae66dd2f7a5d9",
+      "rgbaSha256": "cdc3f047dc9985dce74042aeeab88c5a1ea7093a5f68fff9f31946268262a1c0",
+      "extraCupPixels": 1184
+    },
+    {
+      "frame": 83,
+      "maskSha256": "5b458963d8a5d39d088620e690696d684efc2f75b94cc51bfe43ffda9e886086",
+      "rgbaSha256": "d2b35ffab58fae6b42f57ecf540694db5e08b1b33a2a32c5d9d235002310cef1",
+      "extraCupPixels": 1271
+    },
+    {
+      "frame": 84,
+      "maskSha256": "186bd125d52604a648009c823c6e992ee498cc7ac6346a02ae3c75b7de64abb9",
+      "rgbaSha256": "d03e7b72a8aeab6810e5be3433d6be09d8781617f2ae7f93d72e13f2c4287596",
+      "extraCupPixels": 15310
+    },
+    {
+      "frame": 85,
+      "maskSha256": "6d14e293951ff68710fc7eb146eb82d11dc23f2c6344d30bc5e96e83d4eceb99",
+      "rgbaSha256": "7035f681b5df2542a722794810a77ade70244e2b8e0b4ef3dfd0cb324811b306",
+      "extraCupPixels": 15299
+    },
+    {
+      "frame": 86,
+      "maskSha256": "116de18b9bc3f03a67f75ee8034108615d9bc73968bf50b214cd749166c28950",
+      "rgbaSha256": "20bdac21604b8e2fb245cf6a444873139cfea13c1eaf3fa2b80874a052e575e5",
+      "extraCupPixels": 1045
+    },
+    {
+      "frame": 87,
+      "maskSha256": "2bd7494cf71719f5f2de46710c943766e9fb9b0cdf466b1cfb6dfa18c7284ec1",
+      "rgbaSha256": "55ff208da35f743a522c910e232abf3dd1cf12b09bc4d401842b8ecd06f74749",
+      "extraCupPixels": 953
+    },
+    {
+      "frame": 88,
+      "maskSha256": "8128c9f6517031e80b3f53eab2db950bfa1e8253f83ba0278b8eec22c18685c2",
+      "rgbaSha256": "b39042ab5708896c2da0b8e14270096d58e6bc5b9804d91d27839c56a9e6804a",
+      "extraCupPixels": 5579
+    },
+    {
+      "frame": 89,
+      "maskSha256": "7a322d19c08d1d5c3db861b12f9236101dca45ae911c25dbc2812f10eed7a196",
+      "rgbaSha256": "80a216797c1389b2178c4f8869e4e2c8ee8474a5b88764115421cb4791e5b550",
+      "extraCupPixels": 16125
+    },
+    {
+      "frame": 90,
+      "maskSha256": "519c4c74ce6a3024a09f7b9ec0a1f244bc93eeb69aaf3c894e31f4ef39cdaf5f",
+      "rgbaSha256": "abb52bc26d77eaf010740768ada09959d58f560c82c5f4a5373d531f748f0bf0",
+      "extraCupPixels": 16165
+    },
+    {
+      "frame": 91,
+      "maskSha256": "9cdce84606ef0f71bd7274df1f6ff6ad87f5e7b732a3def0111d8d2be8c6b866",
+      "rgbaSha256": "61415e1caae4f9f88bbd0f28833bf7296a52cd03a72b0d7763fa90ea5c19800d",
+      "extraCupPixels": 15960
+    },
+    {
+      "frame": 92,
+      "maskSha256": "9dea4f0d64a82d6f59f40f850b51493a2964f4373df8d1563a8296d5fb25986f",
+      "rgbaSha256": "de1e2524809fc50f1f63b8e1cb8887e7803f974653ad2afbcf9073159f8177ab",
+      "extraCupPixels": 14984
+    },
+    {
+      "frame": 93,
+      "maskSha256": "a4c97a617a860a06823f2670523c23551c4eaac6a641c5ea446181d84ca44ec4",
+      "rgbaSha256": "9955720da6ad339e4daf05b7e80c889664955658397f6ed6e53abd687713b87d",
+      "extraCupPixels": 8347
+    },
+    {
+      "frame": 94,
+      "maskSha256": "399fa0e3b6dd7bca046ee97621659b302f9153bd75063cb71022f329729b0dd5",
+      "rgbaSha256": "489c5688f76ddda4c36f5ed5701e37ff50228e42bc9d2ed6689965adbf55d548",
+      "extraCupPixels": 15997
+    },
+    {
+      "frame": 95,
+      "maskSha256": "3e398e0d6d8f1d83d11df77a1955ce905448cfadf56da7ff739aaa0ae057cb43",
+      "rgbaSha256": "c76811f27bc9bf1428008b661eb26f3acef50b2c2dfd1a8db55e3af7fb7ec4a9",
+      "extraCupPixels": 15898
+    },
+    {
+      "frame": 96,
+      "maskSha256": "e808042f4705a27c6264971cc7fe2261edeebe01490f1bfde7cf16b94c6c80c1",
+      "rgbaSha256": "84244c65ceef59e01cbc01c88041da3921b8a538aa7112e6fb4cbccf7152c541",
+      "extraCupPixels": 16976
+    },
+    {
+      "frame": 97,
+      "maskSha256": "0240bad44c90a4789007b9dd1e66b383a1d91a1eb13d0d071e080adf3773bce2",
+      "rgbaSha256": "dc230b99574f30e4282f62542dd1401900145cae4f21a1f515ca92a8981cff1b",
+      "extraCupPixels": 15247
+    },
+    {
+      "frame": 98,
+      "maskSha256": "423a6c422dab0d37b5ffe256c0399367fa0708b48dcd978f73c82644e718df80",
+      "rgbaSha256": "cd106d9fa320f76ae82c5adaeae4bcb017607af877cb8b6bc3c93baa23bbbe16",
+      "extraCupPixels": 17307
+    },
+    {
+      "frame": 99,
+      "maskSha256": "3219a8ea7acc69827f065b567dd5e56d06b8e1aecd8555c55b696be8833ce187",
+      "rgbaSha256": "efd85cbb8d4620ddcd85ed22906b90081f67529ed1bbb26bf0311f58b6a4078c",
+      "extraCupPixels": 17189
+    },
+    {
+      "frame": 100,
+      "maskSha256": "82fe3fc55b5089fcafa9a5ecaaabd4da4334b1e99baa87713f338d6ff54b2530",
+      "rgbaSha256": "1887b02167f296032df47aac2075855fc683a7b8a1b4263dc454b413236862ec",
+      "extraCupPixels": 17094
+    },
+    {
+      "frame": 101,
+      "maskSha256": "97087cb01811003e26cf83ad055af597d8b8b292dd6cc6f17e7a7bffe48ee2a7",
+      "rgbaSha256": "88d8b747bcfc461718224645f1203d8c753e6c781e2f9872e243601d8b3cc155",
+      "extraCupPixels": 17211
+    },
+    {
+      "frame": 102,
+      "maskSha256": "d2dff96cabfb98ea17620cc2ae470595379cb212bd4b10e268f84775c8377b45",
+      "rgbaSha256": "9648c7a48f17500dea00706203db96b6bada021b7fab31652e8fd382bac3499f",
+      "extraCupPixels": 16996
+    },
+    {
+      "frame": 103,
+      "maskSha256": "dd9457903efb0bf932e9340820cd9db77c62a340154f16027b9e793eac9a9843",
+      "rgbaSha256": "8aa1f558e17888d74164e228d7eb4eff2e912ca48b58b0d5258e99675aa8b780",
+      "extraCupPixels": 17132
+    },
+    {
+      "frame": 104,
+      "maskSha256": "ffc085ebfb5425bd573c38494c4592ebd5fcfd27b51ea9284ce6e45f429e49ee",
+      "rgbaSha256": "0edde88cc08be88d903e044565b13f93f45dfafcb3fdc664940029f7138409dd",
+      "extraCupPixels": 17097
+    },
+    {
+      "frame": 105,
+      "maskSha256": "994e46357f81b7633c74ef3391f75cd5afde80452e8b9c3367fb0872948b4c8e",
+      "rgbaSha256": "7c9668e7f567da00683829f4043bb19afc8a09c6ecd4457b4d2c9bce9883d3b9",
+      "extraCupPixels": 17280
+    },
+    {
+      "frame": 106,
+      "maskSha256": "c53936c7de5a8fa2a4d574705cb74ed0899d21e90be54b8b6a42fa8830430ca9",
+      "rgbaSha256": "0c32d6287347cfb52cf7cb334254f080739f149824a3dacd8235cccb6d37f5cb",
+      "extraCupPixels": 17192
+    },
+    {
+      "frame": 107,
+      "maskSha256": "282bdea37497cf2ce1001af1bfb1dcdf852047fa86410bb04e58719193d3d81b",
+      "rgbaSha256": "dcb6f78e3134f48e75708e85645ab67caac4ea14ff2b36fe370f255fd90826e5",
+      "extraCupPixels": 17138
+    },
+    {
+      "frame": 108,
+      "maskSha256": "8216becfae4e8a758ea1202760e81b3e04c20172bf8109109bcf8b6b6cf5a76d",
+      "rgbaSha256": "069e1df8051745f85ae8a316f173bd46cb51bf376cb73f97d603b5c3b72ef431",
+      "extraCupPixels": 17127
+    },
+    {
+      "frame": 109,
+      "maskSha256": "8bc33e5070f38fafeb9b614c8f33a10b20c1d6d0c32b1b00816e937b2c936e99",
+      "rgbaSha256": "2ffb142c563243eaa09e9081f0e9f835dd4cf041ec083e89eb19f58b47b82ca5",
+      "extraCupPixels": 17118
+    },
+    {
+      "frame": 110,
+      "maskSha256": "9bb415c38a340a1d6996274fbd52ddce38da4d3a760c1286c11ab31608c125ed",
+      "rgbaSha256": "399fb36cb8127dbbe77b877d1b95f5d26bcdb3ff727cf54e551af4743429a4df",
+      "extraCupPixels": 17078
+    },
+    {
+      "frame": 111,
+      "maskSha256": "cca8c5de1f342c9eca7c2b90fe56975fc8106482b459b8ded1de60e2b1ecf94a",
+      "rgbaSha256": "998f3f1a081c41b0d72542ae8031136e3b8db893b06248524e4a8bbe3df36c11",
+      "extraCupPixels": 17056
+    },
+    {
+      "frame": 112,
+      "maskSha256": "97690d94b131e4332320d4ae67fefdafa2cf7180f777041f99c6b55f6ca6dd48",
+      "rgbaSha256": "33598530f933b9acb509a29d6eca38549fb0621dd0164358d9d5b49ffd9297c8",
+      "extraCupPixels": 17024
+    },
+    {
+      "frame": 113,
+      "maskSha256": "b5e8bffa522a0f958a5e52b124f893c0b1351bfde61c7b82ecc6781b683f2634",
+      "rgbaSha256": "02c56aa2f1d7561be88428190cc7b469d5878e0ad8512835fc9248f3f8077d86",
+      "extraCupPixels": 16946
+    },
+    {
+      "frame": 114,
+      "maskSha256": "7e5b21329e8c4c60fdb7ecf48b6cb81fedbbc283e78c15af347309148461c2ed",
+      "rgbaSha256": "eae3555dc8cb63d2d0c05dc68edd758688dc309575d8acfe492843642bc80fdc",
+      "extraCupPixels": 16939
+    },
+    {
+      "frame": 115,
+      "maskSha256": "a24b0511ddf1640cd80defa724c6a6289936a4ad79ef5c7989067c98c4a86efa",
+      "rgbaSha256": "d547f1399d12a0b93e2825d85ff995fa30a3d210cc0e99890a22f93cdc65378b",
+      "extraCupPixels": 16921
+    },
+    {
+      "frame": 116,
+      "maskSha256": "174b1f7828e97ce0a9b237e26db16b765c4c817c3876bfde578f4a2786dcad30",
+      "rgbaSha256": "759f2290cd57dcc29ac520afcf052234b5c2169793011ccb1ee5452ab692e785",
+      "extraCupPixels": 16883
+    },
+    {
+      "frame": 117,
+      "maskSha256": "265210b970cd9ed7f26a23eb03e1be0a98a4a3e174f98963d2c9d352d66e3b06",
+      "rgbaSha256": "fb26808a639522819c74440b51269f2f4577facbe746243f5e140d83c3045d6f",
+      "extraCupPixels": 16840
+    },
+    {
+      "frame": 118,
+      "maskSha256": "4b180c7d6fd717e69704cecaf056a344b9b2810fc761899d7a271f4434462e90",
+      "rgbaSha256": "196c1c1af16d17eefb0d66745b46306e2c02d7b7b1cf0755de4e178f64eaaee2",
+      "extraCupPixels": 16828
+    },
+    {
+      "frame": 119,
+      "maskSha256": "497a0f65f8245ff3f6e0bb820eb3f99100a9eb93a091b5bd1cef0f1cd3ce3e74",
+      "rgbaSha256": "86768302cf59e046bb4b68f82d833bb69fcf8df9557c6f1b022ddf1d6f45a738",
+      "extraCupPixels": 16826
+    },
+    {
+      "frame": 120,
+      "maskSha256": "283d04dd016c8bcbe1f30faf243bd6a973da2fd09b63e1d35e0c7e97b959716c",
+      "rgbaSha256": "0b951385942b0221e8167c953873c657bd6f85f50af3fbcda55b2c11a976cfae",
+      "extraCupPixels": 16776
+    },
+    {
+      "frame": 121,
+      "maskSha256": "94eefa6fc36b76959b6ee6111f3738a11f99198137b274c3873e1147b8d5d4b0",
+      "rgbaSha256": "6294cc00436a042d64bb8c47396863e61e6692aa00460ae5313d7579e967f932",
+      "extraCupPixels": 16774
+    },
+    {
+      "frame": 122,
+      "maskSha256": "879c3c89dcc1f284a434006f463cc2b57edd5933f611b2419b169d2538ec8c20",
+      "rgbaSha256": "51dad64bcb80485fd53efb715e0ebf3d440dcc6f8273728639b43117f316be8c",
+      "extraCupPixels": 16698
+    },
+    {
+      "frame": 123,
+      "maskSha256": "3f760b01fb27841f5978f676617e314ac9b5a8f2bb8a1013251edcf8c8198f47",
+      "rgbaSha256": "0849f5f8f59db4fd97086d0a0090779c142cee7c5db1af8bc9af9068a8d09582",
+      "extraCupPixels": 16603
+    },
+    {
+      "frame": 124,
+      "maskSha256": "ee95ddcd9dcad66b832603893382a2ddddbee54e6ecc1852194d74f8f3a9c847",
+      "rgbaSha256": "138b635eff34ca1138ff82c1ffb9a0835d121312343f46538d5f12e9b5a042a6",
+      "extraCupPixels": 16594
+    },
+    {
+      "frame": 125,
+      "maskSha256": "e8133ebdc022533e8b4ccd9e351fbd9065a0eaadf37934c01674e0459e0dd70a",
+      "rgbaSha256": "a80dd682340f82e44821e84f8a56322820c6e87c173438d57cc60b2bbb3eaa4d",
+      "extraCupPixels": 16580
+    },
+    {
+      "frame": 126,
+      "maskSha256": "e5881c227c9fead03d5a60371783c6a4c9d8ca6730d7ef81d907c95cf754fbe0",
+      "rgbaSha256": "50ef9b6ce626fec48a1616141bb1e95a71336e09f59a0837b776adcd4863404d",
+      "extraCupPixels": 16580
+    },
+    {
+      "frame": 127,
+      "maskSha256": "bb00373fdb323be66f251144c1b9a7cb3fc61fa9d10aa573fe3b6050b86bacfc",
+      "rgbaSha256": "95acc96ebb55482f0c93c9e419edaf01aca925b950846e4e5f460c7008110c06",
+      "extraCupPixels": 16580
+    },
+    {
+      "frame": 128,
+      "maskSha256": "36b454df26101d9a0427f3e28b1c5215af62e2cfb0200c11f3718868850806d9",
+      "rgbaSha256": "e732ebb169cf71f61ea96b922b6fca3173b851ec6188cdc85c2d5679480a38d2",
+      "extraCupPixels": 16572
+    },
+    {
+      "frame": 129,
+      "maskSha256": "7ec5123c27ddafa46cb983855521eee88887c3196b0cb4ba24ac8adaf226fced",
+      "rgbaSha256": "444d9155694aabe9af9b253285af0c690c43301dce7d123a4594713b095845d9",
+      "extraCupPixels": 16554
+    }
+  ]
+}

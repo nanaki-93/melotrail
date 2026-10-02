@@ -1,0 +1,4 @@
+java.lang.IllegalStateException: Owned runtime left READY: app.melotrail.video.adapter.ComfyVideoRuntimeException: Stopping pinned ComfyUI while ComfyUI was running because memory pressure is critical.
+runtimeState=FAILED
+runtimeFailure=app.melotrail.video.adapter.ComfyVideoRuntimeException: Stopping pinned ComfyUI while ComfyUI was running because memory pressure is critical.
+elapsedMillis=200236

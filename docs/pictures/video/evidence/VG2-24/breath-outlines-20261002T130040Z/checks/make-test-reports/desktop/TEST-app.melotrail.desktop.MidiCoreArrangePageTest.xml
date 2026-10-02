@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreArrangePageTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:28.538Z" hostname="Marcos-MacBook-Pro.local" time="1.348">
+  <properties/>
+  <testcase name="failed applied repair labels saved plan and retries the exact repair()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.441"/>
+  <testcase name="style preview uses the selected song-map occurrence()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.039"/>
+  <testcase name="advanced role generation records current role engine and pattern identity()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.18"/>
+  <testcase name="Arrange blocks missing authority and retains no retired scope selector()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.014"/>
+  <testcase name="song map distinguishes not generated draft rest accepted rest attention accepted stale and draft role states()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.007"/>
+  <testcase name="persistent player exposes catalog style and distinct section names()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.08"/>
+  <testcase name="Arrange renders one song map style gallery draft action and selected section inspector()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.029"/>
+  <testcase name="selected style and full draft action remain reachable at all Arrange reference sizes()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.112"/>
+  <testcase name="selected style exposes an explicit session-only song-plan proposal action()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.02"/>
+  <testcase name="selected-section inspector exposes previous and next song-map navigation()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.02"/>
+  <testcase name="song map keeps duplicate labels distinct and updates the selected occurrence by intent()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.02"/>
+  <testcase name="section repair previews a bounded contextual action and retains role controls behind disclosure()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.093"/>
+  <testcase name="selected section inspector reports factual planned rest and active draft progress()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.016"/>
+  <testcase name="draft progress supports cancellation and exact retry without hiding selected section()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.036"/>
+  <testcase name="one full draft action remains visible for the selected style()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.016"/>
+  <testcase name="Arrange source keeps compact rectangular actions and no superseded dropdown first flow()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.004"/>
+  <testcase name="wide Arrange keeps real four lanes and the full draft action above the persistent player()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.077"/>
+  <testcase name="compact Arrange keeps the horizontally navigable song map visible after page scrolling()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.057"/>
+  <testcase name="reference wide Arrange moves its one selected-section inspector into the 332 dp shell column()" classname="app.melotrail.desktop.MidiCoreArrangePageTest" time="0.083"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

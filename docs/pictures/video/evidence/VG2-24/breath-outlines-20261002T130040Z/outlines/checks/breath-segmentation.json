@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "stopReason": null,
+  "seconds": 5.484,
+  "peakSampledRssBytes": 82886656,
+  "command": [
+    "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/VisionMasks",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/inputs/breath-sequence.json"
+  ],
+  "limits": {
+    "seconds": 120,
+    "rssBytes": 2147483648,
+    "storageBytes": 4294967296
+  }
+}

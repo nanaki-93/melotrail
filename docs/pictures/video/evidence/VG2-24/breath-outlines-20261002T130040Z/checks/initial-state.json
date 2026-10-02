@@ -1,0 +1,18 @@
+{
+  "run": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z",
+  "scratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv",
+  "stamp": "20261002T130040Z",
+  "head": "d6be842436df7aa10556a6395219c63c8f9fa4e2",
+  "initialNumstat": "16\t0\tAGENTS.md\n6\t2\tPLAN-AUDIO.md\n6\t2\tPLAN-VIDEO.md\n8\t1\tREADME.md\n16\t4\tTASKS-AUDIO.md\n53\t13\tTASKS-VIDEO.md\n6\t2\tdocs/ARCHITECTURE.md\n9\t0\tdocs/TABI_VIDEO.md\n60\t1\tdocs/VALIDATION.md\n",
+  "files": [
+    "AGENTS.md",
+    "PLAN-AUDIO.md",
+    "PLAN-VIDEO.md",
+    "README.md",
+    "TASKS-AUDIO.md",
+    "TASKS-VIDEO.md",
+    "docs/ARCHITECTURE.md",
+    "docs/TABI_VIDEO.md",
+    "docs/VALIDATION.md"
+  ]
+}

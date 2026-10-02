@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreReviewPageTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:05:06.162Z" hostname="Marcos-MacBook-Pro.local" time="0.353">
+  <properties/>
+  <testcase name="wide Review owns one selected section inspector without a duplicate shell context()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.039"/>
+  <testcase name="compact Review retains map and persistent player after scrolling()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.034"/>
+  <testcase name="Review repair uses the already selected song-map context()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.013"/>
+  <testcase name="Review keeps candidate comparison and lifecycle operations behind selected-section disclosure()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.097"/>
+  <testcase name="Review routes a shared-lane selection and scope blocker to the selected section()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.014"/>
+  <testcase name="Review presents the shared map and one complete draft listen-use decision()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.024"/>
+  <testcase name="reference wide Review moves its one selected-section inspector into the 332 dp shell column()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.044"/>
+  <testcase name="Review identifies an accepted draft and exposes undo Export but not a redundant Use()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.028"/>
+  <testcase name="Review distinguishes a planned rest in a draft from the same accepted rest()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.016"/>
+  <testcase name="Review alternatives retain the role selected by an Export blocker()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.029"/>
+  <testcase name="Review never counts stale accepted pointers as export ready()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.012"/>
+  <testcase name="Review source keeps a compact inspector and no retired role first acceptance ladder()" classname="app.melotrail.desktop.MidiCoreReviewPageTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

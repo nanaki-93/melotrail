@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreAuthorityDraftingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:29.887Z" hostname="Marcos-MacBook-Pro.local" time="0.009">
+  <properties/>
+  <testcase name="unchanged explicit rows preserve exact existing chord durations()" classname="app.melotrail.desktop.MidiCoreAuthorityDraftingTest" time="0.003"/>
+  <testcase name="odd PPQ rejects unrepresentable durations and rejects gaps overlaps and overflow()" classname="app.melotrail.desktop.MidiCoreAuthorityDraftingTest" time="0.001"/>
+  <testcase name="explicit 3 plus 1 plus 2 plus 2 beat rows derive deterministic gap-free windows()" classname="app.melotrail.desktop.MidiCoreAuthorityDraftingTest" time="0.0"/>
+  <testcase name="simple named section rows derive one exact whole-bar timeline()" classname="app.melotrail.desktop.MidiCoreAuthorityDraftingTest" time="0.004"/>
+  <testcase name="duplicate and split retain the repeat family while assigning each occurrence a new identity()" classname="app.melotrail.desktop.MidiCoreAuthorityDraftingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

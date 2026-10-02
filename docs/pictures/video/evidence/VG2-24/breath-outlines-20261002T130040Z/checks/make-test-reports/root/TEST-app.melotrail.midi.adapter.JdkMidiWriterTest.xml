@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.midi.adapter.JdkMidiWriterTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.463Z" hostname="Marcos-MacBook-Pro.local" time="0.002">
+  <properties/>
+  <testcase name="rejects forbidden generated role events and events beyond the song boundary()" classname="app.melotrail.midi.adapter.JdkMidiWriterTest" time="0.0"/>
+  <testcase name="writes an aligned conductor plus one named role file()" classname="app.melotrail.midi.adapter.JdkMidiWriterTest" time="0.0"/>
+  <testcase name="writes deterministic format one conductor and core role tracks()" classname="app.melotrail.midi.adapter.JdkMidiWriterTest" time="0.001"/>
+  <testcase name="builds a deterministic in-memory sequence for MIDI audition()" classname="app.melotrail.midi.adapter.JdkMidiWriterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

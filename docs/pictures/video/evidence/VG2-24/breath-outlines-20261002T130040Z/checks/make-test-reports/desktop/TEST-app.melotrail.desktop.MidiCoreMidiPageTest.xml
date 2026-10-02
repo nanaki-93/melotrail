@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreMidiPageTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:37.152Z" hostname="Marcos-MacBook-Pro.local" time="0.229">
+  <properties/>
+  <testcase name="rejected source format keeps its corrective explanation without offering replacement()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.012"/>
+  <testcase name="real parsed multi-track source renders exact track and channel counts()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.022"/>
+  <testcase name="native drop accepts one MIDI file and stops accepting after source protection()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.002"/>
+  <testcase name="fractional confirmed tempo is displayed consistently on Project and MIDI pages()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.041"/>
+  <testcase name="MIDI page shows format one facts findings and immutable identity evidence()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.013"/>
+  <testcase name="MIDI page has no superseded preparation controls()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.001"/>
+  <testcase name="rejected structural import renders its scoped findings and available recovery()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.011"/>
+  <testcase name="source action chooses playback while the persistent player owns transport controls()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.063"/>
+  <testcase name="keyboard Enter opens the retained MIDI chooser()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.024"/>
+  <testcase name="MIDI page imports one source and shows the automatically protected channel()" classname="app.melotrail.desktop.MidiCoreMidiPageTest" time="0.038"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

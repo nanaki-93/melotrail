@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreComparisonHarnessTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:02.316Z" hostname="Marcos-MacBook-Pro.local" time="1.37">
+  <properties/>
+  <testcase name="v1 baseline remains loadable and reports simulated v4 candidate engine inputs()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.026"/>
+  <testcase name="invalid source case is rejected without producing a MIDI package()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.003"/>
+  <testcase name="invalid review loop is rejected before comparison capture()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.0"/>
+  <testcase name="case taxonomy and frozen manifest inputs cover every M01 development scenario()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.0"/>
+  <testcase name="full song fixture proves its declared musical scenarios from MIDI semantics()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.0"/>
+  <testcase name="development command publishes portable comparisons without replacing an earlier package()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.418"/>
+  <testcase name="baseline manifest validation rejects malformed frozen fields()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.018"/>
+  <testcase name="freezes deterministic side by side packages and an unscored review form()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.242"/>
+  <testcase name="each case can be captured twice with identical byte and semantic hashes()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.404"/>
+  <testcase name="owned fixture headers use the authoritative 480 PPQ tick grid()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.001"/>
+  <testcase name="meter fixtures prove their authored meters and final boundaries from MIDI semantics()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.001"/>
+  <testcase name="full song comparison candidate records coordinated terminal rests without shortening the melody()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.125"/>
+  <testcase name="semantic comparison reports changed protected source independently of package paths()" classname="app.melotrail.application.MidiCoreComparisonHarnessTest" time="0.128"/>
+  <system-out><![CDATA[Q01 M01 development comparison: /Users/marcoandreose/DEV/lab/melotrail/build/q01-development/comparison-3507576443763579648/packages
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

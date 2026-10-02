@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreAcceptedSongAssemblyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:52:59.996Z" hostname="Marcos-MacBook-Pro.local" time="0.675">
+  <properties/>
+  <testcase name="rejects a candidate that crosses its occurrence or violates its role channel()" classname="app.melotrail.application.MidiCoreAcceptedSongAssemblyTest" time="0.423"/>
+  <testcase name="assembles repeated bar-defined occurrences with sub-bar harmony and source identity()" classname="app.melotrail.application.MidiCoreAcceptedSongAssemblyTest" time="0.131"/>
+  <testcase name="rejects stale and digest-invalid accepted evidence()" classname="app.melotrail.application.MidiCoreAcceptedSongAssemblyTest" time="0.078"/>
+  <testcase name="accepts intentional role silence but rejects a missing accepted scope()" classname="app.melotrail.application.MidiCoreAcceptedSongAssemblyTest" time="0.04"/>
+  <testcase name="summarizes semantic additions removals and changes deterministically()" classname="app.melotrail.application.MidiCoreAcceptedSongAssemblyTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,45 @@
+{
+  "status": "PASS",
+  "baselineHead": "d6be842436df7aa10556a6395219c63c8f9fa4e2",
+  "baselineNumstat": "16\t0\tAGENTS.md\n6\t2\tPLAN-AUDIO.md\n6\t2\tPLAN-VIDEO.md\n8\t1\tREADME.md\n16\t4\tTASKS-AUDIO.md\n53\t13\tTASKS-VIDEO.md\n6\t2\tdocs/ARCHITECTURE.md\n9\t0\tdocs/TABI_VIDEO.md\n60\t1\tdocs/VALIDATION.md\n",
+  "baselineWorkingFiles": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "7f5cf885bfb539ac365b3a6c6a4b190f7a50e41edb99248863c308c4d2b07fcf"
+    },
+    {
+      "path": "PLAN-AUDIO.md",
+      "sha256": "97aaf929110bdfafa42e73915c7676a17f7d33298031c6d7d333558959076f31"
+    },
+    {
+      "path": "PLAN-VIDEO.md",
+      "sha256": "97ade454277d2649a4c023aa0a7c343e824a2600e840877e7baec541686f00c5"
+    },
+    {
+      "path": "README.md",
+      "sha256": "b40a7cbcb4731c2adc1f37be937098624f9e4ef8af861d90f621720076ccf118"
+    },
+    {
+      "path": "TASKS-AUDIO.md",
+      "sha256": "0211bff2aeed015929fafe04faaca2008112c11988ff57b9c4fb4cab5b35c796"
+    },
+    {
+      "path": "TASKS-VIDEO.md",
+      "sha256": "49e36de613bad1dcacbabae106409355fe51ce36dfd988e8721750df889024c1"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "9b4467f417d77ac9f76a133adac947540e24ef073e83efefdc1c3521e5d25ea5"
+    },
+    {
+      "path": "docs/TABI_VIDEO.md",
+      "sha256": "139c39d748f781c93f3cd9dcfcefed23acd2ca6eb628f3304d69191cb8a96a94"
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "sha256": "93bed4d46d8bf1ac82db1129e3a1ee39e5dec67020bbd412790cf9aeef191f2e"
+    }
+  ],
+  "method": "Only task insertions are mapped into HEAD for index blobs. Remaining unstaged change text must equal initial working-tree change text. No reset, stash or shared cleanup.",
+  "verifiedUnstagedNumstat": "16\t0\tAGENTS.md\n6\t2\tPLAN-AUDIO.md\n6\t2\tPLAN-VIDEO.md\n8\t1\tREADME.md\n16\t4\tTASKS-AUDIO.md\n53\t13\tTASKS-VIDEO.md\n6\t2\tdocs/ARCHITECTURE.md\n9\t0\tdocs/TABI_VIDEO.md\n60\t1\tdocs/VALIDATION.md\n"
+}

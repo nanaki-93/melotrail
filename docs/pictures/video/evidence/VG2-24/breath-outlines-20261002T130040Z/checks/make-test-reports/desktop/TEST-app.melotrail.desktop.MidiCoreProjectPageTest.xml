@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreProjectPageTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:55.035Z" hostname="Marcos-MacBook-Pro.local" time="0.19">
+  <properties/>
+  <testcase name="project page source has no audio-era setup or readiness controls()" classname="app.melotrail.desktop.MidiCoreProjectPageTest" time="0.0"/>
+  <testcase name="current project page shows persisted readiness location and next incomplete step()" classname="app.melotrail.desktop.MidiCoreProjectPageTest" time="0.061"/>
+  <testcase name="project page creates opens recent and exposes only target readiness actions()" classname="app.melotrail.desktop.MidiCoreProjectPageTest" time="0.082"/>
+  <testcase name="long persisted project name remains contained by the factual project card()" classname="app.melotrail.desktop.MidiCoreProjectPageTest" time="0.012"/>
+  <testcase name="unsupported project and failed save have explicit recoverable explanations()" classname="app.melotrail.desktop.MidiCoreProjectPageTest" time="0.024"/>
+  <testcase name="project page calls the single persisted reopen action its actual name()" classname="app.melotrail.desktop.MidiCoreProjectPageTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

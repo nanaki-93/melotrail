@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreVerticalSliceTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.159Z" hostname="Marcos-MacBook-Pro.local" time="0.078">
+  <properties/>
+  <testcase name="completes the target project to auditioned and semantically reimported MIDI package()" classname="app.melotrail.application.MidiCoreVerticalSliceTest" time="0.078"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

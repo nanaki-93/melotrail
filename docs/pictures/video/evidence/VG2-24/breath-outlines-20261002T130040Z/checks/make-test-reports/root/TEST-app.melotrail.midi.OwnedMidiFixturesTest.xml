@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.midi.OwnedMidiFixturesTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.447Z" hostname="Marcos-MacBook-Pro.local" time="0.003">
+  <properties/>
+  <testcase name="owned fixtures materialize as immutable test inputs()" classname="app.melotrail.midi.OwnedMidiFixturesTest" time="0.002"/>
+  <testcase name="owned fixtures have stable bytes hashes headers and declared intent()" classname="app.melotrail.midi.OwnedMidiFixturesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

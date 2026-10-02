@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoShotPlannerTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:41.271Z" hostname="Marcos-MacBook-Pro.local" time="0.074">
+  <properties/>
+  <testcase name="invalid or impossible shot overrides return bounded typed problems()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.002"/>
+  <testcase name="local estimate is unknown without evidence and scales only from supplied accepted footage()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.006"/>
+  <testcase name="planner compiles current reference bytes roles and guidance instead of reusing a prior preview()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.001"/>
+  <testcase name="duration boundaries produce exact unique footage and default four-minute count()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.004"/>
+  <testcase name="per-shot text is an exact refinement of the retained primary prompt and duration stays exact()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.002"/>
+  <testcase name="reuse duration changes proposal and placement identity without invalidating unchanged generation requests()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.001"/>
+  <testcase name="timing evidence without a profile or for changed backend model workflow settings or output stays unknown()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.021"/>
+  <testcase name="prompt-only shot change invalidates its dependent pending request and retains earlier takes()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.003"/>
+  <testcase name="current optional guidance template and profile changes replace every dependent request()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.021"/>
+  <testcase name="current unsupported reference role or guidance blocks planning after a ready preview()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.001"/>
+  <testcase name="extending unique duration retains forty unchanged six-second requests and shrinking removes only the added shot()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.002"/>
+  <testcase name="changed prompt asset model or workflow invalidates every dependent pending request()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.006"/>
+  <testcase name="backend clip-duration bounds block unsupported generic and reuse choices visibly()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.001"/>
+  <testcase name="explicit reuse has bounded distinct takes exact disclosure and review-required forward repeats()" classname="app.melotrail.video.VideoShotPlannerTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

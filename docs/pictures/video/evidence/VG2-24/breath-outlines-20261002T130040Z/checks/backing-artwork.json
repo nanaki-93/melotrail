@@ -1,0 +1,12 @@
+{
+  "tool": "built-in image_gen imagegen",
+  "skill": "/Users/marcoandreose/.codex/skills/.system/imagegen/SKILL.md",
+  "calls": 1,
+  "automaticRetries": 0,
+  "source": "docs/pictures/video/tabi-assets/scenario/scenery-20261002T100234Z/neutral-comfy-1080p.png",
+  "generated": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-b13320a2-03cf-4e05-bcf4-8c5a4ea3a924.png",
+  "saved": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/empty-cabin-cup-free.png",
+  "sha256": "42d464ac2831c0faf33a9287c09a25464477d2709dd311cbd38f89c7918940ff",
+  "scope": "Remove TABI and takeaway cup including their own shadows; retain notebook facing TABI, pen, cabin, bag, scenery and exact framing.",
+  "inspection": "Empty matching cabin and cup-free table; notebook orientation preserved. Generated image is a candidate backing; not a claim of pixel-perfect registration or human approval."
+}

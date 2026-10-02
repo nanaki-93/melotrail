@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoSceneLooksTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:37.819Z" hostname="Marcos-MacBook-Pro.local" time="0.072">
+  <properties/>
+  <testcase name="missing wrong-role inspiration and rejected versions fail with replacement actions()" classname="app.melotrail.video.VideoSceneLooksTest" time="0.035"/>
+  <testcase name="reopen selects exact imported finished version and replacement preserves the earlier look()" classname="app.melotrail.video.VideoSceneLooksTest" time="0.036"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

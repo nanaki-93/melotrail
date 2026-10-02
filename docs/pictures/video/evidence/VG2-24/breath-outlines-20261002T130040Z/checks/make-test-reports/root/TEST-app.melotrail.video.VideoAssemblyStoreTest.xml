@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoAssemblyStoreTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:41.566Z" hostname="Marcos-MacBook-Pro.local" time="2.216">
+  <properties/>
+  <testcase name="failed document publication retains exact orphan and retry cannot substitute different bytes()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.229"/>
+  <testcase name="oversized proposal is refused before descriptor or project publication()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.112"/>
+  <testcase name="all target durations reopen with exact actions support chunks sources and work fingerprints()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.371"/>
+  <testcase name="changed descriptor and forged project provenance are rejected read only()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.14"/>
+  <testcase name="stale saves create no descriptor and successful IDs are never overwritten()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.16"/>
+  <testcase name="ordinary saves cannot revise remove or duplicate assembly history()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.134"/>
+  <testcase name="changed and missing input bytes reject both save and reopen without project writes()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.159"/>
+  <testcase name="legacy project version is rejected without automatic migration or artifact changes()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.098"/>
+  <testcase name="matching source digests cannot bypass decoded prepared image validation()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.124"/>
+  <testcase name="symlinked assembly folder and protected MIDI location reject before any descriptor write()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.124"/>
+  <testcase name="symlinked descriptor and unknown assembly ID reject on reopen()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.135"/>
+  <testcase name="foreign missing and mismatched prepared or finished source pins reject without writing()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.149"/>
+  <testcase name="independent writers share the project CAS and only one descriptor is published()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.138"/>
+  <testcase name="unsupported invalid missing-version and oversized descriptors preserve recorded bytes()" classname="app.melotrail.video.VideoAssemblyStoreTest" time="0.14"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoAssemblyPlannerTest" tests="30" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:41.213Z" hostname="Marcos-MacBook-Pro.local" time="0.353">
+  <properties/>
+  <testcase name="empty schedule does not erase explicit unsupported motion or prompt blockers()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.008"/>
+  <testcase name="synthesized action keys cannot conflict with supplied or scoped dependencies()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.004"/>
+  <testcase name="work identity is canonical and excludes replacement provenance and unused preparation()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.023"/>
+  <testcase name="forged partitions overlaps holes support and delivery settings fail closed()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.001"/>
+  <testcase name="all durations and bounded support profiles cover each delivered frame once()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.211"/>
+  <testcase name="preparation dependency scope follows action support and effect tails only()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.009"/>
+  <testcase name="unselected scenery preparation is excluded until its coverage is consumed()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.004"/>
+  <testcase name="support counts are clipped at scene edges and included in the invocation ceiling not delivered()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.0"/>
+  <testcase name="validated assembly snapshots caller lists and cannot be mutated through exposed lists()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.0"/>
+  <testcase name="overlapping independent prepared subjects cannot become a schedule()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.001"/>
+  <testcase name="nonblocking prompt guidance stays visible without turning text into an action()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.0"/>
+  <testcase name="unsupported duration overflow unsafe integer and invalid chunk settings reject before IO()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.0"/>
+  <testcase name="rendered plate changes stale chunks outside the action while unselected scenery does not()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.008"/>
+  <testcase name="selected control ID disambiguates controls with the same intent target and capability()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.004"/>
+  <testcase name="duplicate conflicting unsupported and rejected actions have scoped remedies()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.001"/>
+  <testcase name="consumed placements and capabilities invalidate only affected work and conflicts reject()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.006"/>
+  <testcase name="same input replays with exact authored text and versioned pins()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.001"/>
+  <testcase name="consumed preparation version bytes and artifact location all invalidate their action work()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.006"/>
+  <testcase name="scheduled supported actions bind to prepared components and replay with verbatim text()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.003"/>
+  <testcase name="serialized assembly requires explicit schema and planner identity()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.002"/>
+  <testcase name="local action changes reach intersecting support and steam tails but not distant chunks()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.013"/>
+  <testcase name="blink amount is a fraction of the prepared pose capability maximum()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.001"/>
+  <testcase name="rejected dependencies and missing semantic components block each supported action with scoped guidance()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.0"/>
+  <testcase name="preparation scope declarations reject missing unknown duplicate empty and dangling ownership()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.001"/>
+  <testcase name="every supported integer duration partitions its exact frames once at zero support()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.023"/>
+  <testcase name="unused preparation dependency changes preserve every work fingerprint and completed take()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.004"/>
+  <testcase name="action rejects consumed foreground occlusion and anchor landmark reviews without rejecting unrelated art()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.001"/>
+  <testcase name="preparation ownership ordering is irrelevant and returned work snapshots mutable declarations()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.003"/>
+  <testcase name="missing trajectory rejects and changing its consumed pin stales every chunk()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.004"/>
+  <testcase name="shared global and unspecified preparation dependencies remain conservative()" classname="app.melotrail.video.VideoAssemblyPlannerTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

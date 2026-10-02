@@ -1,0 +1,78 @@
+{
+  "task": "VG2-24",
+  "createdAt": "2026-10-02T13:47:58.019369+00:00",
+  "authorization": {
+    "quote": "Finish the remaining batch",
+    "scope": "One fresh ComfyUI runtime for final 33 fixed-cabin drink frames, then one local 129-frame review encode; reuse completed 96 frames; no new motion generation."
+  },
+  "native": {
+    "runnerAttempts": 1,
+    "automaticRetries": 0,
+    "modelGenerations": 0,
+    "graphSubmissions": 1,
+    "wholeRunnerLimitSeconds": 180,
+    "cumulativeWithVerificationLimitSeconds": 300,
+    "observedProcessTreeRssLimitBytes": 8589934592,
+    "ownedEvidenceAndSessionLimitBytes": 1073741824,
+    "minimumFreeDiskBytes": 21474836480,
+    "reviewEncodes": 1,
+    "verificationDecodeTraversals": 2
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/request.json",
+      "bytes": 1417,
+      "sha256": "db806a898e2c0bea73da4209e2ed0d2686282376beb156adbe94ff3a7a104c73"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/scripts/ComfyMasksSingle.java",
+      "bytes": 5975,
+      "sha256": "4991d6247ee4185e879475e7f08ac064f77974ab135e64e4bf049954ea01a3ce"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/scripts/assemble.py",
+      "bytes": 6957,
+      "sha256": "d72f258d0c25f7f20432fb720a66e9a7c820b8d1bbd7c58c5709e3e68faef108"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/scripts/run.py",
+      "bytes": 7132,
+      "sha256": "88b4ec83eb017bde79dba64a1169bbc52cdb7ff3e8137d55930d81df574d0f0e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/workflow/last-batch.json",
+      "bytes": 957,
+      "sha256": "bf4d80b56be4c26aa34215ccdeb916da8c6b4160d5d088af152b2a3b57f8ed0a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/fixed-cabin-cup-free-v2-1080p.png",
+      "bytes": 2921398,
+      "sha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-3.png",
+      "bytes": 99635438,
+      "sha256": "95abd7c403afaebd76952aa3fdc80f0c7993d47bf838e1b26138e2da17c5f468"
+    },
+    {
+      "path": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ComfyMasksSingle.class",
+      "bytes": 13368,
+      "sha256": "d5661f651b17e4f6415b599c7a50e2ace32f0eef9d1c07a7d0c4c675b3aa79cd"
+    },
+    {
+      "path": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/runtime-classpath.txt",
+      "bytes": 2975,
+      "sha256": "cc0f4db15abb4f7854ec9dde645d41388ca2f773b040569e379f0454a0124489"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    }
+  ]
+}

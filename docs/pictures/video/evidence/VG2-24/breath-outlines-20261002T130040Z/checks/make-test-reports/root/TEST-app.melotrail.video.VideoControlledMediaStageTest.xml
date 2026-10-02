@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoControlledMediaStageTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:45.278Z" hostname="Marcos-MacBook-Pro.local" time="27.527">
+  <properties/>
+  <testcase name="restart after rejected queue but before submit acknowledgement reconciles no-start evidence()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.079"/>
+  <testcase name="only the durable current claimed binding can start work and duplicate direct calls cannot start it twice()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.05"/>
+  <testcase name="two adapter instances race on one pending claim and dispatch only persisted work off caller thread()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.035"/>
+  <testcase name="reopen promotes only sealed owned completion and rejects changed bytes without relaunch()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.08"/>
+  <testcase name="queued cancellation is confirmed only by owned worker before native execution()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.108"/>
+  <testcase name="claimed stage refuses insufficient memory or total staging reservation before native setup()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.109"/>
+  <testcase name="queue rejection records confirmed no-start and does not leave a phantom worker()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.073"/>
+  <testcase name="claimed attempt denied a native slot is confirmed failed on reconciliation and retryable()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.116"/>
+  <testcase name="production stage stages only the persisted descriptor after claim and retains failed attempt evidence()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.053"/>
+  <testcase name="confirmed worker failure survives restart and only explicit bounded retry launches()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.113"/>
+  <testcase name="unclaimed and older attempts never execute even with matching command fields()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.013"/>
+  <testcase name="cancellation request retains admission until owned worker confirms stop()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.073"/>
+  <testcase name="claimed production stage verifies complete absolute preview ranges and retains chunk receipts()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="26.526"/>
+  <testcase name="image2 consumption rejects changed missing reordered and duplicated receipts before publication()" classname="app.melotrail.video.VideoControlledMediaStageTest" time="0.097"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreVisualEvidenceProjectionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.237Z" hostname="Marcos-MacBook-Pro.local" time="0.018">
+  <properties/>
+  <testcase name="missing source artifact is unavailable without changing project authority()" classname="app.melotrail.application.MidiCoreVisualEvidenceProjectionTest" time="0.005"/>
+  <testcase name="digest mismatch is unavailable rather than drawn or repaired()" classname="app.melotrail.application.MidiCoreVisualEvidenceProjectionTest" time="0.004"/>
+  <testcase name="projects protected source notes as read-only verified lane facts()" classname="app.melotrail.application.MidiCoreVisualEvidenceProjectionTest" time="0.005"/>
+  <testcase name="stale project evidence is unavailable rather than drawn()" classname="app.melotrail.application.MidiCoreVisualEvidenceProjectionTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

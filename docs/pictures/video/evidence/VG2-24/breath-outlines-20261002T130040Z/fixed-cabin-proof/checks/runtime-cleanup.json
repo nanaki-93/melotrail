@@ -1,0 +1,70 @@
+{
+  "state": "RESOURCE_STOPPED_PROCESSES_REAPED",
+  "runtimeFinalLogAvailable": false,
+  "observedPidsAbsent": [
+    48537,
+    48830
+  ],
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-4dc65bb5-c100-4529-b661-4faf0c77e774",
+  "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/runtime-session",
+  "allCopiesVerified": true,
+  "ownedSessionRemoved": true,
+  "files": [
+    {
+      "path": "input/backing.png",
+      "bytes": 2921398,
+      "sha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5"
+    },
+    {
+      "path": "input/layer-0.png",
+      "bytes": 93164575,
+      "sha256": "3f2f6a86c7d9f03fe7e3fc8440b8a524e3c9bf54cb417b8c4afd098020e99029"
+    },
+    {
+      "path": "input/layer-1.png",
+      "bytes": 95721401,
+      "sha256": "971ea2310c9a6b4d6035b0fe958e89bc9d9f612e612ec48792eff262f121de9d"
+    },
+    {
+      "path": "input/layer-3.png",
+      "bytes": 99635438,
+      "sha256": "95abd7c403afaebd76952aa3fdc80f0c7993d47bf838e1b26138e2da17c5f468"
+    },
+    {
+      "path": "input/layer-2.png",
+      "bytes": 95758234,
+      "sha256": "e0face6eb55fb3cc7d2a039b46578d2396a70d8c81ae764f71067d998fb66d48"
+    },
+    {
+      "path": "output/fixed-cabin-2_00001_.png",
+      "bytes": 35577707,
+      "sha256": "272ffd76994a35192bb2cecf29aa085b5067c2872aeefbe2daf8e733d2608c78"
+    },
+    {
+      "path": "output/fixed-cabin-0_00001_.png",
+      "bytes": 35672643,
+      "sha256": "8e3c7ba59ef64c4f168a1a38664cb0fd5ed7d7dfaa217f9f3e6617cc19e8c42e"
+    },
+    {
+      "path": "output/fixed-cabin-3_00001_.png",
+      "bytes": 19235524,
+      "sha256": "b28c09a1a3ad8b71fbc7f21fee17c019b7c1cc645a01901147eb2ac1050817c9"
+    },
+    {
+      "path": "output/fixed-cabin-1_00001_.png",
+      "bytes": 35880328,
+      "sha256": "82f10229571c20dbd728cb7a2ec28d7f820c0351738c98138b15fecb34521220"
+    },
+    {
+      "path": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "c7ec8b0c4ce125068120fbebf102c0c4a9110cc92a7a8631e87f0cbf3620ffe5"
+    },
+    {
+      "path": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "lastBatchCandidate": "The final APNG header declares 33 frames but full decode reports truncation; it is failure evidence, never selected as complete."
+}

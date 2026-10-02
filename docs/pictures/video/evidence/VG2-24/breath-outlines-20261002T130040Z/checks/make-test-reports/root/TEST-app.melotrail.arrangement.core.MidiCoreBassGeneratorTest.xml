@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.311Z" hostname="Marcos-MacBook-Pro.local" time="0.028">
+  <properties/>
+  <testcase name="held melody reduces only the harmony window that it overlaps()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="returns a scoped rejection for off-grid authority instead of silently moving a bass attack()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="bass pattern catalog exposes every supported pattern exactly once()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.0"/>
+  <testcase name="bounded approach resolves into the next authoritative bass root()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="held low melody leaves one bass support per chord while preserving chord space()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.0"/>
+  <testcase name="walking and diatonic approach patterns remain legal and voice lead across phrase boundaries()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="profile note lengths distinguish sustained sub-like and muted plucked output()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.0"/>
+  <testcase name="never falls back to a protected melody collision when every matching bass pitch is blocked()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.0"/>
+  <testcase name="same repeated harmony lifts bass pitch deterministically from explicit section policy()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="accepted chord rhythm and melody activity affect bass attacks without changing authority()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="protected melody anchors and accepted low-end chord notes are avoided when alternatives exist()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="reduced density preserves support in every held melody harmony window()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.003"/>
+  <testcase name="bass uses exact three four and six eight meter slots with repeatable groove fingerprints()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.003"/>
+  <testcase name="generates every curated bass pattern with both MIDI performance profiles()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.004"/>
+  <testcase name="matches the semantic golden sequence for every curated bass pattern()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.002"/>
+  <testcase name="honors slash bass and exact sub-bar harmony windows()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="three development fixtures yield two valid distinct bass alternatives with exact harmony()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.002"/>
+  <testcase name="seeded alternatives are distinct repeatable and scoped to the bass channel()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <testcase name="shared groove preserves the first chord-aligned support attack in every harmony window()" classname="app.melotrail.arrangement.core.MidiCoreBassGeneratorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

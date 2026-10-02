@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreArrangementPlanProposalTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:01.640Z" hostname="Marcos-MacBook-Pro.local" time="0.053">
+  <properties/>
+  <testcase name="renaming section labels cannot change a proposal purpose()" classname="app.melotrail.application.MidiCoreArrangementPlanProposalTest" time="0.01"/>
+  <testcase name="style proposal is deterministic and never writes project authority or artifacts()" classname="app.melotrail.application.MidiCoreArrangementPlanProposalTest" time="0.01"/>
+  <testcase name="cancelling leaves the proposal unsaved while confirmation saves only explicit plan authority()" classname="app.melotrail.application.MidiCoreArrangementPlanProposalTest" time="0.01"/>
+  <testcase name="confirmation cannot overwrite an already confirmed plan()" classname="app.melotrail.application.MidiCoreArrangementPlanProposalTest" time="0.01"/>
+  <testcase name="changed authority rejects both stale session and stale proposal without writes()" classname="app.melotrail.application.MidiCoreArrangementPlanProposalTest" time="0.011"/>
+  <testcase name="proposal purposes are order-derived and give each song function distinct intent()" classname="app.melotrail.application.MidiCoreArrangementPlanProposalTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoProjectStoreTest" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:37.521Z" hostname="Marcos-MacBook-Pro.local" time="0.276">
+  <properties/>
+  <testcase name="ordinary saves cannot edit or remove immutable record history()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.012"/>
+  <testcase name="control paths and namespaces are rejected during construction and document decoding()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.016"/>
+  <testcase name="replacement and restored-mtime mutations at commit cannot publish stale content()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.01"/>
+  <testcase name="versioned records reopen independently and selections change without rewriting history()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.016"/>
+  <testcase name="candidate and session paths retain symlink parent semantics through create save and reopen()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.01"/>
+  <testcase name="corrupt staged save preserves the last known-good project()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.009"/>
+  <testcase name="publication refuses unreliable or unsupported change time before referencing a take()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.007"/>
+  <testcase name="raw protected roots resolve symlink parent traversal for existing and missing exports()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.007"/>
+  <testcase name="bulk verification on fresh replay and orphan paths never owns the document lock()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.029"/>
+  <testcase name="measured take provenance survives reopen and direct saves cannot revise either measurement()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.013"/>
+  <testcase name="direct save cannot append a take without complete measurements and provenance()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.005"/>
+  <testcase name="parent traversal through a missing prefix fails closed without creating folders()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.001"/>
+  <testcase name="unsupported and malformed documents are rejected without rewriting their bytes()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.008"/>
+  <testcase name="create publication never replaces a target that appears after the absence check()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.005"/>
+  <testcase name="identity publication converges across stores and never links source bytes()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.029"/>
+  <testcase name="direct save rejects take source IDs from another prepared scene()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.016"/>
+  <testcase name="direct saves cannot select rejected missing or duplicate takes or reject selected takes()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.021"/>
+  <testcase name="a document self reference is rejected before save and the original project remains reopenable()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.005"/>
+  <testcase name="missing protected roots marker files and symlinked ancestors reject video storage()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.001"/>
+  <testcase name="prepared scene records are append-only and retain every consumed artifact pin()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.017"/>
+  <testcase name="artifact traversal and symlink escape cannot replace current work()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.006"/>
+  <testcase name="stale sessions from independent stores cannot both save the same revision()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.01"/>
+  <testcase name="cancelled and failed publication leave project intact and exact orphan is reusable()" classname="app.melotrail.video.VideoProjectStoreTest" time="0.023"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoMotionRendererTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:54:31.970Z" hostname="Marcos-MacBook-Pro.local" time="2.832">
+  <properties/>
+  <testcase name="rejects changed scenery module before any process launch()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.002"/>
+  <testcase name="rejects scenery changed during rendering before accepting the first chunk()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.026"/>
+  <testcase name="rejects wrong loaded Canvas package()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.001"/>
+  <testcase name="probe resolves Canvas beside compositor rather than the configured NODE_PATH package()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.052"/>
+  <testcase name="rejects FFmpeg changed during rendering()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.023"/>
+  <testcase name="real compositor carries scenery across a bounded chunk seam()" classname="app.melotrail.video.VideoMotionRendererTest" time="2.099"/>
+  <testcase name="rejects changed explicit tool pin before launching()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.0"/>
+  <testcase name="one deadline and staging budget stop later chunks but preserve earlier frames()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.057"/>
+  <testcase name="rejects Canvas manifest changed during rendering()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.021"/>
+  <testcase name="rejects omitted source pins()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.024"/>
+  <testcase name="cancellation during receipt frame validation never completes()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.022"/>
+  <testcase name="rejects Canvas artifact changed during rendering before accepting receipt()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.023"/>
+  <testcase name="current receipt version rejects old and unknown compositor receipts()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.044"/>
+  <testcase name="rejects scenery changed after receipt validation before accepting receipt()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.028"/>
+  <testcase name="absolute preview ranges split into exact bounded chunks()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.155"/>
+  <testcase name="rejects wrong chunk request identity()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.022"/>
+  <testcase name="rejects changed Canvas implementation bytes before any process launch()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.001"/>
+  <testcase name="missing and mutated receipt frames reject without removing earlier chunks()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.099"/>
+  <testcase name="caller cancellation stops each runtime probe before rendering()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.002"/>
+  <testcase name="splits long absolute range preserving scenery state and validates identities()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.064"/>
+  <testcase name="rejects scenery changed while validating the final chunk before returning()" classname="app.melotrail.video.VideoMotionRendererTest" time="0.064"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/scripts/refine.py", line 32, in <module>
+    assert np.all(edge[eroded]==255), 'Semantic foreground interior was lost'
+AssertionError: Semantic foreground interior was lost

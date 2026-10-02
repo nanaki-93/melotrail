@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.midi.MidiCoreBoundedPropertyTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.323Z" hostname="Marcos-MacBook-Pro.local" time="0.124">
+  <properties/>
+  <testcase name="seeded unpaired note events remain bounded findings and never publish a source()" classname="app.melotrail.midi.MidiCoreBoundedPropertyTest" time="0.038"/>
+  <testcase name="seeded malformed SMF chunks always return a typed import rejection()" classname="app.melotrail.midi.MidiCoreBoundedPropertyTest" time="0.043"/>
+  <testcase name="seeded semantic songs writer reader round trip without program changes()" classname="app.melotrail.midi.MidiCoreBoundedPropertyTest" time="0.015"/>
+  <testcase name="seeded rational timing cases keep documented rounding bounds()" classname="app.melotrail.midi.MidiCoreBoundedPropertyTest" time="0.001"/>
+  <testcase name="seeded project JSON and path mutations retain only valid candidate states()" classname="app.melotrail.midi.MidiCoreBoundedPropertyTest" time="0.023"/>
+  <testcase name="seeded authority timelines stay contiguous and malformed chord coverage is typed()" classname="app.melotrail.midi.MidiCoreBoundedPropertyTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

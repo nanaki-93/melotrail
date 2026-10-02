@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreDesktopCompositionTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:29.897Z" hostname="Marcos-MacBook-Pro.local" time="0.076">
+  <properties/>
+  <testcase name="default main delegates to target entrypoint and target graph has no worker construction()" classname="app.melotrail.desktop.MidiCoreDesktopCompositionTest" time="0.001"/>
+  <testcase name="target composition wires every MIDI Core use case without starting external services()" classname="app.melotrail.desktop.MidiCoreDesktopCompositionTest" time="0.016"/>
+  <testcase name="desktop production tree retains only the MIDI Core routes and no legacy composition()" classname="app.melotrail.desktop.MidiCoreDesktopCompositionTest" time="0.059"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

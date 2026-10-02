@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoAnimationAssetsTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:40.016Z" hostname="Marcos-MacBook-Pro.local" time="1.195">
+  <properties/>
+  <testcase name="pivot outside supplied subject geometry fails without appending a descriptor()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.121"/>
+  <testcase name="undersized opaque plates reject through import and indexed alpha is measured on reopen()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.081"/>
+  <testcase name="translucent finished artwork keeps its decoded alpha facts and original bytes()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.038"/>
+  <testcase name="requested scenery travel beyond supplied coverage fails with replacement artwork action()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.043"/>
+  <testcase name="subjects outside the viewport fail before deriving ranges with an invalid zero default()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.067"/>
+  <testcase name="painted checkerboard cutouts and unusable masks reject through import without publishing()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.068"/>
+  <testcase name="transparent scenery overlay imports only with measured opaque backing()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.088"/>
+  <testcase name="finished scene alone retains exact original and exposes only image to video eligibility()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.063"/>
+  <testcase name="initial rotations cannot claim aligned poses or unrotated motion and coverage ranges()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.068"/>
+  <testcase name="generic mask supplies neither clean plate nor semantic effect anchor()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.061"/>
+  <testcase name="opaque rgba and fully transparent subject files do not count as separated layers()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.071"/>
+  <testcase name="rotation ranges contain no between-degree excursions outside the viewport()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.084"/>
+  <testcase name="ready layers persist measured alpha placement pivots occlusion and coverage capabilities()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.16"/>
+  <testcase name="misaligned poses duplicate IDs and invalid relationships reject without project mutation()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.063"/>
+  <testcase name="stale revision import rejects without publishing a scene()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.022"/>
+  <testcase name="clean backgrounds and scenery reject translucent pixels and transparent holes without writes()" classname="app.melotrail.video.VideoAnimationAssetsTest" time="0.095"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

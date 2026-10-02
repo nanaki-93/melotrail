@@ -644,6 +644,50 @@ This closes reading at the disclosed cuff/frond quality. VG2-24’s remaining
 breathing/fixed-scene obligations and VG2-27 are unchanged. Next is the independently
 ready VG4-05 scenery preparation and short join proof.
 
+VG2-24 movement preparation (2026-10-02): the user authorizes “ok, go with the
+first point”. Evidence: `docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/`.
+The first 129-frame breathing inference stops on production critical-memory
+pressure after 212.056s; no movie or automatic retry. The user then explicitly
+approves one shorter 97-frame/3.88s take with smaller temporal decoding batches,
+a 35-minute cumulative scope, 32 GiB sampled process memory and 2 GiB new files.
+Two harness preflight rejections (owned input placement and the legacy host
+probe's five-second-only range) launch no model. A narrowly admitted 97-frame
+helper then uses the unchanged production runtime/backend/job owners. Generation
+passes in 251.009s and one whole-frame ComfyUI finish in 71.377s. Review:
+`finish/review/tabi-breath-comfy-1080p.mp4`, SHA-256 `8c49fbbf6e71fca7ce74b2754d3cd1550c9584c0b939ab5564444a8be57746d2`.
+Silent 1920×1080, 97 frames, exact 25fps/3.88s from zero; all-frame face checks
+and a face-dropout negative pass. Native motion remains 768×448, enhanced with
+the accepted RealESRGAN method. Small head/shoulder, eyelid and mouth changes
+are visible; independently satisfactory breathing is a pending human decision.
+
+One imagegen call prepares an empty matching cabin/cup-free table. Candidate
+backings and 484 moving alpha/RGBA frames (watch/drink/read 129 each, breathing
+97) are under `docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/`.
+Local semantic segmentation plus a narrow spatial edge refinement replaces the
+rejected colour-threshold method; source character RGB and opaque face interiors
+are protected. The Mac Vision helper is external headless evidence preparation,
+not a revived Swift application or mandatory automatic in-app extraction.
+Resting cup contours and bidirectional prop flow supplement the drink masks.
+A backing correction removes an omitted original frond; notebook pixels outside
+the authored backing support remain unchanged. Fine frond/table edge remnants
+still need review; technical coverage is not artistic acceptance.
+
+Fixed-cabin ComfyUI proof: core alpha/composite nodes complete three 32-frame
+batches, then the fourth batch is stopped at the 8-GiB RSS cap (peak 9,670,049,792
+bytes). Its truncated APNG is retained as failure evidence. Completed batches
+remain immutable. The user explicitly approves “Finish the remaining batch”.
+One fresh ComfyUI runtime completes those 33 frames in 26.474s. All 129 composite
+frames match the independent alpha formula within 1/255; cabin pixels outside
+moving support are fixed. One local review encode yields
+`fixed-cabin-recovery/review/tabi-drink-fixed-cabin-comfy-1080p.mp4`,
+SHA-256 `a645e8cd015a8b59249ad09c09fd9e29d532768d3d665a4434f50e3a952894fc`:
+silent 1920×1080, exact 25fps/5.16s. Full decode passes (minimum 34.75 dB PSNR,
+maximum face MAE 2.534/255). Total recovery processing is under 60s and retained
+new files under 1 GiB; the original resource failure remains recorded.
+VG2-24 remains REVIEW; VG2-27, 60 seconds, 180 seconds, 30fps conversion and the
+six-minute repeat gate remain open. Original sources and accepted clips stay local
+and unchanged. Validation and cleanup receipts are in this run's `checks/`.
+
 ### Route 1 — Standalone rig proof tasks
 
 **Deferred by the 2026-10-02 reset above.** The following dated evidence and

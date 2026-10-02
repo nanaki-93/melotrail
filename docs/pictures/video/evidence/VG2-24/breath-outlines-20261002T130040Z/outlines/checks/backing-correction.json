@@ -1,0 +1,14 @@
+{
+  "correction": 1,
+  "problem": "Semantic neutral mask omitted one original right frond; first backing left a duplicate pink frond when the head moved.",
+  "sourcePixelsUnchanged": true,
+  "solution": "Explicit authored clear-support rectangle x320..918, y182..630 covers original head/fronds before borrowing empty backing pixels; source action silhouette is unchanged.",
+  "assertions": {
+    "outsideBackingSupportExact": true
+  },
+  "newBackings": [
+    "fixed-cabin-v2-1080p.png",
+    "fixed-cabin-cup-free-v2-1080p.png"
+  ],
+  "oldCandidatesPreserved": true
+}

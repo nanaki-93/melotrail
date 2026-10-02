@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoAssetImportTest" tests="24" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:43.782Z" hostname="Marcos-MacBook-Pro.local" time="0.82">
+  <properties/>
+  <testcase name="source paths preserve symlink parent traversal semantics()" classname="app.melotrail.video.VideoAssetImportTest" time="0.026"/>
+  <testcase name="reopen reports missing and changed owned media with recovery guidance()" classname="app.melotrail.video.VideoAssetImportTest" time="0.044"/>
+  <testcase name="stale concurrent session is rejected before publishing another asset()" classname="app.melotrail.video.VideoAssetImportTest" time="0.024"/>
+  <testcase name="unsupported oversized and corrupt sources fail with specific corrective guidance()" classname="app.melotrail.video.VideoAssetImportTest" time="0.019"/>
+  <testcase name="PNG transparency requires valid placement uniqueness color type and length()" classname="app.melotrail.video.VideoAssetImportTest" time="0.01"/>
+  <testcase name="PNG truncation checksums and invalid chunk lengths reject before publication()" classname="app.melotrail.video.VideoAssetImportTest" time="0.008"/>
+  <testcase name="reopen loads pinned descriptors and verifies raw and thumbnail media()" classname="app.melotrail.video.VideoAssetImportTest" time="0.036"/>
+  <testcase name="PNG background and histogram must respect their palette and image data boundaries()" classname="app.melotrail.video.VideoAssetImportTest" time="0.009"/>
+  <testcase name="original thumbnail and descriptor hashes bind their exact stored bytes()" classname="app.melotrail.video.VideoAssetImportTest" time="0.028"/>
+  <testcase name="indexed PNG transparency is recorded and preserved after reopen()" classname="app.melotrail.video.VideoAssetImportTest" time="0.021"/>
+  <testcase name="replacement artwork receives a new immutable identity and earlier bundle survives reopen()" classname="app.melotrail.video.VideoAssetImportTest" time="0.061"/>
+  <testcase name="original inspection measures native alpha extremes and visible mask contrast without modifying assets()" classname="app.melotrail.video.VideoAssetImportTest" time="0.023"/>
+  <testcase name="duplicate bytes reuse the exact identity without overwrite or metadata promotion()" classname="app.melotrail.video.VideoAssetImportTest" time="0.024"/>
+  <testcase name="valid PNG transparency for grayscale RGB and partial palettes survives import and reopen()" classname="app.melotrail.video.VideoAssetImportTest" time="0.128"/>
+  <testcase name="sixteen bit PNG alpha distinguishes partial transparency from full opacity()" classname="app.melotrail.video.VideoAssetImportTest" time="0.054"/>
+  <testcase name="symbolic source and owned storage redirects are rejected without touching their targets()" classname="app.melotrail.video.VideoAssetImportTest" time="0.006"/>
+  <testcase name="PNG chunk reserved bit must be uppercase even for unknown ancillary chunks()" classname="app.melotrail.video.VideoAssetImportTest" time="0.005"/>
+  <testcase name="PNG and JPEG imports preserve raw bytes and use decoded format instead of extension()" classname="app.melotrail.video.VideoAssetImportTest" time="0.066"/>
+  <testcase name="PNG headers critical chunk ordering and terminal structure are required even with valid CRCs()" classname="app.melotrail.video.VideoAssetImportTest" time="0.011"/>
+  <testcase name="valid PNG keeps ancillary chunks optional RGB palette and consecutive split image data()" classname="app.melotrail.video.VideoAssetImportTest" time="0.023"/>
+  <testcase name="every reference role and no role work independently without a required combination()" classname="app.melotrail.video.VideoAssetImportTest" time="0.133"/>
+  <testcase name="failed project publication leaves current project and selected source unchanged and retryable()" classname="app.melotrail.video.VideoAssetImportTest" time="0.029"/>
+  <testcase name="pixel count and thumbnail byte bounds reject without publishing or changing the source()" classname="app.melotrail.video.VideoAssetImportTest" time="0.01"/>
+  <testcase name="original inspection enforces original decode bounds and exact descriptor and media pins()" classname="app.melotrail.video.VideoAssetImportTest" time="0.021"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

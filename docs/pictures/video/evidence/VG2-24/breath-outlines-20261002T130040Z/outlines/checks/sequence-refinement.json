@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "stopReason": null,
+  "seconds": 159.463,
+  "peakSampledRssBytes": 1031946240,
+  "command": [
+    "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/comfyui/v0.35.0/.venv/bin/python",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/scripts/refine.py",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/inputs/sequence.json",
+    "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/raster-deps"
+  ],
+  "limits": {
+    "seconds": 360,
+    "rssBytes": 2147483648,
+    "storageBytes": 4294967296
+  }
+}

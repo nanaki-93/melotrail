@@ -1,0 +1,108 @@
+{
+  "task": "VG2-24",
+  "createdAt": "2026-10-02T13:18:15.649817+00:00",
+  "sourceHead": "d6be842436df7aa10556a6395219c63c8f9fa4e2",
+  "authorization": {
+    "quote": "Run the shorter breathing take",
+    "interpretation": "One explicitly approved 97-frame take plus one full-frame 1080p finish. 35 minutes total, 32 GiB observed process memory, 2 GiB local new evidence, no automatic retry."
+  },
+  "scope": "One shorter gentle breath/return using unchanged models, native dimensions and sampler; 32-frame temporal decode tiles with 8-frame overlap.",
+  "imageConditioning": "Frame 0 neutral; neutral guide frame 48 strength 0.35; frame 96 strength 1.",
+  "native": {
+    "workflow": "External reading API graph based on the tested two-image LTX guide graph; installed ComfyUI LTX-2.3/Gemma models and sampler unchanged.",
+    "width": 768,
+    "height": 448,
+    "frameCount": 97,
+    "fps": 25,
+    "durationSeconds": 3.88,
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "cancellationTestSubmissions": 0,
+    "inferenceLimitSeconds": 1200,
+    "wholeRunnerLimitSeconds": 1500,
+    "observedProcessTreeRssLimitBytes": 34359738368,
+    "rssLimitation": "Sampled RSS excludes some GPU/Metal allocations; unchanged production critical/unknown pressure and 8-GiB extra-swap safeguards also apply.",
+    "ownedEvidenceAndSessionLimitBytes": 2147483648,
+    "minimumFreeDiskBytes": 21474836480,
+    "mediaProbePerProcessLimitSeconds": 120,
+    "additionalReviewDecodeTraversals": 1,
+    "hostedFallback": false,
+    "modelDownloads": false
+  },
+  "processOwnership": "ComfyVideoRuntime owns and reaps the only model server. VideoMediaProcess owns native media commands. The outside guard observes only its own JVM tree and requests graceful JVM shutdown on a limit.",
+  "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/output",
+  "storage": "MP4s and any frame PNGs remain local; commit request, helper sources, input pins, checks and owner status only.",
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/request.json",
+      "bytes": 2297,
+      "sha256": "6ff178ccf429a2136c84d730c832dd27875a9e9ca5a0910ca321f9774a52bf41"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/scripts/BreathRepairPilot.java",
+      "bytes": 11084,
+      "sha256": "a9747204c2f181a57613aad945452e78842601624c9ed3b8d33dfedcea4287a4"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/scripts/decode-native.py",
+      "bytes": 2513,
+      "sha256": "afd59c0040ab1d82614cc1031a9ad1c7b7be00a43cea5dd0a6f13d18c9b7590f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/scripts/review-sheets.cjs",
+      "bytes": 1446,
+      "sha256": "3341eee96562fbd32b1f194ec6c0b369a71f090426006d91f941b74953faffd3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/scripts/run.py",
+      "bytes": 7148,
+      "sha256": "0052ede4f331c751b45c8f4ce82dd9815e02bb3856ef45e2e57d2e675cb3e48f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/workflow/guided-breath-api.json",
+      "bytes": 5777,
+      "sha256": "79c27ec95d022dff1920073dcb4f4d3bf4b9072dab4fe509eec8c2e081351b8f"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ActionPilot.class",
+      "bytes": 19680,
+      "sha256": "8fb3508e8810ca694ab2959bfbf4faeb89d5f7d5530816877f7f81d0aaff3c87"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/BreathRepairPilot.class",
+      "bytes": 19698,
+      "sha256": "cca4c6de771ba7e74b7bbdaf9bdc2e53b70b2774cb73177637c35a00fb3c3b04"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ComfyFinish.class",
+      "bytes": 13414,
+      "sha256": "a997864d9e23850634c14f5799c8a5cd949147b05e896da24b72e0455fb65e19"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/MotionTools.class",
+      "bytes": 5225,
+      "sha256": "b5f5bf388b6095d2750f47e9d008a993a6f01ac266bac5ca03177b09dc8a9df0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/generation/inputs/approved-neutral-scene.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/generation/inputs/approved-breath-guide.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    }
+  ],
+  "preflightFreeDiskBytes": 254196326400
+}

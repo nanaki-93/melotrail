@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreArrangementExtentTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:01.313Z" hostname="Marcos-MacBook-Pro.local" time="0.009">
+  <properties/>
+  <testcase name="non-bar source end can be padded cancelled and reopened without changing source bytes()" classname="app.melotrail.application.MidiCoreArrangementExtentTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

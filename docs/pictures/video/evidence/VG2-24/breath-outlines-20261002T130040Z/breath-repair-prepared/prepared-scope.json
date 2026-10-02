@@ -1,0 +1,64 @@
+{
+  "state": "PREPARED_NOT_AUTHORIZED",
+  "reason": "The initial ComfyUI runtime stopped on critical host memory pressure. No automatic retry.",
+  "proposedChanges": {
+    "frames": [
+      129,
+      97
+    ],
+    "durationSeconds": [
+      5.16,
+      3.88
+    ],
+    "nativeDimensionsUnchanged": [
+      768,
+      448
+    ],
+    "deliveryDimensionsUnchanged": [
+      1920,
+      1080
+    ],
+    "fpsUnchanged": 25,
+    "decodeTemporalTile": [
+      128,
+      32
+    ],
+    "decodeTemporalOverlap": [
+      32,
+      8
+    ],
+    "midpointGuideFrames": [
+      64,
+      48
+    ],
+    "endGuideFrames": [
+      128,
+      96
+    ]
+  },
+  "generationLimitSeconds": 1500,
+  "finishLimitSeconds": 600,
+  "cumulativeLimitSeconds": 2100,
+  "observedProcessTreeRssLimitBytes": 34359738368,
+  "newEvidenceLimitBytes": 2147483648,
+  "minimumFreeDiskBytes": 21474836480,
+  "pressureAndSwapGuards": "unchanged production stop on critical/unknown pressure or 8 GiB additional swap",
+  "modelGenerations": 1,
+  "fullFrame1080pFinishes": 1,
+  "automaticRetries": 0,
+  "limitations": "Lower temporal workload is intended to reduce memory, not a guarantee. Same native spatial detail and accepted upscaling policy; no quality fallback or model download.",
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/workflow/guided-breath-api.json",
+      "sha256": "79c27ec95d022dff1920073dcb4f4d3bf4b9072dab4fe509eec8c2e081351b8f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/request.json",
+      "sha256": "6ff178ccf429a2136c84d730c832dd27875a9e9ca5a0910ca321f9774a52bf41"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair-prepared/scripts/BreathRepairPilot.java",
+      "sha256": "a9747204c2f181a57613aad945452e78842601624c9ed3b8d33dfedcea4287a4"
+    }
+  ]
+}

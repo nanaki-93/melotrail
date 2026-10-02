@@ -1,0 +1,1006 @@
+{
+  "status": "PREPARED_FOR_VISUAL_REVIEW",
+  "cupRoi": [
+    650,
+    400,
+    1130,
+    820
+  ],
+  "cupContourInRetainedCrop": [
+    [
+      31,
+      47
+    ],
+    [
+      42,
+      42
+    ],
+    [
+      71,
+      39
+    ],
+    [
+      104,
+      39
+    ],
+    [
+      125,
+      42
+    ],
+    [
+      137,
+      48
+    ],
+    [
+      138,
+      65
+    ],
+    [
+      146,
+      69
+    ],
+    [
+      147,
+      79
+    ],
+    [
+      140,
+      86
+    ],
+    [
+      130,
+      181
+    ],
+    [
+      129,
+      190
+    ],
+    [
+      119,
+      196
+    ],
+    [
+      94,
+      200
+    ],
+    [
+      66,
+      198
+    ],
+    [
+      48,
+      195
+    ],
+    [
+      41,
+      189
+    ],
+    [
+      37,
+      175
+    ],
+    [
+      26,
+      87
+    ],
+    [
+      20,
+      80
+    ],
+    [
+      21,
+      70
+    ],
+    [
+      27,
+      66
+    ]
+  ],
+  "tracking": "Forward from first frame to midpoint; backward from final frame after midpoint. Independent from character matte; source RGB unchanged.",
+  "fixedCabinOutsideBackingSupportExact": true,
+  "frames": [
+    {
+      "frame": 1,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0001.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0001.png",
+      "maskSha256": "e9a1129c6f4d7d82cf87a49202ba3a5f957032b86d4c74ff0efcb1c0fcc018e2",
+      "separateCupPixels": 16554
+    },
+    {
+      "frame": 2,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0002.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0002.png",
+      "maskSha256": "ba74b6fbfe9b881e3042d6d0fef22d3bde138b2050863da5c1b32fce00251be2",
+      "separateCupPixels": 16714
+    },
+    {
+      "frame": 3,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0003.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0003.png",
+      "maskSha256": "32b04c60c0e33d2b307d9441b0789211aacd40108fec7373f7408d31af5eb0af",
+      "separateCupPixels": 16744
+    },
+    {
+      "frame": 4,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0004.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0004.png",
+      "maskSha256": "306b4ec3da1e86a5a676180a50358f43fe3ae8354b90c0e66805f93950e50e27",
+      "separateCupPixels": 16760
+    },
+    {
+      "frame": 5,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0005.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0005.png",
+      "maskSha256": "0bc8741cc91c1e36c82b1dfb936461f5c8572fe7bce61d32bcfd9529799c8a4b",
+      "separateCupPixels": 16829
+    },
+    {
+      "frame": 6,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0006.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0006.png",
+      "maskSha256": "7c44cc92686c3bd9595ec8e21b9393dd878ca73baf9cfbb241a798d46522e147",
+      "separateCupPixels": 16919
+    },
+    {
+      "frame": 7,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0007.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0007.png",
+      "maskSha256": "9f0e1b5473b0ce476339c7c2e87e584def535e18a7a18cc2b1ecac23dff3cd3e",
+      "separateCupPixels": 16935
+    },
+    {
+      "frame": 8,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0008.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0008.png",
+      "maskSha256": "e09df295b3a85cef63f646d2716dc4cb64963159e3bda5e2e9eb767b047dcf16",
+      "separateCupPixels": 16962
+    },
+    {
+      "frame": 9,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0009.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0009.png",
+      "maskSha256": "bf3e2270ae3450962ed4ebded7291bfe0168555ce973e94031fcb7887ea2dcff",
+      "separateCupPixels": 16922
+    },
+    {
+      "frame": 10,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0010.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0010.png",
+      "maskSha256": "ccca50689f8a7eba7becebe3b97722664093d53fa7e70c56b8813722eb49bf93",
+      "separateCupPixels": 16987
+    },
+    {
+      "frame": 11,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0011.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0011.png",
+      "maskSha256": "52ccdc315cede651281f3d50c68abf2a2f66a5bb7ef79a838bf07780c3005a48",
+      "separateCupPixels": 16732
+    },
+    {
+      "frame": 12,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0012.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0012.png",
+      "maskSha256": "150cb83c096260937a69e922b94f72715a74d80210da3f6ee10fcd08b6a87ed6",
+      "separateCupPixels": 16754
+    },
+    {
+      "frame": 13,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0013.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0013.png",
+      "maskSha256": "caad2493da9baa56ee5dd6d8467095860aac5b2b5e9f45e320e83e2b3faf1705",
+      "separateCupPixels": 16762
+    },
+    {
+      "frame": 14,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0014.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0014.png",
+      "maskSha256": "7fff6d5bed9b63b8d1cd48ea55a226875bda6eb59ef76b646c44a29f375e51c1",
+      "separateCupPixels": 16857
+    },
+    {
+      "frame": 15,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0015.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0015.png",
+      "maskSha256": "26322639023e4e90bf499a4a83fbdeb2c11d72ffdf0014b332922d69d7973de6",
+      "separateCupPixels": 16704
+    },
+    {
+      "frame": 16,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0016.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0016.png",
+      "maskSha256": "98a17f16efb5c66c52c6a36a626d98ed2a66edd3ce62b67bfe6389a890f9e98d",
+      "separateCupPixels": 16725
+    },
+    {
+      "frame": 17,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0017.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0017.png",
+      "maskSha256": "fbb37a4ea17c2ba2fbed2887ac9437e5d5f578a87f345d7ea3ee61cbd5fd7c43",
+      "separateCupPixels": 17019
+    },
+    {
+      "frame": 18,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0018.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0018.png",
+      "maskSha256": "084ea53989f9ef725ee633816a83fe5109f5ea5f67b33141e715bedd319ccb2c",
+      "separateCupPixels": 17136
+    },
+    {
+      "frame": 19,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0019.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0019.png",
+      "maskSha256": "798e67292eb25ecf1c6d152ecf975889bf9f8473112b4036f2b4ff5d655a576a",
+      "separateCupPixels": 16931
+    },
+    {
+      "frame": 20,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0020.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0020.png",
+      "maskSha256": "25978688936449e8a9db90e9f6d66bd529d97160df86c246f4bd6ba975c860b4",
+      "separateCupPixels": 16970
+    },
+    {
+      "frame": 21,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0021.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0021.png",
+      "maskSha256": "8e35d0d664e20d84b9ba49cd61ea23e7bc00e0a62d6bdc8a4843275cf28cfd78",
+      "separateCupPixels": 16780
+    },
+    {
+      "frame": 22,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0022.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0022.png",
+      "maskSha256": "f0395275058d05553ab0174edb8e2e7772fed935a80fe5d1c124de151364afb7",
+      "separateCupPixels": 16736
+    },
+    {
+      "frame": 23,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0023.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0023.png",
+      "maskSha256": "fee3729608687c7588573f74c05ca6637f07f0c0b1b4d5e5cbbf36986d983042",
+      "separateCupPixels": 16320
+    },
+    {
+      "frame": 24,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0024.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0024.png",
+      "maskSha256": "891522d508d5f80da304ec6160418bc7bed8f20a9731ab0b6855e5ff88303f69",
+      "separateCupPixels": 15643
+    },
+    {
+      "frame": 25,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0025.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0025.png",
+      "maskSha256": "c720f2d602d7da4d2ef1334e19d97c9c3a3bda713413737a8b241985459663cb",
+      "separateCupPixels": 16563
+    },
+    {
+      "frame": 26,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0026.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0026.png",
+      "maskSha256": "ada03416cdfd9cab4dae10764f3909eda1be10dd68425010f9a8b509fd4bdf34",
+      "separateCupPixels": 12512
+    },
+    {
+      "frame": 27,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0027.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0027.png",
+      "maskSha256": "5fc380a87afffc4dc906f91903a035e91097603c01117ec726f3ae6746eb2fb4",
+      "separateCupPixels": 1281
+    },
+    {
+      "frame": 28,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0028.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0028.png",
+      "maskSha256": "d77cae8eb825d9d42d6489014c5b1e27001de8627a5db9cbc9ba4ee5088c068e",
+      "separateCupPixels": 1358
+    },
+    {
+      "frame": 29,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0029.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0029.png",
+      "maskSha256": "9090a2277f393b46db6b3c6bdbd83a97839bd5dd90c4f46d9745540593e28756",
+      "separateCupPixels": 1742
+    },
+    {
+      "frame": 30,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0030.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0030.png",
+      "maskSha256": "107731f9faa68a936fdf773410f5d87f238b8806675bbf6c5708443566da0fe7",
+      "separateCupPixels": 1828
+    },
+    {
+      "frame": 31,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0031.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0031.png",
+      "maskSha256": "ff5db50468f78d5141ac91d3991895017979b7f35d09e61e7dbac45937892d16",
+      "separateCupPixels": 1834
+    },
+    {
+      "frame": 32,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0032.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0032.png",
+      "maskSha256": "d2726258560c8525257dde0e765ba3cbf729b7608b4e2764eb0a539d6883ffb5",
+      "separateCupPixels": 1906
+    },
+    {
+      "frame": 33,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0033.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0033.png",
+      "maskSha256": "00ae8d85849d28e1f265dc7e9f483cbaefc201cacc3e568d324cbe5b3d81f4ab",
+      "separateCupPixels": 2390
+    },
+    {
+      "frame": 34,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0034.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0034.png",
+      "maskSha256": "4df7626b4fecfa332c31e0e5adf9c4938909cb0f25b8b83bb749fff9c4da87e1",
+      "separateCupPixels": 2507
+    },
+    {
+      "frame": 35,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0035.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0035.png",
+      "maskSha256": "50a958e50d4497a2df02ccf288edb12268b0e07ca4ae3a65887ee29725a88f9a",
+      "separateCupPixels": 3317
+    },
+    {
+      "frame": 36,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0036.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0036.png",
+      "maskSha256": "1bd106a8ed27963424cfaba6177341c12fd710a8b341fc57f1592ba49330051f",
+      "separateCupPixels": 3299
+    },
+    {
+      "frame": 37,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0037.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0037.png",
+      "maskSha256": "c9cce303f29c39f8da0be4e87108e00ebce8340ceca79e08b179f367e98deffd",
+      "separateCupPixels": 3350
+    },
+    {
+      "frame": 38,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0038.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0038.png",
+      "maskSha256": "8d1039bdc915e7ce8970a150a6cbe66d9a7453d76271d8209b78c5cafbd82c73",
+      "separateCupPixels": 3403
+    },
+    {
+      "frame": 39,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0039.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0039.png",
+      "maskSha256": "4ee64efaa78d4d4d65dc12a1dd230631613226ae3f7a134628ebdb9bb455611e",
+      "separateCupPixels": 3540
+    },
+    {
+      "frame": 40,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0040.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0040.png",
+      "maskSha256": "e269d534e6f50be6a1e1b5c76e88505d7574aaa25951c85caeece726f8a97b59",
+      "separateCupPixels": 3494
+    },
+    {
+      "frame": 41,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0041.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0041.png",
+      "maskSha256": "f67537459d5992d23a4b5831f4a84c29bf1a64b79e5c6a9489f0791b810a3e72",
+      "separateCupPixels": 3362
+    },
+    {
+      "frame": 42,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0042.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0042.png",
+      "maskSha256": "781ab42d57f604cf982df4adc4dc9aab86e345959e410fec9ca4814e355f4bfc",
+      "separateCupPixels": 3439
+    },
+    {
+      "frame": 43,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0043.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0043.png",
+      "maskSha256": "38c3579ab429658fb63e5c3c3a716cf7db0cb0e2ad8175858dc705eb04049ed0",
+      "separateCupPixels": 3664
+    },
+    {
+      "frame": 44,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0044.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0044.png",
+      "maskSha256": "eec2159372d72ab1375a5b13d0ba2ef29c663cade4ca32fe08117e11fccee7d2",
+      "separateCupPixels": 3383
+    },
+    {
+      "frame": 45,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0045.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0045.png",
+      "maskSha256": "d9a6a91e84b8a6193b1c4210d3230894f0ebc0831c0810a9391441a51a328e1d",
+      "separateCupPixels": 3487
+    },
+    {
+      "frame": 46,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0046.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0046.png",
+      "maskSha256": "35072b24fd514b72162759bf5b90be6169474b909ab360c581af69b4ddd35f56",
+      "separateCupPixels": 3450
+    },
+    {
+      "frame": 47,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0047.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0047.png",
+      "maskSha256": "90b3db1953c0386638b772a301e528e9ba32b0e495723d632d320d80e3d6ab9e",
+      "separateCupPixels": 3441
+    },
+    {
+      "frame": 48,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0048.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0048.png",
+      "maskSha256": "0b4bcc8087394d053558a2f908053859930259a608088e98f612402e2692877d",
+      "separateCupPixels": 3370
+    },
+    {
+      "frame": 49,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0049.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0049.png",
+      "maskSha256": "870b31302d6b4dd7e4e735cb1cdb6f40706c0f0e7ffcf1042b6004d4213d9b97",
+      "separateCupPixels": 3405
+    },
+    {
+      "frame": 50,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0050.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0050.png",
+      "maskSha256": "1a4114ae67d18a7df7a461444c67db37a8b5634596bee06abe355b8c27053926",
+      "separateCupPixels": 3395
+    },
+    {
+      "frame": 51,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0051.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0051.png",
+      "maskSha256": "6a4bcaa241fc093e19a56f3db9a8ee62a2036132a6910dbadb3ae1ffdb910229",
+      "separateCupPixels": 3415
+    },
+    {
+      "frame": 52,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0052.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0052.png",
+      "maskSha256": "c17f9a97d48165495f846c0225ebcae32a6c0ad9651329020ab8aba3b5e69711",
+      "separateCupPixels": 3500
+    },
+    {
+      "frame": 53,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0053.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0053.png",
+      "maskSha256": "94fa5b118dedae654f7ac9b741f7bed48984c47890cb09ec1eefa6ebd52e0f0b",
+      "separateCupPixels": 3551
+    },
+    {
+      "frame": 54,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0054.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0054.png",
+      "maskSha256": "278db4d5c32c961bca98d077c205273af67af5ab517e8c7bda3d8fd8021a7700",
+      "separateCupPixels": 3441
+    },
+    {
+      "frame": 55,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0055.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0055.png",
+      "maskSha256": "9d82cb3de46788cc3b5231f6872cc1021af91ce5f40ee90fe2849c591327096c",
+      "separateCupPixels": 3383
+    },
+    {
+      "frame": 56,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0056.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0056.png",
+      "maskSha256": "7d970dee1b411d10884c848b898fd56e2c625fe361a475bdb5f553cd97c062d3",
+      "separateCupPixels": 3402
+    },
+    {
+      "frame": 57,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0057.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0057.png",
+      "maskSha256": "3b083b3bb910dbe8c811e6a2ab994f3e416505e5c8657120aa6da31463cef8e7",
+      "separateCupPixels": 3418
+    },
+    {
+      "frame": 58,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0058.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0058.png",
+      "maskSha256": "6957cf82c87739878ccf2653952e1de56c81cce84e3d1f0cdc194daa263a3221",
+      "separateCupPixels": 3478
+    },
+    {
+      "frame": 59,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0059.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0059.png",
+      "maskSha256": "12f1ea0bcc17bfc5822e2cf55793fae4cce4ae4e91b5b09b64a297dc9ff9c653",
+      "separateCupPixels": 3497
+    },
+    {
+      "frame": 60,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0060.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0060.png",
+      "maskSha256": "c15870cb4993a97461e560a528f0dd6322758d27b1cc785a9259635a17f4f4f9",
+      "separateCupPixels": 3487
+    },
+    {
+      "frame": 61,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0061.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0061.png",
+      "maskSha256": "7fd2afa09dacd65a3fdf2ce3e99e370c031e1dc680fd08f8a09f48a91b71f687",
+      "separateCupPixels": 3576
+    },
+    {
+      "frame": 62,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0062.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0062.png",
+      "maskSha256": "69af0c3708b88575652c0d4dff2b58664b2824ad3d756386d999d0c811f6ec81",
+      "separateCupPixels": 3507
+    },
+    {
+      "frame": 63,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0063.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0063.png",
+      "maskSha256": "13d584d7999e092091b60f63ae0769046b77410e44db95415051b6944b524924",
+      "separateCupPixels": 3462
+    },
+    {
+      "frame": 64,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0064.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0064.png",
+      "maskSha256": "1cbe90d49e50bc5c22ab47e9fb366b03456862fa47602ec7834824ce9d8e7cec",
+      "separateCupPixels": 3605
+    },
+    {
+      "frame": 65,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0065.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0065.png",
+      "maskSha256": "be3cf3ae65d18c49150767c916763e35809ff421c36fc7e8dbc2d0271d9c934b",
+      "separateCupPixels": 3626
+    },
+    {
+      "frame": 66,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0066.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0066.png",
+      "maskSha256": "d3ad9237864a2123d85b475fa5c124c5b2ec46d321dc81b2c4dc5c739c17b002",
+      "separateCupPixels": 3562
+    },
+    {
+      "frame": 67,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0067.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0067.png",
+      "maskSha256": "c27bd7ee645e75af80ddcbe0cc853169968da46db7027201ac9c62423c973656",
+      "separateCupPixels": 3547
+    },
+    {
+      "frame": 68,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0068.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0068.png",
+      "maskSha256": "4edb994788c4c998bce44a32a0b110f1a82a0f1a18af93dd4f63a6076d7bacb3",
+      "separateCupPixels": 3530
+    },
+    {
+      "frame": 69,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0069.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0069.png",
+      "maskSha256": "3a3ac67949840fc085136179c3e93a5213b0d623d615ce7aee0df18dff651d06",
+      "separateCupPixels": 3525
+    },
+    {
+      "frame": 70,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0070.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0070.png",
+      "maskSha256": "803b56c7eae4f030ba21fa131efd21b9bb372362de332114a2ac9d669c7350db",
+      "separateCupPixels": 3528
+    },
+    {
+      "frame": 71,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0071.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0071.png",
+      "maskSha256": "9f83aac68c4fccb2397bf67e5d8ee750bbc0d39359baeddfa61b92e59ff6f641",
+      "separateCupPixels": 3461
+    },
+    {
+      "frame": 72,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0072.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0072.png",
+      "maskSha256": "4ef93746888f5434a78ba555de9995c90eaf2e5611edf0596e7105f655952be8",
+      "separateCupPixels": 3448
+    },
+    {
+      "frame": 73,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0073.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0073.png",
+      "maskSha256": "57810c1ee59e85276bad1248465ae306ae82dc7445dbfa848574363151a5a2ed",
+      "separateCupPixels": 3368
+    },
+    {
+      "frame": 74,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0074.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0074.png",
+      "maskSha256": "aa1636879924ef18ab2d6e4a666bb1ffce7183c29441feb0c65bdcb8dca73a0d",
+      "separateCupPixels": 3352
+    },
+    {
+      "frame": 75,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0075.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0075.png",
+      "maskSha256": "d1abcdd9a594f7e109325ed9b71bfc37c5f4ac8a032ef5a7dcece4e02772a557",
+      "separateCupPixels": 3232
+    },
+    {
+      "frame": 76,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0076.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0076.png",
+      "maskSha256": "c1794a1cf7792ba91051b9f7af24fa1e44f3c9073804770942f355e4df94dd8e",
+      "separateCupPixels": 3146
+    },
+    {
+      "frame": 77,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0077.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0077.png",
+      "maskSha256": "d411e85b9574ef2e8886bbc3f611454a63de8fdb3c0c169b153991cc2c872968",
+      "separateCupPixels": 2829
+    },
+    {
+      "frame": 78,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0078.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0078.png",
+      "maskSha256": "cf697a0f4318af6e6521fc0a56d0c98645db9498315f9bf2420c7bd8fc6b0bde",
+      "separateCupPixels": 2632
+    },
+    {
+      "frame": 79,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0079.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0079.png",
+      "maskSha256": "f0ce5925070f0fe80777671e01194a942aea67bbd699a4fafd2e177a8e0fce5a",
+      "separateCupPixels": 2617
+    },
+    {
+      "frame": 80,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0080.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0080.png",
+      "maskSha256": "71d4dd92ae3f4c2a76670939d34a28ce9c00f9ccdac42cc1af6e1111f6a9c612",
+      "separateCupPixels": 1818
+    },
+    {
+      "frame": 81,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0081.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0081.png",
+      "maskSha256": "960b39ccd628702aa5179edae525af18d79fbc052fd9fe2d03af29fb2f7fb549",
+      "separateCupPixels": 1760
+    },
+    {
+      "frame": 82,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0082.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0082.png",
+      "maskSha256": "38b93e9c6366605fefef07a719fbb41c2e03dc669460ba845a5ae66dd2f7a5d9",
+      "separateCupPixels": 1184
+    },
+    {
+      "frame": 83,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0083.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0083.png",
+      "maskSha256": "5b458963d8a5d39d088620e690696d684efc2f75b94cc51bfe43ffda9e886086",
+      "separateCupPixels": 1271
+    },
+    {
+      "frame": 84,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0084.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0084.png",
+      "maskSha256": "186bd125d52604a648009c823c6e992ee498cc7ac6346a02ae3c75b7de64abb9",
+      "separateCupPixels": 15310
+    },
+    {
+      "frame": 85,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0085.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0085.png",
+      "maskSha256": "6d14e293951ff68710fc7eb146eb82d11dc23f2c6344d30bc5e96e83d4eceb99",
+      "separateCupPixels": 15299
+    },
+    {
+      "frame": 86,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0086.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0086.png",
+      "maskSha256": "116de18b9bc3f03a67f75ee8034108615d9bc73968bf50b214cd749166c28950",
+      "separateCupPixels": 1045
+    },
+    {
+      "frame": 87,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0087.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0087.png",
+      "maskSha256": "2bd7494cf71719f5f2de46710c943766e9fb9b0cdf466b1cfb6dfa18c7284ec1",
+      "separateCupPixels": 953
+    },
+    {
+      "frame": 88,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0088.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0088.png",
+      "maskSha256": "8128c9f6517031e80b3f53eab2db950bfa1e8253f83ba0278b8eec22c18685c2",
+      "separateCupPixels": 5579
+    },
+    {
+      "frame": 89,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0089.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0089.png",
+      "maskSha256": "7a322d19c08d1d5c3db861b12f9236101dca45ae911c25dbc2812f10eed7a196",
+      "separateCupPixels": 16125
+    },
+    {
+      "frame": 90,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0090.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0090.png",
+      "maskSha256": "519c4c74ce6a3024a09f7b9ec0a1f244bc93eeb69aaf3c894e31f4ef39cdaf5f",
+      "separateCupPixels": 16165
+    },
+    {
+      "frame": 91,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0091.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0091.png",
+      "maskSha256": "9cdce84606ef0f71bd7274df1f6ff6ad87f5e7b732a3def0111d8d2be8c6b866",
+      "separateCupPixels": 15960
+    },
+    {
+      "frame": 92,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0092.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0092.png",
+      "maskSha256": "9dea4f0d64a82d6f59f40f850b51493a2964f4373df8d1563a8296d5fb25986f",
+      "separateCupPixels": 14984
+    },
+    {
+      "frame": 93,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0093.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0093.png",
+      "maskSha256": "a4c97a617a860a06823f2670523c23551c4eaac6a641c5ea446181d84ca44ec4",
+      "separateCupPixels": 8347
+    },
+    {
+      "frame": 94,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0094.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0094.png",
+      "maskSha256": "399fa0e3b6dd7bca046ee97621659b302f9153bd75063cb71022f329729b0dd5",
+      "separateCupPixels": 15997
+    },
+    {
+      "frame": 95,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0095.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0095.png",
+      "maskSha256": "3e398e0d6d8f1d83d11df77a1955ce905448cfadf56da7ff739aaa0ae057cb43",
+      "separateCupPixels": 15898
+    },
+    {
+      "frame": 96,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0096.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0096.png",
+      "maskSha256": "e808042f4705a27c6264971cc7fe2261edeebe01490f1bfde7cf16b94c6c80c1",
+      "separateCupPixels": 16976
+    },
+    {
+      "frame": 97,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0097.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0097.png",
+      "maskSha256": "0240bad44c90a4789007b9dd1e66b383a1d91a1eb13d0d071e080adf3773bce2",
+      "separateCupPixels": 15247
+    },
+    {
+      "frame": 98,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0098.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0098.png",
+      "maskSha256": "423a6c422dab0d37b5ffe256c0399367fa0708b48dcd978f73c82644e718df80",
+      "separateCupPixels": 17307
+    },
+    {
+      "frame": 99,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0099.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0099.png",
+      "maskSha256": "3219a8ea7acc69827f065b567dd5e56d06b8e1aecd8555c55b696be8833ce187",
+      "separateCupPixels": 17189
+    },
+    {
+      "frame": 100,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0100.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0100.png",
+      "maskSha256": "82fe3fc55b5089fcafa9a5ecaaabd4da4334b1e99baa87713f338d6ff54b2530",
+      "separateCupPixels": 17094
+    },
+    {
+      "frame": 101,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0101.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0101.png",
+      "maskSha256": "97087cb01811003e26cf83ad055af597d8b8b292dd6cc6f17e7a7bffe48ee2a7",
+      "separateCupPixels": 17211
+    },
+    {
+      "frame": 102,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0102.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0102.png",
+      "maskSha256": "d2dff96cabfb98ea17620cc2ae470595379cb212bd4b10e268f84775c8377b45",
+      "separateCupPixels": 16996
+    },
+    {
+      "frame": 103,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0103.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0103.png",
+      "maskSha256": "dd9457903efb0bf932e9340820cd9db77c62a340154f16027b9e793eac9a9843",
+      "separateCupPixels": 17132
+    },
+    {
+      "frame": 104,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0104.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0104.png",
+      "maskSha256": "ffc085ebfb5425bd573c38494c4592ebd5fcfd27b51ea9284ce6e45f429e49ee",
+      "separateCupPixels": 17097
+    },
+    {
+      "frame": 105,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0105.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0105.png",
+      "maskSha256": "994e46357f81b7633c74ef3391f75cd5afde80452e8b9c3367fb0872948b4c8e",
+      "separateCupPixels": 17280
+    },
+    {
+      "frame": 106,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0106.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0106.png",
+      "maskSha256": "c53936c7de5a8fa2a4d574705cb74ed0899d21e90be54b8b6a42fa8830430ca9",
+      "separateCupPixels": 17192
+    },
+    {
+      "frame": 107,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0107.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0107.png",
+      "maskSha256": "282bdea37497cf2ce1001af1bfb1dcdf852047fa86410bb04e58719193d3d81b",
+      "separateCupPixels": 17138
+    },
+    {
+      "frame": 108,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0108.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0108.png",
+      "maskSha256": "8216becfae4e8a758ea1202760e81b3e04c20172bf8109109bcf8b6b6cf5a76d",
+      "separateCupPixels": 17127
+    },
+    {
+      "frame": 109,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0109.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0109.png",
+      "maskSha256": "8bc33e5070f38fafeb9b614c8f33a10b20c1d6d0c32b1b00816e937b2c936e99",
+      "separateCupPixels": 17118
+    },
+    {
+      "frame": 110,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0110.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0110.png",
+      "maskSha256": "9bb415c38a340a1d6996274fbd52ddce38da4d3a760c1286c11ab31608c125ed",
+      "separateCupPixels": 17078
+    },
+    {
+      "frame": 111,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0111.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0111.png",
+      "maskSha256": "cca8c5de1f342c9eca7c2b90fe56975fc8106482b459b8ded1de60e2b1ecf94a",
+      "separateCupPixels": 17056
+    },
+    {
+      "frame": 112,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0112.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0112.png",
+      "maskSha256": "97690d94b131e4332320d4ae67fefdafa2cf7180f777041f99c6b55f6ca6dd48",
+      "separateCupPixels": 17024
+    },
+    {
+      "frame": 113,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0113.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0113.png",
+      "maskSha256": "b5e8bffa522a0f958a5e52b124f893c0b1351bfde61c7b82ecc6781b683f2634",
+      "separateCupPixels": 16946
+    },
+    {
+      "frame": 114,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0114.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0114.png",
+      "maskSha256": "7e5b21329e8c4c60fdb7ecf48b6cb81fedbbc283e78c15af347309148461c2ed",
+      "separateCupPixels": 16939
+    },
+    {
+      "frame": 115,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0115.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0115.png",
+      "maskSha256": "a24b0511ddf1640cd80defa724c6a6289936a4ad79ef5c7989067c98c4a86efa",
+      "separateCupPixels": 16921
+    },
+    {
+      "frame": 116,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0116.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0116.png",
+      "maskSha256": "174b1f7828e97ce0a9b237e26db16b765c4c817c3876bfde578f4a2786dcad30",
+      "separateCupPixels": 16883
+    },
+    {
+      "frame": 117,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0117.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0117.png",
+      "maskSha256": "265210b970cd9ed7f26a23eb03e1be0a98a4a3e174f98963d2c9d352d66e3b06",
+      "separateCupPixels": 16840
+    },
+    {
+      "frame": 118,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0118.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0118.png",
+      "maskSha256": "4b180c7d6fd717e69704cecaf056a344b9b2810fc761899d7a271f4434462e90",
+      "separateCupPixels": 16828
+    },
+    {
+      "frame": 119,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0119.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0119.png",
+      "maskSha256": "497a0f65f8245ff3f6e0bb820eb3f99100a9eb93a091b5bd1cef0f1cd3ce3e74",
+      "separateCupPixels": 16826
+    },
+    {
+      "frame": 120,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0120.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0120.png",
+      "maskSha256": "283d04dd016c8bcbe1f30faf243bd6a973da2fd09b63e1d35e0c7e97b959716c",
+      "separateCupPixels": 16776
+    },
+    {
+      "frame": 121,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0121.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0121.png",
+      "maskSha256": "94eefa6fc36b76959b6ee6111f3738a11f99198137b274c3873e1147b8d5d4b0",
+      "separateCupPixels": 16774
+    },
+    {
+      "frame": 122,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0122.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0122.png",
+      "maskSha256": "879c3c89dcc1f284a434006f463cc2b57edd5933f611b2419b169d2538ec8c20",
+      "separateCupPixels": 16698
+    },
+    {
+      "frame": 123,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0123.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0123.png",
+      "maskSha256": "3f760b01fb27841f5978f676617e314ac9b5a8f2bb8a1013251edcf8c8198f47",
+      "separateCupPixels": 16603
+    },
+    {
+      "frame": 124,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0124.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0124.png",
+      "maskSha256": "ee95ddcd9dcad66b832603893382a2ddddbee54e6ecc1852194d74f8f3a9c847",
+      "separateCupPixels": 16594
+    },
+    {
+      "frame": 125,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0125.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0125.png",
+      "maskSha256": "e8133ebdc022533e8b4ccd9e351fbd9065a0eaadf37934c01674e0459e0dd70a",
+      "separateCupPixels": 16580
+    },
+    {
+      "frame": 126,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0126.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0126.png",
+      "maskSha256": "e5881c227c9fead03d5a60371783c6a4c9d8ca6730d7ef81d907c95cf754fbe0",
+      "separateCupPixels": 16580
+    },
+    {
+      "frame": 127,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0127.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0127.png",
+      "maskSha256": "bb00373fdb323be66f251144c1b9a7cb3fc61fa9d10aa573fe3b6050b86bacfc",
+      "separateCupPixels": 16580
+    },
+    {
+      "frame": 128,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0128.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0128.png",
+      "maskSha256": "36b454df26101d9a0427f3e28b1c5215af62e2cfb0200c11f3718868850806d9",
+      "separateCupPixels": 16572
+    },
+    {
+      "frame": 129,
+      "mask": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/mask-0129.png",
+      "rgba": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/drink/cup-support/rgba-0129.png",
+      "maskSha256": "7ec5123c27ddafa46cb983855521eee88887c3196b0cb4ba24ac8adaf226fced",
+      "separateCupPixels": 16554
+    }
+  ]
+}

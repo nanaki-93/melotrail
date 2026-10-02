@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreArrangementStylePreviewTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:01.693Z" hostname="Marcos-MacBook-Pro.local" time="0.15">
+  <properties/>
+  <testcase name="preview loops one real bar without any state mutation()" classname="app.melotrail.application.MidiCoreArrangementStylePreviewTest" time="0.026"/>
+  <testcase name="unsupported comping meter returns a preview rejection without writes()" classname="app.melotrail.application.MidiCoreArrangementStylePreviewTest" time="0.014"/>
+  <testcase name="style preview preparation stays within cold and warm p95 budgets()" classname="app.melotrail.application.MidiCoreArrangementStylePreviewTest" time="0.05"/>
+  <testcase name="style authority and seed form independent preview cache identities()" classname="app.melotrail.application.MidiCoreArrangementStylePreviewTest" time="0.022"/>
+  <testcase name="catalog has stable readable all-role bundles()" classname="app.melotrail.application.MidiCoreArrangementStylePreviewTest" time="0.001"/>
+  <testcase name="style preview resolves the same plan before and after explicit confirmation()" classname="app.melotrail.application.MidiCoreArrangementStylePreviewTest" time="0.021"/>
+  <testcase name="preview is deterministic bounded and never mutates project or artifacts()" classname="app.melotrail.application.MidiCoreArrangementStylePreviewTest" time="0.014"/>
+  <system-out><![CDATA[MC-048I preview preparation: cold p95=4ms [3, 3, 4, 3, 3, 3, 2, 2]; warm p95=1ms [1, 1, 1, 1, 1, 1, 1, 1]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

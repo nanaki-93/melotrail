@@ -1,0 +1,3 @@
+Exception in thread "main" java.lang.IllegalArgumentException: Host probe must remain a bounded approximately five-second case
+	at app.melotrail.video.ComfyVideoHostProbe.validateRequest$melotrail_test(ComfyVideoHostCheck.kt:369)
+	at CheckBreathRequest.main(CheckBreathRequest.java:1)

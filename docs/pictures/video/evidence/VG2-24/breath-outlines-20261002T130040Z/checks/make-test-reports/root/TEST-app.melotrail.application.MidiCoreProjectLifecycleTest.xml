@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.application.MidiCoreProjectLifecycleTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:24.071Z" hostname="Marcos-MacBook-Pro.local" time="0.005">
+  <properties/>
+  <testcase name="missing bound artifacts reject open before state is returned()" classname="app.melotrail.application.MidiCoreProjectLifecycleTest" time="0.002"/>
+  <testcase name="create reopen and close preserve a MIDI Core project()" classname="app.melotrail.application.MidiCoreProjectLifecycleTest" time="0.001"/>
+  <testcase name="failed save preserves the prior readable project()" classname="app.melotrail.application.MidiCoreProjectLifecycleTest" time="0.001"/>
+  <testcase name="invalid create request is rejected before a project folder is created()" classname="app.melotrail.application.MidiCoreProjectLifecycleTest" time="0.0"/>
+  <testcase name="unsupported project rejection never rewrites its document()" classname="app.melotrail.application.MidiCoreProjectLifecycleTest" time="0.001"/>
+  <testcase name="corrupted and missing project files return actionable rejection()" classname="app.melotrail.application.MidiCoreProjectLifecycleTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

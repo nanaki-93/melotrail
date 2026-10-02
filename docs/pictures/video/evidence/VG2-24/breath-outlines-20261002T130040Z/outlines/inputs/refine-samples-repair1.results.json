@@ -1,0 +1,96 @@
+{
+  "opencv": "4.11.0",
+  "method": "semantic narrow-band GrabCut, solid interior protection, source RGB unchanged",
+  "frames": [
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/review/frames/frame-0001.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/watch-0001-refined-repair1",
+      "opaquePixels": 304157,
+      "selectedPixels": 313755,
+      "protectedInteriorPixels": 285575,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 34,
+      "seconds": 0.439
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/review/frames/frame-0065.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/watch-0065-refined-repair1",
+      "opaquePixels": 306638,
+      "selectedPixels": 315912,
+      "protectedInteriorPixels": 288386,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 58,
+      "seconds": 0.439
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/review/frames/frame-0129.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/watch-0129-refined-repair1",
+      "opaquePixels": 306035,
+      "selectedPixels": 315741,
+      "protectedInteriorPixels": 287530,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 43,
+      "seconds": 0.42
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/review/frames/frame-0001.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/drink-0001-refined-repair1",
+      "opaquePixels": 304102,
+      "selectedPixels": 313681,
+      "protectedInteriorPixels": 284873,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 34,
+      "seconds": 0.422
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/review/frames/frame-0065.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/drink-0065-refined-repair1",
+      "opaquePixels": 312726,
+      "selectedPixels": 322193,
+      "protectedInteriorPixels": 293115,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 55,
+      "seconds": 0.402
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/review/frames/frame-0129.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/drink-0129-refined-repair1",
+      "opaquePixels": 304839,
+      "selectedPixels": 314475,
+      "protectedInteriorPixels": 285496,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 56,
+      "seconds": 0.419
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/frames/frame-0001.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/read-0001-refined-repair1",
+      "opaquePixels": 299502,
+      "selectedPixels": 308889,
+      "protectedInteriorPixels": 281231,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 78,
+      "seconds": 0.384
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/frames/frame-0065.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/read-0065-refined-repair1",
+      "opaquePixels": 303161,
+      "selectedPixels": 312662,
+      "protectedInteriorPixels": 285293,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 17,
+      "seconds": 0.411
+    },
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/frames/frame-0129.png",
+      "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/outlines/review/read-0129-refined-repair1",
+      "opaquePixels": 299430,
+      "selectedPixels": 308944,
+      "protectedInteriorPixels": 281349,
+      "protectedInteriorPass": true,
+      "unprotectedFeatherWouldChangePixels": 88,
+      "seconds": 0.403
+    }
+  ]
+}

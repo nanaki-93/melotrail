@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoPreviewDecoderTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:54:34.984Z" hostname="Marcos-MacBook-Pro.local" time="0.564">
+  <properties/>
+  <testcase name="bounded timing resolves actual decoded order at first interior and final with irregular rational cadence()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.013"/>
+  <testcase name="executable pin failure from owned process never falls back to a second executable()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.01"/>
+  <testcase name="missing unsafe and changed persisted takes fail before tool launch or scratch creation()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.01"/>
+  <testcase name="changed bytes with restored size and time fail before extraction and after a racing extract()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.015"/>
+  <testcase name="RGB and palette PNGs convert to owned ARGB without leaking raster formats()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.001"/>
+  <testcase name="probe and extraction never overlap and cleanup uncertainty blocks metadata launches()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.121"/>
+  <testcase name="oversized unexpected entry is preserved but cleanup failure is bounded and explicit()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.017"/>
+  <testcase name="audio codec geometry and frame counts are rejected from persisted measurements()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.012"/>
+  <testcase name="missing manifest wrong pins wrong reported build and unsafe scratch never fall back to PATH()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.015"/>
+  <testcase name="extracted PNG has actual immutable pixels and no project or thumbnail side effects()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.001"/>
+  <testcase name="seeked PNG without matching decoded timestamp never becomes the requested frame()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.015"/>
+  <testcase name="oversized staging and unexpected files never publish pixels or delete unknown entries()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.014"/>
+  <testcase name="disk failure and uncertain cleanup retain only their owned bounded diagnostic staging()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.014"/>
+  <testcase name="long metadata scans overlap keyframe seeks without keeping a whole timeline()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.012"/>
+  <testcase name="open is lazy read only and authenticates persisted silent take before any extraction()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.011"/>
+  <testcase name="bounded windows decode first interior final and backward frames without staging whole take()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.027"/>
+  <testcase name="encoded staging and raster plus published pixel accounting enforce byte ceilings()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.0"/>
+  <testcase name="simultaneous PNG decode cannot spend the extraction staging allowance()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.012"/>
+  <testcase name="staged files and concurrent reader claims never underflow the encoded ceiling()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.0"/>
+  <testcase name="retained and in flight pixel reservations are bounded and released on close()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.001"/>
+  <testcase name="excess unexpected staging entries are inspected with bounded metadata and block retries()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.201"/>
+  <testcase name="missing non increasing contradictory and oversized timestamps fail closed()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.018"/>
+  <testcase name="changed take during tool checks cannot be admitted and cancellation prevents native work()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.011"/>
+  <testcase name="truncated changed checksum oversize and compressed dimension bomb yield no frame()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.001"/>
+  <testcase name="exactly 256 decoded frames complete at the bounded window edge()" classname="app.melotrail.video.VideoPreviewDecoderTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

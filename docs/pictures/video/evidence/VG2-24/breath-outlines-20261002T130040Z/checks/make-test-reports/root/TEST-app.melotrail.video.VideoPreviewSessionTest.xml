@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.VideoPreviewSessionTest" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:55:36.922Z" hostname="Marcos-MacBook-Pro.local" time="0.598">
+  <properties/>
+  <testcase name="cached playback timing cancels in flight decode on pause or seek()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.245"/>
+  <testcase name="playback timing works with a negative monotonic clock origin()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.041"/>
+  <testcase name="long take seeks and playback use bounded GOP windows with verified identity()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.028"/>
+  <testcase name="seek during slow admission waits for verified take and skips frame zero()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.017"/>
+  <testcase name="uncertain native cleanup is an explicit failed close and blocks replacement()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.016"/>
+  <testcase name="nonidentity or partial MP4 edit cannot grant random access()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.009"/>
+  <testcase name="cold near and far seeks use constant bounded probe work()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.012"/>
+  <testcase name="composition offsets map a reordered cold decoded ordinal without scanning the prefix()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.014"/>
+  <testcase name="replacement open discards late failure from previous take and retains newest identity()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.017"/>
+  <testcase name="seek during rejected admission retains tool error rather than invalid-frame error()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.012"/>
+  <testcase name="decoder stall reports buffering with last actual frame and no fictional progress()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.016"/>
+  <testcase name="saturated queue preserves open and stop and only worker publishes state()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.022"/>
+  <testcase name="transport follows irregular timestamps buffers without advancing pixels and ends without looping()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.017"/>
+  <testcase name="full queue rejects noncritical transport without publishing from caller()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.015"/>
+  <testcase name="seek step pause and stop use actual clamped frames()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.022"/>
+  <testcase name="queued seek cannot mask a missing take admission error()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.01"/>
+  <testcase name="seek queued before open begins still admits the take and skips frame zero()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.013"/>
+  <testcase name="owned MP4 fixture identity edit has an exact bounded timing index without native tools()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.001"/>
+  <testcase name="close cancels the active owned extraction and cannot launch after joining()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.013"/>
+  <testcase name="indexed timestamp missing from bounded decode window is rejected()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.011"/>
+  <testcase name="commands are queued and opening publishes only actual pixels and rational identity()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.013"/>
+  <testcase name="rejected take and failed extraction never publish a synthetic success frame()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.016"/>
+  <testcase name="invalid transport reports actionable failure without extraction and can recover()" classname="app.melotrail.video.VideoPreviewSessionTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

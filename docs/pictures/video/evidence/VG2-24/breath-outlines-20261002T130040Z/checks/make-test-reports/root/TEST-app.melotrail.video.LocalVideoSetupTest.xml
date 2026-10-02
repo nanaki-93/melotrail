@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.LocalVideoSetupTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:39.978Z" hostname="Marcos-MacBook-Pro.local" time="0.038">
+  <properties/>
+  <testcase name="missing setup reports every absent dependency and keeps MIDI-only choice()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.007"/>
+  <testcase name="launch rejects source changed after a ready inspection before starting any child()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.006"/>
+  <testcase name="unsupported host is unavailable without inspecting or creating paths()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.0"/>
+  <testcase name="resolved Python is pinned while virtual environment imports stay explicit()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.004"/>
+  <testcase name="new import source cannot silently join the pinned executable set()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.003"/>
+  <testcase name="dirty Comfy and GGUF executable sources are corrupt with unchanged HEAD()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.011"/>
+  <testcase name="bundled profile pins Gemma and owned-server restrictions without T5 or cloud()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.001"/>
+  <testcase name="same-size corruption and source commit mismatch are both reported()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.003"/>
+  <testcase name="verified installed files produce ready setup without executing a choice()" classname="app.melotrail.video.LocalVideoSetupTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

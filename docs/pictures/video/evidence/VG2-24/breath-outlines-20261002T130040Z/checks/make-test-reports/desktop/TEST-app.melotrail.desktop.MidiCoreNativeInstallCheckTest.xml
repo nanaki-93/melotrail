@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreNativeInstallCheckTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:04:37.382Z" hostname="Marcos-MacBook-Pro.local" time="1.024">
+  <properties/>
+  <testcase name="inventory detects changed install bytes and rejects external symlinks(Path)" classname="app.melotrail.desktop.MidiCoreNativeInstallCheckTest" time="0.002"/>
+  <testcase name="reduction includes new uncommitted source and excludes removed source(Path)" classname="app.melotrail.desktop.MidiCoreNativeInstallCheckTest" time="0.002"/>
+  <testcase name="success requires the installed runtime and application classes as well as a realized window(Path)" classname="app.melotrail.desktop.MidiCoreNativeInstallCheckTest" time="0.002"/>
+  <testcase name="installed payload requires launcher config and excludes retired runtimes and test libraries()" classname="app.melotrail.desktop.MidiCoreNativeInstallCheckTest" time="0.001"/>
+  <testcase name="nonzero launch and stalled launch fail with retained logs and no surviving process(Path)" classname="app.melotrail.desktop.MidiCoreNativeInstallCheckTest" time="1.017"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

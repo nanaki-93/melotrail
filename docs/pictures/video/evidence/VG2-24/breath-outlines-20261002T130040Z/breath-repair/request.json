@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "runId": "vg2-24-breath-shorter-20261002t130040z",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "outputDirectory": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair/output",
+  "mediaToolsDirectory": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin",
+  "composedImage": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/breath-repair/inputs/approved-neutral-scene.png",
+  "composedImageSha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+  "prompt": "One continuous very quiet breathing cycle in the exact supplied illustrated train scene. A completely locked camera preserves the framing and scale. TABI stays seated in the same relaxed chin-resting pose for the entire shot. The chin remains supported by the same attached paw, with the elbow resting on the table. Inhale gently during the first half of the shot: the green coat chest expands very slightly, the shoulders and head rise together only a few pixels. Exhale gently in the second half, returning to the original comfortable pose by the end. This is a small natural chest breath with soft neck and shoulder motion, not a look around, head turn, nod, wave, speaking or exaggerated stretch. Keep the eyes calm, mouth closed, gold star, pink fronds, headphones, face shape and painted texture unchanged. Keep both hands solid and attached through wrists, leopard cuffs and forearms, with the table contact fixed. The other paw stays beside the open notebook. Keep the correctly oriented notebook, pen, single tan flower takeaway cup and black lid motionless. Feet, tail, seat, table, cabin, windows and Tokyo exterior stay completely stationary. No cuts, fades, camera motion, zoom, duplicated hands or objects, morphing face, glowing skin or changes of light. Finish with the original pose and framing.",
+  "width": 768,
+  "height": 448,
+  "durationMillis": 3880,
+  "framesPerSecond": 25,
+  "expectedFrameCount": 97,
+  "port": 8192,
+  "pollIntervalMillis": 2000,
+  "protectedMidiRoots": [
+    "/Users/marcoandreose/DEV/lab/melotrail/data"
+  ]
+}

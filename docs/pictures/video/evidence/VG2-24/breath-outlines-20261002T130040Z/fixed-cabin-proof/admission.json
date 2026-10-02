@@ -1,0 +1,128 @@
+{
+  "task": "VG2-24",
+  "createdAt": "2026-10-02T13:32:13.034619+00:00",
+  "authorization": {
+    "quote": "ok, go with the first point",
+    "scope": "Prove moving outlines against the fixed cabin using the already approved drink frames. Four model-free core ComfyUI batches followed by one local MP4 review encode; no new character generation."
+  },
+  "native": {
+    "runnerAttempts": 1,
+    "automaticRetries": 0,
+    "modelGenerations": 0,
+    "graphSubmissions": 4,
+    "wholeRunnerLimitSeconds": 600,
+    "cumulativeWithVerificationLimitSeconds": 900,
+    "observedProcessTreeRssLimitBytes": 8589934592,
+    "ownedEvidenceAndSessionLimitBytes": 2147483648,
+    "minimumFreeDiskBytes": 21474836480,
+    "reviewEncodes": 1,
+    "verificationDecodeTraversals": 2
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/request.json",
+      "bytes": 4086,
+      "sha256": "73073b6219c933b564d0e2272c2418d7b4c25eee946aa69277ca27e8c63fcedc"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/scripts/ComfyMasks.java",
+      "bytes": 5964,
+      "sha256": "66d50ba9feaf5b33d091d9917e3a6dd5fc754a5fc5d6d81ac8a1f21b33c9689f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/scripts/prepare.py",
+      "bytes": 2361,
+      "sha256": "bee9b42bd78fc1f4fc0417712bacd18226d89ca14f9f6869ce1ebc12105fdf64"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/scripts/run.py",
+      "bytes": 7114,
+      "sha256": "e52e55dde7e13ec2f90ddb31f7d04366e3403bf0f861af443288fb53d3654e4f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-0.json",
+      "bytes": 948,
+      "sha256": "a700f839a3d554afbca0a7b38c3b8e6e67057a6b0b556c55466b750cc829b1d4"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-1.json",
+      "bytes": 948,
+      "sha256": "4ee9fa7abd534d1acd6378b83199ec062b2d5f676628bb7f92960482a113edc2"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-2.json",
+      "bytes": 948,
+      "sha256": "a62a9738cfaf92e379ebdf0174968f13e350c89f5133c8af6d2a76e0cc5f628d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/workflow/batch-3.json",
+      "bytes": 948,
+      "sha256": "6ae47d07737ef593ba1cb03e82054c4208141f1fc7addf70c3c930765e733b53"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-0.png",
+      "bytes": 93164575,
+      "sha256": "3f2f6a86c7d9f03fe7e3fc8440b8a524e3c9bf54cb417b8c4afd098020e99029"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-1.png",
+      "bytes": 95721401,
+      "sha256": "971ea2310c9a6b4d6035b0fe958e89bc9d9f612e612ec48792eff262f121de9d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-2.png",
+      "bytes": 95758234,
+      "sha256": "e0face6eb55fb3cc7d2a039b46578d2396a70d8c81ae764f71067d998fb66d48"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/inputs/layer-3.png",
+      "bytes": 99635438,
+      "sha256": "95abd7c403afaebd76952aa3fdc80f0c7993d47bf838e1b26138e2da17c5f468"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ActionPilot.class",
+      "bytes": 19680,
+      "sha256": "8fb3508e8810ca694ab2959bfbf4faeb89d5f7d5530816877f7f81d0aaff3c87"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/BreathRepairPilot.class",
+      "bytes": 19703,
+      "sha256": "d2749ac89edb0b605285a1cfc143d396b04993cc3f118adafc142d8bd8e4d2b6"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/CheckBreathRequest.class",
+      "bytes": 1681,
+      "sha256": "0682457f6ac9aedb172dadb73e1ea8e5748aeaaf89c206d0aeacc7c2e3001729"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ComfyFinish.class",
+      "bytes": 13414,
+      "sha256": "a997864d9e23850634c14f5799c8a5cd949147b05e896da24b72e0455fb65e19"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/ComfyMasks.class",
+      "bytes": 13350,
+      "sha256": "d71d0f8a831581e41d4c1ee3b0d80d6f828e49ac9ca601330d2b19746fa1614e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/MotionTools.class",
+      "bytes": 5225,
+      "sha256": "b5f5bf388b6095d2750f47e9d008a993a6f01ac266bac5ca03177b09dc8a9df0"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg224-breath-outlines-m08mqnqv/classes/NarrowBreathAdmission.class",
+      "bytes": 4882,
+      "sha256": "6e9d9b284f7711235d59c445e9359e4a3ae8c419aef17b2e9a04883d92176863"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    }
+  ]
+}

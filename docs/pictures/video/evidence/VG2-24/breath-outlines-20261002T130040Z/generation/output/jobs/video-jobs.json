@@ -1,0 +1,137 @@
+{
+    "schema": "melotrail-video-jobs",
+    "version": 6,
+    "ledger": {
+        "admissionDomainId": "vg2-24-breath-outlines-20261002t130040z",
+        "createdAt": "2026-10-02T13:02:26.341221Z",
+        "jobs": [
+            {
+                "request": {
+                    "id": "vg2-24-breath",
+                    "projectId": "vg2-24-motion-proof",
+                    "backendId": "comfyui-local",
+                    "modelRequirements": [
+                        {
+                            "id": "ltx-2-3-distilled-q4",
+                            "version": "22b-distilled-1.1-Q4_K_M",
+                            "sha256": "5d09efdc0b8ec2054c44a05366cd7c6634ffa333b379b1f8baf018a78974b73d"
+                        },
+                        {
+                            "id": "ltx-2-3-connectors",
+                            "version": "distilled-1.1",
+                            "sha256": "c61cbb396e2a8175d8b2da51f0fdac885a4ccd22c9f64dafa5aa2c455dc8a507"
+                        },
+                        {
+                            "id": "ltx-2-3-video-vae",
+                            "version": "distilled-1.1",
+                            "sha256": "e68d6d8f8a42942ac9b862cc315beb3bc30805a8876c7ad63ba5bf7a2b8e168a"
+                        },
+                        {
+                            "id": "gemma-3-12b-it-qat",
+                            "version": "Q4_K_XL",
+                            "sha256": "da98f81c86916ed1c76b3eeda56b25cb7b8352b01093e2edb8028110fe2cb53b"
+                        }
+                    ],
+                    "input": {
+                        "type": "video",
+                        "prompt": "One continuous very quiet breathing cycle in the exact supplied illustrated train scene. A completely locked camera preserves the framing and scale. TABI stays seated in the same relaxed chin-resting pose for the entire shot. The chin remains supported by the same attached paw, with the elbow resting on the table. Inhale gently during the first half of the shot: the green coat chest expands very slightly, the shoulders and head rise together only a few pixels. Exhale gently in the second half, returning to the original comfortable pose by the end. This is a small natural chest breath with soft neck and shoulder motion, not a look around, head turn, nod, wave, speaking or exaggerated stretch. Keep the eyes calm, mouth closed, gold star, pink fronds, headphones, face shape and painted texture unchanged. Keep both hands solid and attached through wrists, leopard cuffs and forearms, with the table contact fixed. The other paw stays beside the open notebook. Keep the correctly oriented notebook, pen, single tan flower takeaway cup and black lid motionless. Feet, tail, seat, table, cabin, windows and Tokyo exterior stay completely stationary. No cuts, fades, camera motion, zoom, duplicated hands or objects, morphing face, glowing skin or changes of light. Finish with the original pose and framing.",
+                        "dependencyPins": [
+                            {
+                                "id": "vg2-24-guided-breath-graph",
+                                "sha256": "99b99729430150e64f16e1556360c7600b42ecf403e14058824ae0532a7bc2ac",
+                                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/generation/output/workflow-input/guided-breath-api.json"
+                            },
+                            {
+                                "id": "start-scene",
+                                "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+                                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/generation/inputs/approved-neutral-scene.png"
+                            },
+                            {
+                                "id": "breath-guide",
+                                "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+                                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/generation/inputs/approved-breath-guide.png"
+                            }
+                        ],
+                        "durationMillis": 5160,
+                        "width": 768,
+                        "height": 448,
+                        "framesPerSecond": 25,
+                        "comfyWorkflow": {
+                            "workflowDependencyId": "vg2-24-guided-breath-graph",
+                            "promptInput": {
+                                "nodeId": "20",
+                                "inputName": "value"
+                            },
+                            "referenceInputs": [
+                                {
+                                    "dependencyId": "start-scene",
+                                    "slot": {
+                                        "nodeId": "4",
+                                        "inputName": "image"
+                                    },
+                                    "uploadFileName": "neutral-scene.png"
+                                },
+                                {
+                                    "dependencyId": "breath-guide",
+                                    "slot": {
+                                        "nodeId": "30",
+                                        "inputName": "image"
+                                    },
+                                    "uploadFileName": "breath-guide.png"
+                                }
+                            ],
+                            "widthInput": {
+                                "nodeId": "21",
+                                "inputName": "value"
+                            },
+                            "heightInput": {
+                                "nodeId": "22",
+                                "inputName": "value"
+                            },
+                            "frameCountInput": {
+                                "nodeId": "23",
+                                "inputName": "value"
+                            },
+                            "framesPerSecondInput": {
+                                "nodeId": "24",
+                                "inputName": "value"
+                            },
+                            "output": {
+                                "nodeId": "16",
+                                "allowedExtensions": [
+                                    "mp4"
+                                ]
+                            }
+                        }
+                    },
+                    "requestFingerprint": "4706a811806bcf08f6a6e7a887a61dedbe817fd30e7b79cf1afe519f774cc31c",
+                    "maximumAttempts": 1,
+                    "createdAt": "2026-10-02T13:02:13.821099Z",
+                    "execution": {
+                        "type": "local",
+                        "wallClockLimitMillis": 1200000,
+                        "memoryLimitBytes": 51539607552,
+                        "diskLimitBytes": 10737418240
+                    }
+                },
+                "attempts": [
+                    {
+                        "id": "attempt-d7fb9aa8-c239-48b3-b09e-dd33f66719bb",
+                        "requestId": "vg2-24-breath",
+                        "number": 1,
+                        "ownershipToken": "owner-ffcc1db3-e5ec-4009-a3d5-67f91ad2fe06",
+                        "status": "SUBMISSION_UNCERTAIN",
+                        "submissionPhase": "ACKNOWLEDGED",
+                        "admittedAt": "2026-10-02T13:02:26.372637Z",
+                        "providerWorkId": "8c09ebff-b255-302a-b16e-892595d4c9fc",
+                        "lastObservedAt": "2026-10-02T13:05:34.058402Z",
+                        "retryable": false,
+                        "failure": "Verified owned ComfyUI session is unavailable or stale."
+                    }
+                ],
+                "outputs": []
+            }
+        ],
+        "revision": 85
+    }
+}

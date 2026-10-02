@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-01T09:05:08.073Z" hostname="Marcos-MacBook-Pro.local" time="0.027">
+  <properties/>
+  <testcase name="rendered zoom and horizontal scroll keep notes loop and playhead on one x axis()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.0"/>
+  <testcase name="real semantic event ticks use the exact shared x axis at fit and zoom widths()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.0"/>
+  <testcase name="fit uses the exact compact viewport and clipping keeps every fact inside the shared axis()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.0"/>
+  <testcase name="unrepresentable meter never supplies a zero bar interval to the timeline renderer()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.001"/>
+  <testcase name="zoom control widens the actual shared axis and every rendered lane together()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.016"/>
+  <testcase name="timeline renders every factual role lane from immutable evidence()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.009"/>
+  <testcase name="selecting another alternative cannot relabel the playing candidate lanes()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.0"/>
+  <testcase name="active player scope chooses matching verified evidence before fallback()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.0"/>
+  <testcase name="active player scope exposes its unavailable evidence instead of silently drawing another scope()" classname="app.melotrail.desktop.MidiCoreVerifiedTimelineTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

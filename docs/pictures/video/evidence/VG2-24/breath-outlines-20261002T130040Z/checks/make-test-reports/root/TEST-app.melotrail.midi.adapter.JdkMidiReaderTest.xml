@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.midi.adapter.JdkMidiReaderTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-02T13:53:25.451Z" hostname="Marcos-MacBook-Pro.local" time="0.012">
+  <properties/>
+  <testcase name="reads owned SMF 0 into ordered semantic events without changing source bytes()" classname="app.melotrail.midi.adapter.JdkMidiReaderTest" time="0.001"/>
+  <testcase name="all owned valid MIDI fixtures parse with their declared source facts()" classname="app.melotrail.midi.adapter.JdkMidiReaderTest" time="0.003"/>
+  <testcase name="captures channel pressure and records omitted channel messages as findings()" classname="app.melotrail.midi.adapter.JdkMidiReaderTest" time="0.0"/>
+  <testcase name="rejects bounded malformed unsupported format and SMPTE sources()" classname="app.melotrail.midi.adapter.JdkMidiReaderTest" time="0.001"/>
+  <testcase name="treats note-on velocity zero as note-off and preserves release velocity()" classname="app.melotrail.midi.adapter.JdkMidiReaderTest" time="0.002"/>
+  <testcase name="reports recoverable pairing findings and rejects ambiguous same-pitch overlap()" classname="app.melotrail.midi.adapter.JdkMidiReaderTest" time="0.001"/>
+  <testcase name="inspects SMF 1 track channels markers and supported expression facts()" classname="app.melotrail.midi.adapter.JdkMidiReaderTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

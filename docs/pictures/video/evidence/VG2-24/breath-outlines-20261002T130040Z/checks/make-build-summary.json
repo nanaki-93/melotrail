@@ -1,0 +1,616 @@
+{
+  "status": "PASS",
+  "root": {
+    "tests": 794,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "rootTask": "EXECUTED",
+  "desktopTask": "UP-TO-DATE",
+  "nativeWindowExcluded": true,
+  "suites": [
+    {
+      "name": "app.melotrail.application.MidiCoreAcceptedSongAssemblyTest",
+      "sha256": "e770507fe57de0cdb292624f13784137bb28cdae0a3da564291cff86038e8c9a",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreArrangementDraftTest",
+      "sha256": "ca8d92e2117d4521560d64e04d3410c91522ce43911037ab998f65bb66d148fc",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreArrangementExtentTest",
+      "sha256": "20a88cc99e6ca72a7c3ca15c55427c752e0a7daff81da3ec7d798230a83be89d",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreArrangementPlanEditTest",
+      "sha256": "6eeb2471d34efc3b3dbb2dfff1f5e1521c89b2c901b84267b4f0ae22f1e954cd",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreArrangementPlanProposalTest",
+      "sha256": "79aab64dfc00975e30ea74e289367bf5b6da7743f4781e98dc12207b30ff0d93",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreArrangementStylePreviewTest",
+      "sha256": "c6d9b04680175e345f4acda5c50bc8a5da09b62667f7ddc0b8eb24c0918ca542",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreAuthoritativeHarmonyTest",
+      "sha256": "5b6812a892cf3cb3077a4d536d906d3a3201ab691ca8fe81423103c988670399",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreCandidateGenerationTest",
+      "sha256": "932e1814d6f48d11aa04136f03d7b820d837b001ad5dfab449c3be8c3f988006",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreCandidateLifecycleTest",
+      "sha256": "5ccbe340e7509d2fec5ee33f0b7e62cea2c1404836cd44219e2159a60205f6e9",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreCandidateReviewTest",
+      "sha256": "55be09a8a338ea77673943737afd877bbfb1bbf955037f249b40b4bf6b0cfbef",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreComparisonHarnessTest",
+      "sha256": "ceb8f94542218b5b6e3f7a0b0086f7fbe8504a9a20fe45f0c52fa5f84141ae9c",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreLogicMatrixTest",
+      "sha256": "750b9420b8536bc2c931e6b927fe7e57de1a46ee0cbb79700522e27d2e140ee9",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreMidiPackageExporterTest",
+      "sha256": "cc3e9b3c86124a5be001310aa705608291783203f8282d7fd91a94d148190815",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreMusicalAuthorityTest",
+      "sha256": "2dcccfa23d6d2d3fe85ca588dfa6edaa489494dbb32c4ecaf1dea9d244fa7ce7",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreMusicalEvaluationTest",
+      "sha256": "2e0e24b74e8276450a2cddc9aa0bed23beaee3333ea7c3ff9722e14d7f4954dc",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreMusicalRepairAlternativeRankerTest",
+      "sha256": "367b8bb67760cbcaa60720df52b125f65eec849460b6c74688b18df432e8fb26",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreProjectLifecycleTest",
+      "sha256": "1bcad1ad0186a4188203fadc966fc76ae207168f7d48c4af3d4937651c43b5c7",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreSourceAuditionTest",
+      "sha256": "db2d1c218a83261a57590a5695436e1b8d7d2af007bf7f083e448e90a2fb73eb",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreSourceImportTest",
+      "sha256": "48af049fae1e826be4832036bc190e958ac86b81dc33903dff06d1b2653879b9",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreStructureTimelineTest",
+      "sha256": "2057c5e91c75f70b5820c35e702335686851c3fc53f89de36c685e6e1cd6923c",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreVerticalSliceTest",
+      "sha256": "b0b5a14a0ca35482062813cce9724d8d6e854ad0d96fb7fc280dca55e69fceee",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.application.MidiCoreVisualEvidenceProjectionTest",
+      "sha256": "5d67977f3f5775108b589caab08681a8f717902457e6d32fe3df80e744bbcc7b",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.architecture.TargetArchitectureRulesTest",
+      "sha256": "07c736f9793e80c0125e7666312fabfdaed8f242d0be3a81c1f75b39fe93d366",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreBassGeneratorTest",
+      "sha256": "334c9eba72d5a0b57cb0991f79f6f257ebb0a8ef7374924ba672939f5d5d0076",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest",
+      "sha256": "40f4f7428f1e721258d5e9190530a9d883d8e0e58969fcaaa468154e5c235f76",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreChordGeneratorTest",
+      "sha256": "1f97cb061d280a32f808470bba4d57764f09bc22bafdc133b7f055bbc2b90aa2",
+      "tests": 31,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest",
+      "sha256": "8bb9e5935bd60af4794331824686aad5e729dd3e6814770ae3dee0a8fdc15f7c",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreGenerationContextTest",
+      "sha256": "f39ad4df4f8c8a3144360f08d29b4f4c4b110c279d5def6f978ddd584a071fdd",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreInvalidationTest",
+      "sha256": "c59d84a24ce8b7794cf9f8e9e95a5e2fb8bfef8050a1da23b864e4e3a5d69f9c",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreMelodyHarmonyAnalysisTest",
+      "sha256": "ea876ed5e865231b3eec88914cb7968cf4304b8f395f618437bcf86fa48db3ad",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.arrangement.core.MidiCoreRoleValidationTest",
+      "sha256": "1e9d5d5ddc55f5b17590f8c07a280eac67070169b62dd92684120f2a0997e9f3",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.audition.MidiAuditionControllerTest",
+      "sha256": "a0acbcb1412062cd493e1151afaaa1f6fba773134149b21abc7dc3887e4efd4f",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.audition.adapter.JdkMidiAuditionOutputTest",
+      "sha256": "45d3d3196efe6c568da84952e3c125bc0c03c0efd7c7d322502c5a3daaef1488",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.documentation.DocumentationIntegrityTest",
+      "sha256": "cb4eb84765b4dbceea2ceed33ac8a275ff656423c98fd4ad351ebc04e990480e",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.midi.MidiCoreBoundedPropertyTest",
+      "sha256": "913aabfa3636576295aef3829e69e2df50e619e5ae388fd3aeff6e8e01812144",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.midi.OwnedMidiFixturesTest",
+      "sha256": "b3ed6f8e2eaec7eab5ee97b476d11f104ec3527bef365505e638bbd821e87da5",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.midi.adapter.JdkMidiReaderTest",
+      "sha256": "9d1418d7021c47b5400f846855ee3e6ea124d20c78ff3f783403e0d41975c1a4",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.midi.adapter.JdkMidiWriterTest",
+      "sha256": "277cd1530d90624bdd3a0c52746dc6c73c853648939815a156a5ef840ccad927",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.midi.domain.MidiImportValidatorTest",
+      "sha256": "69bc28f804a764c8f36fb8537c74a26d756dbc93e66eb9ed75450ed4b3812c3d",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.midi.domain.MidiProtectedMelodySelectorTest",
+      "sha256": "0044f3b8d6a6debc976f2f5067270344972dd26ae357ccb73f1416034629b7e6",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.midi.domain.SemanticMidiTest",
+      "sha256": "a7d93351112e16abdcfb18304dad691e7684abf27e34671b5e433ebea1d4a62f",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.project.MidiCoreAuthorityFingerprintTest",
+      "sha256": "79622de70dc4c7a06749f1a21512c37f5a415c6edc605e9d087c6f4b65991d18",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.project.MidiCoreProjectSchemaTest",
+      "sha256": "d8d562d6d44228a03c6074b1c24c4fc804c55e659d05407b4d456c6f6b8e4b57",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.project.adapter.MidiCoreArtifactStoreTest",
+      "sha256": "628a7d8061adf982ae5bbc8fd171b9650b7822dedfb6fc615d0f366a2b2e5112",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.retirement.SpringApiRetirementTest",
+      "sha256": "c1301c2522d6d634b9724fbd688c392de12b43ee7e68f87fc650de55003e9d59",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.structure.MidiCoreHarmonyTimelineTest",
+      "sha256": "9fa40f67f0c86b3c1111bfe9d5ab1ec58851710b3037ae8803458f1240c27fc6",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.structure.MidiCoreOccurrenceTimelineTest",
+      "sha256": "6bd5bdb9f9cb38cbca8493c98840b203a67a4b9ff1be437a73e12d4cd521c7a7",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.ComfyVideoClientTest",
+      "sha256": "3002ec819afe4fd80c900d6b2f4c374164b633d99bca966d8b91ca3dadf0d0cb",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.ComfyVideoHostCheckTest",
+      "sha256": "95594bfa15bb91a493c8dfbcdad57bb13a2a17f8a42f1d234ce56348103fb43e",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.ComfyVideoRuntimeTest",
+      "sha256": "d129f521bbea0078ad6a7a18d8b7d9c8e330ddc9c8040eeceb1caf30626a90be",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.LocalVideoBackendTest",
+      "sha256": "aaa0bff541ab6284adfda28d78e066dcae6c8fb13c03d96a8cfc17cb646f58b1",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.LocalVideoProfileTest",
+      "sha256": "fd57dfdcc535e8ff13445e4f3eacdb7895df1611c88c2c21ddd93eb21e7cf603",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.LocalVideoSetupTest",
+      "sha256": "2bf9420ba09a6d9fd5926efbd94c18e6a90b573fc8dace34e1579900da139035",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoAnimationAssetsTest",
+      "sha256": "399015dbc50be3bccfa2cdcd67a73bc92b4c2caf344b4375c76f5a8feab257ab",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoAssemblyPlannerTest",
+      "sha256": "9ab5dd2bb66b43981c9c00f7a6976810fbc400ba3005d72218370d474e3b3330",
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoAssemblyStoreTest",
+      "sha256": "2efa3502c38d651b6dd2b6f458d7159d322411f62b78c6ad096642e065a4d36e",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoAssetImportTest",
+      "sha256": "ac6b5ed763caf5efd59b99482f7f97b35fcf1c062a060641e99ab601fbc4aa06",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoClipGenerationTest",
+      "sha256": "1943bf812dc22e4841858bb6d6980458b6783b9b4a390ca16aaf2ba66a4e5cfd",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoControlledMediaStageTest",
+      "sha256": "fa0951d0a6a7f11856e8f1fe829107d6444c09fc50bd9341f475133d7856c5bb",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoJobCoordinatorTest",
+      "sha256": "f3fd50b3ad1c94cf0c79c596f249eaa415ad2956ff7e55c08bfeabaeba58b6a3",
+      "tests": 31,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoMediaProbeTest",
+      "sha256": "e593abd5c7c97f351a2ffab4f6b52751e76946ea13deb845ce8e70af383fb6ea",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoMediaProcessTest",
+      "sha256": "fb76501ebd264348fc46ecf449946640a7a969bc5ef49f798e7c756259eadaeb",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoMotionDescriptorFixtureTest",
+      "sha256": "2fe32d49e45ce28565f62892f55f53044d4f70de48e5789fc032bcd1424c19a2",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoMotionRendererTest",
+      "sha256": "110dfea9a369547c4215123948b8d2a257e2a6bd134c2e7362c70abb2348e421",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoPreparedSceneStoreTest",
+      "sha256": "6ab8b6fa679102732d103fcf472228c57bfca6e4620e9a7160ab8b51dcc2e8ef",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoPreviewDecoderTest",
+      "sha256": "5cebe7b4b847bdc58a16cc1edcaefb9e670e63302822634399e3c2bad1e65d93",
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoPreviewHostCheckTest",
+      "sha256": "b9f067e074b4b2eb1c3c6ca2d3e453a45535328259e0ac86eb12f672f2b2f7bd",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoPreviewSessionTest",
+      "sha256": "5fedd2541cd70a2739f28cade3d79b032b19e643f0a5e70cc9a8e13d909c5fae",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoProjectStoreTest",
+      "sha256": "576b04964f98cf7f51d0dc4a3e14835c914c6a726fd54c7ddf9d4edfe9a54774",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoPromptCompilerTest",
+      "sha256": "543a3e6af0d27722e7edb088cfd3fed078f149c2f44484e7f3619f7ebd3db05e",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoResultImportTest",
+      "sha256": "138451eb2e14f0ed26f105fe0f84099fea29fbcf0f082f930ef182dbc286f7d1",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoSceneLooksTest",
+      "sha256": "b721a9f3897e83dfb38da6a2652e7af0336baf819ca19099a71799a80141a572",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoScenePreparationTest",
+      "sha256": "3e985db298e1973b068dbc7fbfa714f376d52e1cedb29e56ed6715a01b13cdcf",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoShotPlannerTest",
+      "sha256": "b01798a23919a37f412a4498fc8adc0d55db6661e2d83249694913c8f63067c1",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "app.melotrail.video.VideoTakeReviewTest",
+      "sha256": "468c19b42baaa077c7d0fbf2c6517473565a71522d1233a8884ac3cc75f165f2",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "fullRootReportsArchive": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/checks/gradle-root-reports.zip",
+  "archiveSha256": "d6edd0b9453ff1881acc73276a609e253dab87db75fb48eed30b3c0154fe88d5"
+}

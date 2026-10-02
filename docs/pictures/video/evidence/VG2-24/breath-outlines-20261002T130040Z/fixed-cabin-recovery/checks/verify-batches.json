@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "frames": 129,
+  "maxCompositionRgbError": 1,
+  "fixedCabinOutsideMovingSupportPass": true,
+  "faceDropoutNegativeRejected": true,
+  "sourceBatches": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/review/batch-0.png",
+      "sha256": "8e3c7ba59ef64c4f168a1a38664cb0fd5ed7d7dfaa217f9f3e6617cc19e8c42e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/review/batch-1.png",
+      "sha256": "82f10229571c20dbd728cb7a2ec28d7f820c0351738c98138b15fecb34521220"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-proof/review/batch-2.png",
+      "sha256": "272ffd76994a35192bb2cecf29aa085b5067c2872aeefbe2daf8e733d2608c78"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/review/batch-0.png",
+      "sha256": "58ec6534a170933a52a48d8cae4a909efee5a400ba6ae114f81f1467d19cc795"
+    }
+  ],
+  "seconds": 21.735028082999634
+}
