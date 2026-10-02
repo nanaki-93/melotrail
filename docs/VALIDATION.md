@@ -203,6 +203,47 @@ scenery/props, other actions, 25-to-30fps cadence conversion or full-film/loop
 acceptance. VG2-24 remains REVIEW for its remaining requirements. No native
 process, new decode, generation or encode ran for this acceptance record.
 
+**VG2-25 drinking proof (2026-10-02):** three bounded native ComfyUI generations
+and two complete-frame ComfyUI finishing passes ran under
+`docs/pictures/video/evidence/VG2-25/`. `drink-20261002T084225Z` and
+`drink-repair1-20261002T085547Z` retain the single-image failures. The latter was
+not upscaled; its first review helper stopped before FFmpeg because its scratch
+directory already existed. A fresh per-attempt directory decoded that saved
+movie without another generation. The guard failure and correction are retained.
+
+The final correction, `drink-guided-repair2-20261002T090557Z`, adds the installed
+core guide nodes to the external API graph. The approved reading scene is the
+start/end and the drinking still is the midpoint; both images are consumed and
+pinned in the existing generic typed backend request. Four invalid graph cases
+(guide outside the clip, wrong midpoint image, leaked guide latents and ignored
+guidance) are rejected. Native generation took 267.202s with peak sampled owned
+RSS 23,018,471,424 bytes; the finishing runner took 89.581s with peak RSS
+8,777,187,328 bytes. Samples omit some GPU allocations; production pressure/swap
+stops remained enabled. Every owned runtime stopped; its session was retained,
+hash-verified and removed only from its own external temporary directory.
+
+Final movie SHA-256:
+`e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4`.
+Complete probe and decode pass: silent H.264 High/yuv420p, 1920×1080, 129 frames,
+25fps, zero start, 5.16s and exact i/25 presentation times. The native ComfyUI
+finish declares BT.709 primaries/matrix with sRGB transfer. Native source remains
+768×448. All-frame face comparison passes (maximum mean RGB delta 5.0661/255,
+minimum 99.787% within 40/255); a blacked-out face negative fails. These checks
+detect gross finishing loss, not hand/cup quality, native-1080 detail or a loop.
+All 129 native frames were inspected in indexed sheets; six Full-HD frames were
+inspected individually. Hand/cup/cuff smearing remains in transitions, especially
+frame 33, despite the clearer guided sip and table return. VG2-25 is BLOCKED
+after the initial attempt and two corrections. No human acceptance is recorded.
+
+The initial focused runtime/client/documentation/architecture suite passes 60
+tests. Final filtered headless make/Node outcomes and report hashes are retained
+in the guided run's `checks/validation.json`; `MidiCoreNativeResponsivenessTest`
+is excluded, not passed. No visible app, browser, player or editor is launched.
+Fourteen protected source/reference files remain byte-exact. Media stay local;
+only scripts, graphs, requests, checks and owner documentation are committed.
+The action-quality blocker does not authorize a further native retry, new model,
+hosted fallback, reading generation or full-film render.
+
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
 verifier checks 68 local file pins, including both exact reference MP4s and every

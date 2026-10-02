@@ -1,0 +1,11 @@
+{
+  "startedAt": "2026-10-02T09:14:25.408565+00:00",
+  "classPins": {
+    "ActionPilot.class": "69cacabe7f1dd13d09a121714ea57afd60389681b213d00f4da0fb13337f7bba",
+    "ComfyFinish.class": "228db192e29c8a3613a848f812bc6a573c0e2d1bca0a05d7b5d590781b900d34",
+    "MediaStage.class": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e",
+    "MotionTools.class": "b5f5bf388b6095d2750f47e9d008a993a6f01ac266bac5ca03177b09dc8a9df0"
+  },
+  "admissionSha256": "d06210e292d9c48fe5aff8cac3dd7ee97049cc9fed76483eae7773f7d1e89f17",
+  "commandOwner": "ComfyFinish via production ComfyVideoRuntime/ComfyVideoClient"
+}

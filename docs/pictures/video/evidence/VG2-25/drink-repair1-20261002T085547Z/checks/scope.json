@@ -1,0 +1,27 @@
+{
+  "task": "VG2-25",
+  "repairNumber": 1,
+  "previousRun": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z",
+  "reason": "Full-HD frame inspection exposes transparent/smeared cup and paws during transition, particularly frames 25-28 and 57-62.",
+  "changes": [
+    "Approved reading start with both paws near the table",
+    "Explicitly even five-second action timing",
+    "Small upright sip and shorter hand/cup movement",
+    "Crisp opaque hands and cup, no motion blur"
+  ],
+  "unchanged": [
+    "Installed ComfyUI/LTX/Gemma graph, models and seed",
+    "Native 768x448 / 129 frames / 25fps",
+    "Full-frame RealESRGAN 1080p finishing method",
+    "Production runtime/client/job/media ownership"
+  ],
+  "generationAttempts": 1,
+  "finishingSubmissions": 1,
+  "automaticRetries": 0,
+  "generationRunnerMaxSeconds": 1500,
+  "finishAndVerificationMaxSeconds": 600,
+  "evidenceLimitBytes": 2147483648,
+  "priorCandidatePreserved": true,
+  "humanMotionAcceptance": "Pending",
+  "mediaLocal": true
+}

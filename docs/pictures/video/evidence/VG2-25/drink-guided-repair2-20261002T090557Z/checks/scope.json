@@ -1,0 +1,30 @@
+{
+  "task": "VG2-25",
+  "repairNumber": 2,
+  "authorization": "ok, go for it; final correction within TASKS-VIDEO execution contract initial + at most two bounded repairs",
+  "previousRun": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z",
+  "changes": [
+    "Add installed core LTXVAddGuide for approved drinking image at zero-based frame 64",
+    "Add approved reading image as end guide at zero-based frame 128",
+    "Remove appended guide latents using installed LTXVCropGuides before decoding",
+    "Use the existing generic typed LocalVideoBackend workflow path with both consumed image hashes in the durable request"
+  ],
+  "unchanged": [
+    "Installed models and runtime pins",
+    "768x448, 129 frames, 25fps, same seed and sampler/sigmas",
+    "Full-frame ComfyUI 1080p finishing",
+    "No face mattes or external compositing"
+  ],
+  "generationAttempts": 1,
+  "finishingSubmissions": 1,
+  "automaticRetries": 0,
+  "nativeCeilings": {
+    "generationRunnerSeconds": 1500,
+    "finishAndVerificationSeconds": 600,
+    "generationObservedRssBytes": 38654705664,
+    "finishObservedRssBytes": 34359738368,
+    "evidenceBytes": 2147483648
+  },
+  "appCapabilityClaim": false,
+  "moreRepairsAfterThis": false
+}

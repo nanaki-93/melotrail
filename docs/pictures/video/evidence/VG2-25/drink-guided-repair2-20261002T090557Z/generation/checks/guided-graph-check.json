@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "guideFramesZeroBased": [
+    64,
+    128
+  ],
+  "newConditioningNodes": [
+    "LTXVAddGuide",
+    "LTXVCropGuides"
+  ],
+  "consumedImageNodes": [
+    "4",
+    "30"
+  ],
+  "negativeCasesRejected": [
+    "out-of-range guide",
+    "wrong mid-pose input",
+    "guide decode leak",
+    "sampler ignores guidance"
+  ],
+  "modelsAndSamplerUnchanged": true,
+  "nativeLaunches": 0
+}

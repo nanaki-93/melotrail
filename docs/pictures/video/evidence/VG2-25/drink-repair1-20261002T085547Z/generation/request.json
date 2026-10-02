@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "runId": "vg2-25-drink-repair1-20261002t085547z",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "outputDirectory": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z/generation/output",
+  "mediaToolsDirectory": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin",
+  "composedImage": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z/generation/inputs/approved-reading-scene.png",
+  "composedImageSha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+  "prompt": "A completely static close shot on a locked tripod, preserving the exact framing of this supplied painted train scene. TABI remains seated at the same size and position. Animate one small, slow, complete sip of the existing tan takeaway cup, spread evenly across all five seconds. During the first second, both lavender paws gently reach a short distance from the notebook and firmly grasp the sides of the cup. From one to two seconds, smoothly raise the cup only as far as the mouth. From two to three seconds, take a small sip through the black lid, keeping the head level and the cup almost upright, with only a tiny tilt. From three to four and a half seconds, slowly lower that same cup along the same short path and place its base firmly on its original table spot. During the last half second, release the cup and rest both paws by the notebook in the original reading pose. Keep the motion slow and evenly paced, without sudden acceleration. Every paw stays visibly and continuously attached to its leopard cuff, green sleeve and arm; solid opaque paws firmly hold the solid rigid cup throughout its journey. Preserve the cup size, pink flower emblem and black lid exactly. Clean crisp illustrated outlines and solid painted fills in every frame. Preserve the complete face, gold star, pink gills, rose headphones, green coat and proportions. The open notebook and pen remain perfectly still and correctly oriented. The torso, tail, feet, seat, table, cabin, window frame, exterior and camera remain stationary. No zoom or pullback, no head thrown backwards, no motion blur, smears, transparent objects, double exposures, morphing cup, duplicate cup, extra hands or cuts. One continuous calm action with the cup resting on the table at the end.",
+  "width": 768,
+  "height": 448,
+  "durationMillis": 5160,
+  "framesPerSecond": 25,
+  "expectedFrameCount": 129,
+  "port": 8192,
+  "pollIntervalMillis": 2000,
+  "protectedMidiRoots": [
+    "/Users/marcoandreose/DEV/lab/melotrail/data"
+  ]
+}

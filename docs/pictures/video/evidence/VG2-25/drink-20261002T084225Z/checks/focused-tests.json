@@ -1,0 +1,41 @@
+{
+  "result": "PASS",
+  "tests": [
+    {
+      "class": "app.melotrail.video.ComfyVideoClientTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "927287450724648ab406006355d866ca0c32ed2a0f735e07f1dc9a58ad211440"
+    },
+    {
+      "class": "app.melotrail.video.ComfyVideoRuntimeTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "3a468490d5f0759cf78ce3636cef41bca60905a5400184aaa5932728054a24e3"
+    },
+    {
+      "class": "app.melotrail.documentation.DocumentationIntegrityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "0d8d51474d33c3140cf7e74347aa0ffd441adf544698cddb384d049d0ac47de7"
+    },
+    {
+      "class": "app.melotrail.architecture.TargetArchitectureRulesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "reportSha256": "6cd17ac9985e7e86ad3c4a6594ef2ee763db3ea57f486b7f339599feee5349fc"
+    }
+  ],
+  "total": 60,
+  "headless": true,
+  "nativeWindowTestExcluded": true,
+  "desktopSuiteRequested": false
+}

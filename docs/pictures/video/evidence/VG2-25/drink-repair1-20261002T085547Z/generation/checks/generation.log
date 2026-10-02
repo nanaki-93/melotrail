@@ -1,0 +1,17 @@
+SESSION=/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-cb835358-0220-48f3-8262-d89e3430acb0
+SUBMITTED=attempt-fcff8372-352f-4f52-b9ba-28a8396b4461
+OBSERVATION=15 state=ACTIVE
+OBSERVATION=30 state=ACTIVE
+OBSERVATION=45 state=ACTIVE
+OBSERVATION=60 state=ACTIVE
+OBSERVATION=75 state=ACTIVE
+OBSERVATION=90 state=ACTIVE
+OBSERVATION=105 state=ACTIVE
+ACTION_PILOT_PASSED video=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z/generation/output/publication/generated/vg2-25-drink/attempt-fcff8372-352f-4f52-b9ba-28a8396b4461/88e4e64e-2020-3833-b112-d6bb09b92fd0-melotrail-short-shot_00001_.mp4 sha256=7fd94927c986308592ece5a94b9d30bda95a896ec2b7574c0be17ac48272906f
+MEDIA_FACTS=VideoMediaMetadata(videoCodec=h264, width=768, height=448, durationSeconds=5.16, frameRate=25.0, decodedFrameCount=129, audioStreamCount=0)
+MEDIA_REPORT=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z/generation/output/media-proof/video-media-probe-report.json
+RUNTIME_FINAL=STOPPED
+ELAPSED_MILLIS=273125
+REQUEST_UNCHANGED=true
+IMAGE_UNCHANGED=true
+GRAPH_UNCHANGED=true

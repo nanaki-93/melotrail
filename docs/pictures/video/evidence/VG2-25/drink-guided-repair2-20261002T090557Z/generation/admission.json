@@ -1,0 +1,123 @@
+{
+  "task": "VG2-25",
+  "createdAt": "2026-10-02T09:06:45.977215+00:00",
+  "sourceHead": "ad3741fc7a0d9e0ee209a4740738099d99471c2b",
+  "authorization": {
+    "quote": "ok, go for it",
+    "interpretation": "Final targeted correction (repair 2) within the queue limit; use the existing generic typed ComfyUI workflow with approved mid-sip and return conditioning. No previous packet replay."
+  },
+  "scope": "One new guide-conditioned reach/sip/return clip using two approved source images and installed LTXVAddGuide/LTXVCropGuides. Same model/runtime/seed/sampler, fresh immutable graph binding.",
+  "imageConditioning": "Reading image initializes the video and guides frame 128. Approved drinking image guides frame 64. Both actual uploaded references are fingerprinted.",
+  "native": {
+    "workflow": "Bundled ComfyUI LTX-2.3 distilled 1.1 Q4 with Gemma; unchanged installed graph/model/runtime profile",
+    "width": 768,
+    "height": 448,
+    "frameCount": 129,
+    "fps": 25,
+    "durationSeconds": 5.16,
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "cancellationTestSubmissions": 0,
+    "inferenceLimitSeconds": 1200,
+    "wholeRunnerLimitSeconds": 1500,
+    "observedProcessTreeRssLimitBytes": 38654705664,
+    "rssLimitation": "Sampled RSS excludes some GPU/Metal allocations; unchanged production critical/unknown pressure and 8-GiB extra-swap safeguards also apply.",
+    "ownedEvidenceAndSessionLimitBytes": 2147483648,
+    "minimumFreeDiskBytes": 21474836480,
+    "mediaProbePerProcessLimitSeconds": 120,
+    "additionalReviewDecodeTraversals": 1,
+    "hostedFallback": false,
+    "modelDownloads": false
+  },
+  "processOwnership": "ComfyVideoRuntime owns and reaps the only model server. VideoMediaProcess owns native media commands. The outside guard observes only its own JVM tree and requests graceful JVM shutdown on a limit.",
+  "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/output",
+  "storage": "MP4s and any frame PNGs remain local; commit request, helper sources, input pins, checks and owner status only.",
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/request.json",
+      "bytes": 2391,
+      "sha256": "0e4bc4899f0d693caf8e632389517f49e92cb0edfee74d9d16ef84a886d754a1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/workflow/guided-drink-api.json",
+      "bytes": 5784,
+      "sha256": "b6edaa2fb1b6787be2c856ff443a580f649783a69073f0429bad10034c022e11"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/scripts/ActionPilot.java",
+      "bytes": 11064,
+      "sha256": "58dbe810a85efbf7dce2054e364cedc381a6a24db105acfe7cc137fb95d34e0d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/scripts/MotionTools.java",
+      "bytes": 2200,
+      "sha256": "9ac343b53c6db47f1938e093a95c4da5070cdd8cf9761a97f90550f2dfc14a09"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/scripts/check-guided-graph.py",
+      "bytes": 2208,
+      "sha256": "eb7a8f188d2c29f89edcff70602f9306a98248a4720df9fa1297ae99fff05e34"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/scripts/decode-native.py",
+      "bytes": 2513,
+      "sha256": "850481f4019abbd3027dc429b0e29c763f5f72ebc99c11a2f123795d3daa6021"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/scripts/headless.init.gradle",
+      "bytes": 657,
+      "sha256": "d98f1c32fc6d2fc28bb4a589a760d83557e44d3a750030164e365dab8217e01c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/scripts/review-sheets.cjs",
+      "bytes": 1449,
+      "sha256": "33bcff79cd5f9f009259d1a4ec93c9f911312605decdc78e9209c2ba92caf9bb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/scripts/run.py",
+      "bytes": 7130,
+      "sha256": "b8a9e2e9cf67df73fd575726fb3b87a1b8dc3aea656de216bddef0ef240a86be"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/inputs/approved-drinking-guide.png",
+      "bytes": 2136264,
+      "sha256": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/inputs/approved-reading-scene.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/comfyui/v0.35.0/comfy_extras/nodes_lt.py",
+      "bytes": 59416,
+      "sha256": "01575b886e9abacd08c7ce39e7bde9ef7c7cc8f17063d726e2bf4a320a512d95"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-25-drink-29f6w7g5/repair2/classes/ActionPilot.class",
+      "bytes": 19673,
+      "sha256": "69cacabe7f1dd13d09a121714ea57afd60389681b213d00f4da0fb13337f7bba"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-25-drink-29f6w7g5/repair2/classes/ComfyFinish.class",
+      "bytes": 13413,
+      "sha256": "228db192e29c8a3613a848f812bc6a573c0e2d1bca0a05d7b5d590781b900d34"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-25-drink-29f6w7g5/repair2/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-25-drink-29f6w7g5/repair2/classes/MotionTools.class",
+      "bytes": 5225,
+      "sha256": "b5f5bf388b6095d2750f47e9d008a993a6f01ac266bac5ca03177b09dc8a9df0"
+    }
+  ],
+  "preflightFreeDiskBytes": 259743944704
+}

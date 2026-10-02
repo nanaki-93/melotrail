@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "removedOwnedScratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-25-drink-29f6w7g5",
+  "filesRemoved": 33,
+  "bytesRemoved": 1785566,
+  "mediaPresentInScratch": false,
+  "retainedEvidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z",
+  "ownedComfySessionsStoppedAndRetained": 5,
+  "scope": "Remove only this unique task-created OS directory. Preserve all media, user WIP, build caches and unrelated environments."
+}

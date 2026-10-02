@@ -1,0 +1,31 @@
+{
+  "task": "VG2-25",
+  "status": "BLOCKED",
+  "nativeGenerations": 3,
+  "finishingSubmissions": 2,
+  "remainingRepairAllowance": 0,
+  "movie": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/review/tabi-drink-comfy-1080p.mp4",
+    "bytes": 6467507,
+    "sha256": "e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4"
+  },
+  "nativeMotion": [
+    768,
+    448,
+    129,
+    25
+  ],
+  "finishedMotion": [
+    1920,
+    1080,
+    129,
+    25
+  ],
+  "durationSeconds": 5.16,
+  "technicalChecks": "PASS: complete decode, exact cadence, no audio, all-frame native/finished face content",
+  "qualityBlocker": "Residual hand/cup/cuff smearing in transitions; no human artistic acceptance",
+  "workflow": "Existing local ComfyUI generic typed backend with reading start/end and drinking midpoint guides; original models/sampler retained",
+  "nextRequiredWork": "Resolve hand/cup transitions in a separately bounded correction before VG2-26. Do not silently relax the acceptance condition.",
+  "humanAccepted": false,
+  "protectedInputCount": 14
+}

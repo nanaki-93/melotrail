@@ -1,0 +1,36 @@
+{
+  "recordedAt": "2026-10-02T09:05:57.600515+00:00",
+  "runtimeState": "STOPPED",
+  "observedPidsGone": [
+    75664,
+    75748,
+    76260,
+    79133
+  ],
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-cb835358-0220-48f3-8262-d89e3430acb0",
+  "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z/generation/runtime-session",
+  "files": [
+    {
+      "path": "input/composed-scene.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+    },
+    {
+      "path": "output/shots/melotrail-short-shot_00001_.mp4",
+      "bytes": 1182243,
+      "sha256": "7fd94927c986308592ece5a94b9d30bda95a896ec2b7574c0be17ac48272906f"
+    },
+    {
+      "path": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "bffe6bf60ed1f7ff3a281980f1c3fdab2e9ab47006cfaf4515b452cf9612d3de"
+    },
+    {
+      "path": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "allCopiesVerified": true,
+  "ownedSessionRemoved": true
+}

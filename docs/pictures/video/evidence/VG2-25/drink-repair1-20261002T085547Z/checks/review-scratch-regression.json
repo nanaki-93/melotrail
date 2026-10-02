@@ -1,0 +1,9 @@
+{
+  "oldSharedReviewPathExists": true,
+  "newPerAttemptReviewPathAbsent": true,
+  "failedStep": "Review wrapper refused reused process working directory before ffmpeg launch",
+  "regression": "Allocate a separate scratch subtree per candidate; existing initial review directory stays intact and the new wrapper receives an absent child path.",
+  "oldReceiptPreserved": "generation/checks/review-decode.json",
+  "nextReceipt": "generation/checks/review-decode-corrected.json",
+  "generationReplayed": false
+}

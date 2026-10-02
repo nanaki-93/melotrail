@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "runId": "vg2-25-drink-guided-repair2-20261002t090557z",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "outputDirectory": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/output",
+  "mediaToolsDirectory": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin",
+  "composedImage": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/inputs/approved-reading-scene.png",
+  "composedImageSha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+  "prompt": "One continuous calm drinking action in the exact supplied warm painted train scene. The camera is fixed on a tripod with unchanged framing. TABI begins in the supplied reading pose with both paws resting by the notebook and one takeaway cup standing on the table. Both paws reach smoothly toward that cup, grasp it solidly and lift it slowly to the mouth. At the middle of the shot, TABI matches the supplied drinking pose: both paws hold the same tan paper cup with its black lid at the mouth, face upright, elbows naturally bent, attached wrists and leopard cuffs. Take one small sip, then smoothly lower the same cup to its original table spot, release it and return both paws to the supplied reading pose by the end. The complete reach, lift, sip, lower and release spans all five seconds, with no abrupt movement. Preserve solid, clearly drawn hands, cuffs and cup during every transition. One rigid cup, unchanged proportions, tan colour, pink flower emblem and black lid. Keep TABI's face, gold star, pink gills, headphones, green coat and original painted style consistent. Keep the torso, feet, tail, seat, cabin, window frame, table, open notebook, pen and exterior stationary. No camera motion, zoom, pullback, cuts, crossfades, double images, motion blur, transparent paws or morphing props. Smooth continuous movement between the supplied poses, with the cup back on the table at the end.",
+  "width": 768,
+  "height": 448,
+  "durationMillis": 5160,
+  "framesPerSecond": 25,
+  "expectedFrameCount": 129,
+  "port": 8192,
+  "pollIntervalMillis": 2000,
+  "protectedMidiRoots": [
+    "/Users/marcoandreose/DEV/lab/melotrail/data"
+  ]
+}

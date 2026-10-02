@@ -1,0 +1,11 @@
+{
+  "task": "VG2-25",
+  "status": "REPAIR_REQUIRED",
+  "nativeMovieSha256": "4b684c2454e182de6ba2ba525f684c1ec6ccef1a55b2978f8483b72460a37e09",
+  "finishedMovieSha256": "b31ec034c5ed4cb68410b5855021ad0c7a8f2e83329580667f04ab95cab11776",
+  "movie": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/review/tabi-drink-comfy-1080p.mp4",
+  "technicalChecks": "129 full-HD frames, uniform 25fps / 5.16s, zero audio, face-fidelity check pass",
+  "visualFailure": "Visible cup/paw/cuff smear and ghosting at lift/lower transitions, plus camera drift. Upscaling preserves rather than cures this defect.",
+  "nextRepair": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z",
+  "humanAccepted": false
+}

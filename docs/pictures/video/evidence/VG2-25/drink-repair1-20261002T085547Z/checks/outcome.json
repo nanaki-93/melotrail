@@ -1,0 +1,15 @@
+{
+  "task": "VG2-25",
+  "status": "REPAIR_REQUIRED",
+  "nativeMovieSha256": "7fd94927c986308592ece5a94b9d30bda95a896ec2b7574c0be17ac48272906f",
+  "movie": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-repair1-20261002T085547Z/generation/review/tabi-drink-native.mp4",
+  "findings": [
+    "Sip and table return are visible; start/end reading poses are more compatible.",
+    "Paw/cup and head/frond smearing persists in lift/lower transitions, including frames 25 and 97.",
+    "Camera and scene geometry drift despite fixed-camera text."
+  ],
+  "upscaled": false,
+  "reasonNotFinished": "Retain the native failure; preserve the finishing allowance for a corrected action.",
+  "nextRepair": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z",
+  "humanAccepted": false
+}

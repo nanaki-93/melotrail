@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.video.ComfyVideoClientTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-02T08:42:47.947Z" hostname="Marcos-MacBook-Pro.local" time="4.88">
+  <properties/>
+  <testcase name="pinned SaveVideo dynamic schema submits bundled H264 reencode CRF18 settings unchanged()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.085"/>
+  <testcase name="interrupted websocket event is cancellation and successful history still wins()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.01"/>
+  <testcase name="invalid acknowledgement is ambiguous after one prompt post()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.004"/>
+  <testcase name="omitted optional encoding does not require inactive CRF input()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.006"/>
+  <testcase name="node progress resets and node completion never claim whole workflow completion()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.522"/>
+  <testcase name="malformed dynamic combo schema rejects before upload or prompt()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.027"/>
+  <testcase name="dynamic branches use effective scalar bindings before validating nested inputs()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.004"/>
+  <testcase name="prompt body stalls after headers or partial bytes return bounded uncertain and close the socket()" classname="app.melotrail.video.ComfyVideoClientTest" time="1.023"/>
+  <testcase name="node progress stays indeterminate and late history validates exact output node()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.011"/>
+  <testcase name="cancellation always targets one prompt and ambiguous absence stays unknown()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.518"/>
+  <testcase name="executed websocket event is not success without validated history output()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.004"/>
+  <testcase name="typed workflow validates uploads only consumed images and submits stable prompt identity()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.005"/>
+  <testcase name="unacknowledged pending cancellation preserves queue evidence until acknowledgement()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.521"/>
+  <testcase name="oversized response is bounded and interrupted stalled consumption releases the socket()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.043"/>
+  <testcase name="acknowledged pending deletion proves cancellation only with subsequent queue and history evidence()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.519"/>
+  <testcase name="enqueue followed by server error remains uncertain and reconciles same prompt without repost()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.513"/>
+  <testcase name="invalid missing and inactive dynamic inputs reject before upload or prompt()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.026"/>
+  <testcase name="unsupported slot fails before upload or inference()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.001"/>
+  <testcase name="success racing interrupt remains recoverable instead of falsely confirmed stopped()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.511"/>
+  <testcase name="history node error is terminal failure even after reconnect()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.009"/>
+  <testcase name="interrupted history survives a requested cancellation and client reconstruction()" classname="app.melotrail.video.ComfyVideoClientTest" time="0.514"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

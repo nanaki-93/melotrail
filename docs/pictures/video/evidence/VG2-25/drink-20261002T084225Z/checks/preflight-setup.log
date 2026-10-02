@@ -1,0 +1,6 @@
+SETUP=READY
+LocalVideoTerms(component=ComfyUI, terms=GPL-3.0, source=https://github.com/Comfy-Org/ComfyUI/blob/40c4fcdf513a4523e39d54a9d391908af8df8171/LICENSE)
+LocalVideoTerms(component=ComfyUI-GGUF, terms=GPL-3.0, source=https://github.com/city96/ComfyUI-GGUF/blob/6ea2651e7df66d7585f6ffee804b20e92fb38b8a/LICENSE)
+LocalVideoTerms(component=LTX-2.3, terms=LTX-2 Community License; disclosure required; separate commercial license at or above USD 10M annual entity revenue and for competing products/services, source=https://huggingface.co/Lightricks/LTX-2.3/blob/main/LICENSE)
+LocalVideoTerms(component=Gemma 3, terms=Gemma Terms and prohibited-use policy; redistribution has separate obligations, source=https://ai.google.dev/gemma/terms)
+LocalVideoTerms(component=RealESRGAN, terms=BSD-3-Clause, source=https://github.com/xinntao/Real-ESRGAN/blob/master/LICENSE)

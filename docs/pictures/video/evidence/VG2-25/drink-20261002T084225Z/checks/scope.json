@@ -1,0 +1,15 @@
+{
+  "task": "VG2-25",
+  "authorization": "ok, go for it",
+  "generationAttempts": 1,
+  "finishingSubmissions": 1,
+  "automaticRetries": 0,
+  "generationRunnerMaxSeconds": 1500,
+  "finishAndVerificationMaxSeconds": 600,
+  "evidenceLimitBytes": 2147483648,
+  "sourceAndFinishedMovieLocal": true,
+  "deliverable": "Silent 1920x1080 drinking action review movie using accepted full-frame ComfyUI finish",
+  "humanMotionAcceptance": "Pending exact output review",
+  "noModelDownloads": true,
+  "noHostedFallback": true
+}

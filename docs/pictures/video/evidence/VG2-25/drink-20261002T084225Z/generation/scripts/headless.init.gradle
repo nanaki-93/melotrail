@@ -1,0 +1,17 @@
+allprojects {
+    tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        systemProperty "java.awt.headless", "true"
+        exclude "**/MidiCoreNativeResponsivenessTest*"
+    }
+}
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    root.tasks.register('vg225ReadClasspath') {
+        dependsOn(root.tasks.named('testClasses'))
+        doLast {
+            def out = new File(root.findProperty('vg225ClasspathOutput') ?: 'MISSING_CLASSPATH_PATH')
+            if (out.exists()) throw new GradleException('Refusing existing classpath output')
+            out.text = root.sourceSets.test.runtimeClasspath.asPath
+        }
+    }
+}

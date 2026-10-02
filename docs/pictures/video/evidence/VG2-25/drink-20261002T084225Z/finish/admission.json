@@ -1,0 +1,92 @@
+{
+  "task": "VG2-25",
+  "createdAt": "2026-10-02T08:50:34.965865+00:00",
+  "sourceHead": "ad3741fc7a0d9e0ee209a4740738099d99471c2b",
+  "authorization": {
+    "quote": "ok, go for it",
+    "interpretation": "One Full-HD finishing pass on this new drinking candidate using the already accepted ComfyUI graph. No further motion generation or automatic replay."
+  },
+  "native": {
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "wholeRunnerLimitSeconds": 600,
+    "observedProcessTreeRssLimitBytes": 34359738368,
+    "ownedEvidenceAndSessionLimitBytes": 536870912,
+    "minimumFreeDiskBytes": 21474836480,
+    "videoEncodes": 1,
+    "postExportVerificationTraversals": 2
+  },
+  "workflow": {
+    "source": "New 768x448 ComfyUI/LTX action candidate, 129 frames at 25fps",
+    "upscaler": "Installed RealESRGAN x2plus",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "resize": "Complete-frame Lanczos with crop disabled, same slight aspect adjustment as accepted preview",
+    "encoding": "ComfyUI SaveVideo H264 CRF16 sRGB silent",
+    "disclosure": "Enhanced motion, not native-1080 synthesis. Original generated camera/scenery/prop movement retained; no masks or external compositing."
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/request.json",
+      "bytes": 767,
+      "sha256": "8f0dec791868b5deeae8394f64bd55a278c2ad64511791b36d905b0af5908a65"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/workflow/finish-full-frame-api.json",
+      "bytes": 801,
+      "sha256": "c304343b1190027ad7a86ab156cf42df43a56eaa26a9dd39cdcf2f23a0781966"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/scripts/ComfyFinish.java",
+      "bytes": 6704,
+      "sha256": "6ef98de14b7b756571fb5d7265211d4237c3f34c3d59661b19281c8c6634b2b1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/scripts/MediaStage.java",
+      "bytes": 1475,
+      "sha256": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/scripts/check-frame-continuity.cjs",
+      "bytes": 3538,
+      "sha256": "e49dccd7705afbfba008a47dcd0b989110ad3439eee3da2b0f08667e6a19ffb1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/scripts/run.py",
+      "bytes": 7118,
+      "sha256": "eac13c049853348f3794406890d7aec7a8520993b4cf567aeedc397a3088951a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/finish/scripts/verify-media.py",
+      "bytes": 3712,
+      "sha256": "c086bf29dcfc21ee781daad1d04f711bae20f7a58a88609500fee5e616a8db97"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-20261002T084225Z/generation/review/tabi-drink-native.mp4",
+      "bytes": 1160659,
+      "sha256": "4b684c2454e182de6ba2ba525f684c1ec6ccef1a55b2978f8483b72460a37e09"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/upscale_models/RealESRGAN_x2plus.pth",
+      "bytes": 67061725,
+      "sha256": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-25-drink-29f6w7g5/classes/ComfyFinish.class",
+      "bytes": 13413,
+      "sha256": "228db192e29c8a3613a848f812bc6a573c0e2d1bca0a05d7b5d590781b900d34"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-25-drink-29f6w7g5/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    }
+  ]
+}

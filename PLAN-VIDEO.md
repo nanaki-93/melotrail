@@ -267,8 +267,11 @@ implementation/evidence identities, not a clean release or artistic approvals.
 
 Important planning corrections:
 
-- ComfyUI accepts one composed image for the measured I2V route. It does not prove
-  independently controllable layers, complex actions or four-minute coherence.
+- The bundled ComfyUI I2V preset accepts one composed image. VG2-25's external
+  guided drinking proof also consumes a second approved pose through core guide
+  nodes and the existing generic backend. Hand/cup transitions still need repair;
+  this does not deliver an integrated multi-image control, independent layers,
+  accepted complex actions or four-minute coherence.
 - `VideoShotPlanner` still models short unique/repeated shots. Replace its primary
   app flow with the persisted continuous-scene plan after the production workflow
   is proven; that caller cleanup is not a prerequisite for character experiments.

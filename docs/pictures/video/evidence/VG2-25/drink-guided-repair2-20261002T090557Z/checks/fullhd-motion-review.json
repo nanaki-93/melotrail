@@ -1,0 +1,43 @@
+{
+  "reviewer": "agent frame inspection; human normal-speed acceptance pending",
+  "movie": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/review/tabi-drink-comfy-1080p.mp4",
+    "bytes": 6467507,
+    "sha256": "e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4"
+  },
+  "fullHdFramesInspected": [
+    17,
+    33,
+    65,
+    81,
+    101,
+    129
+  ],
+  "nativeFramesInspected": 129,
+  "nativeMethod": "Indexed contact sheets and 17-frame overview",
+  "findings": [
+    {
+      "frames": [
+        17,
+        33,
+        81,
+        101
+      ],
+      "finding": "Moving paw/cuff/cup outlines retain smear and texture deformation; cup flower detail changes during lift/lower."
+    },
+    {
+      "frames": [
+        65
+      ],
+      "finding": "Readable sip, intact face and attached hands in the guided pose."
+    },
+    {
+      "frames": [
+        129
+      ],
+      "finding": "Returns to reading pose with one cup on the table."
+    }
+  ],
+  "conclusion": "BLOCKED: VG2-25 requires consistent hands/cup without ghosting. The guide improves the action but does not meet this quality condition.",
+  "scope": "No human artistic acceptance, native-1080 synthesis, rigid scene, seamless loop, cadence conversion or full-film proof."
+}

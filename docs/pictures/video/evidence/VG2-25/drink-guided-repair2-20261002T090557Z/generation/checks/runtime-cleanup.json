@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-10-02T09:14:10.521291+00:00",
+  "runtimeState": "STOPPED",
+  "observedPidsGone": [
+    82298,
+    82384,
+    82686,
+    85053
+  ],
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-279d88ea-07b4-4d08-979f-24f39e2406fb",
+  "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/runtime-session",
+  "files": [
+    {
+      "path": "input/drinking-guide.png",
+      "bytes": 2136264,
+      "sha256": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c"
+    },
+    {
+      "path": "input/reading-scene.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+    },
+    {
+      "path": "output/shots/tabi-guided-drink_00001_.mp4",
+      "bytes": 1099925,
+      "sha256": "d7fbc0c6b3e5eb9ec7422f5a3099a2d87bca3cfb279a74b9eb94fec366d32a08"
+    },
+    {
+      "path": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "72b9757fdf116b5caa269d99de6750c3395f9e175a859bad9bab795b7e069470"
+    },
+    {
+      "path": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "allCopiesVerified": true,
+  "ownedSessionRemoved": true
+}

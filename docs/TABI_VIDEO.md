@@ -195,6 +195,31 @@ and the full-film repeat remain open; VG2-24 and the combined-action review reta
 those obligations. The native-25fps short proof does not change the 1080p30 film
 target. No new generation or encode is included in this acceptance update.
 
+The subsequent VG2-25 drinking trial is retained under
+`pictures/video/evidence/VG2-25/`. Two single-image attempts show severe hand/cup
+smearing despite completing the action. The final bounded correction,
+`drink-guided-repair2-20261002T090557Z`, actually consumes the approved reading
+scene as the starting image and end guide, and the approved drinking scene at
+zero-based frame 64. Core `LTXVAddGuide` nodes condition these poses; core
+`LTXVCropGuides` removes the extra guide latents before decoding. Both consumed
+image hashes are bound in the existing typed job, with no production schema,
+model, plugin or bundled-preset change. Its saved API graph is a template whose
+dimensions/prompt/images are bound by `generation/request.json` and `ActionPilot`;
+it is not a new integrated app control.
+
+The resulting `finish/review/tabi-drink-comfy-1080p.mp4` has SHA-256
+`e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4`.
+The same whole-frame ComfyUI finish enhances native 768×448 motion to 1920×1080,
+129 frames at uniform 25fps, 5.16s and no audio. The sip and reading return are
+clearer, and all-frame source comparisons find no gross face loss/darkening.
+However, full-size transition frames still show smeared paw/cuff/cup edges and
+changing cup detail. Upscaling retains those generation defects. After the
+initial attempt and two corrections, VG2-25 is BLOCKED for action quality and
+VG2-26 reading has not started. The best movie is supplied for human review;
+no acceptance, seamless loop, fixed scenery or final 1080p30 delivery is inferred.
+All media remain local; source art, panoramas and earlier accepted movies are
+unchanged. Finite scopes, failure evidence, graphs and checks accompany each run.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the
