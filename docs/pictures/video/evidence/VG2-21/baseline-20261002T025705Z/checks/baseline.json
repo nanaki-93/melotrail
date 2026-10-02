@@ -1,0 +1,570 @@
+{
+  "at": "2026-10-02T02:58:03.978379+00:00",
+  "task": "VG2-21",
+  "head": "a672c6b42a40528c1d6da528710cc0ebaf5b97ff",
+  "decision": "Return to user-selected 20/30-second blink/parallax recipe; defer rig/wave work.",
+  "userQuote": "I think we should start from here, we got assets and ComfyUI and it was working",
+  "files": [
+    {
+      "path": "docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4",
+      "role": "user-selected successful video",
+      "bytes": 53215523,
+      "sha256": "abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4",
+      "role": "user-selected successful video",
+      "bytes": 35492513,
+      "sha256": "30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/preparation.json",
+      "role": "preparation receipt",
+      "bytes": 2846,
+      "sha256": "e5503eb56ca383b3d8186231c370369682de93fd4f98d725c2dd69cacc78fda5",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/cabin-foreground.png",
+      "role": "original 30-second preparation",
+      "bytes": 3414198,
+      "sha256": "f53c4e239afba1b6fcdb3891a35ea20ef7b069c4828ee299f59cadf648d6ca57",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/cabin-occlusion.png",
+      "role": "original 30-second preparation",
+      "bytes": 21910,
+      "sha256": "b009954169f835f759b4e4e52c6e104e5ce05f157b863b641f94301de12c70a8",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/closed-context.png",
+      "role": "original 30-second preparation",
+      "bytes": 2760286,
+      "sha256": "1806968f15a180876686db6c1c7ab1d29c78d1b9cd45d3079a6135e670d60d9d",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/combined-preparation.json",
+      "role": "original 30-second preparation",
+      "bytes": 4682,
+      "sha256": "7de43a3665d66ba5d72ee707a06d02ed5250bb29d0953f5b80042c1e723bd342",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/eye-support.png",
+      "role": "original 30-second preparation",
+      "bytes": 2710,
+      "sha256": "959235c93249ef29493514c8f2fa858a2c0ec1a7db6ef0848533add67df7f6d8",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/eyes-closed.png",
+      "role": "original 30-second preparation",
+      "bytes": 3139791,
+      "sha256": "988bb0ead1c49a989111594c23653671adef89e6bc0d797e53ca0527f58b5df1",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/eyes-open.png",
+      "role": "original 30-second preparation",
+      "bytes": 3147015,
+      "sha256": "e61431efbd3d410678b921f759ef4dca197f10df0bea8ecc17325e41e5633aed",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/far-plane.png",
+      "role": "original 30-second preparation",
+      "bytes": 2661343,
+      "sha256": "b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/finished-scene.png",
+      "role": "original 30-second preparation",
+      "bytes": 2808142,
+      "sha256": "db99e2513baf0d0e0b89b35e05c4613ec57aefd0e464e1b05e75b1f8754c94b6",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/fixed-scene-1080p.png",
+      "role": "original 30-second preparation",
+      "bytes": 2969186,
+      "sha256": "82077aa0f594baca3190a724a3f99828f22ded059d5b4e4bcb2df652f6205d16",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/fixed-scene.png",
+      "role": "original 30-second preparation",
+      "bytes": 2766937,
+      "sha256": "846a6e10ab693f25681218ecaab3d4c901dcbfb67d8965d374807cb72b71f00c",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/middle-plane.png",
+      "role": "original 30-second preparation",
+      "bytes": 3288326,
+      "sha256": "37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/near-plane.png",
+      "role": "original 30-second preparation",
+      "bytes": 2441049,
+      "sha256": "f26a6c3de329e80338d60779ce58a436cd9363600d66f0d20db4269a5d6c8cee",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/prepared/window-mask-1080p.png",
+      "role": "original 30-second preparation",
+      "bytes": 10705,
+      "sha256": "4290c7e1ab9cbffa851cb1eb3b679a693d631bcb4b3e90d2abf3c3d6ed500bf3",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/preparation.json",
+      "role": "accepted mask correction review artifact",
+      "bytes": 5711,
+      "sha256": "d63fa5d92d9d2ff8276287373a7f911b91d09265c480e15655def9eabd37b99f",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/cabin-foreground.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 3414146,
+      "sha256": "e85e3d7fa1a4bddff409affbf3fec1c2a926f893adc19d0e0dba04c06713c7e4",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/cabin-occlusion.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 21840,
+      "sha256": "94e4e61205ee9795d69acdfd8880cd1c517c94f17345b23b7e4c82949739d954",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/eye-support.png",
+      "role": "accepted mask-corrected preparation",
+      "bytes": 2710,
+      "sha256": "959235c93249ef29493514c8f2fa858a2c0ec1a7db6ef0848533add67df7f6d8",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/eyes-closed.png",
+      "role": "accepted mask-corrected preparation",
+      "bytes": 3139791,
+      "sha256": "988bb0ead1c49a989111594c23653671adef89e6bc0d797e53ca0527f58b5df1",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/eyes-open.png",
+      "role": "accepted mask-corrected preparation",
+      "bytes": 3147015,
+      "sha256": "e61431efbd3d410678b921f759ef4dca197f10df0bea8ecc17325e41e5633aed",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/far-plane.png",
+      "role": "accepted mask-corrected preparation",
+      "bytes": 2661343,
+      "sha256": "b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/finished-scene.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 2807998,
+      "sha256": "23d3ff7ef3a1f9a19fc5ba6ee3557bfd0e0fd8d389837b40078ef9fc662c041a",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/fixed-scene-1080p.png",
+      "role": "accepted mask-corrected preparation",
+      "bytes": 2969186,
+      "sha256": "82077aa0f594baca3190a724a3f99828f22ded059d5b4e4bcb2df652f6205d16",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/middle-plane.png",
+      "role": "accepted mask-corrected preparation",
+      "bytes": 3288326,
+      "sha256": "37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/near-plane.png",
+      "role": "accepted mask-corrected preparation",
+      "bytes": 2441049,
+      "sha256": "f26a6c3de329e80338d60779ce58a436cd9363600d66f0d20db4269a5d6c8cee",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/window-mask-1080p.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 10733,
+      "sha256": "a85f21cb5687b9f1e9f1b4b90102e89de97bf683076de500108af3a2b03e971f",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-next-preflight.iMUH0P/mask-user-review.json",
+      "role": "accepted correction review event",
+      "bytes": 2219,
+      "sha256": "d57240bbf2f5e557e2daa4d0be9c4d2151c841c9bc07959ab518769448f410e4",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/review/leaf-mask-comparison.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 97013,
+      "sha256": "1637fcf810064a5a254f98617718f62065a98c18f27fb95b34f5c3dba17a0f35",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/review/context-start.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 2807998,
+      "sha256": "23d3ff7ef3a1f9a19fc5ba6ee3557bfd0e0fd8d389837b40078ef9fc662c041a",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/review/context-middle.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 2817378,
+      "sha256": "65dfb7043f2ee74f7ebc3d70c0f607b5cdb20135c8fee778dee581edd6760d5b",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/tabi-leaf-mask.ey9rmD/prepared/review/context-end.png",
+      "role": "accepted mask correction review artifact",
+      "bytes": 2886490,
+      "sha256": "723d73cea00257a8e9ecca1dac968635bdc236874c9a357d08cd634abeafd079",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/far-correction/admission.json",
+      "role": "historical still-generation receipt",
+      "bytes": 6776,
+      "sha256": "6a33e4e1c3135e3f8aea51f00f039346c05c685247c759860499d3b4d53e4bc5",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/far-correction/panorama-api.json",
+      "role": "retained ComfyUI far-correction panorama-api.json",
+      "bytes": 5663,
+      "sha256": "7551b5c3406e7e6e529050daa0da0d81c994bd55692545634769893da54d5f66",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/far-correction/prompt.txt",
+      "role": "retained ComfyUI far-correction prompt.txt",
+      "bytes": 1684,
+      "sha256": "680e0ab09741a0ce4e509d05f2fff3222957c7ceb7a6a5474b22874ed5f4b464",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/far-correction/layer-native-3072x512.png",
+      "role": "selected native ComfyUI far-correction drawing",
+      "bytes": 1653756,
+      "sha256": "2ae29462425d6ded27a2f0933bb539a299cc1b8a7ea59db587b56cc0bffe8f6f",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/far-correction/inputs/style.png",
+      "role": "retained ComfyUI conditioning input",
+      "bytes": 353808,
+      "sha256": "34f609a91fdda260f5ba9d2c742b8a38f6c081d7b19c6ee57da81c631f1576de",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/far-correction/inputs/tower.png",
+      "role": "retained ComfyUI conditioning input",
+      "bytes": 583354,
+      "sha256": "5720f94219236ac6dfe33c03d634ab5adade566d09609de394f31176acab127e",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/middle/admission.json",
+      "role": "historical still-generation receipt",
+      "bytes": 5657,
+      "sha256": "7e11f929fcecb389c26f696311bd5a44a44ee93296c337272a0d8328a5946731",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/middle/panorama-api.json",
+      "role": "retained ComfyUI middle panorama-api.json",
+      "bytes": 5206,
+      "sha256": "a90010c7d9184bb8b22e1982fc101a3f0d5c348309ad62f43809cc70cc106177",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/middle/prompt.txt",
+      "role": "retained ComfyUI middle prompt.txt",
+      "bytes": 1898,
+      "sha256": "5ec599d11e7121f2d05179b85900f84d1526b754f3a96d193e5b379460009352",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/middle/layer-native-3072x512.png",
+      "role": "selected native ComfyUI middle drawing",
+      "bytes": 1770600,
+      "sha256": "79fe9c5e6eb4945b5b0d088a8692760b2beeee2c8e1f32160515658b4c672d36",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/middle/inputs/style.png",
+      "role": "retained ComfyUI conditioning input",
+      "bytes": 371269,
+      "sha256": "aefe8f577eb3277ae0c13dc1b6d2a3e745219edc57bfaa4164e603506c4fa311",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/near/admission.json",
+      "role": "historical still-generation receipt",
+      "bytes": 5654,
+      "sha256": "3808adf195ea08447947b17a33407f22d71df4a4abd46af64cbd87edb18c6cc8",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/near/panorama-api.json",
+      "role": "retained ComfyUI near panorama-api.json",
+      "bytes": 5586,
+      "sha256": "c614344c0f6e4dac214480e33de38503e97926370b5047d7b8d6e6c4a19e9b2c",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/near/prompt.txt",
+      "role": "retained ComfyUI near prompt.txt",
+      "bytes": 2280,
+      "sha256": "f2d8ccf6726ac845e748e98781e0803914609a80364a46317516e836f339df0e",
+      "historicalPinChecked": true
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/near/layer-native-3072x512.png",
+      "role": "selected native ComfyUI near drawing",
+      "bytes": 2042174,
+      "sha256": "622c202a0bc08b9299f353f479b4194ff9f745d31ffa7675c1c2205722dd1e8f",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/near/inputs/style.png",
+      "role": "retained ComfyUI conditioning input",
+      "bytes": 378036,
+      "sha256": "79648979678652e8e1c88bdf3fbc4bd9520fbf66d7940fbea8dc7dc275f0f281",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/finishing/far-correction-x2.png",
+      "role": "selected finished scenery",
+      "bytes": 6994700,
+      "sha256": "01dfcb1a967d2aa6203c67ae7bc1a758e5792f1aec43a8df048ea61d9ad7272e",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/finishing/middle-x2.png",
+      "role": "selected finished scenery",
+      "bytes": 7504067,
+      "sha256": "f98c8a8eda9b3a2d2d857bc82a9d0256bceb40555f2f96347f5cc0aff3483b2f",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/finishing/near-x2.png",
+      "role": "selected finished scenery",
+      "bytes": 8319218,
+      "sha256": "800bfa3f5af6251f3ba39aaac07b3b45d07fa728ed94b9f9b7d4642ef732373e",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/finishing/upscale-api.json",
+      "role": "retained RealESRGAN finishing graph",
+      "bytes": 384,
+      "sha256": "c3adafc44a8377588e9d68ca8314894f6fcb3a69832801f227cc9cb23a614d30",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/review-frames.jpg",
+      "role": "existing decoded 20-second review sheet",
+      "bytes": 1203197,
+      "sha256": "eee202967bfdacafbb2c987f1cebf9516c9e85d02f08e560b82c430086f82ad5",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/decoded-review/partial-decoded-review.jpg",
+      "role": "existing decoded 30-second review sheet",
+      "bytes": 2026035,
+      "sha256": "7940bffe7aa314cfe8eddbaee6fe233617c327103c9d08605728edbf5e0831ea",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/ParallaxHost.kt",
+      "role": "historical Kotlin production-service harness",
+      "bytes": 17787,
+      "sha256": "4e88484db857a30210c33a043c55d53eaf043edeb06afffdf878acb5cf1f8414",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/render/motion-request.json",
+      "role": "historical exact controlled-motion request",
+      "bytes": 13495,
+      "sha256": "0ed8279d9e080eb1072a2fa6ba64ebc18eefead07ea5b848829c48d0248615bf",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/blink-schedule.json",
+      "role": "historical absolute blink schedule",
+      "bytes": 62535,
+      "sha256": "bed3fd587a40d7bb1ec6559384a904e3a9fde24bd93c84769b0a82f56a5f0ce3",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-continuity.0lyIo2/source-proof.json",
+      "role": "historical source proof",
+      "bytes": 193038,
+      "sha256": "1912c8ee1fa626b1ee6b08272828ea0afb05b14c2524e974a10f5ee56f513269",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-tail-review.rT83Xd/decoded-proof.json",
+      "role": "completed historical decode proof",
+      "bytes": 405579,
+      "sha256": "ed46535e531b3fba38132db5fd50af5dd476d9507fb3a5ccd07e05712de765f5",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/tabi-next-preflight.iMUH0P/coverage-result.json",
+      "role": "historical 60-second coverage analysis",
+      "bytes": 5256,
+      "sha256": "dcfb792a243dfe4a73f73209f17e9eb8df9ad06699c8ed0f153b69d78b6c0c2c",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png",
+      "role": "original finished TABI scene",
+      "bytes": 2554183,
+      "sha256": "01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/final-source/tools/video-motion/render.cjs",
+      "role": "historical compositor source",
+      "bytes": 50339,
+      "sha256": "c4d1ff5db7ede326dea551ab93621936958638f03629b0de35f893e547d5acf1",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "tools/video-motion/render.cjs",
+      "role": "current compositor source at recovery checkpoint",
+      "bytes": 55563,
+      "sha256": "3332cc623e0e780ee89ec37d2e28df72c5353ef85176b7ccea9bf6270829ba9b",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/final-source/tools/video-motion/scenery.cjs",
+      "role": "historical compositor source",
+      "bytes": 24488,
+      "sha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "tools/video-motion/scenery.cjs",
+      "role": "current compositor source at recovery checkpoint",
+      "bytes": 24488,
+      "sha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+      "historicalPinChecked": false
+    },
+    {
+      "path": "tools/video-motion/package.json",
+      "role": "current runtime dependency pins",
+      "bytes": 420,
+      "sha256": "79ae9257384be483f2b16215d2bcb9e09052e91eb2937a00da5ae48bdb74bd00",
+      "historicalPinChecked": false
+    }
+  ],
+  "recipe": {
+    "stillArtwork": "ComfyUI Flux2 Klein FP16 derivative + Qwen3 4B + Flux2 VAE; selected 3072x512 paintings, RealESRGAN x2 finishing",
+    "motion": "Existing Kotlin controlled-media services + Node/Canvas compositor + FFmpeg H.264",
+    "tabi": "Original fixed character/body/hands/cabin; only registered open/closed eye blending",
+    "frameRange": {
+      "startFrame": 0,
+      "frameCount": 900
+    },
+    "fps": 30,
+    "canvas": {
+      "coordinateSpaceId": "scene",
+      "width": 1920,
+      "height": 1080
+    },
+    "seed": 2026092804,
+    "camera": {
+      "startFrame": 0,
+      "durationFrames": 900,
+      "travelXPixels": 720.4006677796327,
+      "travelYPixels": 0,
+      "motionBlurSamples": 3,
+      "shutterFraction": 0.5
+    },
+    "depthMultipliers": [
+      1,
+      2,
+      3
+    ],
+    "nearStartingShiftPixels": 480,
+    "newPreparation": "build/tabi-leaf-mask.ey9rmD/prepared",
+    "smallLeftPanes": "static in these references"
+  },
+  "currentSourceComparison": [
+    {
+      "file": "tools/video-motion/render.cjs",
+      "historicalSha256": "c4d1ff5db7ede326dea551ab93621936958638f03629b0de35f893e547d5acf1",
+      "currentSha256": "3332cc623e0e780ee89ec37d2e28df72c5353ef85176b7ccea9bf6270829ba9b",
+      "identical": false
+    },
+    {
+      "file": "tools/video-motion/scenery.cjs",
+      "historicalSha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+      "currentSha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+      "identical": true
+    }
+  ],
+  "installedModelFileObservation": [
+    {
+      "id": "klein-fp16",
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/diffusion_models/flux-2-klein-4b-from-approved-fp8-dequant-fp16.safetensors",
+      "present": true,
+      "sizeMatchesHistorical": true,
+      "historicalSha256": "f21ba054e1805c35811a0548f8be1cd7c36369f706c62c63106b6f4d9f4bac30",
+      "hashRechecked": false,
+      "loaded": false
+    },
+    {
+      "id": "qwen-3-4b",
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/text_encoders/qwen_3_4b.safetensors",
+      "present": true,
+      "sizeMatchesHistorical": true,
+      "historicalSha256": "6c671498573ac2f7a5501502ccce8d2b08ea6ca2f661c458e708f36b36edfc5a",
+      "hashRechecked": false,
+      "loaded": false
+    },
+    {
+      "id": "flux2-vae",
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/vae/flux2-vae.safetensors",
+      "present": true,
+      "sizeMatchesHistorical": true,
+      "historicalSha256": "868fe7b343cc8f3a19dbcfcafbc3d5f888802be3f89bd81b65b3621a066ce8f3",
+      "hashRechecked": false,
+      "loaded": false
+    }
+  ],
+  "limitations": [
+    "Existing video hashes and receipt-bound preparations match; this is not a newly executed render or live ComfyUI readiness test.",
+    "Current compositor source differs from the historical snapshot; current-schema fixture and short artifact comparison precede longer rendering.",
+    "Corrected mask has accepted still evidence but no corrected moving video.",
+    "Current near scenery reaches about 30.63s; 60s needs more authored near and far coverage and bounded execution.",
+    "No full 3-5 minute export or integrated Video UI is delivered.",
+    "Historical preview colour matrix is unspecified; preserve references and compare display appearance when validating a new output."
+  ],
+  "mediaLocal": true,
+  "newNativeRuns": 0
+}

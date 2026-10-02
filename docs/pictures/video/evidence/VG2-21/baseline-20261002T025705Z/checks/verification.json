@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "checkedFiles": 68,
+  "failures": [],
+  "mediaModelOrDecoderLaunches": 0,
+  "scope": "Retained source/recipe identity only; no current runtime or moving pass."
+}

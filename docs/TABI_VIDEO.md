@@ -17,12 +17,75 @@ This document preserves supplied artwork, scoped artistic decisions and runtime
 measurements. Older task IDs, commands and dated status statements below identify
 their original evidence; they are not active queue dependencies or authorization
 to resume an experiment. TASKS-VIDEO alone owns current video work. Production-pilot reviews
-now precede app development: **VG2-07** character, **VG5-05** combined 60 seconds,
-and **VG5-07** full pilot/editor handoff. Later **app** gates remain VG6-02 and
+now precede app development: **VG2-22** recovered blink/parallax, **VG5-05**
+combined 60 seconds, and **VG5-07** full-film artifact review. New character
+actions are deferred optional experiments after the recovered base is stable. Later **app** gates remain VG6-02 and
 VG6-06; none of these new/later gates is passed. VG3 design permission/approval is
 still separate. Earlier “next VG4-01” or app-first statements are historical.
 
+## Selected blink/parallax baseline (2026-10-02)
+
+The project user rejects the recent picture/direction and explicitly selects
+[tokyo-parallax-20s-1080p.mp4](pictures/video/tests/tokyo-parallax-20s-1080p.mp4)
+and [tabi-tokyo-continuity-30s-1080p.mp4](pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4)
+as good results to build from. This supersedes the rig-first sequence; it does
+not retroactively approve the later arm experiments or establish full-film readiness.
+
+Read-only recovery reverified both MP4 hashes against the historical receipts:
+20 seconds `30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7`;
+30 seconds `abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea`.
+Existing decoded review sheets were inspected; no new decode or playback was run.
+The reusable read-only check and 68 file pins are in
+`docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`.
+
+| Recovered stage | Exact retained owner / behavior |
+| --- | --- |
+| Original scene | `tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png`; fixed TABI, hands, body, props and cabin |
+| ComfyUI artwork | `build/video-test-archive-2026-09-28/previous-tests/tokyo-parallax-20s-2026-09-28/evidence/{far-correction,middle,near}/`; selected graphs/prompts/conditioning/drawings, Klein FP16 derivative + Qwen3 4B + Flux2 VAE |
+| Finishing | The same archive's `finishing/`; three selected RealESRGAN x2 paintings |
+| Successful motion | `build/tabi-continuity.0lyIo2/ParallaxHost.kt`, `render/motion-request.json` and `blink-schedule.json`; existing production services + Node/Canvas + FFmpeg |
+| Future corrected inputs | `build/tabi-leaf-mask.ey9rmD/prepared/`; all original/corrected receipt-listed assets match, with accepted still decision in `build/tabi-next-preflight.iMUH0P/mask-user-review.json` |
+
+The recipe uses 1080p30, camera speed 480/599 pixels per frame, relative scenery
+depths 1/2/3, three shutter samples at 0.5 shutter fraction, seed 2026092804 and
+absolute blink timing. The 30-second near plane starts 480 pixels farther right.
+Only the large right window moves; the reference's small left panes stay fixed.
+ComfyUI made artwork; these videos did not use whole-scene generative I2V.
+
+`scenery.cjs` still matches the successful source snapshot; `render.cjs` has later
+changes. Recovering sources does not prove the current runtime's output. The
+selected model files exist at their recorded sizes, but their hashes/server were
+not revalidated or launched. VG2-22 first checks current import/renderer compatibility
+and prepares a fresh ten-second comparison using the accepted mask correction.
+It needs no new artwork or rig. Preserve original reference videos and sealed
+receipts; historical harnesses are recipe evidence, not commands to replay.
+
+Then extend scenery: the retained extent check reaches about 30.63s for near art;
+60s needs at least 82 extra far pixels and 2,117 near pixels at current placement,
+plus join/filtering margins. Reuse supplied art first and use the retained local
+ComfyUI method only for missing scenery under a new finite scope. No stretching,
+slowing or repeated footage. The corrected mask has still approval, not a new
+moving pass. Historical colour matrix remains unspecified; compare new output
+appearance without modifying the references. Full 3–5-minute delivery is pending.
+
+The unadmitted VG2-18 `encode-20261002T023519Z` continuation is cancelled. Its
+empty scratch directory was removed after path/device/inode checks; all saved
+frames, packets and failed evidence remain. The recovery owner's
+`checks/wave-cancellation.json` records zero native calls. Unfinished rig/action
+rows are deferred OPTIONAL; previous DONE/BLOCKED evidence remains unchanged.
+[Current tasks](../TASKS-VIDEO.md#baseline-recovery-2026-10-02) govern the next step.
+
+Recovery validation: 68 pinned-file checks and 18 headless documentation/architecture
+tests pass (8 documentation, 10 architecture; zero failures/errors). The temporary
+init enforces headless mode and excludes `MidiCoreNativeResponsivenessTest`; only
+root test selectors ran, no desktop suite or native media. No production/build
+code changed, so full `make test`/`make build` were not repeated for this reset.
+`git diff --check` passes. Exact commands/results: recovery `checks/`.
+
 ## Selected coherent rig method (2026-10-01)
+
+**Historical direction, deferred on 2026-10-02.** The selected blink/parallax
+baseline above now governs work; do not resume pending rig packets from this section.
 
 Following rejection of the seven-pose movie, the user says **“i want to go with
 the first route”** and requests tasks to test the process before working on the

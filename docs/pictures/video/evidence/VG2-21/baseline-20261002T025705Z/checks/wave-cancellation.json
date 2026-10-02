@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-02T02:58:03.978379+00:00",
+  "decision": "CANCELLED_BEFORE_ADMISSION",
+  "reason": "User rejects rig direction and selects earlier successful blink/parallax videos.",
+  "packetPath": "docs/pictures/video/evidence/VG2-18/encode-20261002T023519Z/packets/wave.json",
+  "packetSha256": "9ac8e0d88259bbbf870d84df0fc8dfc1edb801a13ceb65aaf0ddf902e6cf099c",
+  "newNativeCalls": 0,
+  "scratchRemoved": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-saved-source-c7x7g5q5",
+  "scratchIdentity": {
+    "path": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-saved-source-c7x7g5q5",
+    "device": 16777229,
+    "inode": 112238006
+  },
+  "preserved": "All packet/helper/source/frame/media evidence; no sealed record rewritten.",
+  "nextOwner": "docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z"
+}

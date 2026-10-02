@@ -1,0 +1,52 @@
+{
+  "at": "2026-10-02T03:03:15.274867+00:00",
+  "scope": "Source recovery, documentation and read-only evidence helper; no production implementation or new media.",
+  "baselineVerification": {
+    "status": "PASS",
+    "checkedFiles": 68,
+    "failures": [],
+    "mediaModelOrDecoderLaunches": 0,
+    "scope": "Retained source/recipe identity only; no current runtime or moving pass."
+  },
+  "testCommand": "JAVA_HOME=/Users/marcoandreose/.sdkman/candidates/java/21.0.11-tem ./gradlew -I <temporary-headless.init.gradle> :test --tests *DocumentationIntegrityTest --tests *TargetArchitectureRulesTest",
+  "headlessInit": "allprojects { tasks.withType(org.gradle.api.tasks.testing.Test).configureEach { systemProperty \"java.awt.headless\", \"true\"; exclude \"**/MidiCoreNativeResponsivenessTest*\" } }",
+  "testResults": [
+    {
+      "name": "DocumentationIntegrityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "TargetArchitectureRulesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "gradleTasks": {
+    "executed": 1,
+    "upToDate": 5
+  },
+  "desktopTestsRun": false,
+  "excludedNativeWindowTest": "MidiCoreNativeResponsivenessTest",
+  "fullMakeTestBuildRepeated": false,
+  "reason": "No production/test/build wiring changed; focused documentation/architecture checks cover this reset.",
+  "gitDiffCheck": "PASS",
+  "mediaModelDecoderLaunches": 0,
+  "unrelatedChanges": "Original nine-file user changes preserved separately from this checkpoint.",
+  "logs": [
+    {
+      "path": "checks/headless-focused-final.log",
+      "bytes": 432,
+      "sha256": "d1d94d5c1d88281bbac5156edcf8e466758b7176fce111ddf10d19ee38742d80"
+    },
+    {
+      "path": "checks/headless-focused.log",
+      "bytes": 432,
+      "sha256": "d1d94d5c1d88281bbac5156edcf8e466758b7176fce111ddf10d19ee38742d80"
+    }
+  ]
+}

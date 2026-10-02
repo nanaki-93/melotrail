@@ -56,47 +56,57 @@ This documentation change does not remove test sources or implement new runners.
 
 ## Production-first video gates (2026-09-28)
 
-Updated 2026-10-01: prove a standalone coherent 2D/2.5D rig, two readable actions
-and description-driven short reuse before minimum production binding. Then prove
-a complete Tokyo film and a second-city method check before app functionality. The user's
-selected series keeps TABI in the train, changes the city exterior and gives each
-episode a materially different small-activity sequence. The roadmap is
-[PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order); dependencies/status remain in
-[TASKS-VIDEO](../TASKS-VIDEO.md#production-first-priority-2026-09-28), with
-[recipe/current evidence](TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30) in TABI.
-Fixture-proven control and static-look approval are not actual-kit or moving passes.
-This update grants no artwork/model/media budget, live admission or UI permission;
-new review decisions below remain pending and generic projects remain supported.
+Updated 2026-10-02: the user selects the existing 20-second Tokyo parallax and
+30-second TABI continuity videos as the successful baseline and rejects the recent
+picture/direction. This supersedes rig-first scheduling. Keep the original fixed
+TABI/cabin and approved blink; new character actions are later isolated experiments.
+Roadmap: [PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order). Active scope:
+[TASKS-VIDEO](../TASKS-VIDEO.md#baseline-recovery-2026-10-02). Recipe and exact
+sources: [TABI](TABI_VIDEO.md#selected-blinkparallax-baseline-2026-10-02).
 
 | Production gate | Required evidence and real decision |
 | --- | --- |
-| VG2-12–18/07 · Rigged wave | Approve coherent parts/neutral, prove rig support/joints and guarded colour/media handling, then produce one newly admitted five-second/150-frame wave. Fully decode; user reviews normal-speed identity, arm volume/texture, joint attachment, props/frond/contact and return. No whole-arm swaps, ghost fades or static-only acceptance. Historical VG2-08/11 failures stay blocked; no production import in this standalone gate. |
-| VG2-09/10 · One additional activity | Validate only the selected small non-blink motif's compatible inputs/control and actual contact/entry/return, produce its separately admitted moving proof and record exact user review. A static reading/listening pose or unsupported sip/page turn is not a second demonstrated activity. |
-| VG4-05 · Scenery join | Validate window/frond/foreground mattes against the actual cabin and every allowed pose; the old fixed-head mask is not automatically reusable. Prove a moving offscreen handoff with matching overlap, rigid travel, no seam/hole/wrap, whole requested/shutter coverage and supplied 60-second extents. Account for all selected exterior apertures. Record the user's seam decision; static art/width alone is insufficient. |
-| VG4-08, VG2-19/20 · Standalone description/reuse | Two supported scene descriptions produce different 20–30-second action sequences using unchanged rig/art/action versions, without manual keyframe edits. Bound scenery coverage; reject missing actions/props/viewpoints, ambiguity and conflicts. User checks both exact clips against the descriptions. This is not production/import/full-film/app proof. |
-| VG4-07/09/02 · Executable episode | After short proof and explicit runtime choice, persist/compile the proven rig/action semantics through existing owners; pin activity choice/order/timing/rests/returns, rig/parts/capabilities/versions and scoped dependencies. Prove production import/support, exact process/decoder ownership, absolute chunk/state parity, input invalidation and 180/240/300s fixtures. Do not pretend the held-pose contract already supports a rig. |
-| VG5-03/05 · Combined 60 seconds | Scene/pose-compatible masks, two reviewed non-blink activities/returns, deliberate quiet intervals and extended Tokyo scenery in one silent 1080p30 result. Fully decode/check timing/action/scenery/chunk joins, measure stages and aggregate resources, then record normal-speed review. Prove restart after a verified completed chunk while later work remains, not reconciliation of a finished MP4. |
-| VG4-06, VG5-06/07 · Complete Tokyo pilot | Complete supplied corridor/alpha/shutter coverage and a newly admitted 180s/5400-frame batch. Verify continuous moving parallax, distinct passing views about every 5–10 seconds with quiet travel, and the pinned varied two-activity schedule inside the fixed cabin. Isolated tests do not approve long holds/loops. Fully decode; inspect timestamps/first/last/actions/all joins and disclosed reuse. User reviews the supplied whole film without a required editor session. No production-integration/release pass follows. |
-| VG5-08/09/10 · Different episode proof | After full-film review, prepare one selected second-city pack/script as new pins, validate every visible exterior aperture and any new motif, then produce/review a separately admitted 20–30-second reuse clip through the same owners. Change exterior plus activity choice/order/timing/quiet intervals, retaining compatible cabin/TABI/props. A city rename/reseed or Tokyo-art substitution fails; no regenerated/overwritten first film. This is not second-city full coverage/film approval. |
-| VG6-05/06 · Full next-city production film | After separate headless app-integration/early/package gates, validate the selected second city's complete corridor/sequence/contact, admit a new full batch, produce/decode one real 180–300s export through production services and obtain whole-artifact review. No live UI/editor test. The short reuse clip, first harness film and planning arithmetic cannot substitute. |
+| VG2-21 · Recover references | Match selected MP4/source/receipt pins and recover ComfyUI graphs, scenery, blink and render settings. Record current-source differences and cancel the unadmitted wave. No new runtime or moving pass is inferred. |
+| VG2-22 · Short baseline check | Verify current-schema import/runtime compatibility; one separately admitted ten-second output preserves the original character/cabin, blink, speed/depth and uses the accepted leaf/window correction. Fully check output and obtain artifact-specific review. No new art, rig or inference. |
+| VG4-05 · Scenery extension/join | Preserve fixed-character mattes and style/scale/speed; verify supplied 60-second extent/alpha/shutter coverage, one moving offscreen join and user seam review. Account for selected exterior apertures. New scenery uses a separately bounded preparation step. |
+| VG4-02, VG5-01/02 · Continuous execution | Bind existing controls through current plan/job/media owners, prove absolute chunk/state parity, completed-chunk restart, resource bounds and immutable encoding. No rig schema or second ledger. |
+| VG5-03/05 · 60 seconds | Original fixed TABI/cabin plus blink and extended parallax; full decode, timing/joins, measured stages/resources and normal-speed review. No mandatory new character action in this baseline milestone. |
+| VG4-06, VG5-06/07 · Complete Tokyo pilot | Full supplied corridor and a separately admitted 180s/5400-frame batch with continuous depth travel, distinct views and quiet intervals. Fully check and review the supplied whole film; no repeat-to-fill or inferred app/release pass. |
+| VG5-08/09/10 · Second city | New exterior artwork and episode-specific supported brief through the same owners; separately admitted 20–30-second proof and review. Check all visible apertures. Any new character motif gets a separate moving proof. |
+| VG6-05/06 · Full app output | Separate headless app-integration/package checks and one complete selected second-city export with whole-film/release decisions. Earlier harness/short-video evidence cannot substitute. |
 
-Keep source, rendered lossless PNG and decoded H.264 claims distinct. New motion
-may require new support/mattes and clean plates; declare those regions rather than
-weakening the old fixed-pixel checks or claiming the old mask follows a moving head.
-Use one declared single-pass alpha policy for replacement poses. Preserve approved
-29 and all old comparisons; a changed neutral/composed appearance needs an explicit
-new artifact-specific baseline decision, not a loosened threshold or hidden alpha
-switch. For moving backgrounds, check the neutral cutout and time-appropriate
-composition/contact, not equality of entire first/last frames containing different
-scenery. Bind new derivatives to new descriptors/requests in a fresh current-schema project.
-Never regenerate/overwrite the approved 30-second video, replace historical inputs,
-migrate old projects or rewrite sealed review/timeout receipts.
+VG2-21 recovery evidence is in
+`docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
+verifier checks 68 local file pins, including both exact reference MP4s and every
+receipt-listed original/corrected preparation asset. Retained decoded review
+sheets were inspected without new playback or decode. ComfyUI graphs/prompts,
+conditioning and selected native/finished art survive. Selected model files exist
+at historical sizes; their hashes and a live server were not checked. The current
+scenery source is identical to the successful snapshot; the main renderer differs.
+Thus recovery is not current-runtime output acceptance. Model/render/encode/decode
+launches: zero. `checks/wave-cancellation.json` records cancellation before admission
+and removal of only the verified empty task-owned scratch. Media remain local.
 
-The minimal runner must reuse existing intent/claim/job/process ownership and
-verify completed chunk hashes/state before reuse. Retain incomplete/uncertain work;
-no automatic retry or partial-chunk/abrupt-crash recovery claim without proof.
-The pinned FFmpeg has image2/H.264, not concat. Validate the numbered PNG sequence
-and final output; a different assembly/tool route requires separate testing.
+Recovery validation: 68 pinned-file checks and 18 headless documentation/architecture
+tests pass (8 documentation, 10 architecture; zero failures/errors). The temporary
+init enforces headless mode and excludes `MidiCoreNativeResponsivenessTest`; only
+root test selectors ran, no desktop suite or native media. No production/build
+code changed, so full `make test`/`make build` were not repeated for this reset.
+`git diff --check` passes. Exact commands/results: recovery `checks/`.
+
+The user's selection is an explicit creative direction decision about those two
+files. Their original sealed take states, historical mask issue and unspecified
+colour matrix stay recorded. The mask correction has its earlier scoped still
+approval; corrected motion has not been produced. Preserve the original videos
+and all later rejected candidates/failures. Source PNG exactness, decoded H.264
+appearance and human motion acceptance are separate claims. New derivatives need
+new current-schema descriptors and output destinations, never historical rewrites.
+
+Each new native step retains exact input/tool/output pins and finite time/memory/
+storage/traversal limits. Reuse current process/job ownership; do not rerun consumed
+historical packets. The pending rig encode is cancelled, not awaiting approval.
+New actions, if later selected, need compatible support/mattes and their own moving
+review. No live app, editor, GUI or model session is part of this recovery check.
 
 VG2-06 technical character output (2026-09-29): after one memory-only
 pre-launch refusal, a separately authorized retry sealed a 217-frame isolated

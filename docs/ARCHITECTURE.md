@@ -91,12 +91,11 @@ source identities and prepared image facts. Unsupported project/plan versions
 reject without migration or artifact rewriting. Proposal persistence is not
 executable readiness: application integration, continuous execution/checkpoints
 and complete export orchestration remain VG4–VG5 work. `VideoAssemblyActionKind`
-still has scalar scheduled actions and no pose-sequence or rig semantics. After
-the selected standalone rig/reuse proof, VG4-07/09 must scope only the required
-proven-action representation/adapter through existing assembly/planner/store/
-preparation/job/media owners, with one current contract, rig/part/action/timing
-pins and absolute chunk-boundary tests. Runtime held-pose admission is neither
-rig support nor episode-schedule integration.
+still has scalar scheduled actions and no pose-sequence or rig semantics. The
+2026-10-02 reset first binds the existing blink/parallax controls through current
+assembly/planner/store/preparation/job/media owners. Optional future articulated
+actions need an explicitly selected contract and adapter; VG4-07/09 are deferred.
+Runtime held-pose admission is neither rig support nor episode-schedule integration.
 Video code cannot write a
 MIDI project or import MIDI application/storage owners. Only the application
 composition root coordinates the two workspaces.
@@ -148,39 +147,40 @@ Audition timbre is not authoritative and does not render audio files.
 
 ## Video isolation and remaining integration
 
-Production order (updated 2026-10-01): standalone coherent parts/rig → reviewed
-five-second wave → reviewed second action → description-driven 20–30-second
-reuse proof/review. Only then scope minimum production rig/action binding and
-moving scenery join → combined 60-second proof/review → full 180-second Tokyo
-film/editor review → selected second-city reuse proof/review → app integration.
-The default/current full target is 180 seconds, not a mandatory 240; the product
-supports 180–300. See [PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order) and the
-[TABI recipe/evidence](TABI_VIDEO.md#tabi-train-series-recipe-2026-09-30).
-The user-selected prepared 2D/2.5D method first uses Blender as a standalone proof
+Production order (updated 2026-10-02): recover the successful 20/30-second
+blink/parallax references → short current-runtime comparison with the accepted
+mask correction → scenery extension/moving join → bounded runner and reviewed
+60 seconds → complete 180-second Tokyo film → second-city reuse → app integration.
+The product range remains 180–300 seconds. See [PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order)
+and [current recipe](TABI_VIDEO.md#selected-blinkparallax-baseline-2026-10-02).
+
+ComfyUI supplied the scenery paintings; existing Kotlin controlled-media services,
+Node/Canvas and FFmpeg produced the successful videos. The cabin and character
+stay fixed apart from the registered blink. The pending Blender wave encode was
+cancelled before admission and rig integration is deferred. No archived renderer,
+legacy schema, second job ledger or MIDI dependency is introduced by recovery.
+The current renderer has evolved; verify current import/runtime/output against
+the retained recipe before a longer run. Do not replay historical admission packets.
+
+Limit pre-pilot engineering to the existing controls' continuous execution,
+verified completed-chunk continuation and bounded encoding. Reuse current
+planner/store/decoder work; app caller cleanup and UI follow the proven recipe.
+Future character actions are isolated experiments requiring compatible inputs
+and moving review before use. For another city, reuse compatible cabin/TABI/props
+and replace exterior art plus the supported episode brief through the same owners.
+Account for all visible exterior apertures; static small panes in the references
+do not prove a full new-city replacement. Generic scenarios remain valid.
+
+The deferred Blender work remains a standalone proof
 candidate, outside production projects/jobs. New ignored rig/scripts/input data
 are experiment artifacts, not a second durable ledger or a production rig schema.
-Use a fresh directly owned supervisor; do not reuse the failed shared-socket guard
-or mutate consumed packets. Preserve rejected seven-pose footage and all failures.
-Image-generation-assisted missing-parts preparation is external, finite and
-separately admitted; it does not add in-app synthesis/extraction.
 
-After that proof is accepted and the production runtime explicitly chosen, a thin
-harness must use existing Kotlin project/job/media ownership. Scope a lazy rig
-media-stage adapter and typed action binding behind tests; no second scheduler,
-parallel persistence schema or MIDI dependency. The current held-pose API must
-not masquerade as an articulated rig. Limit pre-pilot product engineering to those
-required bindings, verified completed-chunk continuation and bounded encoding.
-Preserve existing planner/store/decoder work; defer app caller cleanup and UI.
-
-For the user's recurring train series, reuse compatible cabin/camera/TABI/props,
-replace city-specific exterior art and activity choice/order/timing/quiet intervals,
-and derive new immutable scene/plan/job identities through the same owners. These
-are content inputs, not a separate episode schema, city-specific backend or second
-scheduler. All visible exterior apertures and the full selected duration need
-coverage; original static small panes and a short reuse clip cannot prove a full
-new-city film. Generic scenarios remain valid. Full-pilot success unlocks second-
-city method testing; its reviewed short proof unlocks app work, not full second-
-city coverage, app/release acceptance or automatic live budgets.
+New reusable proof helpers/inputs/checks go under
+`docs/pictures/video/evidence/<task-id>/<unique-run-id>/`; existing historical
+locations and sealed records stay unchanged. Use separate disposable OS scratch
+and remove only owned temporary files; follow [storage and cleanup](VALIDATION.md#evidence-storage-and-temporary-file-cleanup).
+Local ComfyUI artwork preparation is external and separately bounded; it does
+not add in-app picture generation. This recovery starts no model or media job.
 
 The initial full-film assembly route is verified absolute chunk PNGs followed by
 one immutable numbered image sequence and a pinned FFmpeg image2/H.264 encode.
@@ -224,10 +224,10 @@ entry/return and ≤9000-frame span; each invocation remains ≤300 frames. It r
 applies alpha once, not a dissolve or native articulated interpolation, and rejects
 simultaneous blink/breathing/head/subject-steam controls. Synthetic production-
 imported tests and later matching-kit source checks pass, but seven-pose moving
-quality is rejected; the selected rig route is not implemented by this control.
-Window/frond/foreground mattes must fit the selected cabin and every allowed rig
-state as well as any supplied poses; the accepted
-old fixed-head mask is not automatically compatible. Original art/masks/videos
+quality is rejected; the deferred rig route is not implemented by this control.
+The recovered baseline uses the accepted fixed-character mask correction. If a
+future action moves the head/body, revalidate support and occlusion for its entire
+motion; the fixed-head mask does not automatically cover that new capability. Original art/masks/videos
 remain immutable. The Video tab/application composition, visible motion setup and
 full assembly/export remain planned in VG2–VG6. For this series, VG6's full app
 export uses the selected second city/different script only after complete corridor/
