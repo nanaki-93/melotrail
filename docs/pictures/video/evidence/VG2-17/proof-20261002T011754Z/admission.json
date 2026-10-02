@@ -1,0 +1,174 @@
+{
+  "status": "AUTHORIZED",
+  "exactUserMessage": "you can continue with the point 2 of the list",
+  "authorizationBasis": "The existing point-2 instruction authorizes the standalone reusable-motion proof; this fresh record scopes its required tiny colour prerequisite to this exact prepared packet. It is not a claim of a new user review of the packet or of visual acceptance.",
+  "packetSha256": "ab1eae9ea50203894ae164fda59e9e57a71837e26aad5f485dc978cbb0503103",
+  "limits": {
+    "attempts": 1,
+    "retries": 0,
+    "fallbacks": 0,
+    "cumulativeSeconds": 180,
+    "phaseSeconds": {
+      "render": 60,
+      "encode": 60,
+      "validationAndCopy": 60
+    },
+    "aggregateRssBytes": 4294967296,
+    "newStorageBytes": 134217728,
+    "minimumFreeDiskBytes": 19327352832,
+    "minimumFreeMemoryBytes": 3221225472,
+    "normalMemoryPressureSamples": 3,
+    "maximumSwapGrowthBytes": 0,
+    "freeDiskReserveBytes": 10737418240
+  },
+  "operations": [
+    {
+      "id": "render",
+      "phase": "render",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/colour_source.cjs",
+        "--generate"
+      ]
+    },
+    {
+      "id": "source",
+      "phase": "render",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/verify_pixels.cjs",
+        "source"
+      ]
+    },
+    {
+      "id": "encode",
+      "phase": "encode",
+      "decoderCost": 0,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-hide_banner",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-f",
+        "image2",
+        "-framerate",
+        "30",
+        "-start_number",
+        "1",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-%04d.png",
+        "-frames:v",
+        "6",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-c:v",
+        "h264_videotoolbox",
+        "-allow_sw",
+        "0",
+        "-b:v",
+        "12M",
+        "-vf",
+        "scale=iw:ih:in_range=full:out_range=tv:out_color_matrix=bt709",
+        "-pix_fmt",
+        "yuv420p",
+        "-aspect",
+        "640:360",
+        "-colorspace",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-color_primaries",
+        "bt709",
+        "-color_range",
+        "tv",
+        "-video_track_timescale",
+        "15360",
+        "-movflags",
+        "+faststart",
+        "-f",
+        "mp4",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "probe",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+        "-v",
+        "error",
+        "-count_frames",
+        "-show_streams",
+        "-show_frames",
+        "-show_format",
+        "-of",
+        "json",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "decode",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-threads",
+        "1",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/preview.mp4",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-fps_mode",
+        "passthrough",
+        "-vf",
+        "scale=iw:ih:in_range=tv:out_range=full:in_color_matrix=bt709",
+        "-pix_fmt",
+        "rgba",
+        "-threads",
+        "1",
+        "-start_number",
+        "1",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/decoded/frame-%04d.png"
+      ]
+    },
+    {
+      "id": "pixels",
+      "phase": "validationAndCopy",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/verify_pixels.cjs",
+        "decoded"
+      ]
+    }
+  ],
+  "storageDecision": {
+    "userAnswer": "Keep media locally; commit scripts and checks (Recommended)",
+    "localDate": "2026-10-02",
+    "decision": "Retain native MP4, lossless source/converted/decoded frames and any failures under the exact local VG2-17/VG2-18 proof owners. Commit scripts, checks and hash records only. Do not force-add ignored MP4s or stage frame sequences.",
+    "scope": "This storage decision accompanies the existing instruction to continue point 2. No public upload or hosted spending."
+  },
+  "scope": "One tiny local colour proof; zero Blender frames; no retry, fallback, upload or production import. Wave is separately bound after this passes.",
+  "recordedUtc": "2026-10-02T01:37:54.597309+00:00"
+}

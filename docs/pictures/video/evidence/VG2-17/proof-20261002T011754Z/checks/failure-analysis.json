@@ -1,0 +1,107 @@
+{
+  "status": "COLOUR_PROOF_FAILED_RETAINED_NO_RETRY",
+  "failure": {
+    "status": "STOPPED_NO_RETRY",
+    "error": "Media codec/geometry/cadence/color mismatch",
+    "decoderReservations": 1,
+    "operationsReserved": 4,
+    "sampledPeakAggregateRssBytes": 43450368,
+    "peakNewStorageBytes": 9137689,
+    "elapsedSeconds": 11.804696415999999
+  },
+  "mismatches": {
+    "color_transfer": {
+      "expected": "bt709",
+      "actual": "iec61966-2-1"
+    }
+  },
+  "encodedPngColourChunks": [
+    {
+      "type": "sRGB",
+      "dataHex": "00"
+    }
+  ],
+  "observed": "Converted Rec.709 pixel values were transported in PNGs with an sRGB chunk; the actual VideoToolbox MP4 reports sRGB transfer despite output flags.",
+  "inference": "Frame metadata inherited from the PNG appears to override the encoder output transfer option. The prepared correction assigns AVFrame Rec.709 metadata after explicit RGB/YUV conversion. Native effectiveness remains unproved.",
+  "references": [
+    "https://ffmpeg.org/ffmpeg-filters.html#setparams",
+    "https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/hwcontext_videotoolbox.c"
+  ],
+  "actualCounts": {
+    "syntheticSourceFrames": 6,
+    "pngConversions": 6,
+    "encodes": 1,
+    "probeScans": 1,
+    "fullDecodes": 0,
+    "reviewCopies": 0,
+    "blenderFrames": 0
+  },
+  "preservedLocalMedia": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0001.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0002.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0003.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0004.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0005.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0006.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/preview.mp4",
+      "sha256": "484c69945d3843fd7458cb9c574e2c049a8aa8dcd9ea021a3fb439d7e9912fa0",
+      "bytes": 146796
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0001.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0002.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0003.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0004.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0005.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0006.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    }
+  ],
+  "storageDecision": "Keep media locally; commit scripts and checks (Recommended)"
+}

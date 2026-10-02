@@ -1,0 +1,19 @@
+{
+  "userChoice": "Keep media locally; commit scripts and checks (Recommended)",
+  "localExcludeFile": "/Users/marcoandreose/DEV/lab/melotrail/.git/info/exclude",
+  "exactFrameDirectoryPatterns": [
+    "/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/",
+    "/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/",
+    "/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/decoded/",
+    "/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/source/",
+    "/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/",
+    "/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/decoded/",
+    "/docs/pictures/video/evidence/VG2-18/proof-20261002T011754Z/live/source/",
+    "/docs/pictures/video/evidence/VG2-18/proof-20261002T011754Z/live/encoded_input/",
+    "/docs/pictures/video/evidence/VG2-18/proof-20261002T011754Z/live/decoded/",
+    "/docs/pictures/video/evidence/VG2-18/proof-20261002T014011Z/live/source/",
+    "/docs/pictures/video/evidence/VG2-18/proof-20261002T014011Z/live/encoded_input/",
+    "/docs/pictures/video/evidence/VG2-18/proof-20261002T014011Z/live/decoded/"
+  ],
+  "mp4": "Already excluded by repository rules; never force-add."
+}

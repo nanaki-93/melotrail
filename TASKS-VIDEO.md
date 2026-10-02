@@ -503,7 +503,7 @@ movie as an animation baseline.
 | VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | DONE |
 | VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | DONE |
 | VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | DONE |
-| VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | TODO |
+| VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | WAITING_USER |
 | VG2-18 | Execute one explicitly admitted five-second/150-frame rigged wave with fixed cabin/head/body contact, encode/probe/full-decode and publish a new validated review copy. Measure stage time/RSS/disk and every frame's geometry/occlusion/edge/colour/PTS/return checks. No automatic retry, import, take selection or short-success-to-full-film promotion. Preserve source PNGs, rig/action/input pins and all failed media. | VG2-17 | TODO |
 | VG2-19 | After both actions and description mapping pass, run one separately bounded pair of 20–30-second standalone scene tests with identical approved rig/art/action versions but two materially different supported descriptions/order/timing. Include rest, both activities, returns and bounded scenery travel within measured coverage. No manual keyframe/rig edit between requests, regenerated character or whole-clip repeat. Validate both complete outputs, absolute-frame repeatability/chunk parity and changed-request dependencies; each clip gets its own explicit one-attempt budget. | VG2-10, VG4-08, VG2-17 | TODO |
 | VG2-20 | User reviews both reuse clips against their original descriptions for motion quality, continuity/contact and actual differences, and decides whether the rigged process warrants minimal production binding. Record limitations and the selected proof runtime; do not infer permanent app-backend adoption, long-film readiness or UI permission. Reject/repair the method before scaling if the same arm defect remains. | VG2-19 | WAITING_USER |
@@ -794,6 +794,40 @@ gets its own admission bound to the existing point-2 continuation and exact pack
 Focused JVM checks, 74 Node tests, 18 supervision checks, headless `make test`
 (2m36s), `make build` (2m41s) and `git diff --check` passed. The native-window
 `MidiCoreNativeResponsivenessTest` was excluded, not verified. VG2-16 is DONE.
+
+VG2-17 first native colour attempt / correction preparation (2026-10-02):
+`docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/` retains six source
+and six converted PNGs plus the failed local MP4. Source/transfer transport passed;
+one encode and one combined probe ran. The probe reports sRGB transfer
+(`iec61966-2-1`) where the converted pixels require `bt709`; all other expected
+stream fields and the six exact 512-tick PTS values match. The strict check stopped
+before the full decode, review copy or any Blender render. Elapsed 11.80 seconds,
+sampled aggregate RSS 43,450,368 bytes, peak counted storage 9,137,689 bytes;
+three NORMAL resource samples had at least 4.90 GB free and zero swap. Failure,
+source/converted hashes, PNG colour chunks, native logs and cleanup are retained.
+VG2-17 is WAITING_USER for a fresh bounded native correction; VG2-18 never started.
+The unused old wave scratch was removed without launching its packet.
+
+Non-live correction owner:
+`docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/`. The converted PNGs
+carry an sRGB chunk; the proposed encoder now sets frame-level Rec.709 metadata
+after explicit RGB-to-YUV conversion, while preserving the numeric transfer and
+strict stream/decoded-pixel checks. This follows FFmpeg's `setparams` contract;
+its effectiveness on the installed encoder is not yet claimed. The tiny proof
+copies the six pinned source and six converted frames plus the patch reference;
+it generates no new source frames. Existing guards are copied unchanged except
+for exact frame-tag validation and fresh owner/packet names. Two regressions reject
+the actual failed MP4 and its old encode command. New colour packet SHA
+`2dfb24d13e69eb6f7ed1166c618b4a0b888440a0a7332357c6f3a902c56a6ec2`;
+wave proposal SHA `b0e4125152f0a2515aa0088629101c52dd09093d579d55ac4419f7b1dc0e9f67`.
+One-attempt, no-retry budgets remain 180s/128 MiB for colour and 900s/2 GiB for
+wave, with the same RSS/disk/memory/swap limits and two traversals per output.
+No native correction or wave admission is inferred from the failed packet. Media
+remain local; only scripts, checks and hash records are intended for Git.
+Both revised exact packets passed independent child-spy review. Focused JVM,
+76 Node and 20 direct supervision checks, headless `make test` (2m43s),
+`make build` (2m50s) and diff whitespace checks passed. The native-window test
+was excluded. The corrected native colour run and wave are still unstarted.
 
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under

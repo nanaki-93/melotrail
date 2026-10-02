@@ -1,0 +1,24 @@
+{
+  "status": "NON_LIVE_CORRECTION_HEADLESS_CHECKS_PASS",
+  "nodeTests": 76,
+  "directSupervisionTests": 20,
+  "focusedJvm": "PASS",
+  "makeTest": "PASS 2m43s; 1 executed, 13 up-to-date",
+  "makeBuild": "PASS 2m50s; 1 executed, 13 up-to-date",
+  "excludedTests": [
+    "MidiCoreNativeResponsivenessTest"
+  ],
+  "nativeCorrectionOperations": 0,
+  "logs": {
+    "checks/wave-packet-review.log": "dac3010525945df92bc42b308cfd7bc8ff1c8a712aa193c6dcace4d5fc7dcf55",
+    "checks/regression.log": "81f9345fceb5c64bd3180faf9222de2c41adb43b9ef59145935884da5b881131",
+    "checks/dry-run.log": "d8fef44bc65b2789860f9788232a6401c266d7cc404be244c97697886db80a03",
+    "checks/focused-final.log": "b090878220dfe17fbe4d761aab8202ebd2bb85e45ebceabae6409acae7d1210f",
+    "checks/diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "checks/make-test.log": "bbd06ad8651ed587f103efe25d37926bd760a42526a3bf9839f21f9d0b3a2b38",
+    "checks/make-build.log": "88cd85ef9a2e48248037d7d7482898b0a3ae02f6f214cb752204491d87bea9d5",
+    "checks/colour-packet-review.log": "94b95a2efbc4266cae81009fade1b341275dd7ba29e5728fa182482810d32791",
+    "checks/node-final.log": "0b545fc7116ec16d49fc4be9b93735fa84c7d16a564160dabdbbf90e448df2c7",
+    "checks/python-final.log": "2bc010fbc8d0c420e694313cd94bbd6a9942dc18b35d21097c34e2b43c06a70c"
+  }
+}

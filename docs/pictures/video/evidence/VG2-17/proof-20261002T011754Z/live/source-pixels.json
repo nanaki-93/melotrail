@@ -1,0 +1,39 @@
+{
+  "status": "SOURCE_AND_EXPLICIT_TRANSFER_PASS",
+  "frames": [
+    {
+      "frame": 1,
+      "sourceSha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "convertedSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182"
+    },
+    {
+      "frame": 2,
+      "sourceSha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "convertedSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182"
+    },
+    {
+      "frame": 3,
+      "sourceSha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "convertedSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182"
+    },
+    {
+      "frame": 4,
+      "sourceSha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "convertedSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182"
+    },
+    {
+      "frame": 5,
+      "sourceSha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "convertedSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182"
+    },
+    {
+      "frame": 6,
+      "sourceSha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "convertedSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182"
+    }
+  ],
+  "maxProtectedDelta": 0,
+  "changedPixels": 0,
+  "conversion": "sRGB EOTF -> linear -> Rec.709 OETF; RGB transport is already converted before YUV matrix encoding",
+  "converterSha256": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36"
+}

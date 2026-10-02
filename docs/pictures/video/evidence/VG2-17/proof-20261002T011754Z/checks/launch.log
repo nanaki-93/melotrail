@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/preview.py", line 417, in <module>
+    try:run(p)
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/preview.py", line 368, in run
+    facts = media_facts(json.loads((work / 'probe.log').read_text()))
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/preview.py", line 250, in media_facts
+    need(all(s.get(k) == v for k, v in expected.items()), 'Media codec/geometry/cadence/color mismatch')
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/preview.py", line 41, in need
+    raise RuntimeError(message)
+RuntimeError: Media codec/geometry/cadence/color mismatch

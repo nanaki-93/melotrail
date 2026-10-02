@@ -570,6 +570,27 @@ Focused JVM checks, 74 Node tests and 18 direct supervision checks pass. Headles
 up-to-date tasks. `MidiCoreNativeResponsivenessTest` was explicitly excluded; no
 interactive window or media tool ran. The final diff whitespace check passes.
 
+VG2-17 native failure (2026-10-02):
+`pictures/video/evidence/VG2-17/proof-20261002T011754Z/checks/failure-analysis.json`
+records the actual `iec61966-2-1` versus required `bt709` transfer mismatch. Six
+source/converted PNGs passed transport checks; the single encode and count/PTS
+probe completed, consuming one MP4 traversal. No full decode, review copy or
+Blender render followed. The failure and all 13 local media files have retained
+hashes; scratch was removed. The unstarted wave's empty scratch was also removed.
+
+`pictures/video/evidence/VG2-16/transfer-20261002T014011Z/` prepares the bounded
+correction: reuse exact source/converted frames, keep explicit transfer conversion,
+and use FFmpeg `setparams` to align per-frame Rec.709 metadata before encoding.
+The actual failed probe remains a negative fixture; old commands without the
+frame contract fail before dispatch. Twenty data-only supervision regressions
+include these two negatives. New frozen proposals retain the prior numeric
+colour tolerances and operation/resource ceilings; no extra encode/decode or
+visual approval is implied by their non-live checks.
+Both exact revised packets passed child-spy review. Focused JVM, 76 Node and
+20 direct supervision checks passed, followed by headless `make test` (2m43s),
+`make build` (2m50s) and diff whitespace checks. The native-window test remains
+explicitly excluded; the corrected native media path is not yet verified.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

@@ -1,0 +1,9 @@
+{
+  "previousPacketOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z",
+  "failedColourOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z",
+  "colourOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z",
+  "waveOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T014011Z",
+  "status": "NON_LIVE_CORRECTION_ONLY_FRESH_NATIVE_PERMISSION_REQUIRED",
+  "reason": "Keep actual converted pixel values and enforce Rec.709 frame metadata before VideoToolbox; preserve the strict tag and decoded-pixel gates.",
+  "storage": "User selects local media/frames; commit helpers, checks and hashes only."
+}

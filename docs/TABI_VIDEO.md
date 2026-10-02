@@ -255,6 +255,18 @@ lossless proof frames locally and commit scripts/checks/hashes; full-frame seque
 and ignored MP4s will not be added to Git. The exact wave still needs normal-speed
 review before any second activity.
 
+### VG2-17 colour result and prepared correction (2026-10-02)
+
+The six-frame colour experiment stopped after encoding/probing: its MP4 reports
+sRGB transfer although the supplied PNG code values had been converted to Rec.709.
+Source and converted frames, failed MP4 and checks remain under
+`pictures/video/evidence/VG2-17/proof-20261002T011754Z/`. No full decode or articulated
+wave ran. The separate `VG2-16/transfer-20261002T014011Z/` proposal reuses those
+frames and explicitly assigns matching encoder-frame colour metadata; it retains
+the original pixel conversion and acceptance limits. Native effectiveness awaits
+a fresh one-attempt admission, followed by the first wave only if colour passes.
+All media stay local under the user's storage choice.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

@@ -1,0 +1,9 @@
+{
+  "status": "STOPPED_NO_RETRY",
+  "error": "Media codec/geometry/cadence/color mismatch",
+  "decoderReservations": 1,
+  "operationsReserved": 4,
+  "sampledPeakAggregateRssBytes": 43450368,
+  "peakNewStorageBytes": 9137689,
+  "elapsedSeconds": 11.804696415999999
+}
