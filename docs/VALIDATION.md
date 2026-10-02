@@ -116,6 +116,16 @@ return direction. VG2-24 remains REVIEW; no composition/long-film pass follows
 from the technical checks. Retain complete local frames/media and commit only
 helper sources, request/pins, checks and owner updates.
 
+The subsequent fixed-cabin cutout study failed visual inspection after its
+initial attempt and two repairs. Evidence:
+`docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/checks/outcome.json`.
+Real-frame foreground regressions reproduce and fix missing warm face/frond
+pixels, but the final sampled composites still contain native exterior slivers
+and a clipped return-turn contour. Numeric witnesses do not supersede these
+visible failures. No new movie was encoded and no new inference/artwork occurred.
+The accepted raw motion remains unchanged. Further cutout repair waits for the
+requested fresh bounded allowance; VG2-24 is BLOCKED for that method gate.
+
 VG2-24 validation: focused ComfyUI/backend/documentation/architecture checks and
 headless filtered `make test`/`make build` pass. Root reports contain 794 tests,
 desktop reports 239 cached tests, all with zero failures/errors.

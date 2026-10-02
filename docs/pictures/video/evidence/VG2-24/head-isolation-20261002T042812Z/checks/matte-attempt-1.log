@@ -1,0 +1,3 @@
+Exception in thread "main" app.melotrail.video.adapter.VideoMediaProcessException: Video media process exited with code 1: Node.js v25.8.2.
+	at app.melotrail.video.adapter.VideoMediaProcess.run(VideoMediaProcess.kt:291)
+	at MotionTools.main(MotionTools.java:26)

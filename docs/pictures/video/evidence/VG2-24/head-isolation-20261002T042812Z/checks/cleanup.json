@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-10-02T04:42:27.286117+00:00",
+  "scratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-isolation-x43_vvj6",
+  "scratchBytesRemoved": 1559326,
+  "retainedLocalReviewBytes": 12132636,
+  "modelServerStarted": false,
+  "productionMediaCallsCompleted": true,
+  "scope": "Remove only this uniquely owned scratch after preserving every source, check and failed review sample.",
+  "scratchAbsent": true
+}

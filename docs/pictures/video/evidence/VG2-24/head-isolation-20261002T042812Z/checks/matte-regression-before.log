@@ -1,0 +1,33 @@
+{
+  "status": "FAIL",
+  "caseCount": 2,
+  "failures": [
+    {
+      "frame": 65,
+      "x": 269,
+      "y": 128,
+      "reason": "visible character removed"
+    },
+    {
+      "frame": 65,
+      "x": 285,
+      "y": 154,
+      "reason": "visible character removed"
+    },
+    {
+      "frame": 65,
+      "x": 277,
+      "y": 132,
+      "reason": "visible character removed"
+    },
+    {
+      "frame": 1,
+      "x": 361,
+      "y": 197,
+      "reason": "visible character removed"
+    }
+  ]
+}
+Real frame foreground/background witnesses
+
+4 !== 0

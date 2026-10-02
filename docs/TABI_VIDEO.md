@@ -134,6 +134,16 @@ velocity. Render temporal support around the join correctly; identical endpoint
 stills alone do not prove a smooth loop. The initial three minutes may not be filled
 with the old 20/30-second clip. Full motion, corridor and loop review remain pending.
 
+VG2-24 isolation follow-up is blocked after the bounded cutout study fails.
+The accepted native head motion remains the source; the existing empty-cabin
+plate and approved Sumida panorama were sampled without new model/artwork calls.
+Ten final composites preserve the corrected book/cup, but old exterior remains
+beside the fronds and the returning head clips at one sampled contour. The
+foreground pixel regressions pass without curing those visible defects. No new
+movie was encoded. Retained helpers, source pins and failure samples are under
+`docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/`; a fresh
+precise-contour repair allowance is requested before another attempt.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the

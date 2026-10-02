@@ -426,7 +426,7 @@ code changed, so full `make test`/`make build` were not repeated for this reset.
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
 | VG2-23 | Inspect existing scene/action references and prepare initial scene-matched drink/read/watch and additional Tokyo scenery reference candidates in the user-requested asset folders. Keep the original scene/props/style, pin sources/results and disclose missing registration/motion capability. This row delivers static candidates, not animation-ready layers or artistic approval. | VG2-21 | DONE |
-| VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | REVIEW |
+| VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | BLOCKED |
 | VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-24 | TODO |
 | VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | TODO |
 | VG2-27 | Review the exact breath/head/watch, drink and read clips at normal speed and relevant in-betweens. Record identity/style, attachment, contact, prop continuity, cadence and return decisions for every required activity. Repair rejected actions before the full film; no test score or static candidate substitutes. | VG2-24, VG2-25, VG2-26 | WAITING_USER |
@@ -494,6 +494,17 @@ desktop: 239 cached tests, zero failures/errors; `MidiCoreNativeResponsivenessTe
 excluded. No production or test wiring changed. Original approved art and both
 selected baseline videos remain byte exact; media stay local, docs/helpers/checks
 are versioned. Headless checks do not award the pending motion/composition pass.
+
+VG2-24 isolation follow-up: the accepted raw motion is retained. The bounded
+standalone cutout study in
+`docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/` reuses the
+existing clean cabin plate and approved Sumida panorama. The initial helper
+failed its module lookup in the owned scratch directory; two repairs produced
+ten samples each. Warm-face/frond pixel regressions now pass, but sampled
+composites retain old exterior beside the fronds and clip the returning head.
+This candidate fails visual inspection. The three-attempt limit is reached:
+VG2-24 is BLOCKED pending a fresh precise-contour repair allowance. No new model,
+artwork, MP4, take or full-film pass; source assets and approved motion are intact.
 
 ### Route 1 — Standalone rig proof tasks
 

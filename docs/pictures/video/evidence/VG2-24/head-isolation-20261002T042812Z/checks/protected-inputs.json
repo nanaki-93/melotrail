@@ -1,0 +1,57 @@
+{
+  "status": "UNCHANGED",
+  "files": [
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/00-neutral-book-facing-tabi.png",
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/01-drinking-book-facing-tabi.png",
+      "sha256": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png",
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/03-window-watch-book-facing-tabi.png",
+      "sha256": "5b3ba59efe869e1158be5ce4d770a33fa1ed0c7fa6e29ed4d608c5c747bcf59a"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/01-asakusa-sensoji-panorama.png",
+      "sha256": "fc39b3d0bdc632ac2cfbea90a68f148507745f9f71a0dc1d13c5d18e0b7420f8"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/02-sumida-river-skytree-panorama.png",
+      "sha256": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/03-ueno-shinobazu-pond-panorama.png",
+      "sha256": "41bd4ad859c62e83ff802422a2479431954cc98e0cb91122ce04a84265e149a2"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/04-yanaka-residential-rooftops-panorama.png",
+      "sha256": "bde1a4827cc8716292dcb3ea0bfac44951f0e1ce2c6621d7b23c558b86803182"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/05-shinjuku-skyline-panorama.png",
+      "sha256": "54940a967372d259cb3661997b152ffb410156d1d8ad58e82c900fcbbba0fe67"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/06-tokyo-bay-rainbow-bridge-panorama.png",
+      "sha256": "54850c937d59c1023c95996c1c73d9ac43b11913e507dca13dee400f8bf3bd60"
+    },
+    {
+      "path": "docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4",
+      "sha256": "abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea"
+    },
+    {
+      "path": "docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4",
+      "sha256": "30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/tabi-head-watch-5s-768x448-candidate.mp4",
+      "sha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2"
+    }
+  ]
+}

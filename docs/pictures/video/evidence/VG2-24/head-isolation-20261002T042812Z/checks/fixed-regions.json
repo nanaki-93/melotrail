@@ -1,0 +1,241 @@
+{
+  "frames": [
+    {
+      "name": "frame-0001.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    },
+    {
+      "name": "frame-0017.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    },
+    {
+      "name": "frame-0025.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    },
+    {
+      "name": "frame-0033.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    },
+    {
+      "name": "frame-0049.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    },
+    {
+      "name": "frame-0065.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 159,
+          "maxChannelDelta": 134
+        }
+      }
+    },
+    {
+      "name": "frame-0097.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 151,
+          "maxChannelDelta": 89
+        }
+      }
+    },
+    {
+      "name": "frame-0105.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    },
+    {
+      "name": "frame-0113.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    },
+    {
+      "name": "frame-0129.png",
+      "results": {
+        "cup": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "bookAndPen": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "posterAboveHead": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        },
+        "leftCabin": {
+          "changedPixels": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    }
+  ],
+  "regions": {
+    "cup": [
+      375,
+      252,
+      57,
+      71
+    ],
+    "bookAndPen": [
+      220,
+      321,
+      233,
+      62
+    ],
+    "posterAboveHead": [
+      113,
+      30,
+      60,
+      44
+    ],
+    "leftCabin": [
+      1,
+      1,
+      87,
+      175
+    ]
+  },
+  "interpretation": "Exact pixels only in these sampled fixed regions. These numbers do not pass the visibly defective moving matte, whole-cabin preservation or long-film continuity."
+}

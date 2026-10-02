@@ -1,0 +1,249 @@
+{
+  "task": "VG2-24",
+  "recordedAt": "2026-10-02T04:35:41.732104+00:00",
+  "status": "FAILED_COMPOSITION_REPAIR_LIMIT_REACHED",
+  "acceptedMotionSha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2",
+  "retainedMotionDirection": "Keep this motion direction",
+  "attempts": [
+    {
+      "attempt": 1,
+      "result": "Node lookup failed before image outputs; owned cwd differs from repo root."
+    },
+    {
+      "attempt": 2,
+      "result": "Ten samples generated; warm face highlights and right fronds lost."
+    },
+    {
+      "attempt": 3,
+      "result": "Ten samples generated; foreground witness regressions pass, but retained exterior beside fronds and clipped return-turn boundary still fail visual inspection."
+    }
+  ],
+  "prelaunchRejection": "An existing empty scratch child was rejected by production VideoMediaProcess. It was removed before the first Node launch.",
+  "visualFramesInspectedZeroBased": [
+    0,
+    24,
+    64,
+    104
+  ],
+  "unresolved": [
+    "Native scenery survives beside the right fronds; color-only separation is insufficient for similarly colored blossoms.",
+    "Return-turn profile clips to the interpolated boundary at frame 104.",
+    "The lower-body blend is not an independent breathing/contact proof.",
+    "One rigid exterior layer is not the required multi-depth 180-second corridor."
+  ],
+  "nativeInferenceCount": 0,
+  "newArtworkCount": 0,
+  "newMp4Count": 0,
+  "newMovieDecodes": 0,
+  "sourcePinsChanged": [],
+  "mediaRemainLocal": true,
+  "sampleFiles": [
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0001.png",
+      "bytes": 603718,
+      "sha256": "fa1776c78041a8f733979605cb010891c54cf99022d17aa77789eeecebda13d0"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0017.png",
+      "bytes": 603300,
+      "sha256": "63054003c58a0a4fc4e377cd035ab03d07da90b6fd48387b6bf16851ef6c46db"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0025.png",
+      "bytes": 603637,
+      "sha256": "cf9878a7ba41987f0d9ff119f92df655efba15dabf0073bf50407d07cc2d8029"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0033.png",
+      "bytes": 606936,
+      "sha256": "a8fc3e5a8c0ea3d439f5994cd1ea5db1d378ea5dee25010fa7809bae5d9d3726"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0049.png",
+      "bytes": 605480,
+      "sha256": "c01712bbfa9a0e9f8bfa9845382ca8342d4822acb604c18a5804fa96f5a0a657"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0065.png",
+      "bytes": 603979,
+      "sha256": "2d7fe9a24c42d069c368ee4040575e0cdbe14da59772d71d4917ee2b2d039f05"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0097.png",
+      "bytes": 600566,
+      "sha256": "16c0c314edec3cf0f130a2827d8449f2d0b21997b551f9ac4c8e453ecc8efd6f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0105.png",
+      "bytes": 596815,
+      "sha256": "8d355e9d8c126087e6e81168f27a265da4a8a90914920b94f4569e5e9a4c9449"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0113.png",
+      "bytes": 595756,
+      "sha256": "e3aa02389436cbc395ac604bc574bdc3c2192bf9fbbd5ee265ee07312a73ce89"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/frame-0129.png",
+      "bytes": 594006,
+      "sha256": "2f20d445518a27a157d0a77e1016ef0fa29f40aeca6e7f552dbc29890da1283f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0001.png",
+      "bytes": 3827,
+      "sha256": "07d439777beb8347d99fdce83e27fccfd577bb02b471f34580ec6ec5ecfd8384"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0017.png",
+      "bytes": 3870,
+      "sha256": "7e60b95096e1575af67b9d6d7e18f81d5fe9f0e17620d67197030cbd1a83b8b0"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0025.png",
+      "bytes": 3602,
+      "sha256": "4a3037af3f59ee6eb85b50949d20922a5d61a5a5bee1d472a82c5af5ecf901cc"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0033.png",
+      "bytes": 3442,
+      "sha256": "d90d68f46131472ca4b7a66c54e92b2b5bfbfa6e52b7009a7a6246ae13785947"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0049.png",
+      "bytes": 3471,
+      "sha256": "c696cca45d314359151770f2b26d447d86ebe13da0a3e42273d7933ec0848333"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0065.png",
+      "bytes": 3420,
+      "sha256": "473e010995e4187ed9700869d06eb92d0afcae8720850cfa1784931a59e732ce"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0097.png",
+      "bytes": 3474,
+      "sha256": "14ddfee85eecdf70fef3a656d5a43be9d525fd0e59536b773263c1994ed00d18"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0105.png",
+      "bytes": 3572,
+      "sha256": "faa4134c495602a46f8bb60a575a30e135d6850bc7ca1e650bd4259877d9798a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0113.png",
+      "bytes": 3799,
+      "sha256": "a115dde27179a7c79e292a7ab7a5ce11e1ca16ae44e746e6695963cc89cd138e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-2-samples/matte-0129.png",
+      "bytes": 3861,
+      "sha256": "9f0823be74f94aa171f0a435d78befba8fe200874af44a7193fb45e4b4fd6dbb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0001.png",
+      "bytes": 604099,
+      "sha256": "4d73fe2965faab3b56bf701c2a68b2d081482645dc2da21c41218fc07ddaa432"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0017.png",
+      "bytes": 604332,
+      "sha256": "9c5e64d0b21a36f42c5538864c98652cc1c7f15c1dec1353ac0832cbe814ae0b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0025.png",
+      "bytes": 605751,
+      "sha256": "faa31c99c96f0d59a9ae28021b6a1b55a7df462116aa92706cfdd3af28bbb2c5"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0033.png",
+      "bytes": 611240,
+      "sha256": "b8ed27d2a494f1bc1ec5fcdd5042d50ecf77b04e77d0b9c08083fbedb33f4d41"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0049.png",
+      "bytes": 609979,
+      "sha256": "1b02b0273e36b916aec6f8186935a81d70706f4478e407b50706861617a00e4f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0065.png",
+      "bytes": 608798,
+      "sha256": "244a99bb3dd99994f06179f1b6dc09df83cb89935be4b7dbce97f7c149e3780e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0097.png",
+      "bytes": 605622,
+      "sha256": "fcbaf30d33a18aca427eb8db06df1acdf07022518d0eaf377403a36b430cc80e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0105.png",
+      "bytes": 599085,
+      "sha256": "275fe75092c6550ea994e172f774bc5542baae439e0bf6c5e7c897f7825f93b1"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0113.png",
+      "bytes": 597179,
+      "sha256": "7782d043b8ffb51754fa564473a0d34dbc9496c75c1f60ba2467d524b893dbe8"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/frame-0129.png",
+      "bytes": 595875,
+      "sha256": "436434e2a4dbc73aa65cd64a55b69831eb212793cf9ddb9a4f8a1f652658b2db"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0001.png",
+      "bytes": 3552,
+      "sha256": "1c5116ad38df90b18c4aa847450a84162ddea5171ec39de903dce78f389aa0e6"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0017.png",
+      "bytes": 3563,
+      "sha256": "19524de8fbaca361b512e983c5173d44a17cbda4e176a8e83ae972e5933af607"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0025.png",
+      "bytes": 3449,
+      "sha256": "a140514d43218b51e889b75770e3931847c600928826758d7a1a50f2c0478cc0"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0033.png",
+      "bytes": 3323,
+      "sha256": "421843d74662e6597176c002a9b2f449d3d4d500f871a83cce98d863d2890014"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0049.png",
+      "bytes": 3434,
+      "sha256": "55c5dc7d680b949d49b2704164387b7ec3d5f1a1e1e8ee986922320067dbbc1a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0065.png",
+      "bytes": 3491,
+      "sha256": "93311688036955f0bdddab1a9858fc1262eb644f75c56b37efea3dac7762b66c"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0097.png",
+      "bytes": 3372,
+      "sha256": "67fcb3e6a29b516fb4ad2873535afb6f4bc8f08946d2c36382d33480067513c8"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0105.png",
+      "bytes": 3430,
+      "sha256": "d2fee6e8470915bfe00658d8500973a2612e3942a40a67fb013b1f60e76e23d0"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0113.png",
+      "bytes": 3487,
+      "sha256": "3621613acde89a1e3258d10472ff1949ba40ae6be2e6ada4735c8003aac039c5"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/review/attempt-3-samples/matte-0129.png",
+      "bytes": 3530,
+      "sha256": "ca25146b027cece631416b399d877a15e6f18e1ae7ad4f885605372a51945480"
+    }
+  ],
+  "nextGate": "Fresh bounded local repair allowance, then precise actual-frame contours and all-frame edge/prop checks before an encode. No automatic retries or scale-up.",
+  "fixedRegionDiagnostics": {
+    "sampleCount": 10,
+    "cupBookPenAndUpperPoster": "Exact native-first-frame pixels in all ten samples. This is not exact equivalence to the high-resolution image before I2V.",
+    "leftCabin": "159/151 changed pixels in frames 64/96 because the far-left fronds enter the nominated region; do not report it as an unobstructed fixed-cabin pass.",
+    "report": "checks/fixed-regions.json"
+  }
+}

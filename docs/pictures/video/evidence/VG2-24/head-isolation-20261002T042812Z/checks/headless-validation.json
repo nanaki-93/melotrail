@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "check": "focused",
+      "command": [
+        "./gradlew",
+        "--no-daemon",
+        "--console=plain",
+        "--init-script",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/scripts/headless.init.gradle",
+        ":test",
+        "--tests",
+        "*DocumentationIntegrityTest",
+        "--tests",
+        "*TargetArchitectureRulesTest"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 4.534
+    },
+    {
+      "check": "make-test",
+      "command": [
+        "make",
+        "test",
+        "GRADLE=./gradlew --no-daemon --console=plain --init-script /Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/scripts/headless.init.gradle"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 159.295
+    },
+    {
+      "check": "make-build",
+      "command": [
+        "make",
+        "build",
+        "GRADLE=./gradlew --no-daemon --console=plain --init-script /Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/scripts/headless.init.gradle"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 154.002
+    }
+  ],
+  "excluded": [
+    "MidiCoreNativeResponsivenessTest"
+  ],
+  "note": "Headless automated checks do not pass the visibly failed composition."
+}

@@ -1,0 +1,5 @@
+Exception in thread "main" app.melotrail.video.adapter.VideoMediaProcessException: Refusing to reuse existing job working directory: /var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-isolation-x43_vvj6/matte-attempt-1
+	at app.melotrail.video.adapter.VideoMediaProcess.invalid(VideoMediaProcess.kt:430)
+	at app.melotrail.video.adapter.VideoMediaProcess.validateWorkingDirectory(VideoMediaProcess.kt:374)
+	at app.melotrail.video.adapter.VideoMediaProcess.run(VideoMediaProcess.kt:145)
+	at MotionTools.main(MotionTools.java:26)
