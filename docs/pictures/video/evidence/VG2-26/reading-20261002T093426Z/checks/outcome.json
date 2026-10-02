@@ -1,0 +1,32 @@
+{
+  "task": "VG2-26",
+  "status": "REVIEW",
+  "movie": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/tabi-read-comfy-1080p.mp4",
+    "bytes": 6099541,
+    "sha256": "33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6"
+  },
+  "nativeMovieSha256": "bc51f87a45541d46d22020a1be2f564e99bb1c58ed9be51bc36f70d854f3d791",
+  "generationSubmissions": 1,
+  "finishingSubmissions": 1,
+  "automaticRetries": 0,
+  "nativeMotion": [
+    768,
+    448,
+    129,
+    25
+  ],
+  "finishedMotion": [
+    1920,
+    1080,
+    129,
+    25
+  ],
+  "durationSeconds": 5.16,
+  "technicalChecks": "PASS: exact cadence, complete decode, no audio, all-frame native/finished face-content comparison",
+  "humanAccepted": false,
+  "limitations": [
+    "Fine cuff/frond detail variation during motion",
+    "No rigid exterior, seamless loop, cadence-conversion or complete-film proof"
+  ]
+}

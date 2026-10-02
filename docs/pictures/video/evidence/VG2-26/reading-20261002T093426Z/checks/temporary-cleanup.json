@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "removedOwnedScratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-26-reading-_r8ad9qx",
+  "filesRemoved": 23,
+  "bytesRemoved": 1715465,
+  "mediaPresentInScratch": false,
+  "retainedEvidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z",
+  "ownedComfySessionsStoppedAndRetained": 2,
+  "scope": "Remove only this unique task-created OS directory; preserve media, user WIP, build caches and unrelated environments."
+}

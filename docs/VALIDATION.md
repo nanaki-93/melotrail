@@ -244,6 +244,45 @@ only scripts, graphs, requests, checks and owner documentation are committed.
 The action-quality blocker does not authorize a further native retry, new model,
 hosted fallback, reading generation or full-film render.
 
+**Human drinking acceptance (2026-10-02):** the project user says “i also approve
+this one. go with the next”. This accepts the exact guided movie with SHA-256
+`e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4`, after the
+hand/cup transition limitation was disclosed. The movie, native source and both
+workflow hashes were reverified in
+`docs/pictures/video/evidence/VG2-25/accepted-drinking-20261002T093426Z/checks/user-acceptance.json`.
+VG2-25 is DONE at the user's accepted quality; its prior BLOCKED receipt remains
+historical and no defect is relabelled as absent. The same instruction authorizes
+VG2-26's next bounded reading proof. It does not accept that unseen clip, rigid
+scenery, a seamless loop, cadence conversion or a completed film.
+
+**VG2-26 reading proof (2026-10-02):**
+`docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/` retains the fresh
+request, two consumed approved image pins, external guide graph, runtime evidence
+and review output. One generation runner succeeds in 277.807s, with peak sampled
+owned RSS 23,515,545,600 bytes. One full-frame ComfyUI finish succeeds in 89.548s,
+with peak RSS 9,074,524,160 bytes. No retry runs; samples omit some GPU allocations
+and production pressure/swap safeguards remain active. Both owned sessions stop,
+are copied/hash-verified and are removed only from their temporary runtime owners.
+
+Final movie SHA-256:
+`33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6`.
+Full probe/decode verifies silent H.264 High/yuv420p, 1920×1080, 129 frames,
+25fps, 5.16s, zero start and exact i/25 presentation times. ComfyUI declares
+BT.709 matrix/primaries with sRGB transfer. Source remains native 768×448.
+All-frame face checks pass: maximum mean RGB delta 5.3874/255 and minimum
+99.715% within 40/255; the blacked-out-face negative fails. All 129 native frames
+and six Full-HD frames were visually inspected. Reading and the return are
+visible, with attached paws and retained notebook/props; fine cuff/frond detail
+changes remain. These checks do not grant normal-speed artistic acceptance,
+rigid scenery, a seamless loop, cadence conversion or full-film approval.
+
+Four invalid guide graphs are rejected. The focused suite passes 60 tests;
+final headless make/Node outcomes and report hashes are in `checks/validation.json`.
+`MidiCoreNativeResponsivenessTest` is excluded, not passed; no visible window
+is opened. Sixteen protected files are byte-exact. VG2-26 is REVIEW; media stay
+local and only scripts, graphs, requests, checks and owner documentation are
+committed. No further native generation is needed for this review candidate.
+
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
 verifier checks 68 local file pins, including both exact reference MP4s and every

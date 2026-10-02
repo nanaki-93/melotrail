@@ -428,8 +428,8 @@ code changed, so full `make test`/`make build` were not repeated for this reset.
 | VG2-23 | Inspect existing scene/action references and prepare initial scene-matched drink/read/watch and additional Tokyo scenery reference candidates in the user-requested asset folders. Keep the original scene/props/style, pin sources/results and disclose missing registration/motion capability. This row delivers static candidates, not animation-ready layers or artistic approval. | VG2-21 | DONE |
 | VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | REVIEW |
 | VG2-28 | Retain human approval of the exact ComfyUI head/watch clip and full-frame 1080p finishing workflow as the reference for subsequent action tests. This splits the accepted checkpoint from VG2-24's remaining breathing and fixed-scene obligations; it does not approve those obligations or the full film. | VG2-23, VG2-02 | DONE |
-| VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-28 | BLOCKED |
-| VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | TODO |
+| VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-28 | DONE |
+| VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | REVIEW |
 | VG2-27 | Review the exact breath/head/watch, drink and read clips at normal speed and relevant in-betweens. Record identity/style, attachment, contact, prop continuity, cadence and return decisions for every required activity. Repair rejected actions before the full film; no test score or static candidate substitutes. | VG2-24, VG2-25, VG2-26 | WAITING_USER |
 
 VG2-23 first preparation: `docs/pictures/video/evidence/VG2-23/action-scope-20261002T030904Z/`.
@@ -606,6 +606,36 @@ Final headless make/Node outcomes, report hashes and native-window exclusion are
 recorded in the guided run's `checks/validation.json`. Protected art and previous
 movies remain byte-exact; media stay local, with scripts/checks/docs committed.
 No human acceptance, rigid panorama, cadence conversion or full-film pass follows.
+
+VG2-25 human acceptance (2026-10-02): the user says “i also approve this one. go
+with the next”, accepting the exact guided 1080p drinking movie above after its
+transition smearing was disclosed. Its bytes and both workflows were reverified;
+`docs/pictures/video/evidence/VG2-25/accepted-drinking-20261002T093426Z/checks/user-acceptance.json`
+retains the decision. This completes the drinking checkpoint at the explicitly
+accepted visual quality and unlocks VG2-26; it does not claim the known defects
+vanished or approve unseen actions, fixed scenery or the full film. Earlier
+BLOCKED receipts remain accurate records of the agent's pre-acceptance review.
+
+VG2-26 reading proof (2026-10-02), now REVIEW:
+`docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/` uses the approved
+neutral start/end and reading midpoint through the same core LTX guide nodes.
+One actual ComfyUI motion submission and one complete-frame 1080p finish succeed,
+with no correction/retry. The final `finish/review/tabi-read-comfy-1080p.mp4` has
+SHA-256 `33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6`:
+129 frames, uniform 25fps, 5.16s, silent H.264, enhanced from 768×448 to 1920×1080.
+TABI lowers the chin-resting paw and gaze, attends to the corrected open notebook,
+blinks and makes small head/paw movements, then returns to rest. Notebook
+orientation, headphones, cup and pen are retained. All native frames and six
+Full-HD samples were inspected; fine cuff/frond detail varies during transitions.
+No human acceptance, rigid scene or seamless loop is inferred.
+
+Full decode, exact timing and all-frame face-content checks pass, including a
+face-dropout negative. Four guide-wiring negatives are rejected; 60 focused
+client/runtime/documentation/architecture tests pass. Final filtered headless
+make/Node outcomes and report hashes are in `checks/validation.json`, with the
+native-window test excluded. Sixteen protected original/reference files remain
+byte-exact, both owned runtimes stopped, and media stay local. VG2-27 still needs
+all required action decisions, including VG2-24's remaining obligations.
 
 ### Route 1 — Standalone rig proof tasks
 

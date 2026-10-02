@@ -1,0 +1,123 @@
+{
+  "task": "VG2-26",
+  "createdAt": "2026-10-02T09:36:42.488054+00:00",
+  "sourceHead": "8ba63e60e88ed3a1a40aeadb3649ce56c68d66ea",
+  "authorization": {
+    "quote": "i also approve this one. go with the next",
+    "interpretation": "One fresh bounded short reading proof after explicit approval of the exact drinking clip, using the accepted local guide/1080p finishing method."
+  },
+  "scope": "One guide-conditioned reading/return clip using approved neutral and reading sources, installed local model/runtime/sampler, and a fresh immutable typed workflow binding.",
+  "imageConditioning": "Neutral image initializes the video and guides zero-based frame 128; approved reading image guides frame 64. Both uploaded images are fingerprinted.",
+  "native": {
+    "workflow": "External reading API graph based on the tested two-image LTX guide graph; installed ComfyUI LTX-2.3/Gemma models and sampler unchanged.",
+    "width": 768,
+    "height": 448,
+    "frameCount": 129,
+    "fps": 25,
+    "durationSeconds": 5.16,
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "cancellationTestSubmissions": 0,
+    "inferenceLimitSeconds": 1200,
+    "wholeRunnerLimitSeconds": 1500,
+    "observedProcessTreeRssLimitBytes": 38654705664,
+    "rssLimitation": "Sampled RSS excludes some GPU/Metal allocations; unchanged production critical/unknown pressure and 8-GiB extra-swap safeguards also apply.",
+    "ownedEvidenceAndSessionLimitBytes": 2147483648,
+    "minimumFreeDiskBytes": 21474836480,
+    "mediaProbePerProcessLimitSeconds": 120,
+    "additionalReviewDecodeTraversals": 1,
+    "hostedFallback": false,
+    "modelDownloads": false
+  },
+  "processOwnership": "ComfyVideoRuntime owns and reaps the only model server. VideoMediaProcess owns native media commands. The outside guard observes only its own JVM tree and requests graceful JVM shutdown on a limit.",
+  "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/output",
+  "storage": "MP4s and any frame PNGs remain local; commit request, helper sources, input pins, checks and owner status only.",
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/request.json",
+      "bytes": 2568,
+      "sha256": "df10727480668cfa05252d4f903a152dfcfbea96fde0c4fe1f83b802d7b8398d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/workflow/guided-read-api.json",
+      "bytes": 5782,
+      "sha256": "5776169457281a3ac024066a4d2d6d40f92b8d147078ba1b43a7e29adb6945f0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/ActionPilot.java",
+      "bytes": 11052,
+      "sha256": "200b872be1d1e74a8a71b46e51666e1fecc56b0317aa33ed43ff6bd1c4f134bb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/MotionTools.java",
+      "bytes": 2200,
+      "sha256": "9ac343b53c6db47f1938e093a95c4da5070cdd8cf9761a97f90550f2dfc14a09"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/check-guided-graph.py",
+      "bytes": 2206,
+      "sha256": "618f5d695592dac3aa8a555bdcb66aedb35efa846e7e1857411f7c447bb74b5b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/decode-native.py",
+      "bytes": 2512,
+      "sha256": "9f6a8f63f61be344557bceb12386fb9fc62445dfb418920997db69db8340cea3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/headless.init.gradle",
+      "bytes": 657,
+      "sha256": "f61d8aa116b36f177c4c9b3893e3e69e4777c7b3812159eef02e162f08415b48"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/review-sheets.cjs",
+      "bytes": 1449,
+      "sha256": "33bcff79cd5f9f009259d1a4ec93c9f911312605decdc78e9209c2ba92caf9bb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/run.py",
+      "bytes": 7130,
+      "sha256": "96680b6f2f2f435ad2b404225511f0974d2ac1c4ad3e5d318c8d547b8e8fae8a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/inputs/approved-neutral-scene.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/inputs/approved-reading-guide.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/comfyui/v0.35.0/comfy_extras/nodes_lt.py",
+      "bytes": 59416,
+      "sha256": "01575b886e9abacd08c7ce39e7bde9ef7c7cc8f17063d726e2bf4a320a512d95"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-26-reading-_r8ad9qx/classes/ActionPilot.class",
+      "bytes": 19663,
+      "sha256": "0a6516dcc5d0245a969854c909705ce336dae49aaef2bc2fd5ed3b9765e97679"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-26-reading-_r8ad9qx/classes/ComfyFinish.class",
+      "bytes": 13412,
+      "sha256": "a8153d2f2c0a7ccfd8994dcf27da4b093083026298bd342f01b8648a0bd3956b"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-26-reading-_r8ad9qx/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-26-reading-_r8ad9qx/classes/MotionTools.class",
+      "bytes": 5225,
+      "sha256": "b5f5bf388b6095d2750f47e9d008a993a6f01ac266bac5ca03177b09dc8a9df0"
+    }
+  ],
+  "preflightFreeDiskBytes": 254196326400
+}

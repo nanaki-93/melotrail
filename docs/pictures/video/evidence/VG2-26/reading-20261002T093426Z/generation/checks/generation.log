@@ -1,0 +1,18 @@
+SESSION=/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-03885e0e-74c4-42fb-a765-1b80cbb8ede8
+SUBMITTED=attempt-e9dd5b62-7f81-4a8f-aa60-5e7d4d47880a
+OBSERVATION=15 state=ACTIVE
+OBSERVATION=30 state=ACTIVE
+OBSERVATION=45 state=ACTIVE
+OBSERVATION=60 state=ACTIVE
+OBSERVATION=75 state=ACTIVE
+OBSERVATION=90 state=ACTIVE
+OBSERVATION=105 state=ACTIVE
+ACTION_PILOT_PASSED video=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/output/publication/generated/vg2-26-read/attempt-e9dd5b62-7f81-4a8f-aa60-5e7d4d47880a/cf8e35d3-bad1-3b12-ad7e-d15e16dff079-tabi-read-guided_00001_.mp4 sha256=bc51f87a45541d46d22020a1be2f564e99bb1c58ed9be51bc36f70d854f3d791
+MEDIA_FACTS=VideoMediaMetadata(videoCodec=h264, width=768, height=448, durationSeconds=5.16, frameRate=25.0, decodedFrameCount=129, audioStreamCount=0)
+MEDIA_REPORT=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/output/media-proof/video-media-probe-report.json
+RUNTIME_FINAL=STOPPED
+ELAPSED_MILLIS=267281
+REQUEST_UNCHANGED=true
+IMAGE_UNCHANGED=true
+GRAPH_UNCHANGED=true
+GUIDE_UNCHANGED=true

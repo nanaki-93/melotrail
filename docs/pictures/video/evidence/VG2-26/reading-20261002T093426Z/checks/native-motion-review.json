@@ -1,0 +1,36 @@
+{
+  "reviewer": "agent frame inspection; human normal-speed acceptance pending",
+  "sourceSha256": "bc51f87a45541d46d22020a1be2f564e99bb1c58ed9be51bc36f70d854f3d791",
+  "framesInspected": 129,
+  "method": "All indexed native contact sheets 1\u20137 plus 17-frame overview",
+  "observedAction": {
+    "restFrames": [
+      1,
+      29
+    ],
+    "lowerPawAndGazeFrames": [
+      30,
+      44
+    ],
+    "readingFrames": [
+      45,
+      87
+    ],
+    "blinkAndReturnFrames": [
+      88,
+      103
+    ],
+    "settledRestFrames": [
+      104,
+      129
+    ]
+  },
+  "findings": [
+    "Visible continuous lowering of the chin-supporting paw and head toward the notebook, followed by a return to the starting pose.",
+    "Both paws settle by the open notebook during the attentive reading interval; two blinks and subtle head/gaze movement are visible.",
+    "One cup and the pen remain on the table; notebook orientation remains consistent.",
+    "Hand/cuff outlines remain connected in the contact-sheet review; inspect full-size transition frames after finishing.",
+    "Small generated detail variation remains possible; strict scene rigidity, a seamless loop and artistic acceptance are not established."
+  ],
+  "finishingDecision": "Proceed with one whole-frame ComfyUI 1080p finishing pass for human review."
+}

@@ -1,0 +1,40 @@
+{
+  "recordedAt": "2026-10-02T09:42:14.188290+00:00",
+  "runtimeState": "STOPPED",
+  "observedPidsGone": [
+    509,
+    648,
+    1990
+  ],
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-03885e0e-74c4-42fb-a765-1b80cbb8ede8",
+  "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/runtime-session",
+  "files": [
+    {
+      "path": "input/neutral-scene.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "input/reading-guide.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+    },
+    {
+      "path": "output/shots/tabi-read-guided_00001_.mp4",
+      "bytes": 968903,
+      "sha256": "bc51f87a45541d46d22020a1be2f564e99bb1c58ed9be51bc36f70d854f3d791"
+    },
+    {
+      "path": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "c18a08c3e2b5439e145d9cdb6de21b8753a4fd0f855e5fefad5bd22a5bdea368"
+    },
+    {
+      "path": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "allCopiesVerified": true,
+  "ownedSessionRemoved": true
+}

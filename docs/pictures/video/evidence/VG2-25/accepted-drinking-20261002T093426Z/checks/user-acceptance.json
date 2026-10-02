@@ -1,0 +1,30 @@
+{
+  "task": "VG2-25",
+  "reviewer": "project user",
+  "date": "2026-10-02T09:34:26.944769+00:00",
+  "quote": "i also approve this one. go with the next",
+  "decision": "Accept the exact guided drinking clip and proceed to VG2-26 reading.",
+  "movie": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/review/tabi-drink-comfy-1080p.mp4",
+    "bytes": 6467507,
+    "sha256": "e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4"
+  },
+  "nativeSource": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/review/tabi-drink-native.mp4",
+    "bytes": 1099925,
+    "sha256": "d7fbc0c6b3e5eb9ec7422f5a3099a2d87bca3cfb279a74b9eb94fec366d32a08"
+  },
+  "workflow": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/workflow/guided-drink-api.json",
+    "sha256": "b6edaa2fb1b6787be2c856ff443a580f649783a69073f0429bad10034c022e11"
+  },
+  "finishWorkflow": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/workflow/finish-full-frame-api.json",
+    "sha256": "c304343b1190027ad7a86ab156cf42df43a56eaa26a9dd39cdcf2f23a0781966"
+  },
+  "knownLimitationsAcceptedForThisClip": [
+    "Hand/cup/cuff smearing in some transitions",
+    "Native motion 768x448 enhanced to 1080p at 25fps"
+  ],
+  "scope": "Completes this human-reviewed drinking checkpoint and its dependency for reading. Does not claim defects vanished or approve unseen clips, rigid scenery, cadence conversion or a full film."
+}

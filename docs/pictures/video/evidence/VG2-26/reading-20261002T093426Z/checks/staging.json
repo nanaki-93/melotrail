@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "strategy": "Apply only task-owned before/current hunks to HEAD blobs; original user diff signatures and nine-file unstaged numstat remain unchanged. No working-file reset.",
+  "documentation": [
+    {
+      "path": "TASKS-VIDEO.md",
+      "ownedHunks": 2,
+      "selectedBlob": "a2207d26bfea688c0f921feb7bc194503dbbfa0b",
+      "workingSha256": "a91b0ad00e97018018ba13b36b8e46842a4054d7bf668863a32c5e7595f0cda5"
+    },
+    {
+      "path": "PLAN-VIDEO.md",
+      "ownedHunks": 1,
+      "selectedBlob": "e88d931530297bf9235a3c3f2fd037ff5b91516f",
+      "workingSha256": "97ade454277d2649a4c023aa0a7c343e824a2600e840877e7baec541686f00c5"
+    },
+    {
+      "path": "docs/TABI_VIDEO.md",
+      "ownedHunks": 1,
+      "selectedBlob": "aa68857d6a98f60c8fdcc05d38b5f05af7e4510c",
+      "workingSha256": "6bc1ca209d94291d7587ba0b33053b435ac2a3a0cdd641a7225d3db6ede46307"
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "ownedHunks": 1,
+      "selectedBlob": "3d0d9d105df1c3189c53bc0412f3f68a04eb38bc",
+      "workingSha256": "77fd6731b6c4708dfd4c3f22d5b2a631585ac301e0b23f0302bd865da7ae4288"
+    }
+  ],
+  "newTextEvidenceFiles": 66,
+  "newTextEvidenceBytes": 487236,
+  "preservedUnstagedNumstat": "16\t0\tAGENTS.md\n6\t2\tPLAN-AUDIO.md\n6\t2\tPLAN-VIDEO.md\n8\t1\tREADME.md\n16\t4\tTASKS-AUDIO.md\n53\t13\tTASKS-VIDEO.md\n6\t2\tdocs/ARCHITECTURE.md\n9\t0\tdocs/TABI_VIDEO.md\n60\t1\tdocs/VALIDATION.md\n",
+  "mediaStaged": false
+}

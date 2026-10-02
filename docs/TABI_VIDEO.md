@@ -220,6 +220,28 @@ no acceptance, seamless loop, fixed scenery or final 1080p30 delivery is inferre
 All media remain local; source art, panoramas and earlier accepted movies are
 unchanged. Finite scopes, failure evidence, graphs and checks accompany each run.
 
+The user subsequently says “i also approve this one. go with the next”, accepting
+that exact guided drinking movie with its disclosed transition limitations.
+`pictures/video/evidence/VG2-25/accepted-drinking-20261002T093426Z/checks/user-acceptance.json`
+pins the reverified movie, native source and both graphs. VG2-25 is DONE for this
+human-reviewed action checkpoint; the preceding failure observations are retained.
+VG2-26 reading is authorized next using the same local guide-conditioned ComfyUI
+route and complete-frame 1080p finish. Other actions, fixed scenery and the full
+three-minute film retain their separate gates.
+
+VG2-26's first reading take is ready for review at
+`pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/tabi-read-comfy-1080p.mp4`,
+SHA-256 `33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6`.
+The approved neutral scene initializes the motion and guides its ending; the
+approved reading image guides zero-based frame 64. One actual ComfyUI generation
+and one accepted-method full-frame finish produce 129 frames, 25fps and 5.16s at
+1920×1080, enhanced from native 768×448. TABI lowers the chin-resting paw, looks
+at the notebook with subtle head/gaze/paw movement and blinks, then settles back
+into the resting pose. Cup, pen, notebook orientation and headphones are retained.
+Fine cuff/frond detail varies during the transitions. Full decode/timing and
+all-frame face-content checks pass; VG2-26 remains REVIEW for this exact movie.
+No fixed exterior, seamless loop, 30fps conversion or full-film delivery follows.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the

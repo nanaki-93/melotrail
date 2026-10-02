@@ -1,0 +1,31 @@
+{
+  "task": "VG2-26",
+  "authorization": "i also approve this one. go with the next",
+  "acceptedDrinkingReceipt": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/accepted-drinking-20261002T093426Z/checks/user-acceptance.json",
+  "action": "Lower chin-resting paw and gaze, attentively read the corrected open notebook, small head/paw movement, then restore the resting pose.",
+  "generationAttempts": 1,
+  "automaticRetries": 0,
+  "finishSubmissions": 1,
+  "nativeShape": [
+    768,
+    448,
+    129,
+    25
+  ],
+  "reviewShape": [
+    1920,
+    1080,
+    129,
+    25
+  ],
+  "nativeRunnerSeconds": 1500,
+  "finishAndVerificationSeconds": 600,
+  "newEvidenceCeilingBytes": 2147483648,
+  "minimumFreeDiskBytes": 21474836480,
+  "hostedFallback": false,
+  "modelDownloads": false,
+  "mediaStorage": "Keep locally; commit scripts/checks/requests/graphs and owner docs only.",
+  "independentSceneAndFullFilmClaim": false,
+  "cumulativeNativeLimitSeconds": 2170,
+  "cumulativeScope": "At most 1500s native generation/import runner, 70s retained native review decode, 600s finishing plus two post-export traversals."
+}

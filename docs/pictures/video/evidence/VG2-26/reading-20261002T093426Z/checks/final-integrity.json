@@ -1,0 +1,324 @@
+{
+  "result": "PASS",
+  "movie": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/tabi-read-comfy-1080p.mp4",
+    "bytes": 6099541,
+    "sha256": "33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6"
+  },
+  "protectedInputs": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/00-neutral-book-facing-tabi.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+      "actualSha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/01-drinking-book-facing-tabi.png",
+      "bytes": 2136264,
+      "sha256": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c",
+      "actualSha256": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "actualSha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/03-window-watch-book-facing-tabi.png",
+      "bytes": 2235205,
+      "sha256": "5b3ba59efe869e1158be5ce4d770a33fa1ed0c7fa6e29ed4d608c5c747bcf59a",
+      "actualSha256": "5b3ba59efe869e1158be5ce4d770a33fa1ed0c7fa6e29ed4d608c5c747bcf59a",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/01-asakusa-sensoji-panorama.png",
+      "bytes": 2702053,
+      "sha256": "fc39b3d0bdc632ac2cfbea90a68f148507745f9f71a0dc1d13c5d18e0b7420f8",
+      "actualSha256": "fc39b3d0bdc632ac2cfbea90a68f148507745f9f71a0dc1d13c5d18e0b7420f8",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/02-sumida-river-skytree-panorama.png",
+      "bytes": 2439262,
+      "sha256": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20",
+      "actualSha256": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/03-ueno-shinobazu-pond-panorama.png",
+      "bytes": 2592770,
+      "sha256": "41bd4ad859c62e83ff802422a2479431954cc98e0cb91122ce04a84265e149a2",
+      "actualSha256": "41bd4ad859c62e83ff802422a2479431954cc98e0cb91122ce04a84265e149a2",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/04-yanaka-residential-rooftops-panorama.png",
+      "bytes": 2719261,
+      "sha256": "bde1a4827cc8716292dcb3ea0bfac44951f0e1ce2c6621d7b23c558b86803182",
+      "actualSha256": "bde1a4827cc8716292dcb3ea0bfac44951f0e1ce2c6621d7b23c558b86803182",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/05-shinjuku-skyline-panorama.png",
+      "bytes": 2410530,
+      "sha256": "54940a967372d259cb3661997b152ffb410156d1d8ad58e82c900fcbbba0fe67",
+      "actualSha256": "54940a967372d259cb3661997b152ffb410156d1d8ad58e82c900fcbbba0fe67",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/06-tokyo-bay-rainbow-bridge-panorama.png",
+      "bytes": 2438089,
+      "sha256": "54850c937d59c1023c95996c1c73d9ac43b11913e507dca13dee400f8bf3bd60",
+      "actualSha256": "54850c937d59c1023c95996c1c73d9ac43b11913e507dca13dee400f8bf3bd60",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4",
+      "bytes": 53215523,
+      "sha256": "abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea",
+      "actualSha256": "abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4",
+      "bytes": 35492513,
+      "sha256": "30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7",
+      "actualSha256": "30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/tabi-head-watch-5s-768x448-candidate.mp4",
+      "bytes": 1910375,
+      "sha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2",
+      "actualSha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/review/tabi-head-watch-comfy-1080p.mp4",
+      "bytes": 10802013,
+      "sha256": "fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b",
+      "actualSha256": "fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/generation/review/tabi-drink-native.mp4",
+      "bytes": 1099925,
+      "sha256": "d7fbc0c6b3e5eb9ec7422f5a3099a2d87bca3cfb279a74b9eb94fec366d32a08",
+      "actualSha256": "d7fbc0c6b3e5eb9ec7422f5a3099a2d87bca3cfb279a74b9eb94fec366d32a08",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-25/drink-guided-repair2-20261002T090557Z/finish/review/tabi-drink-comfy-1080p.mp4",
+      "bytes": 6467507,
+      "sha256": "e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4",
+      "actualSha256": "e2d88ceec6a229e4c0a955ebfe5d070bc65cd1416cd78b5b3e94ff79163cd1d4",
+      "unchanged": true
+    }
+  ],
+  "executions": [
+    {
+      "stage": "generation",
+      "exitCode": 0,
+      "stopReason": null,
+      "elapsedSeconds": 277.807,
+      "peakSampledOwnedRssBytes": 23515545600,
+      "observedPids": [
+        509,
+        648,
+        1990
+      ],
+      "note": "RSS samples exclude some Metal/GPU allocations; production pressure/swap safeguards remain unchanged.",
+      "allObservedPidsGone": true,
+      "cleanup": {
+        "recordedAt": "2026-10-02T09:42:14.188290+00:00",
+        "runtimeState": "STOPPED",
+        "observedPidsGone": [
+          509,
+          648,
+          1990
+        ],
+        "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-03885e0e-74c4-42fb-a765-1b80cbb8ede8",
+        "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/runtime-session",
+        "files": [
+          {
+            "path": "input/neutral-scene.png",
+            "bytes": 2185733,
+            "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+          },
+          {
+            "path": "input/reading-guide.png",
+            "bytes": 2144723,
+            "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+          },
+          {
+            "path": "output/shots/tabi-read-guided_00001_.mp4",
+            "bytes": 968903,
+            "sha256": "bc51f87a45541d46d22020a1be2f564e99bb1c58ed9be51bc36f70d854f3d791"
+          },
+          {
+            "path": "user/comfyui.db",
+            "bytes": 151552,
+            "sha256": "c18a08c3e2b5439e145d9cdb6de21b8753a4fd0f855e5fefad5bd22a5bdea368"
+          },
+          {
+            "path": "user/comfyui.db.lock",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "allCopiesVerified": true,
+        "ownedSessionRemoved": true
+      }
+    },
+    {
+      "stage": "finish",
+      "exitCode": 0,
+      "stopReason": null,
+      "elapsedSeconds": 89.548,
+      "peakSampledOwnedRssBytes": 9074524160,
+      "observedPids": [
+        6539,
+        6848
+      ],
+      "note": "RSS samples exclude some Metal/GPU allocations; production pressure/swap safeguards remain unchanged.",
+      "allObservedPidsGone": true,
+      "cleanup": {
+        "recordedAt": "2026-10-02T09:45:32.968238+00:00",
+        "runtimeState": "STOPPED",
+        "observedPidsGone": [
+          6539,
+          6848
+        ],
+        "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-be06edbd-0772-4e06-ae2a-ceaae5ca1409",
+        "retainedSession": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/runtime-session",
+        "files": [
+          {
+            "path": "input/accepted-motion.mp4",
+            "bytes": 968903,
+            "sha256": "bc51f87a45541d46d22020a1be2f564e99bb1c58ed9be51bc36f70d854f3d791"
+          },
+          {
+            "path": "output/shots/tabi-fullhd-comfy_00001_.mp4",
+            "bytes": 6099541,
+            "sha256": "33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6"
+          },
+          {
+            "path": "user/comfyui.db",
+            "bytes": 151552,
+            "sha256": "1d8c6c0e17811a755b66b2fcf2782a014238243f247f781dc4a92d07a96986a0"
+          },
+          {
+            "path": "user/comfyui.db.lock",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "allCopiesVerified": true,
+        "ownedSessionRemoved": true
+      }
+    }
+  ],
+  "proofInputs": [
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/admission.json",
+      "bytes": 4322,
+      "sha256": "d8401587fd8f87ec8a996c8d0aa342cb1655616581fa832ca9b163f64109f8f4"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/request.json",
+      "bytes": 770,
+      "sha256": "d0fa31f5e5b9751fb2879f8d6dd275e57719f428cccb288ec8df44f5175d6307"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/scripts/ComfyFinish.java",
+      "bytes": 6703,
+      "sha256": "81d45f2d8d13b470cc6128ed8550035953b74412be63f84f09e840c39b1de2e3"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/scripts/MediaStage.java",
+      "bytes": 1475,
+      "sha256": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/scripts/check-frame-continuity.cjs",
+      "bytes": 3537,
+      "sha256": "1158335f154399555a3e6072979a1cf73105f8f4eb39dc468009064be22071c9"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/scripts/run.py",
+      "bytes": 7118,
+      "sha256": "eac13c049853348f3794406890d7aec7a8520993b4cf567aeedc397a3088951a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/scripts/verify-media.py",
+      "bytes": 3711,
+      "sha256": "5726b4e465d6e456f5c29c0d3172cf38f61306ae2b3379fcbdb75ccfbe89ecfb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/workflow/finish-full-frame-api.json",
+      "bytes": 801,
+      "sha256": "c304343b1190027ad7a86ab156cf42df43a56eaa26a9dd39cdcf2f23a0781966"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/admission.json",
+      "bytes": 6621,
+      "sha256": "3ee8f692bfbfe2f2a57e9b68aa2f90a5b3199c539131bb61097882b4bb4bfec9"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/request.json",
+      "bytes": 2568,
+      "sha256": "df10727480668cfa05252d4f903a152dfcfbea96fde0c4fe1f83b802d7b8398d"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/ActionPilot.java",
+      "bytes": 11052,
+      "sha256": "200b872be1d1e74a8a71b46e51666e1fecc56b0317aa33ed43ff6bd1c4f134bb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/MotionTools.java",
+      "bytes": 2200,
+      "sha256": "9ac343b53c6db47f1938e093a95c4da5070cdd8cf9761a97f90550f2dfc14a09"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/check-guided-graph.py",
+      "bytes": 2206,
+      "sha256": "618f5d695592dac3aa8a555bdcb66aedb35efa846e7e1857411f7c447bb74b5b"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/decode-native.py",
+      "bytes": 2512,
+      "sha256": "9f6a8f63f61be344557bceb12386fb9fc62445dfb418920997db69db8340cea3"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/headless.init.gradle",
+      "bytes": 657,
+      "sha256": "f61d8aa116b36f177c4c9b3893e3e69e4777c7b3812159eef02e162f08415b48"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/review-sheets.cjs",
+      "bytes": 1449,
+      "sha256": "33bcff79cd5f9f009259d1a4ec93c9f911312605decdc78e9209c2ba92caf9bb"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/scripts/run.py",
+      "bytes": 7130,
+      "sha256": "96680b6f2f2f435ad2b404225511f0974d2ac1c4ad3e5d318c8d547b8e8fae8a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/workflow/guided-read-api.json",
+      "bytes": 5782,
+      "sha256": "5776169457281a3ac024066a4d2d6d40f92b8d147078ba1b43a7e29adb6945f0"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/scripts/retain-session.py",
+      "bytes": 1786,
+      "sha256": "dfbadafe0414dc99dad3090e4ed6ebb7fe85307e36aba0da9602fdd2e5b8d9a0"
+    }
+  ],
+  "evidenceBytes": 451406877,
+  "scope": "Read-only byte/resource/process audit; no media traversal or native relaunch."
+}

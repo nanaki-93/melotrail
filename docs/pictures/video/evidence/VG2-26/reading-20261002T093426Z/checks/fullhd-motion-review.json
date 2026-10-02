@@ -1,0 +1,25 @@
+{
+  "reviewer": "agent frame inspection; human normal-speed approval pending",
+  "movie": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/tabi-read-comfy-1080p.mp4",
+    "bytes": 6099541,
+    "sha256": "33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6"
+  },
+  "nativeFramesInspected": 129,
+  "fullHdFramesInspected": [
+    1,
+    40,
+    49,
+    65,
+    97,
+    129
+  ],
+  "findings": [
+    "The chin-resting paw lowers beside the notebook and the head/gaze settles toward its pages, then both return to rest.",
+    "Both paws remain joined to their sleeves/cuffs in the inspected frames. Moving cuff outlines and right frond detail vary, especially frames 40 and 97.",
+    "Notebook orientation, headphones-on-head, single cup and resting pen are retained; no page turn or prop pickup occurs.",
+    "The full face remains visible when expected; no external matte/crop is used.",
+    "Fine drawing texture and some scene detail vary; exact rigid scenery and seamless start/end continuity have not been established."
+  ],
+  "disposition": "REVIEW: provide the first completed take without an additional correction; await the user decision on this exact movie."
+}
