@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "seconds": 60,
+  "frames": 1800,
+  "depthFactors": [
+    1,
+    2,
+    3
+  ],
+  "negativeChecks": [
+    "Excessive travel rejected",
+    "Current-frame continuation rejected",
+    "Old far painted extent fails 60s"
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "status": "PASS",
+  "coverageSeconds": 60,
+  "exactViewportOverlap": true,
+  "sourceJoinFrames": [
+    {
+      "plane": "far",
+      "frame": 1230,
+      "sampleFrames": [
+        1228.8333333333333,
+        1229,
+        1229.1666666666667,
+        1229.8333333333333,
+        1229.999999,
+        1230,
+        1230.1666666666667
+      ]
+    },
+    {
+      "plane": "near",
+      "frame": 1230,
+      "sampleFrames": [
+        1228.8333333333333,
+        1229,
+        1229.1666666666667,
+        1229.8333333333333,
+        1229.999999,
+        1230,
+        1230.1666666666667
+      ]
+    }
+  ],
+  "sourceSamples": [
+    {
+      "status": "PASS",
+      "frame": 0,
+      "file": "source-sample-0000.png",
+      "sha256": "5feb0d684571f3af05e493125a9059c2746ddf84322c0a1425a0b39d78b161bc",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 600,
+      "file": "source-sample-0600.png",
+      "sha256": "c10957161e7c0164097617167f41828ea8e7c83d3190775b2a1d266dd234e3fe",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1170,
+      "file": "source-sample-1170.png",
+      "sha256": "84d6c65870b4c4f757730d601f8919eabb4f27767cbfc41b066f3a9bdc9684e4",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1229,
+      "file": "source-sample-1229.png",
+      "sha256": "4ab27faea227575ec37dc6bd48d4c9806c722d9a9de4df8c99926009786891ab",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1230,
+      "file": "source-sample-1230.png",
+      "sha256": "6b25870758f6d795a6c34b1b420ced611e7c906b05d7e1060248cb909123773e",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1231,
+      "file": "source-sample-1231.png",
+      "sha256": "61ee822b01ef7f25b2616f8352e2e97c60cfbe369d6f49fee22234ea05973b76",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1350,
+      "file": "source-sample-1350.png",
+      "sha256": "d773f8f79d294b052de48463127831e64bc1663923f5be3326dbcae2250d3f72",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1469,
+      "file": "source-sample-1469.png",
+      "sha256": "400e2174826f0762e26d5bf7bfce89ef24032ffa864af7e6a8614e87c5db37ee",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1590,
+      "file": "source-sample-1590.png",
+      "sha256": "48ac17f39cbca948ea48c27318218a643928b71b406454d1e4ffa5a99a7585fd",
+      "protectedDifferences": 0,
+      "transparent": 0
+    },
+    {
+      "status": "PASS",
+      "frame": 1799,
+      "file": "source-sample-1799.png",
+      "sha256": "0868e937a1dab72e0ee733b48104b470dd22548f36add4621a1b01c8b2daf21e",
+      "protectedDifferences": 0,
+      "transparent": 0
+    }
+  ],
+  "negativeChecks": [
+    "Excessive travel rejected",
+    "Current-frame continuation rejected",
+    "Old far painted extent fails 60s",
+    "Visible changed overlap rejected",
+    "Actual prior different-width near sections fail exact rendered overlap"
+  ],
+  "scope": "Static neutral and main window only. Human motion review and moving action support remain pending."
+}

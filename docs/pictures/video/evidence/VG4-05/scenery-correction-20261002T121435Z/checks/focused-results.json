@@ -1,0 +1,41 @@
+{
+  "tests": 70,
+  "classes": [
+    {
+      "class": "app.melotrail.architecture.TargetArchitectureRulesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "class": "app.melotrail.documentation.DocumentationIntegrityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "class": "app.melotrail.video.VideoAnimationAssetsTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "class": "app.melotrail.video.VideoControlledMediaStageTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "class": "app.melotrail.video.VideoMotionDescriptorFixtureTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "class": "app.melotrail.video.VideoMotionRendererTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0
+    }
+  ]
+}

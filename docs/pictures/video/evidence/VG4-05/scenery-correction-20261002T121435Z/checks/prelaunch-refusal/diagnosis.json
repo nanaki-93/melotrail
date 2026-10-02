@@ -1,0 +1,8 @@
+{
+  "state": "REJECTED_BEFORE_NATIVE_LAUNCH",
+  "reason": "MediaStage requires a fresh job working directory; repository root already exists.",
+  "nativeChildrenLaunched": 0,
+  "outputsWritten": 0,
+  "repair": "Use unique owned-prepare-scenery and owned-check-scenery working directories under this evidence run. Charge refusal time to the same 120-second budget.",
+  "nativeRetries": 0
+}

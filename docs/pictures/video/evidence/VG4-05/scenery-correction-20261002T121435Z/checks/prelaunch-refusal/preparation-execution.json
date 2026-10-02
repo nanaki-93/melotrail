@@ -1,0 +1,16 @@
+{
+  "stages": [
+    {
+      "stage": "prepare-scenery",
+      "exitCode": 1,
+      "stopReason": null,
+      "seconds": 0.5336439589955262,
+      "peakObservedTreeRssBytes": 6668288,
+      "observedPids": [
+        89420
+      ]
+    }
+  ],
+  "seconds": 0.5342382500020904,
+  "automaticRetries": 0
+}

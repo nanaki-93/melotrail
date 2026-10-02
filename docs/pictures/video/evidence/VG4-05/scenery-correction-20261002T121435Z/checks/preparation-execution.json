@@ -1,0 +1,17 @@
+{
+  "stages": [
+    {
+      "stage": "check-scenery",
+      "exitCode": 1,
+      "stopReason": null,
+      "seconds": 2.1230733749980573,
+      "peakObservedTreeRssBytes": 1933557760,
+      "observedPids": [
+        89958,
+        89966
+      ]
+    }
+  ],
+  "seconds": 10.643378249995294,
+  "automaticRetries": 0
+}

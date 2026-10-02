@@ -1,0 +1,5 @@
+{
+  "mediaPolicy": "LOCAL_ONLY",
+  "scriptAndReceiptStageable": true,
+  "checkIgnore": ".gitignore:28:*.mp4\tdocs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/review/tokyo-window-join-10s-1080p.mp4\n"
+}

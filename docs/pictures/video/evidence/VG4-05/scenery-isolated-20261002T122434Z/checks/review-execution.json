@@ -1,0 +1,25 @@
+{
+  "stages": [
+    {
+      "stage": "decode",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 5.515201459005766,
+      "peakObservedTreeRssBytes": 504692736,
+      "peakOwnedEvidenceBytes": 2569175798
+    },
+    {
+      "stage": "compare",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 11.304679916000168,
+      "peakObservedTreeRssBytes": 389169152,
+      "peakOwnedEvidenceBytes": 2628630063
+    }
+  ],
+  "seconds": 16.820284874993376,
+  "sharedNativeSeconds": 169.3532058339988,
+  "automaticRetries": 0,
+  "additionalFullDecodes": 1,
+  "additionalProbes": 0
+}

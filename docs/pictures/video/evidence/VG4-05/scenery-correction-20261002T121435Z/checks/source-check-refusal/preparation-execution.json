@@ -1,0 +1,38 @@
+{
+  "stages": [
+    {
+      "stage": "prepare-scenery",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.5904415840050206,
+      "peakObservedTreeRssBytes": 564707328,
+      "observedPids": [
+        89640,
+        89647
+      ]
+    },
+    {
+      "stage": "import",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 5.3275912500030245,
+      "peakObservedTreeRssBytes": 795164672,
+      "observedPids": [
+        89658
+      ]
+    },
+    {
+      "stage": "check-scenery",
+      "exitCode": 1,
+      "stopReason": null,
+      "seconds": 1.06693962499412,
+      "peakObservedTreeRssBytes": 479477760,
+      "observedPids": [
+        89706,
+        89711
+      ]
+    }
+  ],
+  "seconds": 8.519796583001153,
+  "automaticRetries": 0
+}

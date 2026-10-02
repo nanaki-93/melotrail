@@ -1,0 +1,26 @@
+{
+  "status": "BLOCKED",
+  "at": "2026-10-02T12:20:48.440911+00:00",
+  "passed": [
+    "6264x1080 equal-size tiles",
+    "Shared decoded original pixels exactly preserved",
+    "V5 right-hand art exactly preserved",
+    "Production project import",
+    "Short typed controlled-media request construction"
+  ],
+  "incomplete": [
+    "60-second end-to-end source check",
+    "Exact handoff proof",
+    "Source visual inspection",
+    "Video render and decode"
+  ],
+  "failure": "Owned source-check process memory 2165374976 > 2147483648 bytes",
+  "nativeVideoAttempts": 0,
+  "encodes": 0,
+  "newComfyUiJobs": 0,
+  "prelaunchRefusal": "checks/prelaunch-refusal/",
+  "sourceCheckerContinuationRepair": "checks/source-check-refusal/",
+  "nativeRetriesAfterMemoryFailure": 0,
+  "next": "Verify geometry once; run exact joins, damaged-overlap regression, prior-source regression and each review frame in separate sequential production-owned short processes. Every process exits before the next, releasing native buffers. Preserve exact equality, 1080p, source speed and depth.",
+  "proposalStaticSyntaxChecks": "PASS; not an execution or memory proof"
+}

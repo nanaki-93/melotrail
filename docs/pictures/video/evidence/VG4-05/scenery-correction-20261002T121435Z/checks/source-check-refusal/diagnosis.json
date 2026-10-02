@@ -1,0 +1,7 @@
+{
+  "reason": "The inherited source checker supplied the current frame as initialState; production requires the immediately preceding frame.",
+  "repair": "Use stateForFrame(f-1), as production tests do. No change to media requests, images, renderer or equality gates.",
+  "sourceChecksExecutedBeforeRepair": 1,
+  "videoAttempts": 0,
+  "cumulativePreparationSeconds": 8.519796583001153
+}

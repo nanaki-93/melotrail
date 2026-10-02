@@ -1,0 +1,10 @@
+{
+  "authorized": true,
+  "userInstruction": "we can put the CAP limit to 8 or 10 GiB",
+  "context": "Reply to source-check plus conditional-preview approval question. Choose lower offered cap, 8 GiB, for native and observed process tree. Retain time/disk/no-retry limits.",
+  "priorProposal": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/checks/next-correction.json",
+    "sha256": "fea0248b5e7586a6e67a94d171297484db69e35cfff638a03021d34ca2a7ab63"
+  },
+  "at": "2026-10-02T12:24:34.634066+00:00"
+}

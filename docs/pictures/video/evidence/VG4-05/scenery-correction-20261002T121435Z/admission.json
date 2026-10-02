@@ -1,0 +1,43 @@
+{
+  "task": "VG4-05",
+  "userInstruction": "yes, go for it",
+  "recordedAt": "2026-10-02T12:14:35.241804+00:00",
+  "scope": "Fresh correction of the blocked equal-pixel near-plane handoff: equal 6264x1080 canvases, production reimport, exact overlap and 60-second checks, followed only on success by one 300-frame 1080p30 preview at absolute frames 1170..1469. Static approved ComfyUI neutral, main window only.",
+  "limits": {
+    "wholeNativeRunnerSeconds": 900,
+    "nativeProcessMemoryBytes": 2147483648,
+    "observedTreeRssBytes": 5368709120,
+    "totalNewEvidenceBytes": 4294967296,
+    "freeDiskReserveBytes": 21474836480,
+    "encodes": 1,
+    "builtInCountProbeTraversals": 1,
+    "builtInFullDecodeTraversals": 1,
+    "additionalFullDecodeTraversals": 1,
+    "additionalProbeTraversals": 0,
+    "automaticRetries": 0,
+    "newComfyUiJobs": 0
+  },
+  "stages": {
+    "renderMaximumSeconds": 540,
+    "encodeAndBuiltInChecksMaximumSeconds": 180,
+    "additionalReviewDecodeMaximumSeconds": 180,
+    "preparationMaximumSeconds": 120
+  },
+  "stop": "Stop and preserve on time/RSS/disk/source/pressure failure; no automatic native retry. All media local; only helpers/checks/docs committed.",
+  "fullRoute": {
+    "targetSeconds": 180,
+    "frames": 5400,
+    "minimumAuthoredWidths": [
+      5467,
+      10173,
+      14420
+    ],
+    "ready": false,
+    "closingJoin": "Must return camera/depth and closing artwork to opening with equal travel velocity; not solved by this short proof."
+  },
+  "proposal": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/checks/next-correction.json",
+    "sha256": "e7f4758f396ad1e992f62eedc149f526e87b2332c47869f124a3a448b024af73"
+  },
+  "derivedAssetDirectory": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-correction-20261002T121435Z"
+}

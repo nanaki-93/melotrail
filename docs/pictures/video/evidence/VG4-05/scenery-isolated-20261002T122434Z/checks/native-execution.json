@@ -1,0 +1,15 @@
+{
+  "exitCode": 0,
+  "stopReason": null,
+  "elapsedSeconds": 152.53292066699942,
+  "peakObservedTreeRssBytes": 1612906496,
+  "peakOwnedEvidenceBytes": 1967594664,
+  "observedPids": [
+    95198,
+    95215,
+    96987,
+    97149
+  ],
+  "automaticRetries": 0,
+  "rssExcludesSomeGpuMemory": true
+}

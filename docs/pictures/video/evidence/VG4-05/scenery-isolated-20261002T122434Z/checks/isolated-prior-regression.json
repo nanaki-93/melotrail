@@ -1,0 +1,4 @@
+{
+  "status": "PASS",
+  "negative": "Actual prior different-width near sections fail exact rendered overlap"
+}

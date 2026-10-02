@@ -1,0 +1,49 @@
+{
+  "status": "PASS",
+  "movieSha256": "df01ed7840435eb82b2f1af7a4e99de09f165efeeaa4b55a34649ed6221da8f7",
+  "bytes": 17672567,
+  "width": 1920,
+  "height": 1080,
+  "frames": 300,
+  "fps": 30,
+  "durationSeconds": 10.0,
+  "fastStart": true,
+  "audioStreams": 0,
+  "pixelAspect": "1:1 (production counted-probe gate)",
+  "codec": "H.264",
+  "exactPresentationCadence": true,
+  "presentationIntervalTicks": {
+    "512": 299
+  },
+  "timescale": 15360,
+  "sampleTables": {
+    "mvhd": {
+      "timescale": 1000,
+      "duration": 10000
+    },
+    "elst": [
+      [
+        10000,
+        0,
+        1,
+        0
+      ]
+    ],
+    "mdhd": {
+      "timescale": 15360,
+      "duration": 153600
+    },
+    "codec": "avc1",
+    "width": 1920,
+    "height": 1080,
+    "stts": [
+      [
+        300,
+        512
+      ]
+    ],
+    "samples": 300
+  },
+  "humanReview": "PENDING",
+  "colorMetadata": "Not certified by this table inspection"
+}

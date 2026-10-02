@@ -1,0 +1,7 @@
+MotionInputError: initialState must be the immediately previous V19b finalState with the same seed.
+    at Object.validateRequest (/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/render.cjs:433:51)
+    at at (/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/scripts/check-scenery.cjs:14:39)
+    at main (/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/scripts/check-scenery.cjs:15:49)
+Exception in thread "main" app.melotrail.video.adapter.VideoMediaProcessException: Video media process exited with code 1:     at main (/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/scripts/check-scenery.cjs:15:49).
+	at app.melotrail.video.adapter.VideoMediaProcess.run(VideoMediaProcess.kt:291)
+	at MediaStage.main(MediaStage.java:15)

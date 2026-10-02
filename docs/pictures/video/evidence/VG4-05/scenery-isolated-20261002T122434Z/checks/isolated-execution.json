@@ -1,0 +1,111 @@
+{
+  "stages": [
+    {
+      "stage": "coverage",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 0.5679717079983675,
+      "peakObservedTreeRssBytes": 121749504
+    },
+    {
+      "stage": "joins",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1455061250017025,
+      "peakObservedTreeRssBytes": 885424128
+    },
+    {
+      "stage": "changed-overlap",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 0.5747124159970554,
+      "peakObservedTreeRssBytes": 194068480
+    },
+    {
+      "stage": "prior-regression",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 0.8572480410002754,
+      "peakObservedTreeRssBytes": 642416640
+    },
+    {
+      "stage": "frame-0",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1446666660049232,
+      "peakObservedTreeRssBytes": 504479744
+    },
+    {
+      "stage": "frame-600",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1316765829978976,
+      "peakObservedTreeRssBytes": 504086528
+    },
+    {
+      "stage": "frame-1170",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.127311666001333,
+      "peakObservedTreeRssBytes": 504299520
+    },
+    {
+      "stage": "frame-1229",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1307362919978914,
+      "peakObservedTreeRssBytes": 504119296
+    },
+    {
+      "stage": "frame-1230",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1279959169987706,
+      "peakObservedTreeRssBytes": 504168448
+    },
+    {
+      "stage": "frame-1231",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1322429580031894,
+      "peakObservedTreeRssBytes": 504250368
+    },
+    {
+      "stage": "frame-1350",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.12330983299762,
+      "peakObservedTreeRssBytes": 504217600
+    },
+    {
+      "stage": "frame-1469",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1340278749994468,
+      "peakObservedTreeRssBytes": 503496704
+    },
+    {
+      "stage": "frame-1590",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1290591249999125,
+      "peakObservedTreeRssBytes": 503676928
+    },
+    {
+      "stage": "frame-1799",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 1.1287376659965958,
+      "peakObservedTreeRssBytes": 503791616
+    },
+    {
+      "stage": "collect",
+      "exitCode": 0,
+      "stopReason": null,
+      "seconds": 0.8497017499976209,
+      "peakObservedTreeRssBytes": 300777472
+    }
+  ],
+  "seconds": 20.630546166990825,
+  "automaticRetries": 0
+}

@@ -1,0 +1,27 @@
+{
+  "status": "PASS_FOR_USER_REVIEW",
+  "reviewer": "Codex agent visual inspection of decoded file samples",
+  "at": "2026-10-02T12:31:58.371254+00:00",
+  "files": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/review/decoded-contact-sheet.png",
+      "sha256": "2d234b40baf2a7486f004905bfd9db6e96f9cb36af33d652bf0ff2b9f6ff04c5"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/review/decoded/frame-0061.png",
+      "sha256": "d57501597a77c12f0040da28dd24369a993ecf41335edd77e30919b10961ba54"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/review/decoded/frame-0300.png",
+      "sha256": "fab2a2230e28556f99590257c61a2e2010a72fff8b61b2692171d6db8b6fb1d1"
+    }
+  ],
+  "observations": [
+    "Face, eyes, head fronds, connected sleeves/hands, cup and correctly facing notebook remain present and consistent.",
+    "No visible black rectangle, missing face, hard cut or clipped cabin silhouette in inspected frames.",
+    "Near handoff at clip 2s has exact source overlap; clock-front and cherry trees enter later in the clip.",
+    "Compression remains visually close to the lossless source; all 300 decoded frames meet the recorded structural-retention gate."
+  ],
+  "humanMotionReview": "PENDING; no normal-speed human decision inferred from tests or stills",
+  "scope": "Static TABI and main-window scenery only; left panes unchanged. No full 180-second route or repeated-loop approval."
+}

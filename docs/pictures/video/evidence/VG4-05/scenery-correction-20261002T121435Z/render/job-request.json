@@ -1,0 +1,363 @@
+{
+    "id": "tokyo-scenery-join",
+    "projectId": "tokyo-scenery",
+    "backendId": "controlled-media",
+    "modelRequirements": [],
+    "input": {
+        "type": "controlled-motion",
+        "prompt": "Ten-second main-window scenery study at absolute 39..49s, preserving original 480/599 pixels/frame and rigid three-plane depth. Static corrected neutral only.",
+        "dependencyPins": [
+            {
+                "id": "prepared-0",
+                "sha256": "6f1ed06b794a8cb2ab475f4441ac700a40bf0112c79f166ae548ad88a8c56026",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/prepared-scenes/tokyo-main-window/v1/scene.json"
+            },
+            {
+                "id": "prepared-1",
+                "sha256": "9ea3257c6ab220aabfa4bc003416b1f5dbd728622c1b5d1b3af01434646f850b",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/neutral/v1/asset.json"
+            },
+            {
+                "id": "prepared-2",
+                "sha256": "594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/neutral/v1/original.png"
+            },
+            {
+                "id": "prepared-3",
+                "sha256": "b6aa5ed49edc7e356258c6dd3f4cc485f9011161db87395bc71c886ce53cceb3",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-old/v1/asset.json"
+            },
+            {
+                "id": "prepared-4",
+                "sha256": "b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-old/v1/original.png"
+            },
+            {
+                "id": "prepared-5",
+                "sha256": "5daba63833bf283b9aefafd374e6c43f98286da1fa47e02eaa7216329f904216",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-new/v1/asset.json"
+            },
+            {
+                "id": "prepared-6",
+                "sha256": "e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-new/v1/original.png"
+            },
+            {
+                "id": "prepared-7",
+                "sha256": "de83ee0032e6e0a17a60e23901f0c93a824a25c640347b19422689b4fc084060",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/middle/v1/asset.json"
+            },
+            {
+                "id": "prepared-8",
+                "sha256": "37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/middle/v1/original.png"
+            },
+            {
+                "id": "prepared-9",
+                "sha256": "228f0d11f804b43e6bc89ca88316596f2a3ae98aab061cd7fc84b3e787897048",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-old/v1/asset.json"
+            },
+            {
+                "id": "prepared-10",
+                "sha256": "64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-old/v1/original.png"
+            },
+            {
+                "id": "prepared-11",
+                "sha256": "0d946f5f7f52e81a1728d587c1c8d59d9bbe331f9ee95f16fcb0a44f99696a0e",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-new/v1/asset.json"
+            },
+            {
+                "id": "prepared-12",
+                "sha256": "3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-new/v1/original.png"
+            },
+            {
+                "id": "prepared-13",
+                "sha256": "2e6a48eafc5c0709e87a8bcc3c8655e106b1b1bf56ffdb0a3dc02ae5ff07e906",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/fixed-cabin/v1/asset.json"
+            },
+            {
+                "id": "prepared-14",
+                "sha256": "704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/fixed-cabin/v1/original.png"
+            },
+            {
+                "id": "prepared-15",
+                "sha256": "017b46ad04d4ffeb0ff02f0b47e0f3aaf64ef8c87137375cb0db47dfc3379f74",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/cabin-mask/v1/asset.json"
+            },
+            {
+                "id": "prepared-16",
+                "sha256": "e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/cabin-mask/v1/original.png"
+            },
+            {
+                "id": "node",
+                "sha256": "fdfd102dbe86b0af5dfc540a9c8dcb2fa0c5a3166d4a6c067eaf78d49568af40",
+                "ownedPath": "/opt/homebrew/Cellar/node/25.8.2/bin/node"
+            },
+            {
+                "id": "compositor",
+                "sha256": "3332cc623e0e780ee89ec37d2e28df72c5353ef85176b7ccea9bf6270829ba9b",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/render.cjs"
+            },
+            {
+                "id": "scenery",
+                "sha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/scenery.cjs"
+            },
+            {
+                "id": "canvas-manifest",
+                "sha256": "8e345a28e4d1cedd40ee8f41a4c779ef9aeb590c8bbce21eef6c64192c74bdc3",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/package.json"
+            },
+            {
+                "id": "canvas-artifact-0",
+                "sha256": "c7ce5cd89e3647d747a9ca9f28d1362e4da79561336fb49bf49e78eba9850333",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/index.js"
+            },
+            {
+                "id": "canvas-artifact-1",
+                "sha256": "b9849c13b0368608c13cbbf431524c3a2e69bcea314bb719d6e52725232fcb67",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/js-binding.js"
+            },
+            {
+                "id": "canvas-artifact-2",
+                "sha256": "2e0ae365059fdb0424ddd2da8401e240a250c52b7efca68680996a99e804c1a1",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/geometry.js"
+            },
+            {
+                "id": "canvas-artifact-3",
+                "sha256": "a63d9edc7dc00ebee21eb1fe87172b9be68070e49a958ef4d1826445b7c1240e",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/load-image.js"
+            },
+            {
+                "id": "canvas-artifact-4",
+                "sha256": "b6b2f5cc20d4d536c1b5768ba41ef6c83fcd289f4cc435d9aac5e2185e0b655c",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas-darwin-arm64/skia.darwin-arm64.node"
+            },
+            {
+                "id": "ffmpeg",
+                "sha256": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+                "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg"
+            },
+            {
+                "id": "ffprobe",
+                "sha256": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264",
+                "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe"
+            },
+            {
+                "id": "media-manifest",
+                "sha256": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+                "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json"
+            },
+            {
+                "id": "host",
+                "sha256": "a5d79d2f7c95ff7387148531c87bd1c80626e37e2c6f4189f3dafaae0d7a3664",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/scripts/SceneryPilot.kt"
+            },
+            {
+                "id": "prep",
+                "sha256": "da88938571ffc7dfd17a7020825ce0aac19ad056d5a279a4525276e1012e5ecb",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/scripts/prepare-scenery.cjs"
+            },
+            {
+                "id": "preparation",
+                "sha256": "4cedaf3cb260bb237d4707c39863e6d3fa9a81a5eeb26e1914aee7dacf99783a",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/checks/preparation.json"
+            },
+            {
+                "id": "admission",
+                "sha256": "9254fb1694223ec76ddc513401ff700d5826a9a3a9fd5d20e8316429210b6a1e",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/admission.json"
+            }
+        ],
+        "motion": {
+            "preparedPins": [
+                {
+                    "id": "prepared-0",
+                    "sha256": "6f1ed06b794a8cb2ab475f4441ac700a40bf0112c79f166ae548ad88a8c56026",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/prepared-scenes/tokyo-main-window/v1/scene.json"
+                },
+                {
+                    "id": "prepared-1",
+                    "sha256": "9ea3257c6ab220aabfa4bc003416b1f5dbd728622c1b5d1b3af01434646f850b",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/neutral/v1/asset.json"
+                },
+                {
+                    "id": "prepared-2",
+                    "sha256": "594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/neutral/v1/original.png"
+                },
+                {
+                    "id": "prepared-3",
+                    "sha256": "b6aa5ed49edc7e356258c6dd3f4cc485f9011161db87395bc71c886ce53cceb3",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-old/v1/asset.json"
+                },
+                {
+                    "id": "prepared-4",
+                    "sha256": "b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-old/v1/original.png"
+                },
+                {
+                    "id": "prepared-5",
+                    "sha256": "5daba63833bf283b9aefafd374e6c43f98286da1fa47e02eaa7216329f904216",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-new/v1/asset.json"
+                },
+                {
+                    "id": "prepared-6",
+                    "sha256": "e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/far-new/v1/original.png"
+                },
+                {
+                    "id": "prepared-7",
+                    "sha256": "de83ee0032e6e0a17a60e23901f0c93a824a25c640347b19422689b4fc084060",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/middle/v1/asset.json"
+                },
+                {
+                    "id": "prepared-8",
+                    "sha256": "37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/middle/v1/original.png"
+                },
+                {
+                    "id": "prepared-9",
+                    "sha256": "228f0d11f804b43e6bc89ca88316596f2a3ae98aab061cd7fc84b3e787897048",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-old/v1/asset.json"
+                },
+                {
+                    "id": "prepared-10",
+                    "sha256": "64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-old/v1/original.png"
+                },
+                {
+                    "id": "prepared-11",
+                    "sha256": "0d946f5f7f52e81a1728d587c1c8d59d9bbe331f9ee95f16fcb0a44f99696a0e",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-new/v1/asset.json"
+                },
+                {
+                    "id": "prepared-12",
+                    "sha256": "3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/near-new/v1/original.png"
+                },
+                {
+                    "id": "prepared-13",
+                    "sha256": "2e6a48eafc5c0709e87a8bcc3c8655e106b1b1bf56ffdb0a3dc02ae5ff07e906",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/fixed-cabin/v1/asset.json"
+                },
+                {
+                    "id": "prepared-14",
+                    "sha256": "704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/fixed-cabin/v1/original.png"
+                },
+                {
+                    "id": "prepared-15",
+                    "sha256": "017b46ad04d4ffeb0ff02f0b47e0f3aaf64ef8c87137375cb0db47dfc3379f74",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/cabin-mask/v1/asset.json"
+                },
+                {
+                    "id": "prepared-16",
+                    "sha256": "e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/project/references/cabin-mask/v1/original.png"
+                }
+            ],
+            "startFrame": 1170,
+            "endFrameExclusive": 1470,
+            "seed": 2026100205,
+            "descriptor": {
+                "projectId": "tokyo-scenery",
+                "sourceIdentity": "e8e214ceb33fd4f04f07078af1743cddba9e952b19fd520c45d3e22cc0897cdc",
+                "requestJson": "{\"schema\":\"melotrail-controlled-motion-request-v1\",\"preparedScene\":{\"schemaVersion\":2,\"id\":{\"id\":\"tokyo-main-window\",\"version\":1},\"source\":{\"look\":null,\"references\":[{\"id\":{\"id\":\"neutral\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/neutral/v1/asset.json\",\"sha256\":\"9ea3257c6ab220aabfa4bc003416b1f5dbd728622c1b5d1b3af01434646f850b\"},\"original\":{\"artifact\":{\"relativePath\":\"references/neutral/v1/original.png\",\"sha256\":\"594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":3066603,\"hasAlphaChannel\":false,\"hasTransparentPixels\":false}},{\"id\":{\"id\":\"far-old\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/far-old/v1/asset.json\",\"sha256\":\"b6aa5ed49edc7e356258c6dd3f4cc485f9011161db87395bc71c886ce53cceb3\"},\"original\":{\"artifact\":{\"relativePath\":\"references/far-old/v1/original.png\",\"sha256\":\"b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2661343,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false}},{\"id\":{\"id\":\"far-new\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/far-new/v1/asset.json\",\"sha256\":\"5daba63833bf283b9aefafd374e6c43f98286da1fa47e02eaa7216329f904216\"},\"original\":{\"artifact\":{\"relativePath\":\"references/far-new/v1/original.png\",\"sha256\":\"e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2869252,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false}},{\"id\":{\"id\":\"middle\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/middle/v1/asset.json\",\"sha256\":\"de83ee0032e6e0a17a60e23901f0c93a824a25c640347b19422689b4fc084060\"},\"original\":{\"artifact\":{\"relativePath\":\"references/middle/v1/original.png\",\"sha256\":\"37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":3288326,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"near-old\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/near-old/v1/asset.json\",\"sha256\":\"228f0d11f804b43e6bc89ca88316596f2a3ae98aab061cd7fc84b3e787897048\"},\"original\":{\"artifact\":{\"relativePath\":\"references/near-old/v1/original.png\",\"sha256\":\"64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":2399251,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"near-new\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/near-new/v1/asset.json\",\"sha256\":\"0d946f5f7f52e81a1728d587c1c8d59d9bbe331f9ee95f16fcb0a44f99696a0e\"},\"original\":{\"artifact\":{\"relativePath\":\"references/near-new/v1/original.png\",\"sha256\":\"3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":3551134,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"fixed-cabin\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/fixed-cabin/v1/asset.json\",\"sha256\":\"2e6a48eafc5c0709e87a8bcc3c8655e106b1b1bf56ffdb0a3dc02ae5ff07e906\"},\"original\":{\"artifact\":{\"relativePath\":\"references/fixed-cabin/v1/original.png\",\"sha256\":\"704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":2202560,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"cabin-mask\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/cabin-mask/v1/asset.json\",\"sha256\":\"017b46ad04d4ffeb0ff02f0b47e0f3aaf64ef8c87137375cb0db47dfc3379f74\"},\"original\":{\"artifact\":{\"relativePath\":\"references/cabin-mask/v1/original.png\",\"sha256\":\"e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":14850,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}}]},\"coordinateSpaces\":[{\"id\":\"scene\",\"width\":6264,\"height\":1080}],\"layers\":[{\"id\":\"finished-scene\",\"kind\":\"FINISHED_SCENE\",\"image\":{\"artifact\":{\"relativePath\":\"references/neutral/v1/original.png\",\"sha256\":\"594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":3066603,\"hasAlphaChannel\":false,\"hasTransparentPixels\":false},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":1920.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":2073600,\"translucentPixels\":0,\"transparentPixels\":0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"far-old\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/far-old/v1/original.png\",\"sha256\":\"b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2661343,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":6048000,\"translucentPixels\":0,\"transparentPixels\":0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"far-new\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/far-new/v1/original.png\",\"sha256\":\"e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2869252,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":6048000,\"translucentPixels\":0,\"transparentPixels\":0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"middle\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/middle/v1/original.png\",\"sha256\":\"37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":3288326,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1573693,\"translucentPixels\":55160,\"transparentPixels\":4419147},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-old\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/near-old/v1/original.png\",\"sha256\":\"64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":2399251,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1121534,\"translucentPixels\":107652,\"transparentPixels\":5535934},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-new\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/near-new/v1/original.png\",\"sha256\":\"3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":3551134,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1599523,\"translucentPixels\":129171,\"transparentPixels\":5036426},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"cabin\",\"kind\":\"FOREGROUND\",\"image\":{\"artifact\":{\"relativePath\":\"references/fixed-cabin/v1/original.png\",\"sha256\":\"704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":2202560,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":1920.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1356334,\"translucentPixels\":1833,\"transparentPixels\":715433},\"reviewStatus\":\"UNREVIEWED\"}],\"poses\":[],\"masks\":[{\"id\":\"cabin-mask\",\"image\":{\"artifact\":{\"relativePath\":\"references/cabin-mask/v1/original.png\",\"sha256\":\"e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":14850,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":1920.0,\"height\":1080.0},\"layerIds\":[\"cabin\",\"far-old\",\"far-new\",\"middle\",\"near-old\",\"near-new\"],\"purpose\":\"OCCLUSION\",\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1356334,\"translucentPixels\":1833,\"transparentPixels\":715433},\"reviewStatus\":\"UNREVIEWED\"}],\"subjectLandmarks\":[],\"effectAnchors\":[],\"depthRelations\":[{\"nearerLayerId\":\"near-old\",\"fartherLayerId\":\"middle\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"near-new\",\"fartherLayerId\":\"middle\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"middle\",\"fartherLayerId\":\"far-old\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"middle\",\"fartherLayerId\":\"far-new\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"far-old\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"far-new\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"middle\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"near-old\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"near-new\",\"reviewStatus\":\"UNREVIEWED\"}],\"occlusionRelations\":[{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"far-old\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"far-new\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"middle\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"near-old\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"near-new\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"}],\"sceneryCoverage\":[{\"id\":\"far-old-coverage\",\"layerId\":\"far-old\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"far-new-coverage\",\"layerId\":\"far-new\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"middle-coverage\",\"layerId\":\"middle\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-old-coverage\",\"layerId\":\"near-old\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-new-coverage\",\"layerId\":\"near-new\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"}],\"motionCapabilities\":[{\"id\":\"motion-1\",\"targetType\":\"LAYER\",\"targetId\":\"finished-scene\",\"control\":\"IMAGE_TO_VIDEO\",\"unit\":\"RATIO\",\"minimum\":0.0,\"maximum\":1.0,\"defaultValue\":1.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-2\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"far-old-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-3680.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-3\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"far-new-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-3680.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-4\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"middle-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-3680.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-5\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"near-old-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-4344.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-6\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"near-new-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-4344.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"}],\"dependencies\":[{\"id\":\"prepared-animation-assets\",\"version\":\"3\",\"sha256\":\"b803159bac5833ad12a8382ed4854e230508ec85449a55de60c39b35dfb9c951\",\"artifact\":null}],\"reusePolicy\":{\"subtleMotionPatterns\":\"ALLOWED\",\"wholeFootage\":\"FORBIDDEN\"},\"createdAt\":\"2026-10-02T12:16:37.885028Z\"},\"seed\":2026100205,\"fps\":30,\"canvas\":{\"coordinateSpaceId\":\"scene\",\"width\":1920,\"height\":1080},\"frameRange\":{\"startFrame\":1170,\"frameCount\":300},\"controls\":[],\"scenery\":{\"schema\":\"melotrail-rigid-scenery-v1\",\"mode\":\"moving\",\"viewport\":{\"coordinateSpaceId\":\"scene\",\"x\":0,\"y\":0,\"width\":1920,\"height\":1080},\"camera\":{\"startFrame\":1170,\"durationFrames\":300,\"travelXPixels\":239.59933222036727,\"travelYPixels\":0,\"motionBlurSamples\":3,\"shutterFraction\":0.5},\"planes\":[{\"id\":\"far\",\"sections\":[{\"coverageId\":\"far-old-coverage\",\"worldX\":-937.5626043405676,\"worldY\":0,\"startFrame\":1170,\"endFrameExclusive\":1230},{\"coverageId\":\"far-new-coverage\",\"worldX\":-937.5626043405676,\"worldY\":0,\"startFrame\":1230,\"endFrameExclusive\":1470}]},{\"id\":\"middle\",\"sections\":[{\"coverageId\":\"middle-coverage\",\"worldX\":-1875.1252086811353,\"worldY\":0,\"startFrame\":1170,\"endFrameExclusive\":1470}]},{\"id\":\"near\",\"sections\":[{\"coverageId\":\"near-old-coverage\",\"worldX\":-2812.687813021703,\"worldY\":0,\"startFrame\":1170,\"endFrameExclusive\":1230},{\"coverageId\":\"near-new-coverage\",\"worldX\":-2812.687813021703,\"worldY\":0,\"startFrame\":1230,\"endFrameExclusive\":1470}]}]}}",
+                "runtime": {
+                    "node": {
+                        "id": "node",
+                        "sha256": "fdfd102dbe86b0af5dfc540a9c8dcb2fa0c5a3166d4a6c067eaf78d49568af40",
+                        "ownedPath": "/opt/homebrew/Cellar/node/25.8.2/bin/node"
+                    },
+                    "compositor": {
+                        "id": "compositor",
+                        "sha256": "3332cc623e0e780ee89ec37d2e28df72c5353ef85176b7ccea9bf6270829ba9b",
+                        "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/render.cjs"
+                    },
+                    "scenery": {
+                        "id": "scenery",
+                        "sha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+                        "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/scenery.cjs"
+                    },
+                    "canvasManifest": {
+                        "id": "canvas-manifest",
+                        "sha256": "8e345a28e4d1cedd40ee8f41a4c779ef9aeb590c8bbce21eef6c64192c74bdc3",
+                        "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/package.json"
+                    },
+                    "canvasArtifacts": [
+                        {
+                            "id": "canvas-artifact-0",
+                            "sha256": "c7ce5cd89e3647d747a9ca9f28d1362e4da79561336fb49bf49e78eba9850333",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/index.js"
+                        },
+                        {
+                            "id": "canvas-artifact-1",
+                            "sha256": "b9849c13b0368608c13cbbf431524c3a2e69bcea314bb719d6e52725232fcb67",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/js-binding.js"
+                        },
+                        {
+                            "id": "canvas-artifact-2",
+                            "sha256": "2e0ae365059fdb0424ddd2da8401e240a250c52b7efca68680996a99e804c1a1",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/geometry.js"
+                        },
+                        {
+                            "id": "canvas-artifact-3",
+                            "sha256": "a63d9edc7dc00ebee21eb1fe87172b9be68070e49a958ef4d1826445b7c1240e",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/load-image.js"
+                        },
+                        {
+                            "id": "canvas-artifact-4",
+                            "sha256": "b6b2f5cc20d4d536c1b5768ba41ef6c83fcd289f4cc435d9aac5e2185e0b655c",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas-darwin-arm64/skia.darwin-arm64.node"
+                        }
+                    ],
+                    "ffmpeg": {
+                        "id": "ffmpeg",
+                        "sha256": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+                        "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg"
+                    },
+                    "ffprobe": {
+                        "id": "ffprobe",
+                        "sha256": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264",
+                        "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe"
+                    },
+                    "mediaManifest": {
+                        "id": "media-manifest",
+                        "sha256": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+                        "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json"
+                    },
+                    "expectedCanvasVersion": "0.1.80"
+                }
+            }
+        },
+        "primaryPrompt": "Quiet Tokyo travel with a seamless offscreen handoff and clock-front district arrival.",
+        "media": {
+            "execution": {
+                "wallClockLimitMillis": 900000,
+                "memoryLimitBytes": 2147483648,
+                "diskLimitBytes": 4294967296
+            },
+            "maximumStagingBytes": 2147483648,
+            "maximumOutputBytes": 134217728,
+            "minimumFreeDiskBytes": 21474836480,
+            "maximumConcurrentNativeProcesses": 1,
+            "maximumBufferedFrames": 1,
+            "encodingProfile": "image2-h264-yuv420p-silent-square-v1"
+        },
+        "comfyWorkflow": null
+    },
+    "requestFingerprint": "1093b11ffbc682612191d5e5ab645f8f52b4227a50c6d70fd101ff3be56d2ac1",
+    "maximumAttempts": 1,
+    "createdAt": "2026-10-02T12:16:39.636564Z",
+    "execution": {
+        "type": "local",
+        "wallClockLimitMillis": 900000,
+        "memoryLimitBytes": 2147483648,
+        "diskLimitBytes": 4294967296
+    }
+}

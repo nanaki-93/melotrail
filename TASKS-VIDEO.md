@@ -2969,7 +2969,7 @@ No production surface may outrun VG3-03 approval; material changes need renewed 
 | --- | --- | --- | --- |
 | VG4-03 | Scope preparation dependencies to their declared consumed components; keep shared/unspecified dependencies global, reject incomplete or invalid declarations and preserve unaffected pending chunks and completed takes. Bounded prerequisite split from VG4-01. | VG2-02 | DONE |
 | VG4-04 | Persist immutable continuous-plan proposals under the existing Video project lock, with exact source/descriptor pins, append-only versions, revision guards, confined publication and verified reopen. A saved proposal is not executable readiness or a render checkpoint. | VG2-02, VG4-03 | DONE |
-| VG4-05 | Prepare matching Tokyo extensions and offscreen joins using the existing scenario assets plus new same-style points of interest in scenario/. Preserve reference speed/scale, rigid far/middle/near depth and quiet travel. Prove a short moving join and at least 60-second coverage first, with the full 180-second route and closing join scoped from the outset. Mattes must fit the required moving-character envelope, not only the old fixed head. | VG2-23, VG1-02 | BLOCKED |
+| VG4-05 | Prepare matching Tokyo extensions and offscreen joins using the existing scenario assets plus new same-style points of interest in scenario/. Preserve reference speed/scale, rigid far/middle/near depth and quiet travel. Prove a short moving join and at least 60-second coverage first, with the full 180-second route and closing join scoped from the outset. Mattes must fit the required moving-character envelope, not only the old fixed head. | VG2-23, VG1-02 | REVIEW |
 | VG4-07 | After all required action proofs/review, bind only the proven character-motion method and schedule through existing VideoAssembly/Planner/Store and preparation/descriptor owners. Pin motion/art/prop versions, absolute timing/rests/returns and dependency invalidation. Current held poses are not continuous drink/read motion. No automatic rig adoption, second schema/ledger or UI. | VG4-03, VG4-04, VG2-27 | TODO |
 | VG4-08 | Deferred after the 2026-10-02 baseline reset. Standalone description-to-action proof: implement a small explicit supported vocabulary mapping exact descriptions to the reviewed rig actions, absolute timing, bounded speed/amplitude, rests and compatible scenery. Show the interpretation; fixture-test two distinct briefs plus unsupported action/viewpoint/prop, ambiguous timing and channel conflict. No generated code execution, arbitrary prompt-to-film claim, LLM/provider addition, production schema or UI. Agent/manual mappings remain labelled until automated mapping is actually tested. | VG2-10 | OPTIONAL |
 | VG4-09 | Adapt the reviewed local character-motion method to the existing controlled media-stage/job/process/result owners after VG4-07. Prove import, moving support/occlusion, absolute frame dispatch, cancellation/reopen, stale-result/no-overwrite and truthful decode reservations. Preserve the fixed cabin and independently moving scenery. No failed socket reuse or assumed Blender backend. | VG4-07, VG2-02 | TODO |
@@ -3024,6 +3024,57 @@ and exact original-pixel overlap, preserving all old media and reference speed.
 A fresh explicit run instruction is required before that correction/native proof.
 Headless repository validation is retained in `checks/validation.json`; it does
 not promote this failed scenery check or grant human motion approval.
+
+VG4-05 authorized correction (2026-10-02), **BLOCKED before video**:
+The user's “yes, go for it” admitted the saved correction. Evidence is retained at
+`docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/`.
+Both near sections now use 6264×1080 canvases with byte-exact decoded original
+pixels through x=4899 and unchanged v5 right-hand artwork. The final bound has
+19.192px of travel margin; transparent margins are not new painted scenery.
+Production reimport and short request construction pass. A harness working-folder
+refusal occurred before native launch, followed by a continuation-state checker
+repair. The source check then reached 2,165,374,976 bytes against its 2-GiB limit
+and was terminated. Complete coverage/join and visual source review remain
+unverified; no movie render, encode, take or new ComfyUI job occurred. No retry
+followed the resource failure. `checks/next-correction.json` pins a prepared,
+syntax-checked follow-up that runs each source check/frame in its own sequential
+production-owned process, releasing its buffers before the next. It needs a fresh
+explicit run instruction, keeps all existing limits and reuses the corrected
+assets/import rather than regenerating them. The same single 10s 1080p30 movie
+remains conditional on every source/visual gate. Media remain local; human
+normal-speed review and the wider VG4 obligations remain open.
+
+VG4-05 isolated-check follow-up (2026-10-02), **REVIEW**:
+The user replied “we can put the CAP limit to 8 or 10 GiB”; this run selects
+8 GiB for native processes and the observed process tree, retaining 120s preparation,
+900s video processing, 4 GiB new storage, 20 GiB free reserve and no automatic
+retries. This scoped override does not change production defaults or other tasks.
+`docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/` reuses the
+corrected near tiles and approved ComfyUI-finished neutral in a fresh production
+project. Sequential source checks pass in 20.63s including import: all-plane
+60-second bounds, exact far/near handoffs, ten opaque source samples, and zero
+changed pixels outside the main-window aperture. Regressions reject the actual
+prior different-width join, a changed visible overlap, excessive travel and
+incorrect continuation state. Source-check peak observed tree RSS is 885 MB.
+
+The sole production-controlled movie succeeds: `review/tokyo-window-join-10s-1080p.mp4`,
+SHA-256 `df01ed7840435eb82b2f1af7a4e99de09f165efeeaa4b55a34649ed6221da8f7`,
+17,672,567 bytes, 1920×1080 H.264, 300 frames at exact 30fps, 10.000s, square
+pixels, fast start and no audio. Absolute source range is 1170–1469; the handoff
+is frame 1230 (clip 2s). Production counted probe/full decode plus one additional
+review decode pass; all 300 frames compare with the frozen encoder input, with
+minimum PSNR 34.44dB, maximum face MAE 3.68/255 and no identical consecutive
+frames. A synthetic missing-face regression fails as expected. Agent source and
+decoded-still inspection passes; normal-speed human motion approval is pending.
+Native execution plus review takes 169.35s, peak observed tree RSS 1.61 GB and
+peak retained evidence 2.63 GB, within the newly authorized caps. No new ComfyUI
+job, automatic retry, selected take or original-art replacement occurred.
+
+This proves a static-neutral main-window method, not the full VG4-05 row.
+Moving-character mattes, small left panes, remaining Tokyo districts, full 180s
+coverage and the closing join remain required. Full-headless validation is in
+`checks/validation.json`; media remain local and only helpers/checks/status are
+committed. REVIEW does not imply human artistic acceptance or full-film readiness.
 
 VG4-05/06 owners: selected derived scenery and an ignored production-service test
 harness; current `VideoAnimationAssets`, `VideoScenePreparation`, prepared-scene

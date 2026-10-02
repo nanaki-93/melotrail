@@ -1,0 +1,27 @@
+allprojects {
+    tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        systemProperty "java.awt.headless", "true"
+        exclude "**/MidiCoreNativeResponsivenessTest*"
+    }
+}
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    root.tasks.register('vg405ReadClasspath') {
+        dependsOn(root.tasks.named('testClasses'))
+        doLast {
+            def out = new File(root.findProperty('vg405ClasspathOutput') ?: 'MISSING_CLASSPATH_PATH')
+            if (out.exists()) throw new GradleException('Refusing existing classpath output')
+            out.text = root.sourceSets.test.runtimeClasspath.asPath
+        }
+    }
+}
+
+gradle.projectsEvaluated {
+ def p=rootProject
+ p.tasks.register("compileSceneryPilot",JavaExec) {
+  dependsOn p.tasks.named("classes")
+  classpath=p.configurations.getByName("kotlinCompilerClasspath")
+  mainClass.set("org.jetbrains.kotlin.cli.jvm.K2JVMCompiler")
+  args "-no-stdlib","-no-reflect","-jvm-target","21","-classpath",p.sourceSets.main.runtimeClasspath.asPath,"-d",p.findProperty("vg405Classes"),p.findProperty("vg405Host")
+ }
+}

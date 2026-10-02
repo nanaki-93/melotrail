@@ -1,0 +1,164 @@
+{
+  "sources": [
+    {
+      "role": "plate",
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/plate-finish/review/neutral-comfy-1080p.png",
+      "sha256": "594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111"
+    },
+    {
+      "role": "far",
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-parallax-far-5600x1080.png",
+      "sha256": "b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f"
+    },
+    {
+      "role": "fullFar",
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/build/tabi-tokyo-long.58RtOJ/finishing/far-correction-x2.png",
+      "sha256": "01dfcb1a967d2aa6203c67ae7bc1a758e5792f1aec43a8df048ea61d9ad7272e"
+    },
+    {
+      "role": "middle",
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-parallax-middle-5600x1080.png",
+      "sha256": "37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282"
+    },
+    {
+      "role": "near",
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-parallax-near-5600x1080.png",
+      "sha256": "f26a6c3de329e80338d60779ce58a436cd9363600d66f0d20db4269a5d6c8cee"
+    },
+    {
+      "role": "nearNext",
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-clockfront-near-v5/tokyo-near-section-v5-candidate-6200x1080.png",
+      "sha256": "c1114749dc6b1ae704d448231320c13ef3e3ba092b71ecab7394500b6fc9a1e0"
+    }
+  ],
+  "art": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-20261002T100234Z/far-extended-5600x1080.png",
+      "bytes": 2869252,
+      "sha256": "e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-20261002T100234Z/fixed-neutral-foreground.png",
+      "bytes": 2202560,
+      "sha256": "704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-20261002T100234Z/fixed-neutral-occlusion.png",
+      "bytes": 14850,
+      "sha256": "e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-20261002T100234Z/main-window-aperture.png",
+      "bytes": 14217,
+      "sha256": "7a231684d9c2de2022bc16c52d0ac836110feb2399e0a0f0d2aa0fa2d8a71270"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-20261002T100234Z/neutral-comfy-1080p.png",
+      "bytes": 3066603,
+      "sha256": "594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-correction-20261002T121435Z/near-old-6264x1080.png",
+      "sha256": "64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3",
+      "bytes": 2399251,
+      "width": 6264,
+      "height": 1080
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-correction-20261002T121435Z/near-new-6264x1080.png",
+      "sha256": "3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57",
+      "bytes": 3551134,
+      "width": 6264,
+      "height": 1080
+    }
+  ],
+  "scope": "Static-neutral main-window short join with 60-second source coverage. No action composition, left-pane replacement or full route.",
+  "farExtension": {
+    "oldAuthoredWorldX": [
+      780,
+      3280
+    ],
+    "newAuthoredWorldX": [
+      780,
+      3530
+    ],
+    "paintedHeight": 800,
+    "sourceCropX2": [
+      3200,
+      0,
+      3520,
+      1024
+    ],
+    "scale": 0.78125,
+    "protectedDifferences": 0,
+    "notes": "No second tower enters the consumed crop; new columns come from the original ComfyUI painting. New 250px are aspect-preserving samples, not padding or stretching."
+  },
+  "coverage": {
+    "frames": 1800,
+    "fps": 30,
+    "seconds": 60,
+    "shutterEvaluations": 5400,
+    "aperturePixels": 717266,
+    "apertureBounds": [
+      861,
+      0,
+      1920,
+      765
+    ],
+    "minimumPaintedMargins": {
+      "left": 81,
+      "right": 168.3973288814691,
+      "bottom": 35
+    },
+    "speedPixelsPerFrame": 0.8013355592654424,
+    "depthMultipliers": [
+      1,
+      2,
+      3
+    ],
+    "referenceScaleUnchanged": true,
+    "full180SecondCoverage": false
+  },
+  "inheritedPreparation": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/checks/preparation.json",
+    "sha256": "99168c7c34a0f4929c87f4f66c5259eeae8b8844e18c7a63e1659c7d450be580"
+  },
+  "nearCorrection": {
+    "sources": [
+      {
+        "role": "near",
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-parallax-near-5600x1080.png",
+        "sha256": "f26a6c3de329e80338d60779ce58a436cd9363600d66f0d20db4269a5d6c8cee"
+      },
+      {
+        "role": "nearNext",
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-clockfront-near-v5/tokyo-near-section-v5-candidate-6200x1080.png",
+        "sha256": "c1114749dc6b1ae704d448231320c13ef3e3ba092b71ecab7394500b6fc9a1e0"
+      }
+    ],
+    "outputs": [
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-correction-20261002T121435Z/near-old-6264x1080.png",
+        "sha256": "64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3",
+        "bytes": 2399251,
+        "width": 6264,
+        "height": 1080
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/scenery-correction-20261002T121435Z/near-new-6264x1080.png",
+        "sha256": "3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57",
+        "bytes": 3551134,
+        "width": 6264,
+        "height": 1080
+      }
+    ],
+    "sharedPrefixExclusive": 4900,
+    "preservedNewArtFromX": 4956,
+    "protectedDecodedDifferences": 0,
+    "canvasWidth": 6264,
+    "maximumTravelPixels": 4324.808013355592,
+    "remainingBoundPixels": 19.191986644407734,
+    "artCoverage": "Transparent margins are backed by existing painted planes and do not count as variety or painted coverage.",
+    "exactRenderedOverlap": "Pending production source checks"
+  }
+}

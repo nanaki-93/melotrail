@@ -2562,6 +2562,43 @@ shared original pixels, with old source/media preserved. Transparent backing
 margin must not be claimed as new art. Small left panes, moving action mattes,
 other districts, full 180s coverage and closing continuity remain pending.
 
+VG4-05 correction (2026-10-02): the newly authorized
+`pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/` prepares both
+near sections at 6264×1080. The shared decoded original overlap and v5 right-hand
+art are unchanged; the travel bound gains 19.192px margin. Production reimport
+passes. After two harness corrections, the source checker exceeds the enforced
+2-GiB native limit (2,165,374,976 bytes), before complete source proof or any
+video render. No movie/encode/ComfyUI retry occurs. Matching canvas bounds are
+therefore prepared, not accepted as a moving join. The retained next-correction
+proposal separates source checks and sample frames into sequential short owned
+processes at the same caps. It is syntax-checked but not executed or resource-
+proved; fresh explicit authorization is required. No original/reference files
+were replaced. The fixed main-window proof still does not close the left panes,
+moving-action mattes, three-minute corridor or closing join.
+
+VG4-05 follow-up at the user's approved 8-GiB cap (2026-10-02):
+`pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/` completes the
+source proof and one 10-second 1080p30 movie using the existing ComfyUI-finished
+neutral and corrected near tiles. Separate short owned source processes pass
+all-plane 60s bounds and exact rendered joins while staying below 1 GiB observed
+RSS. Ten source samples retain every pixel outside the main-window aperture and
+remain opaque; the prior broken join and damaged-overlap regressions reject.
+
+`review/tokyo-window-join-10s-1080p.mp4` has SHA-256
+`df01ed7840435eb82b2f1af7a4e99de09f165efeeaa4b55a34649ed6221da8f7`.
+It is silent H.264, 1920×1080, square pixels, exactly 300 frames/10s/30fps with
+fast start. The scenery handoff is 2s into the clip; the clock-front district
+enters later. All-frame decode/input comparison and exact presentation timing
+pass; decoded face error stays below 3.68/255 and minimum full-frame PSNR is
+34.44dB. Agent still inspection finds no face loss or hard cabin crop. These
+checks support user review, not a human normal-speed motion decision.
+The sole video attempt plus review uses 169.35s, 1.61 GB observed peak tree RSS
+and 2.63 GB retained evidence. No new ComfyUI generation, automatic retry or
+original-media replacement occurs. The 8-GiB choice is specific to this authorized
+run; general limits are unchanged. VG4-05 is REVIEW for this partial proof:
+TABI is static, the small left panes remain fixed, and moving-character mattes,
+other districts, the three-minute route and its repeat boundary remain open.
+
 ### Supervised production runner, then the app
 
 Reuse current project/job/media services through a thin owned harness, not a

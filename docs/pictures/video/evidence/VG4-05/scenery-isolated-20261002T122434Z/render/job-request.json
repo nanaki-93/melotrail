@@ -1,0 +1,363 @@
+{
+    "id": "tokyo-scenery-join",
+    "projectId": "tokyo-scenery",
+    "backendId": "controlled-media",
+    "modelRequirements": [],
+    "input": {
+        "type": "controlled-motion",
+        "prompt": "Ten-second main-window scenery study at absolute 39..49s, preserving original 480/599 pixels/frame and rigid three-plane depth. Static corrected neutral only.",
+        "dependencyPins": [
+            {
+                "id": "prepared-0",
+                "sha256": "cd5790f84859ab5a5d47e3b6a09bf6e0fba81b01b91047cd1e27f1f91f244137",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/prepared-scenes/tokyo-main-window/v1/scene.json"
+            },
+            {
+                "id": "prepared-1",
+                "sha256": "7b0eed87e679268d09f05827f4425d5d0c68d1b1bc68f66cfb9c08cf8fc39d34",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/neutral/v1/asset.json"
+            },
+            {
+                "id": "prepared-2",
+                "sha256": "594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/neutral/v1/original.png"
+            },
+            {
+                "id": "prepared-3",
+                "sha256": "123007198aec354dd73d8beeb44dcf7713dedc44daa9b874835dc825d7f3477d",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-old/v1/asset.json"
+            },
+            {
+                "id": "prepared-4",
+                "sha256": "b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-old/v1/original.png"
+            },
+            {
+                "id": "prepared-5",
+                "sha256": "5a5587860d25bce4a7c407f3899af539398883939a9b0a03ed4fe590f558f2b6",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-new/v1/asset.json"
+            },
+            {
+                "id": "prepared-6",
+                "sha256": "e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-new/v1/original.png"
+            },
+            {
+                "id": "prepared-7",
+                "sha256": "f6acdee47a87e09fc45ac2079af973e3ece2abe22178e22fcb6ec45e86579cf6",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/middle/v1/asset.json"
+            },
+            {
+                "id": "prepared-8",
+                "sha256": "37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/middle/v1/original.png"
+            },
+            {
+                "id": "prepared-9",
+                "sha256": "13697d7e02a8b6b4e7d4475e4aa49aace150689cf02440badd7371f27900a5a0",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-old/v1/asset.json"
+            },
+            {
+                "id": "prepared-10",
+                "sha256": "64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-old/v1/original.png"
+            },
+            {
+                "id": "prepared-11",
+                "sha256": "b615771f7455a5f515c8a4e057f02c6e7adf53b464355f57ed81d278b314b5e8",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-new/v1/asset.json"
+            },
+            {
+                "id": "prepared-12",
+                "sha256": "3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-new/v1/original.png"
+            },
+            {
+                "id": "prepared-13",
+                "sha256": "fb42b2d4d9a37404fd699c8f22a550fed06b976a4565fb3dbae7e1bf2568274f",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/fixed-cabin/v1/asset.json"
+            },
+            {
+                "id": "prepared-14",
+                "sha256": "704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/fixed-cabin/v1/original.png"
+            },
+            {
+                "id": "prepared-15",
+                "sha256": "50af08234a8c41a283b00a09179c4456f341336821ce5acfc86f2b6bb490a873",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/cabin-mask/v1/asset.json"
+            },
+            {
+                "id": "prepared-16",
+                "sha256": "e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/cabin-mask/v1/original.png"
+            },
+            {
+                "id": "node",
+                "sha256": "fdfd102dbe86b0af5dfc540a9c8dcb2fa0c5a3166d4a6c067eaf78d49568af40",
+                "ownedPath": "/opt/homebrew/Cellar/node/25.8.2/bin/node"
+            },
+            {
+                "id": "compositor",
+                "sha256": "3332cc623e0e780ee89ec37d2e28df72c5353ef85176b7ccea9bf6270829ba9b",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/render.cjs"
+            },
+            {
+                "id": "scenery",
+                "sha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/scenery.cjs"
+            },
+            {
+                "id": "canvas-manifest",
+                "sha256": "8e345a28e4d1cedd40ee8f41a4c779ef9aeb590c8bbce21eef6c64192c74bdc3",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/package.json"
+            },
+            {
+                "id": "canvas-artifact-0",
+                "sha256": "c7ce5cd89e3647d747a9ca9f28d1362e4da79561336fb49bf49e78eba9850333",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/index.js"
+            },
+            {
+                "id": "canvas-artifact-1",
+                "sha256": "b9849c13b0368608c13cbbf431524c3a2e69bcea314bb719d6e52725232fcb67",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/js-binding.js"
+            },
+            {
+                "id": "canvas-artifact-2",
+                "sha256": "2e0ae365059fdb0424ddd2da8401e240a250c52b7efca68680996a99e804c1a1",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/geometry.js"
+            },
+            {
+                "id": "canvas-artifact-3",
+                "sha256": "a63d9edc7dc00ebee21eb1fe87172b9be68070e49a958ef4d1826445b7c1240e",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/load-image.js"
+            },
+            {
+                "id": "canvas-artifact-4",
+                "sha256": "b6b2f5cc20d4d536c1b5768ba41ef6c83fcd289f4cc435d9aac5e2185e0b655c",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas-darwin-arm64/skia.darwin-arm64.node"
+            },
+            {
+                "id": "ffmpeg",
+                "sha256": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+                "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg"
+            },
+            {
+                "id": "ffprobe",
+                "sha256": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264",
+                "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe"
+            },
+            {
+                "id": "media-manifest",
+                "sha256": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+                "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json"
+            },
+            {
+                "id": "host",
+                "sha256": "d962c562eab04ba59d7ed026b054478445eb743d157f35af6c7f77f7146dc3d0",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/scripts/SceneryPilot.kt"
+            },
+            {
+                "id": "prep",
+                "sha256": "da88938571ffc7dfd17a7020825ce0aac19ad056d5a279a4525276e1012e5ecb",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/scripts/prepare-scenery.cjs"
+            },
+            {
+                "id": "preparation",
+                "sha256": "4cedaf3cb260bb237d4707c39863e6d3fa9a81a5eeb26e1914aee7dacf99783a",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/checks/preparation.json"
+            },
+            {
+                "id": "admission",
+                "sha256": "6c36f5f44e4645568cc2b461f9b8864c13118a5835d0bf24fba998a058950d8a",
+                "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/admission.json"
+            }
+        ],
+        "motion": {
+            "preparedPins": [
+                {
+                    "id": "prepared-0",
+                    "sha256": "cd5790f84859ab5a5d47e3b6a09bf6e0fba81b01b91047cd1e27f1f91f244137",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/prepared-scenes/tokyo-main-window/v1/scene.json"
+                },
+                {
+                    "id": "prepared-1",
+                    "sha256": "7b0eed87e679268d09f05827f4425d5d0c68d1b1bc68f66cfb9c08cf8fc39d34",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/neutral/v1/asset.json"
+                },
+                {
+                    "id": "prepared-2",
+                    "sha256": "594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/neutral/v1/original.png"
+                },
+                {
+                    "id": "prepared-3",
+                    "sha256": "123007198aec354dd73d8beeb44dcf7713dedc44daa9b874835dc825d7f3477d",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-old/v1/asset.json"
+                },
+                {
+                    "id": "prepared-4",
+                    "sha256": "b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-old/v1/original.png"
+                },
+                {
+                    "id": "prepared-5",
+                    "sha256": "5a5587860d25bce4a7c407f3899af539398883939a9b0a03ed4fe590f558f2b6",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-new/v1/asset.json"
+                },
+                {
+                    "id": "prepared-6",
+                    "sha256": "e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/far-new/v1/original.png"
+                },
+                {
+                    "id": "prepared-7",
+                    "sha256": "f6acdee47a87e09fc45ac2079af973e3ece2abe22178e22fcb6ec45e86579cf6",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/middle/v1/asset.json"
+                },
+                {
+                    "id": "prepared-8",
+                    "sha256": "37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/middle/v1/original.png"
+                },
+                {
+                    "id": "prepared-9",
+                    "sha256": "13697d7e02a8b6b4e7d4475e4aa49aace150689cf02440badd7371f27900a5a0",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-old/v1/asset.json"
+                },
+                {
+                    "id": "prepared-10",
+                    "sha256": "64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-old/v1/original.png"
+                },
+                {
+                    "id": "prepared-11",
+                    "sha256": "b615771f7455a5f515c8a4e057f02c6e7adf53b464355f57ed81d278b314b5e8",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-new/v1/asset.json"
+                },
+                {
+                    "id": "prepared-12",
+                    "sha256": "3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/near-new/v1/original.png"
+                },
+                {
+                    "id": "prepared-13",
+                    "sha256": "fb42b2d4d9a37404fd699c8f22a550fed06b976a4565fb3dbae7e1bf2568274f",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/fixed-cabin/v1/asset.json"
+                },
+                {
+                    "id": "prepared-14",
+                    "sha256": "704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/fixed-cabin/v1/original.png"
+                },
+                {
+                    "id": "prepared-15",
+                    "sha256": "50af08234a8c41a283b00a09179c4456f341336821ce5acfc86f2b6bb490a873",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/cabin-mask/v1/asset.json"
+                },
+                {
+                    "id": "prepared-16",
+                    "sha256": "e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621",
+                    "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/render/project/references/cabin-mask/v1/original.png"
+                }
+            ],
+            "startFrame": 1170,
+            "endFrameExclusive": 1470,
+            "seed": 2026100205,
+            "descriptor": {
+                "projectId": "tokyo-scenery",
+                "sourceIdentity": "0fe422e503f7c473b5b8094db9966a196f65208c9be08b3e3cbbff8b38b8e0c1",
+                "requestJson": "{\"schema\":\"melotrail-controlled-motion-request-v1\",\"preparedScene\":{\"schemaVersion\":2,\"id\":{\"id\":\"tokyo-main-window\",\"version\":1},\"source\":{\"look\":null,\"references\":[{\"id\":{\"id\":\"neutral\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/neutral/v1/asset.json\",\"sha256\":\"7b0eed87e679268d09f05827f4425d5d0c68d1b1bc68f66cfb9c08cf8fc39d34\"},\"original\":{\"artifact\":{\"relativePath\":\"references/neutral/v1/original.png\",\"sha256\":\"594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":3066603,\"hasAlphaChannel\":false,\"hasTransparentPixels\":false}},{\"id\":{\"id\":\"far-old\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/far-old/v1/asset.json\",\"sha256\":\"123007198aec354dd73d8beeb44dcf7713dedc44daa9b874835dc825d7f3477d\"},\"original\":{\"artifact\":{\"relativePath\":\"references/far-old/v1/original.png\",\"sha256\":\"b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2661343,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false}},{\"id\":{\"id\":\"far-new\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/far-new/v1/asset.json\",\"sha256\":\"5a5587860d25bce4a7c407f3899af539398883939a9b0a03ed4fe590f558f2b6\"},\"original\":{\"artifact\":{\"relativePath\":\"references/far-new/v1/original.png\",\"sha256\":\"e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2869252,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false}},{\"id\":{\"id\":\"middle\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/middle/v1/asset.json\",\"sha256\":\"f6acdee47a87e09fc45ac2079af973e3ece2abe22178e22fcb6ec45e86579cf6\"},\"original\":{\"artifact\":{\"relativePath\":\"references/middle/v1/original.png\",\"sha256\":\"37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":3288326,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"near-old\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/near-old/v1/asset.json\",\"sha256\":\"13697d7e02a8b6b4e7d4475e4aa49aace150689cf02440badd7371f27900a5a0\"},\"original\":{\"artifact\":{\"relativePath\":\"references/near-old/v1/original.png\",\"sha256\":\"64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":2399251,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"near-new\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/near-new/v1/asset.json\",\"sha256\":\"b615771f7455a5f515c8a4e057f02c6e7adf53b464355f57ed81d278b314b5e8\"},\"original\":{\"artifact\":{\"relativePath\":\"references/near-new/v1/original.png\",\"sha256\":\"3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":3551134,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"fixed-cabin\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/fixed-cabin/v1/asset.json\",\"sha256\":\"fb42b2d4d9a37404fd699c8f22a550fed06b976a4565fb3dbae7e1bf2568274f\"},\"original\":{\"artifact\":{\"relativePath\":\"references/fixed-cabin/v1/original.png\",\"sha256\":\"704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":2202560,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}},{\"id\":{\"id\":\"cabin-mask\",\"version\":1},\"descriptorArtifact\":{\"relativePath\":\"references/cabin-mask/v1/asset.json\",\"sha256\":\"50af08234a8c41a283b00a09179c4456f341336821ce5acfc86f2b6bb490a873\"},\"original\":{\"artifact\":{\"relativePath\":\"references/cabin-mask/v1/original.png\",\"sha256\":\"e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":14850,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true}}]},\"coordinateSpaces\":[{\"id\":\"scene\",\"width\":6264,\"height\":1080}],\"layers\":[{\"id\":\"finished-scene\",\"kind\":\"FINISHED_SCENE\",\"image\":{\"artifact\":{\"relativePath\":\"references/neutral/v1/original.png\",\"sha256\":\"594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":3066603,\"hasAlphaChannel\":false,\"hasTransparentPixels\":false},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":1920.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":2073600,\"translucentPixels\":0,\"transparentPixels\":0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"far-old\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/far-old/v1/original.png\",\"sha256\":\"b91e588f20d8b0f1a611c1d59700682408cad03222c59e1221c549b2d392491f\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2661343,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":6048000,\"translucentPixels\":0,\"transparentPixels\":0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"far-new\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/far-new/v1/original.png\",\"sha256\":\"e2ee50867af7ab78b2b138b99583fc22b8aba62255b06ca54f7a07de2f2b7b11\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":2869252,\"hasAlphaChannel\":true,\"hasTransparentPixels\":false},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":6048000,\"translucentPixels\":0,\"transparentPixels\":0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"middle\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/middle/v1/original.png\",\"sha256\":\"37a388aeaf0ac638120fcf68c923c7e77e5acccccd285373d0a460c1562e6282\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":5600,\"height\":1080,\"encodedBytes\":3288326,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1573693,\"translucentPixels\":55160,\"transparentPixels\":4419147},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-old\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/near-old/v1/original.png\",\"sha256\":\"64f71008ee5a7a9e03d2fdbe938e759b508c98b20e6aa1209a5429eb0c08ccf3\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":2399251,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1121534,\"translucentPixels\":107652,\"transparentPixels\":5535934},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-new\",\"kind\":\"SCENERY\",\"image\":{\"artifact\":{\"relativePath\":\"references/near-new/v1/original.png\",\"sha256\":\"3de3ae496142419693eae39faeb71194f5f744d082d07e257e7a58b40a086f57\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":6264,\"height\":1080,\"encodedBytes\":3551134,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1599523,\"translucentPixels\":129171,\"transparentPixels\":5036426},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"cabin\",\"kind\":\"FOREGROUND\",\"image\":{\"artifact\":{\"relativePath\":\"references/fixed-cabin/v1/original.png\",\"sha256\":\"704b55feab8f79dacc93fbea963c83fde11d6b9828956243fb57b3617cf824fc\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":2202560,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":1920.0,\"height\":1080.0},\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1356334,\"translucentPixels\":1833,\"transparentPixels\":715433},\"reviewStatus\":\"UNREVIEWED\"}],\"poses\":[],\"masks\":[{\"id\":\"cabin-mask\",\"image\":{\"artifact\":{\"relativePath\":\"references/cabin-mask/v1/original.png\",\"sha256\":\"e9f22d7ef073f23db75f44417bf5a899e33315f41b36a28fa3fbe3caae67d621\"},\"format\":\"PNG\",\"mediaType\":\"image/png\",\"width\":1920,\"height\":1080,\"encodedBytes\":14850,\"hasAlphaChannel\":true,\"hasTransparentPixels\":true},\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":1920.0,\"height\":1080.0},\"layerIds\":[\"cabin\",\"far-old\",\"far-new\",\"middle\",\"near-old\",\"near-new\"],\"purpose\":\"OCCLUSION\",\"transform\":{\"translateX\":0.0,\"translateY\":0.0,\"scaleX\":1.0,\"scaleY\":1.0,\"rotationDegrees\":0.0},\"pivot\":null,\"alpha\":{\"opaquePixels\":1356334,\"translucentPixels\":1833,\"transparentPixels\":715433},\"reviewStatus\":\"UNREVIEWED\"}],\"subjectLandmarks\":[],\"effectAnchors\":[],\"depthRelations\":[{\"nearerLayerId\":\"near-old\",\"fartherLayerId\":\"middle\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"near-new\",\"fartherLayerId\":\"middle\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"middle\",\"fartherLayerId\":\"far-old\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"middle\",\"fartherLayerId\":\"far-new\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"far-old\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"far-new\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"middle\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"near-old\",\"reviewStatus\":\"UNREVIEWED\"},{\"nearerLayerId\":\"cabin\",\"fartherLayerId\":\"near-new\",\"reviewStatus\":\"UNREVIEWED\"}],\"occlusionRelations\":[{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"far-old\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"far-new\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"middle\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"near-old\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"},{\"occluderLayerId\":\"cabin\",\"occludedLayerId\":\"near-new\",\"maskId\":\"cabin-mask\",\"reviewStatus\":\"UNREVIEWED\"}],\"sceneryCoverage\":[{\"id\":\"far-old-coverage\",\"layerId\":\"far-old\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"far-new-coverage\",\"layerId\":\"far-new\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"middle-coverage\",\"layerId\":\"middle\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":5600.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-old-coverage\",\"layerId\":\"near-old\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"near-new-coverage\",\"layerId\":\"near-new\",\"bounds\":{\"coordinateSpaceId\":\"scene\",\"x\":0.0,\"y\":0.0,\"width\":6264.0,\"height\":1080.0},\"reviewStatus\":\"UNREVIEWED\"}],\"motionCapabilities\":[{\"id\":\"motion-1\",\"targetType\":\"LAYER\",\"targetId\":\"finished-scene\",\"control\":\"IMAGE_TO_VIDEO\",\"unit\":\"RATIO\",\"minimum\":0.0,\"maximum\":1.0,\"defaultValue\":1.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-2\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"far-old-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-3680.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-3\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"far-new-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-3680.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-4\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"middle-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-3680.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-5\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"near-old-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-4344.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"},{\"id\":\"motion-6\",\"targetType\":\"SCENERY_COVERAGE\",\"targetId\":\"near-new-coverage\",\"control\":\"TRANSLATE_X\",\"unit\":\"PIXELS\",\"minimum\":-4344.0,\"maximum\":0.0,\"defaultValue\":0.0,\"reviewStatus\":\"UNREVIEWED\"}],\"dependencies\":[{\"id\":\"prepared-animation-assets\",\"version\":\"3\",\"sha256\":\"b803159bac5833ad12a8382ed4854e230508ec85449a55de60c39b35dfb9c951\",\"artifact\":null}],\"reusePolicy\":{\"subtleMotionPatterns\":\"ALLOWED\",\"wholeFootage\":\"FORBIDDEN\"},\"createdAt\":\"2026-10-02T12:25:34.121772Z\"},\"seed\":2026100205,\"fps\":30,\"canvas\":{\"coordinateSpaceId\":\"scene\",\"width\":1920,\"height\":1080},\"frameRange\":{\"startFrame\":1170,\"frameCount\":300},\"controls\":[],\"scenery\":{\"schema\":\"melotrail-rigid-scenery-v1\",\"mode\":\"moving\",\"viewport\":{\"coordinateSpaceId\":\"scene\",\"x\":0,\"y\":0,\"width\":1920,\"height\":1080},\"camera\":{\"startFrame\":1170,\"durationFrames\":300,\"travelXPixels\":239.59933222036727,\"travelYPixels\":0,\"motionBlurSamples\":3,\"shutterFraction\":0.5},\"planes\":[{\"id\":\"far\",\"sections\":[{\"coverageId\":\"far-old-coverage\",\"worldX\":-937.5626043405676,\"worldY\":0,\"startFrame\":1170,\"endFrameExclusive\":1230},{\"coverageId\":\"far-new-coverage\",\"worldX\":-937.5626043405676,\"worldY\":0,\"startFrame\":1230,\"endFrameExclusive\":1470}]},{\"id\":\"middle\",\"sections\":[{\"coverageId\":\"middle-coverage\",\"worldX\":-1875.1252086811353,\"worldY\":0,\"startFrame\":1170,\"endFrameExclusive\":1470}]},{\"id\":\"near\",\"sections\":[{\"coverageId\":\"near-old-coverage\",\"worldX\":-2812.687813021703,\"worldY\":0,\"startFrame\":1170,\"endFrameExclusive\":1230},{\"coverageId\":\"near-new-coverage\",\"worldX\":-2812.687813021703,\"worldY\":0,\"startFrame\":1230,\"endFrameExclusive\":1470}]}]}}",
+                "runtime": {
+                    "node": {
+                        "id": "node",
+                        "sha256": "fdfd102dbe86b0af5dfc540a9c8dcb2fa0c5a3166d4a6c067eaf78d49568af40",
+                        "ownedPath": "/opt/homebrew/Cellar/node/25.8.2/bin/node"
+                    },
+                    "compositor": {
+                        "id": "compositor",
+                        "sha256": "3332cc623e0e780ee89ec37d2e28df72c5353ef85176b7ccea9bf6270829ba9b",
+                        "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/render.cjs"
+                    },
+                    "scenery": {
+                        "id": "scenery",
+                        "sha256": "c0421aa1fc86a81396cccf264763f1da05a6e329ef24a5f9dc0535c5386e329e",
+                        "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/scenery.cjs"
+                    },
+                    "canvasManifest": {
+                        "id": "canvas-manifest",
+                        "sha256": "8e345a28e4d1cedd40ee8f41a4c779ef9aeb590c8bbce21eef6c64192c74bdc3",
+                        "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/package.json"
+                    },
+                    "canvasArtifacts": [
+                        {
+                            "id": "canvas-artifact-0",
+                            "sha256": "c7ce5cd89e3647d747a9ca9f28d1362e4da79561336fb49bf49e78eba9850333",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/index.js"
+                        },
+                        {
+                            "id": "canvas-artifact-1",
+                            "sha256": "b9849c13b0368608c13cbbf431524c3a2e69bcea314bb719d6e52725232fcb67",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/js-binding.js"
+                        },
+                        {
+                            "id": "canvas-artifact-2",
+                            "sha256": "2e0ae365059fdb0424ddd2da8401e240a250c52b7efca68680996a99e804c1a1",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/geometry.js"
+                        },
+                        {
+                            "id": "canvas-artifact-3",
+                            "sha256": "a63d9edc7dc00ebee21eb1fe87172b9be68070e49a958ef4d1826445b7c1240e",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas/load-image.js"
+                        },
+                        {
+                            "id": "canvas-artifact-4",
+                            "sha256": "b6b2f5cc20d4d536c1b5768ba41ef6c83fcd289f4cc435d9aac5e2185e0b655c",
+                            "ownedPath": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules/@napi-rs/canvas-darwin-arm64/skia.darwin-arm64.node"
+                        }
+                    ],
+                    "ffmpeg": {
+                        "id": "ffmpeg",
+                        "sha256": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+                        "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg"
+                    },
+                    "ffprobe": {
+                        "id": "ffprobe",
+                        "sha256": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264",
+                        "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe"
+                    },
+                    "mediaManifest": {
+                        "id": "media-manifest",
+                        "sha256": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+                        "ownedPath": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json"
+                    },
+                    "expectedCanvasVersion": "0.1.80"
+                }
+            }
+        },
+        "primaryPrompt": "Quiet Tokyo travel with a seamless offscreen handoff and clock-front district arrival.",
+        "media": {
+            "execution": {
+                "wallClockLimitMillis": 900000,
+                "memoryLimitBytes": 8589934592,
+                "diskLimitBytes": 4294967296
+            },
+            "maximumStagingBytes": 2147483648,
+            "maximumOutputBytes": 134217728,
+            "minimumFreeDiskBytes": 21474836480,
+            "maximumConcurrentNativeProcesses": 1,
+            "maximumBufferedFrames": 1,
+            "encodingProfile": "image2-h264-yuv420p-silent-square-v1"
+        },
+        "comfyWorkflow": null
+    },
+    "requestFingerprint": "423f9ba2465ee68e7177843ee64a7e465c8e5345ee58d3fc7943a2d325451a9b",
+    "maximumAttempts": 1,
+    "createdAt": "2026-10-02T12:25:35.864600Z",
+    "execution": {
+        "type": "local",
+        "wallClockLimitMillis": 900000,
+        "memoryLimitBytes": 8589934592,
+        "diskLimitBytes": 4294967296
+    }
+}

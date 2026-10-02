@@ -1,0 +1,54 @@
+{
+  "state": "AUTHORIZED",
+  "task": "VG4-05",
+  "reason": "The supplied-layer correction and production import passed. The inherited synchronous source checker exhausted 2 GiB before all gates. No render or encode has started.",
+  "change": "Verify geometry once; run exact joins, damaged-overlap regression, prior-source regression and each review frame in separate sequential production-owned short processes. Every process exits before the next, releasing native buffers. Preserve exact equality, 1080p, source speed and depth.",
+  "scriptPins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/scripts/check-isolated.cjs",
+      "sha256": "15933184fe528dd6a42057e70f55c4486fa6801c2635c3860ff5531c72933024"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/scripts/run-isolated.py",
+      "sha256": "a598ac218d7be56c6238dc1f7d2cb98d536287968fd856345f031decd2a98825"
+    }
+  ],
+  "reuse": {
+    "preparation": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/checks/preparation.json",
+      "sha256": "4cedaf3cb260bb237d4707c39863e6d3fa9a81a5eeb26e1914aee7dacf99783a"
+    },
+    "request": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-correction-20261002T121435Z/render/job-request.json",
+      "sha256": "9ad0d169b88dce12cb1d820ede61f98b9980144fb99296f303015d0d9500f1fa"
+    },
+    "newArt": false,
+    "newImport": true,
+    "comfyUiJobs": 0,
+    "reason": "Fresh isolated evidence/project retains the failed request and its immutable pins unchanged."
+  },
+  "limits": {
+    "sourceCheckSharedSeconds": 120,
+    "nativeProcessMemoryBytes": 8589934592,
+    "observedTreeRssBytes": 8589934592,
+    "videoSharedSeconds": 900,
+    "renderSeconds": 540,
+    "encodeAndBuiltInChecksSeconds": 180,
+    "additionalReviewDecodeSeconds": 180,
+    "newStorageBytes": 4294967296,
+    "freeDiskReserveBytes": 21474836480,
+    "encodes": 1,
+    "additionalDecodes": 1,
+    "automaticRetries": 0
+  },
+  "video": {
+    "frames": 300,
+    "fps": 30,
+    "width": 1920,
+    "height": 1080,
+    "startFrame": 1170,
+    "mainWindowOnly": true,
+    "staticNeutralOnly": true
+  },
+  "gate": "No movie until every source check and visual source inspection pass. Any failure stops; no cap increase."
+}

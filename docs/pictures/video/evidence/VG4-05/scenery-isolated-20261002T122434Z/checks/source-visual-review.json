@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "at": "2026-10-02T12:26:41.225229+00:00",
+  "reviewer": "Codex agent static-source inspection",
+  "files": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/review/source-contact-sheet.png",
+      "sha256": "d33e246b6cf2dc3336b477d13dff922b6b148a34045374f368679292942f4d02"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-isolated-20261002T122434Z/review/source-sample-1230.png",
+      "sha256": "6b25870758f6d795a6c34b1b420ced611e7c906b05d7e1060248cb909123773e"
+    }
+  ],
+  "findings": [
+    "No missing face, arm, hand or notebook in inspected source samples",
+    "Window sill and cup remain intact; no visible black voids or hard rectangular crop",
+    "Passing roofs, residential facades and clock-front arrival stay outside main window",
+    "Exact numerical equality outside the aperture and opaque full frames confirmed in ten source samples"
+  ],
+  "scope": "Permission to proceed with the admitted preview based on source checks. Not human normal-speed motion approval. Small left panes and character animation remain out of scope."
+}

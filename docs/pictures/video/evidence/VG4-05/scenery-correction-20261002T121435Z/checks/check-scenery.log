@@ -1,0 +1,4 @@
+Exception in thread "main" app.melotrail.video.adapter.VideoMediaProcessException: Owned process group exceeded memory limit: 2165374976 > 2147483648 bytes.
+	at app.melotrail.video.adapter.VideoMediaProcess.failure(VideoMediaProcess.kt:423)
+	at app.melotrail.video.adapter.VideoMediaProcess.run(VideoMediaProcess.kt:239)
+	at MediaStage.main(MediaStage.java:15)
