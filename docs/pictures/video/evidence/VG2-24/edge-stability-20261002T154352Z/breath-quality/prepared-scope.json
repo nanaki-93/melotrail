@@ -1,0 +1,15 @@
+{
+  "state": "PREPARED_NOT_AUTHORIZED",
+  "reason": "Prepared edge smoothing improves the saved ComfyUI frames, but the first breathing MP4 does not preserve the improvement. Its one-encode allowance is consumed.",
+  "scope": "Encode the 97 existing lossless ComfyUI frames with core CreateVideo/SaveVideo H.264 CRF12, using the same ComfyUI encoder family as the earlier approved originals. No new motion, upscaling, masking or compositing.",
+  "maxTotalSeconds": 180,
+  "maxRssBytes": 8589934592,
+  "maxNewFilesBytes": 536870912,
+  "runtimePort": 8199,
+  "newMotionInferences": 0,
+  "graphSubmissions": 1,
+  "reviewEncodes": 1,
+  "verificationTraversals": 2,
+  "automaticRetries": 0,
+  "originalExportGateRemains": "FAILED"
+}

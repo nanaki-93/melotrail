@@ -1,0 +1,7 @@
+Collecting opencv-python-headless==4.11.0.86
+  Obtaining dependency information for opencv-python-headless==4.11.0.86 from https://files.pythonhosted.org/packages/dc/53/2c50afa0b1e05ecdb4603818e85f7d174e683d874ef63a6abe3ac92220c8/opencv_python_headless-4.11.0.86-cp37-abi3-macosx_13_0_arm64.whl.metadata
+  Downloading opencv_python_headless-4.11.0.86-cp37-abi3-macosx_13_0_arm64.whl.metadata (20 kB)
+Downloading opencv_python_headless-4.11.0.86-cp37-abi3-macosx_13_0_arm64.whl (37.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 37.3/37.3 MB 45.0 MB/s eta 0:00:00
+Installing collected packages: opencv-python-headless
+Successfully installed opencv-python-headless-4.11.0.86

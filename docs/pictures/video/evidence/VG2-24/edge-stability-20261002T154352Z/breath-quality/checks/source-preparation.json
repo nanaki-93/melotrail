@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "frames": 97,
+  "source": "Existing lossless ComfyUI composite frames; no image changes",
+  "sha256": "333c89d529a3bf1f0680c29890315bf1d0cc975b02c782e82263bb87288ae091",
+  "bytes": 83888138,
+  "seconds": 4.897877999996126,
+  "peakRssBytes": 1687863296,
+  "nativeLaunches": 0
+}

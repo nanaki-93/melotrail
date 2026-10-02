@@ -1,0 +1,58 @@
+{
+  "authorization": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/inputs/admission.json",
+  "native": {
+    "runnerAttempts": 1,
+    "automaticRetries": 0,
+    "wholeRunnerLimitSeconds": 180,
+    "observedProcessTreeRssLimitBytes": 8589934592,
+    "ownedEvidenceAndSessionLimitBytes": 4294967296,
+    "minimumFreeDiskBytes": 21474836480
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-2/request.json",
+      "bytes": 1745,
+      "sha256": "708cee1716df2e7de32957af01f1394859c5c5298fa9b220e7b988a7abd8b4fb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-2/inputs/layer.png",
+      "bytes": 95965443,
+      "sha256": "5eaa2e7e552cdd8a5e119684b29a382a30289c2de0e3f8d6cf5100cbb94ae778"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-2/workflow/composite.json",
+      "bytes": 949,
+      "sha256": "d46d96c84b560b3ef922b283eb669c732df7002ead5de09addea093f674e36a1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/fixed-cabin-cup-free-v2-1080p.png",
+      "bytes": 2921398,
+      "sha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/ComfyEdgeBatch.java",
+      "bytes": 5973,
+      "sha256": "0b7d5c7b32197e0e0d4a03e1aaa5ec6d218034c0fc8f54d549b69ac78d35cc34"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/run-comfy.py",
+      "bytes": 7163,
+      "sha256": "77d28789b8496e639620d22b7ed0a9e2f64abe43b86d7a333160293981a3557e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay/classes/ComfyEdgeBatch.class",
+      "bytes": 13364,
+      "sha256": "1bef8f75f80a6c0a9dc49b17139bea423d69cc0e16133bacee89fa5b820671b5"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay/runtime-classpath.txt",
+      "bytes": 2975,
+      "sha256": "cc0f4db15abb4f7854ec9dde645d41388ca2f773b040569e379f0454a0124489"
+    }
+  ]
+}

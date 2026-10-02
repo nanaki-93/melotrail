@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "seconds": 179.6586150410003,
+  "batches": [
+    {
+      "stage": "breath-0",
+      "seconds": 26.53,
+      "peakSampledRssBytes": 936558592
+    },
+    {
+      "stage": "breath-1-port",
+      "seconds": 26.557,
+      "peakSampledRssBytes": 912982016
+    },
+    {
+      "stage": "breath-2-port",
+      "seconds": 24.538,
+      "peakSampledRssBytes": 1151762432
+    },
+    {
+      "stage": "drink-0-port",
+      "seconds": 22.492,
+      "peakSampledRssBytes": 1412661248
+    },
+    {
+      "stage": "drink-1-port",
+      "seconds": 20.42,
+      "peakSampledRssBytes": 2930720768
+    },
+    {
+      "stage": "drink-2-port",
+      "seconds": 22.458,
+      "peakSampledRssBytes": 1405599744
+    },
+    {
+      "stage": "drink-3-port",
+      "seconds": 24.57,
+      "peakSampledRssBytes": 2518827008
+    }
+  ],
+  "newMotionInferences": 0
+}

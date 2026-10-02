@@ -1,0 +1,39 @@
+{
+  "status": "READY",
+  "frames": 226,
+  "graphs": 7,
+  "freshOwnedRuntimePerGraph": true,
+  "coreNodesOnly": true,
+  "newModelsOrMotionInferences": 0,
+  "userLocatedDefect": "Around TABI\u2019s outline",
+  "visualSamplesInspected": [
+    "review/breath-edge-before-after-0049.png",
+    "review/drink-edge-before-after-0065.png"
+  ],
+  "sourcePins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/ComfyEdgeBatch.java",
+      "sha256": "0b7d5c7b32197e0e0d4a03e1aaa5ec6d218034c0fc8f54d549b69ac78d35cc34"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/MediaStage.java",
+      "sha256": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/edge_frames.py",
+      "sha256": "a8a073837fa3e7ab27c40d9846e352b895bbba481a6233f05c5910833f601991"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/execute-batches.py",
+      "sha256": "ab8d02af6a95581510ad12ee2e2ca643315c2dc0125f46940dc5725305661da4"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/prepare-comfy.py",
+      "sha256": "90e516e13666e6764a809b73a45b11785803d7f12744cc5160c6494d27be5161"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/scripts/run-comfy.py",
+      "sha256": "77d28789b8496e639620d22b7ed0a9e2f64abe43b86d7a333160293981a3557e"
+    }
+  ]
+}

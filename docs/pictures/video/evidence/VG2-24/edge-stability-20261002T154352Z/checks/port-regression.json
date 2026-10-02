@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "oldFailure": "Occupied loopback bind before any runtime startup",
+  "oldFailureGraphSubmissions": 0,
+  "newPorts": [
+    8193,
+    8194,
+    8195,
+    8196,
+    8197,
+    8198
+  ],
+  "allNewPortsDistinct": true,
+  "finishedBatchKept": {
+    "action": "breath",
+    "index": 0,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/breath-0",
+    "firstFrame": 1,
+    "frames": 32
+  },
+  "productionRuntimePortGuardUnchanged": true,
+  "extraMotionInferences": 0,
+  "duplicatePortNegativeRejected": true
+}

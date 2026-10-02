@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-02T15:57:14.527489+00:00",
+  "classPins": {
+    "ComfyEdgeBatch.class": "1bef8f75f80a6c0a9dc49b17139bea423d69cc0e16133bacee89fa5b820671b5",
+    "MediaStage.class": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+  },
+  "admissionSha256": "a2a9b42d358f433ae24131e2873577a780ce0281f921790462e35cbeb903191f",
+  "commandOwner": "ComfyEdgeBatch via production ComfyVideoRuntime/ComfyVideoClient"
+}

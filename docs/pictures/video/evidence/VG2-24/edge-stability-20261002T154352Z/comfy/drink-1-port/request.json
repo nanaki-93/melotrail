@@ -1,0 +1,27 @@
+{
+  "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-1-port",
+  "backing": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/fixed-cabin-cup-free-v2-1080p.png",
+  "backingSha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "storageRoots": [
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z",
+    "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay"
+  ],
+  "batches": [
+    {
+      "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-1/inputs/layer.png",
+      "sourceSha256": "5cbd90d372951660c4b8262f4b01db56a1db5a5507da6f0fcdd27a9e13963b42",
+      "graph": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-1-port/workflow/composite.json",
+      "graphSha256": "a0a5b8f25b71af46149f551121b616ab9e71501e595ff295f8e8945368cdfbe1",
+      "firstFrame": 33,
+      "frames": 32,
+      "promptId": "591d3eb6-5bf4-4271-85d9-8c362460f3e0",
+      "clientId": "28f25e8c-0678-4e7f-887d-5f6c8c800ab4",
+      "attemptId": "4601aea6-acbc-4ac1-a371-534afcec0449",
+      "ownershipToken": "33bea067-fdc9-46d4-b4e9-e3517f768c7f",
+      "fingerprint": "9af21a4069f2a8cd1a7349fe2f3a1020ae7e8ab7b1c9dc372c97831edf4125a8"
+    }
+  ],
+  "port": 8196
+}

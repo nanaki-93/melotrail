@@ -1,0 +1,692 @@
+{
+  "action": "breath",
+  "mode": "check",
+  "frames": 97,
+  "seconds": 20.741346832997806,
+  "peakRssBytes": 769163264,
+  "rows": [
+    {
+      "frame": 2,
+      "alphaBefore": 0.0271389652043581,
+      "alphaAfter": 0.02123890444636345,
+      "edgeRgbBefore": 1.429062008857727,
+      "edgeRgbAfter": 1.0019484758377075
+    },
+    {
+      "frame": 3,
+      "alphaBefore": 0.04621420055627823,
+      "alphaAfter": 0.03436300903558731,
+      "edgeRgbBefore": 1.5032166242599487,
+      "edgeRgbAfter": 1.2426093816757202
+    },
+    {
+      "frame": 4,
+      "alphaBefore": 0.028601868078112602,
+      "alphaAfter": 0.015594501048326492,
+      "edgeRgbBefore": 1.0798873901367188,
+      "edgeRgbAfter": 0.9637508988380432
+    },
+    {
+      "frame": 5,
+      "alphaBefore": 0.04529271274805069,
+      "alphaAfter": 0.01758393459022045,
+      "edgeRgbBefore": 0.5585740208625793,
+      "edgeRgbAfter": 0.6551094055175781
+    },
+    {
+      "frame": 6,
+      "alphaBefore": 0.028764404356479645,
+      "alphaAfter": 0.014104073867201805,
+      "edgeRgbBefore": 0.9330382347106934,
+      "edgeRgbAfter": 0.6978567838668823
+    },
+    {
+      "frame": 7,
+      "alphaBefore": 0.010337447747588158,
+      "alphaAfter": 0.00903297308832407,
+      "edgeRgbBefore": 0.45688319206237793,
+      "edgeRgbAfter": 0.4776889383792877
+    },
+    {
+      "frame": 8,
+      "alphaBefore": 0.010931858792901039,
+      "alphaAfter": 0.0052288672886788845,
+      "edgeRgbBefore": 0.7386927008628845,
+      "edgeRgbAfter": 0.5728465914726257
+    },
+    {
+      "frame": 9,
+      "alphaBefore": 0.01423984207212925,
+      "alphaAfter": 0.005107747856527567,
+      "edgeRgbBefore": 0.5187661647796631,
+      "edgeRgbAfter": 0.5006572604179382
+    },
+    {
+      "frame": 10,
+      "alphaBefore": 0.014202472753822803,
+      "alphaAfter": 0.00583566864952445,
+      "edgeRgbBefore": 0.5674601197242737,
+      "edgeRgbAfter": 0.4808785617351532
+    },
+    {
+      "frame": 11,
+      "alphaBefore": 0.006248796358704567,
+      "alphaAfter": 0.00905637163668871,
+      "edgeRgbBefore": 0.30638623237609863,
+      "edgeRgbAfter": 0.37536710500717163
+    },
+    {
+      "frame": 12,
+      "alphaBefore": 0.02814171463251114,
+      "alphaAfter": 0.013211681507527828,
+      "edgeRgbBefore": 0.8616390228271484,
+      "edgeRgbAfter": 0.6414916515350342
+    },
+    {
+      "frame": 13,
+      "alphaBefore": 0.004216513130813837,
+      "alphaAfter": 0.005410964135080576,
+      "edgeRgbBefore": 0.44109901785850525,
+      "edgeRgbAfter": 0.4249952435493469
+    },
+    {
+      "frame": 14,
+      "alphaBefore": 0.026056699454784393,
+      "alphaAfter": 0.019724411889910698,
+      "edgeRgbBefore": 0.5711861252784729,
+      "edgeRgbAfter": 0.4448385536670685
+    },
+    {
+      "frame": 15,
+      "alphaBefore": 0.034635357558727264,
+      "alphaAfter": 0.013422253541648388,
+      "edgeRgbBefore": 0.37016934156417847,
+      "edgeRgbAfter": 0.3880542516708374
+    },
+    {
+      "frame": 16,
+      "alphaBefore": 0.027094196528196335,
+      "alphaAfter": 0.01237371563911438,
+      "edgeRgbBefore": 0.7281533479690552,
+      "edgeRgbAfter": 0.5890752077102661
+    },
+    {
+      "frame": 17,
+      "alphaBefore": 0.033418960869312286,
+      "alphaAfter": 0.02131437510251999,
+      "edgeRgbBefore": 0.5701623558998108,
+      "edgeRgbAfter": 0.48601746559143066
+    },
+    {
+      "frame": 18,
+      "alphaBefore": 0.0038075638003647327,
+      "alphaAfter": 0.008504902012646198,
+      "edgeRgbBefore": 0.4651687741279602,
+      "edgeRgbAfter": 0.40257951617240906
+    },
+    {
+      "frame": 19,
+      "alphaBefore": 0.02213311195373535,
+      "alphaAfter": 0.00982922874391079,
+      "edgeRgbBefore": 0.2718121111392975,
+      "edgeRgbAfter": 0.29470300674438477
+    },
+    {
+      "frame": 20,
+      "alphaBefore": 0.020855726674199104,
+      "alphaAfter": 0.01129312813282013,
+      "edgeRgbBefore": 0.6478943824768066,
+      "edgeRgbAfter": 0.5238351821899414
+    },
+    {
+      "frame": 21,
+      "alphaBefore": 0.04575610160827637,
+      "alphaAfter": 0.02790571004152298,
+      "edgeRgbBefore": 0.6231868267059326,
+      "edgeRgbAfter": 0.5194010734558105
+    },
+    {
+      "frame": 22,
+      "alphaBefore": 0.022544056177139282,
+      "alphaAfter": 0.017618199810385704,
+      "edgeRgbBefore": 0.24833190441131592,
+      "edgeRgbAfter": 0.2579910457134247
+    },
+    {
+      "frame": 23,
+      "alphaBefore": 0.0103345587849617,
+      "alphaAfter": 0.007646479178220034,
+      "edgeRgbBefore": 0.21411119401454926,
+      "edgeRgbAfter": 0.18114788830280304
+    },
+    {
+      "frame": 24,
+      "alphaBefore": 0.015289359726011753,
+      "alphaAfter": 0.013015219010412693,
+      "edgeRgbBefore": 0.04558241367340088,
+      "edgeRgbAfter": 1.3696315288543701
+    },
+    {
+      "frame": 25,
+      "alphaBefore": 0.05348470062017441,
+      "alphaAfter": 0.026153139770030975,
+      "edgeRgbBefore": 5.8918938636779785,
+      "edgeRgbAfter": 4.146517753601074
+    },
+    {
+      "frame": 26,
+      "alphaBefore": 0.05476432293653488,
+      "alphaAfter": 0.028012080118060112,
+      "edgeRgbBefore": 6.889893054962158,
+      "edgeRgbAfter": 5.164151191711426
+    },
+    {
+      "frame": 27,
+      "alphaBefore": 0.014917573891580105,
+      "alphaAfter": 0.010423913598060608,
+      "edgeRgbBefore": 0.6517323851585388,
+      "edgeRgbAfter": 1.5269417762756348
+    },
+    {
+      "frame": 28,
+      "alphaBefore": 0.030295582488179207,
+      "alphaAfter": 0.020176013931632042,
+      "edgeRgbBefore": 1.605305552482605,
+      "edgeRgbAfter": 1.2817227840423584
+    },
+    {
+      "frame": 29,
+      "alphaBefore": 0.02108786068856716,
+      "alphaAfter": 0.021063202992081642,
+      "edgeRgbBefore": 1.7600082159042358,
+      "edgeRgbAfter": 1.4057731628417969
+    },
+    {
+      "frame": 30,
+      "alphaBefore": 0.03106694482266903,
+      "alphaAfter": 0.029156053438782692,
+      "edgeRgbBefore": 2.011517286300659,
+      "edgeRgbAfter": 1.5475661754608154
+    },
+    {
+      "frame": 31,
+      "alphaBefore": 0.05330758914351463,
+      "alphaAfter": 0.04101836308836937,
+      "edgeRgbBefore": 1.314611792564392,
+      "edgeRgbAfter": 1.291684627532959
+    },
+    {
+      "frame": 32,
+      "alphaBefore": 0.028940817341208458,
+      "alphaAfter": 0.021573595702648163,
+      "edgeRgbBefore": 1.6791146993637085,
+      "edgeRgbAfter": 1.4173290729522705
+    },
+    {
+      "frame": 33,
+      "alphaBefore": 0.03044123388826847,
+      "alphaAfter": 0.014906886033713818,
+      "edgeRgbBefore": 2.055359125137329,
+      "edgeRgbAfter": 1.6337343454360962
+    },
+    {
+      "frame": 34,
+      "alphaBefore": 0.02880641631782055,
+      "alphaAfter": 0.017968660220503807,
+      "edgeRgbBefore": 1.7228082418441772,
+      "edgeRgbAfter": 1.4446475505828857
+    },
+    {
+      "frame": 35,
+      "alphaBefore": 0.031156029552221298,
+      "alphaAfter": 0.024576807394623756,
+      "edgeRgbBefore": 1.518985629081726,
+      "edgeRgbAfter": 1.3252774477005005
+    },
+    {
+      "frame": 36,
+      "alphaBefore": 0.05042620003223419,
+      "alphaAfter": 0.02755790576338768,
+      "edgeRgbBefore": 1.9047446250915527,
+      "edgeRgbAfter": 1.5044013261795044
+    },
+    {
+      "frame": 37,
+      "alphaBefore": 0.03252153843641281,
+      "alphaAfter": 0.024033620953559875,
+      "edgeRgbBefore": 2.6070003509521484,
+      "edgeRgbAfter": 1.9419057369232178
+    },
+    {
+      "frame": 38,
+      "alphaBefore": 0.05724305659532547,
+      "alphaAfter": 0.0359237864613533,
+      "edgeRgbBefore": 4.282668113708496,
+      "edgeRgbAfter": 3.019970417022705
+    },
+    {
+      "frame": 39,
+      "alphaBefore": 0.068291574716568,
+      "alphaAfter": 0.04460642859339714,
+      "edgeRgbBefore": 8.928136825561523,
+      "edgeRgbAfter": 6.227970600128174
+    },
+    {
+      "frame": 40,
+      "alphaBefore": 0.044738780707120895,
+      "alphaAfter": 0.02421082742512226,
+      "edgeRgbBefore": 5.159260272979736,
+      "edgeRgbAfter": 3.721086263656616
+    },
+    {
+      "frame": 41,
+      "alphaBefore": 0.034884802997112274,
+      "alphaAfter": 0.020879704505205154,
+      "edgeRgbBefore": 5.175751686096191,
+      "edgeRgbAfter": 3.790173292160034
+    },
+    {
+      "frame": 42,
+      "alphaBefore": 0.054200418293476105,
+      "alphaAfter": 0.03487468138337135,
+      "edgeRgbBefore": 8.687786102294922,
+      "edgeRgbAfter": 6.142961502075195
+    },
+    {
+      "frame": 43,
+      "alphaBefore": 0.04871099442243576,
+      "alphaAfter": 0.027753928676247597,
+      "edgeRgbBefore": 5.0632171630859375,
+      "edgeRgbAfter": 3.6864356994628906
+    },
+    {
+      "frame": 44,
+      "alphaBefore": 0.04545372352004051,
+      "alphaAfter": 0.02164158783853054,
+      "edgeRgbBefore": 4.628711700439453,
+      "edgeRgbAfter": 3.3322222232818604
+    },
+    {
+      "frame": 45,
+      "alphaBefore": 0.06204568222165108,
+      "alphaAfter": 0.03867363557219505,
+      "edgeRgbBefore": 9.51900863647461,
+      "edgeRgbAfter": 6.930614471435547
+    },
+    {
+      "frame": 46,
+      "alphaBefore": 0.044203806668519974,
+      "alphaAfter": 0.027936523780226707,
+      "edgeRgbBefore": 3.501127004623413,
+      "edgeRgbAfter": 2.7719991207122803
+    },
+    {
+      "frame": 47,
+      "alphaBefore": 0.03884167969226837,
+      "alphaAfter": 0.023553743958473206,
+      "edgeRgbBefore": 3.4875001907348633,
+      "edgeRgbAfter": 2.4574272632598877
+    },
+    {
+      "frame": 48,
+      "alphaBefore": 0.05327833071351051,
+      "alphaAfter": 0.03303704038262367,
+      "edgeRgbBefore": 6.974244117736816,
+      "edgeRgbAfter": 4.762084007263184
+    },
+    {
+      "frame": 49,
+      "alphaBefore": 0.06991252303123474,
+      "alphaAfter": 0.048910461366176605,
+      "edgeRgbBefore": 14.527642250061035,
+      "edgeRgbAfter": 11.022811889648438
+    },
+    {
+      "frame": 50,
+      "alphaBefore": 0.10043223947286606,
+      "alphaAfter": 0.059613730758428574,
+      "edgeRgbBefore": 11.997400283813477,
+      "edgeRgbAfter": 8.533857345581055
+    },
+    {
+      "frame": 51,
+      "alphaBefore": 0.07683410495519638,
+      "alphaAfter": 0.05086454004049301,
+      "edgeRgbBefore": 12.502813339233398,
+      "edgeRgbAfter": 10.010064125061035
+    },
+    {
+      "frame": 52,
+      "alphaBefore": 0.04519864171743393,
+      "alphaAfter": 0.02413228340446949,
+      "edgeRgbBefore": 4.44301176071167,
+      "edgeRgbAfter": 3.7223353385925293
+    },
+    {
+      "frame": 53,
+      "alphaBefore": 0.03421943262219429,
+      "alphaAfter": 0.017335999757051468,
+      "edgeRgbBefore": 4.072799205780029,
+      "edgeRgbAfter": 3.220212697982788
+    },
+    {
+      "frame": 54,
+      "alphaBefore": 0.050879865884780884,
+      "alphaAfter": 0.027752341702580452,
+      "edgeRgbBefore": 5.921675205230713,
+      "edgeRgbAfter": 4.239975929260254
+    },
+    {
+      "frame": 55,
+      "alphaBefore": 0.038895655423402786,
+      "alphaAfter": 0.024488864466547966,
+      "edgeRgbBefore": 3.4084043502807617,
+      "edgeRgbAfter": 2.8164944648742676
+    },
+    {
+      "frame": 56,
+      "alphaBefore": 0.030953016132116318,
+      "alphaAfter": 0.02143656648695469,
+      "edgeRgbBefore": 2.234109401702881,
+      "edgeRgbAfter": 2.044084072113037
+    },
+    {
+      "frame": 57,
+      "alphaBefore": 0.01969088800251484,
+      "alphaAfter": 0.014297735877335072,
+      "edgeRgbBefore": 2.207494020462036,
+      "edgeRgbAfter": 1.8786063194274902
+    },
+    {
+      "frame": 58,
+      "alphaBefore": 0.03268492594361305,
+      "alphaAfter": 0.017367983236908913,
+      "edgeRgbBefore": 1.7731926441192627,
+      "edgeRgbAfter": 1.4982527494430542
+    },
+    {
+      "frame": 59,
+      "alphaBefore": 0.030667375773191452,
+      "alphaAfter": 0.01851370558142662,
+      "edgeRgbBefore": 1.5720951557159424,
+      "edgeRgbAfter": 1.4207005500793457
+    },
+    {
+      "frame": 60,
+      "alphaBefore": 0.02921138145029545,
+      "alphaAfter": 0.021024521440267563,
+      "edgeRgbBefore": 1.3915547132492065,
+      "edgeRgbAfter": 1.1627962589263916
+    },
+    {
+      "frame": 61,
+      "alphaBefore": 0.01484904158860445,
+      "alphaAfter": 0.012893261387944221,
+      "edgeRgbBefore": 0.9595514535903931,
+      "edgeRgbAfter": 0.926266074180603
+    },
+    {
+      "frame": 62,
+      "alphaBefore": 0.02211710810661316,
+      "alphaAfter": 0.010356246493756771,
+      "edgeRgbBefore": 1.1594847440719604,
+      "edgeRgbAfter": 0.9576101303100586
+    },
+    {
+      "frame": 63,
+      "alphaBefore": 0.024493791162967682,
+      "alphaAfter": 0.015888122841715813,
+      "edgeRgbBefore": 1.0367298126220703,
+      "edgeRgbAfter": 0.9370008707046509
+    },
+    {
+      "frame": 64,
+      "alphaBefore": 0.011360842734575272,
+      "alphaAfter": 0.010783841833472252,
+      "edgeRgbBefore": 1.453095555305481,
+      "edgeRgbAfter": 1.467821717262268
+    },
+    {
+      "frame": 65,
+      "alphaBefore": 0.03479894995689392,
+      "alphaAfter": 0.02198093570768833,
+      "edgeRgbBefore": 4.110489845275879,
+      "edgeRgbAfter": 2.8427886962890625
+    },
+    {
+      "frame": 66,
+      "alphaBefore": 0.036504607647657394,
+      "alphaAfter": 0.023187687620520592,
+      "edgeRgbBefore": 2.001089096069336,
+      "edgeRgbAfter": 1.8554593324661255
+    },
+    {
+      "frame": 67,
+      "alphaBefore": 0.021639497950673103,
+      "alphaAfter": 0.01615229621529579,
+      "edgeRgbBefore": 1.7407417297363281,
+      "edgeRgbAfter": 1.7120330333709717
+    },
+    {
+      "frame": 68,
+      "alphaBefore": 0.03002358414232731,
+      "alphaAfter": 0.017917362973093987,
+      "edgeRgbBefore": 3.3112635612487793,
+      "edgeRgbAfter": 2.37748122215271
+    },
+    {
+      "frame": 69,
+      "alphaBefore": 0.060187917202711105,
+      "alphaAfter": 0.035548631101846695,
+      "edgeRgbBefore": 6.741255760192871,
+      "edgeRgbAfter": 4.552603244781494
+    },
+    {
+      "frame": 70,
+      "alphaBefore": 0.026152318343520164,
+      "alphaAfter": 0.020099224522709846,
+      "edgeRgbBefore": 3.400407314300537,
+      "edgeRgbAfter": 2.682101249694824
+    },
+    {
+      "frame": 71,
+      "alphaBefore": 0.03711666911840439,
+      "alphaAfter": 0.024118633940815926,
+      "edgeRgbBefore": 3.3749284744262695,
+      "edgeRgbAfter": 2.426280975341797
+    },
+    {
+      "frame": 72,
+      "alphaBefore": 0.04375981166958809,
+      "alphaAfter": 0.027000579982995987,
+      "edgeRgbBefore": 6.226360321044922,
+      "edgeRgbAfter": 4.105733394622803
+    },
+    {
+      "frame": 73,
+      "alphaBefore": 0.0976814329624176,
+      "alphaAfter": 0.06196578964591026,
+      "edgeRgbBefore": 13.889191627502441,
+      "edgeRgbAfter": 10.715380668640137
+    },
+    {
+      "frame": 74,
+      "alphaBefore": 0.09380053728818893,
+      "alphaAfter": 0.06135762482881546,
+      "edgeRgbBefore": 13.81931209564209,
+      "edgeRgbAfter": 10.733460426330566
+    },
+    {
+      "frame": 75,
+      "alphaBefore": 0.03847251459956169,
+      "alphaAfter": 0.027059420943260193,
+      "edgeRgbBefore": 5.501828193664551,
+      "edgeRgbAfter": 4.2009358406066895
+    },
+    {
+      "frame": 76,
+      "alphaBefore": 0.039380043745040894,
+      "alphaAfter": 0.020851299166679382,
+      "edgeRgbBefore": 4.070391654968262,
+      "edgeRgbAfter": 3.365501642227173
+    },
+    {
+      "frame": 77,
+      "alphaBefore": 0.04737827554345131,
+      "alphaAfter": 0.028014834970235825,
+      "edgeRgbBefore": 3.8870434761047363,
+      "edgeRgbAfter": 3.0272021293640137
+    },
+    {
+      "frame": 78,
+      "alphaBefore": 0.06088901683688164,
+      "alphaAfter": 0.03640971705317497,
+      "edgeRgbBefore": 4.249281406402588,
+      "edgeRgbAfter": 3.236372709274292
+    },
+    {
+      "frame": 79,
+      "alphaBefore": 0.04979339987039566,
+      "alphaAfter": 0.03470612317323685,
+      "edgeRgbBefore": 5.799827575683594,
+      "edgeRgbAfter": 4.146745681762695
+    },
+    {
+      "frame": 80,
+      "alphaBefore": 0.054791610687971115,
+      "alphaAfter": 0.040848035365343094,
+      "edgeRgbBefore": 8.993722915649414,
+      "edgeRgbAfter": 6.478642463684082
+    },
+    {
+      "frame": 81,
+      "alphaBefore": 0.07229408621788025,
+      "alphaAfter": 0.04741901904344559,
+      "edgeRgbBefore": 8.752001762390137,
+      "edgeRgbAfter": 6.679409503936768
+    },
+    {
+      "frame": 82,
+      "alphaBefore": 0.04986889660358429,
+      "alphaAfter": 0.03231900930404663,
+      "edgeRgbBefore": 8.31236457824707,
+      "edgeRgbAfter": 6.506111145019531
+    },
+    {
+      "frame": 83,
+      "alphaBefore": 0.047179900109767914,
+      "alphaAfter": 0.02736291103065014,
+      "edgeRgbBefore": 4.36161470413208,
+      "edgeRgbAfter": 3.466615676879883
+    },
+    {
+      "frame": 84,
+      "alphaBefore": 0.04694324731826782,
+      "alphaAfter": 0.03151744604110718,
+      "edgeRgbBefore": 4.168649196624756,
+      "edgeRgbAfter": 3.3123040199279785
+    },
+    {
+      "frame": 85,
+      "alphaBefore": 0.05567585676908493,
+      "alphaAfter": 0.03835710510611534,
+      "edgeRgbBefore": 8.674910545349121,
+      "edgeRgbAfter": 6.26399564743042
+    },
+    {
+      "frame": 86,
+      "alphaBefore": 0.045156899839639664,
+      "alphaAfter": 0.02154257707297802,
+      "edgeRgbBefore": 3.632033586502075,
+      "edgeRgbAfter": 2.9977869987487793
+    },
+    {
+      "frame": 87,
+      "alphaBefore": 0.04211568459868431,
+      "alphaAfter": 0.015222787857055664,
+      "edgeRgbBefore": 2.7142632007598877,
+      "edgeRgbAfter": 2.28640079498291
+    },
+    {
+      "frame": 88,
+      "alphaBefore": 0.05150523781776428,
+      "alphaAfter": 0.021164869889616966,
+      "edgeRgbBefore": 3.0332260131835938,
+      "edgeRgbAfter": 2.3541219234466553
+    },
+    {
+      "frame": 89,
+      "alphaBefore": 0.04660174250602722,
+      "alphaAfter": 0.03127516806125641,
+      "edgeRgbBefore": 6.323822498321533,
+      "edgeRgbAfter": 4.296321868896484
+    },
+    {
+      "frame": 90,
+      "alphaBefore": 0.06832657754421234,
+      "alphaAfter": 0.034876901656389236,
+      "edgeRgbBefore": 2.385420083999634,
+      "edgeRgbAfter": 2.023543119430542
+    },
+    {
+      "frame": 91,
+      "alphaBefore": 0.051291391253471375,
+      "alphaAfter": 0.0389401912689209,
+      "edgeRgbBefore": 2.218080759048462,
+      "edgeRgbAfter": 1.816592812538147
+    },
+    {
+      "frame": 92,
+      "alphaBefore": 0.019173143431544304,
+      "alphaAfter": 0.016214890405535698,
+      "edgeRgbBefore": 1.719866394996643,
+      "edgeRgbAfter": 1.4673733711242676
+    },
+    {
+      "frame": 93,
+      "alphaBefore": 0.011060666292905807,
+      "alphaAfter": 0.00875794142484665,
+      "edgeRgbBefore": 0.8071658611297607,
+      "edgeRgbAfter": 0.8249921202659607
+    },
+    {
+      "frame": 94,
+      "alphaBefore": 0.011973832733929157,
+      "alphaAfter": 0.007557296194136143,
+      "edgeRgbBefore": 0.9323768019676208,
+      "edgeRgbAfter": 0.7367908954620361
+    },
+    {
+      "frame": 95,
+      "alphaBefore": 0.010833865962922573,
+      "alphaAfter": 0.009873450733721256,
+      "edgeRgbBefore": 0.8945215940475464,
+      "edgeRgbAfter": 0.7582778930664062
+    },
+    {
+      "frame": 96,
+      "alphaBefore": 0.016913365572690964,
+      "alphaAfter": 0.00821747537702322,
+      "edgeRgbBefore": 0.7097822427749634,
+      "edgeRgbAfter": 0.6029611229896545
+    },
+    {
+      "frame": 97,
+      "alphaBefore": 0.0196694303303957,
+      "alphaAfter": 0.00622777733951807,
+      "edgeRgbBefore": 0.7026492953300476,
+      "edgeRgbAfter": 0.4964018762111664
+    }
+  ],
+  "humanApproval": false,
+  "alpha": {
+    "before": 0.03761167704942636,
+    "after": 0.0234151424325925,
+    "reductionFraction": 0.37745018915742234
+  },
+  "edgeRgb": {
+    "before": 3.4717894604740045,
+    "after": 2.678902988166859,
+    "reductionFraction": 0.22837976822445116
+  }
+}

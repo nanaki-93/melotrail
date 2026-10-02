@@ -1,0 +1,21 @@
+{
+  "run": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z",
+  "scratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay",
+  "stamp": "20261002T154352Z",
+  "head": "f38351db4e18889a2a18ad0ffbf8979806f43fdc",
+  "initialNumstat": "16\t0\tAGENTS.md\n6\t2\tPLAN-AUDIO.md\n6\t2\tPLAN-VIDEO.md\n8\t1\tREADME.md\n16\t4\tTASKS-AUDIO.md\n53\t13\tTASKS-VIDEO.md\n6\t2\tdocs/ARCHITECTURE.md\n9\t0\tdocs/TABI_VIDEO.md\n60\t1\tdocs/VALIDATION.md\n",
+  "files": [
+    "AGENTS.md",
+    "PLAN-AUDIO.md",
+    "PLAN-VIDEO.md",
+    "README.md",
+    "TASKS-AUDIO.md",
+    "TASKS-VIDEO.md",
+    "docs/ARCHITECTURE.md",
+    "docs/TABI_VIDEO.md",
+    "docs/VALIDATION.md"
+  ],
+  "userFeedback": "the 2 last video are flickering a little",
+  "localization": "Around TABI\u2019s outline",
+  "scope": "Read-only diagnosis of existing frames, then reversible outline stabilization. Preserve source movies and accepted motion. No new motion inference or model download."
+}

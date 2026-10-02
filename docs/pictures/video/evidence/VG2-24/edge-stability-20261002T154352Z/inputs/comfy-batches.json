@@ -1,0 +1,51 @@
+[
+  {
+    "action": "breath",
+    "index": 0,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/breath-0",
+    "firstFrame": 1,
+    "frames": 32
+  },
+  {
+    "action": "breath",
+    "index": 1,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/breath-1",
+    "firstFrame": 33,
+    "frames": 32
+  },
+  {
+    "action": "breath",
+    "index": 2,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/breath-2",
+    "firstFrame": 65,
+    "frames": 33
+  },
+  {
+    "action": "drink",
+    "index": 0,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-0",
+    "firstFrame": 1,
+    "frames": 32
+  },
+  {
+    "action": "drink",
+    "index": 1,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-1",
+    "firstFrame": 33,
+    "frames": 32
+  },
+  {
+    "action": "drink",
+    "index": 2,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-2",
+    "firstFrame": 65,
+    "frames": 32
+  },
+  {
+    "action": "drink",
+    "index": 3,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-3",
+    "firstFrame": 97,
+    "frames": 33
+  }
+]

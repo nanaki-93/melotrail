@@ -1,0 +1,6 @@
+drink 24
+drink 48
+drink 72
+drink 96
+drink 120
+{"action": "drink", "mode": "prepare", "frames": 129, "seconds": 55.44613479099644, "peakRssBytes": 910163968, "humanApproval": false}

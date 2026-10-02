@@ -1,0 +1,1137 @@
+{
+  "status": "REVIEW",
+  "frames": 226,
+  "mediaStayLocal": true,
+  "files": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0001.png",
+      "bytes": 2722384,
+      "sha256": "7940b763d3984374cdbd7cf285cb005c6ec702bbbee80282332210f4cb558c5a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0002.png",
+      "bytes": 2804666,
+      "sha256": "30e2484b468da0aee99d41c81a17b39e10a84cf9a430fe198e00270228496fa4"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0003.png",
+      "bytes": 2853480,
+      "sha256": "a272d1edf7bcd295623455ca16a998cde7ea964285a861fac2cf2675e3891108"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0004.png",
+      "bytes": 2870873,
+      "sha256": "486627ce08e8b5f81720a0aba78e3c3109e0024b07fdf9a978b724c1c36c7631"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0005.png",
+      "bytes": 2875072,
+      "sha256": "7b8a5e19f7641c119f4117fe12d306c64c5e55738963a3cea6c71143da4f3dc7"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0006.png",
+      "bytes": 2881446,
+      "sha256": "8f3fda08f7f8a60759f5a4bd2bcceaaa44462d3e26608ad73f086063c7ad1d2e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0007.png",
+      "bytes": 2887190,
+      "sha256": "86efaa9f3c5dc9aa282062b44e3a6dc5b8a3583e90cd9737a4a3d0689eb0bc90"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0008.png",
+      "bytes": 2891426,
+      "sha256": "7fa4fa5f7eb538e5578787e1c7f3740b128409ccf1b57a41b11590051d45a319"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0009.png",
+      "bytes": 2909656,
+      "sha256": "03553f20bc8549563fba81deb528cf375a79a22267c42ce4fe3e32a257731e5f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0010.png",
+      "bytes": 2904156,
+      "sha256": "0873b28744e219ff1050fe837c481125234689f727f1bff176379a8163fa83ad"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0011.png",
+      "bytes": 2913280,
+      "sha256": "27d0f69893429f35cc18d9de55ec82443b1ba8b30b62c7dffa669ea4104602d3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0012.png",
+      "bytes": 2917977,
+      "sha256": "9502075e627b0bcc827e9353aa13c0813de0067b18980816cdfcd592a51d2517"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0013.png",
+      "bytes": 2932223,
+      "sha256": "ac2fedf1a4fb0bae57b4f9410f73dfe61a93bf570806b81d7d5b16dda221a185"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0014.png",
+      "bytes": 2921054,
+      "sha256": "50b057be3bccda951867fcb68606bdacfe9d874fb1508d51d07d78687a3ef26d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0015.png",
+      "bytes": 2928399,
+      "sha256": "15e775c687295f24b31483ef61ca6c6a99d34d1fcb21b39e9e1d667b15371f4a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0016.png",
+      "bytes": 2923897,
+      "sha256": "517f90c5d7511193e9cc5d12c854add9ca425d6c1a3a417b98eaede6abfeb666"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0017.png",
+      "bytes": 2937928,
+      "sha256": "b66ab63970248f821cbfe8738e6fa1950b7bf0697c5a67780f53d9b22bcd8eb7"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0018.png",
+      "bytes": 2922683,
+      "sha256": "befaae623aded1c68aea9b30a5d170584cffda70682299edc0bc37f79136aac0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0019.png",
+      "bytes": 2932423,
+      "sha256": "c779b527824bcbface6f8b9efd7beef95c6af4988d52b6a1e72ab03323ac8c9b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0020.png",
+      "bytes": 2926899,
+      "sha256": "0d3766471bc03e52a93f61124d2b29c9e1b8eeac06aa2daa564b939542cd81c7"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0021.png",
+      "bytes": 2945188,
+      "sha256": "f33de3ce371fc8c740ec07867ae3f7939a474815e9e0fefba29375083e7b7d57"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0022.png",
+      "bytes": 2928358,
+      "sha256": "12af7ac4604603c8c1b05a597adec57fe0484cd1e6ae00e704fbc2c3cfd92a69"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0023.png",
+      "bytes": 2933207,
+      "sha256": "c69ef4b251eb8a53719552765cfb662f15fd9a4e9af481cbee5775a9deac1f9b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0024.png",
+      "bytes": 2938117,
+      "sha256": "3db0ce5be8c68cde810f89efbfc04e6616d8868a12f6e830c2f6f3d977c5ba9b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0025.png",
+      "bytes": 2970076,
+      "sha256": "182edadd5550fed7b1e101772530330e2c80973c069bc8cbf74eaf1075e75c08"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0026.png",
+      "bytes": 2997540,
+      "sha256": "5963ce62b05fb2adb07de6e8d67b7860d9fc20784278be1fd391997b9871d956"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0027.png",
+      "bytes": 3012529,
+      "sha256": "234af2beb7dcd763cb4f188e3a032975d301d79a57f05b005591c2643a48f04c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0028.png",
+      "bytes": 3005348,
+      "sha256": "c125a5cfb5370deae785e43c62434207239678c9fd0e53012561d72e9c62a571"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0029.png",
+      "bytes": 3038709,
+      "sha256": "77b5305b2777dbbc9ff9ed9f094712b42ac584c6748e845458deec8b66a9914d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0030.png",
+      "bytes": 3001494,
+      "sha256": "2cec5e03ca937c89a2c3c1bb833ff15cd0820b0299e84bdc7d96dcaa00a94399"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0031.png",
+      "bytes": 3001495,
+      "sha256": "75356fcdcc6935d923df267dfb152df2fb3762df735c501e412a9f6009d21332"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0032.png",
+      "bytes": 3005564,
+      "sha256": "600228277582809be47b831389139b4bb0c02e43838e44ec65ed5b27580eed8c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0033.png",
+      "bytes": 3031463,
+      "sha256": "08abd029a9b8a8be7dd94beaa4fcc18d697a208856ae90f5700bce1caf7b4f84"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0034.png",
+      "bytes": 3004874,
+      "sha256": "4ca715c20de6b7425186b68d8472e37f6f71e453b7bdc35f8b54f2213c0674e0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0035.png",
+      "bytes": 3003746,
+      "sha256": "2c48a2b54d04e6e75252842e7773b30eaafbb40cf5441af517030cda3f4caf76"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0036.png",
+      "bytes": 3001195,
+      "sha256": "2b93ddd9b2207ab398bac059c6d5346c5224cd5ee266007f9244dab461338f6c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0037.png",
+      "bytes": 3024307,
+      "sha256": "f8f42e83b644b377ce2b4de8694ff439bdad7bc4ac4e848f071fcd41ebfc95f6"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0038.png",
+      "bytes": 2993858,
+      "sha256": "1d7a7da889a2efe35e32e3ad3414cb28e56fc3417395e17656ec78fe0c77eb20"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0039.png",
+      "bytes": 3004005,
+      "sha256": "cffb5ac1329dbad873df22a1a2e5611b44c6860974c5427790f9c4b8d8fe5c47"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0040.png",
+      "bytes": 2991982,
+      "sha256": "65cb4776fab64b2659c7d0eec8caeca920734961d1d040263c4f5f5ab3efb319"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0041.png",
+      "bytes": 3017732,
+      "sha256": "4f3b39dc9dcb78a4c39f1c327357a2532c9e0b8b2b88211c763026bf57b916d3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0042.png",
+      "bytes": 2982607,
+      "sha256": "f53c1d16262e790762231404f55a91c7f024578c0e593530b7738885448e69ca"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0043.png",
+      "bytes": 2984573,
+      "sha256": "b7461ed448f1862fbc4645ae1145384a14bb8741e7449ae9cdba0c09b359620c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0044.png",
+      "bytes": 2978742,
+      "sha256": "baefe178bed23fddcc05c332be78ad374c196fd54ed1673263284c1d65684d05"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0045.png",
+      "bytes": 3003296,
+      "sha256": "79cf15d06d4077fad93e76d349628cc9494f732a9f66cb137be230c3f73441c9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0046.png",
+      "bytes": 2975156,
+      "sha256": "3769df773f9f2f2341732e1c5b634245f9f1b6759dbe5d868ddf2aba6bf5b246"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0047.png",
+      "bytes": 2985352,
+      "sha256": "94b66b518756e7caf3a841bf70f620f09d33321983e080854f4f8adef68cd2af"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0048.png",
+      "bytes": 2983731,
+      "sha256": "3777838d184fca424f09fd0c138e4d5cfa72bc24e2710bad49926451ca04b062"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0049.png",
+      "bytes": 2977328,
+      "sha256": "0a2d34b56d521be08920c9dcc627c8c014d93ff621773500ec1614b6b6e52cdf"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0050.png",
+      "bytes": 2984918,
+      "sha256": "d42ed20e60f51fb12c32588398a47cbe0aa23dbb3dad27c2d4e50f2bf93a1199"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0051.png",
+      "bytes": 3009060,
+      "sha256": "6fc2443ebdd140c1b482f39612398801204881ef7bbf50bc62dddd138a03b180"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0052.png",
+      "bytes": 2991891,
+      "sha256": "66adf3f50b85f2321445fd3f8f4004e5b452d9793ce5cb37f8317cedd4efbaf3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0053.png",
+      "bytes": 3017781,
+      "sha256": "5b9aa931bc5fd57170e1f896e23521b152ff5e7818b99763916d64eb007de89a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0054.png",
+      "bytes": 2977365,
+      "sha256": "12a5a7efec5d1677b0d0f5bbe6d023cf8303b95afed24ed0c4648d2ae590f549"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0055.png",
+      "bytes": 2994065,
+      "sha256": "4c003340b868e953a0faa2eba9cb5316606c25c0c0e6724dd13cc632ac75d333"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0056.png",
+      "bytes": 2988425,
+      "sha256": "ffc121c34cd68b8b2712c80b12722954600866d1a4ce70253b77e47a342b1ea0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0057.png",
+      "bytes": 3029743,
+      "sha256": "7eda1fae9e8a7be246627d7f1ba7cb0f32bd0b6ac2809726345236c1eceb575e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0058.png",
+      "bytes": 2990884,
+      "sha256": "539f09ed773c1fafb47502b5b0d42e34333309854eb328a676461f6a54fd16cc"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0059.png",
+      "bytes": 3005763,
+      "sha256": "05dcf1dc5174f782cdecf87a0fa565719a379f49a9949c7ec42d1e7da24473c9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0060.png",
+      "bytes": 2996385,
+      "sha256": "3f7724a8f6bf32dfae126e08ed3bbc4091ba0aaa51839099a1f548a0db65d432"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0061.png",
+      "bytes": 3030253,
+      "sha256": "4cf5fa65d2dfd21611266b6136822650eb021b07878436c555aa5b1d19917ed2"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0062.png",
+      "bytes": 2994192,
+      "sha256": "0aed116997e05a963ad107f39cf5b1499f734f74e1fae7e8681b7e38d8b94991"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0063.png",
+      "bytes": 3002188,
+      "sha256": "c275835c1fc281e4d85c3ca6d8b9380790ee9819c422a552a5a41ecd0730720c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0064.png",
+      "bytes": 2997564,
+      "sha256": "cc94862174fc8e6877ae605a8a5b2e6c5b02b041a308aa51a51142ed98da96a6"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0065.png",
+      "bytes": 3027885,
+      "sha256": "a247ff89811d07f60b14f6b9578ff47eb435a098d9e349300c3a221f7df9674e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0066.png",
+      "bytes": 2994934,
+      "sha256": "429cd2fab9f3b4f3097010dac6a22465f89f731370ccde7c52f26cef5e38b4a0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0067.png",
+      "bytes": 3004983,
+      "sha256": "425a5da96c8e8db9c8f52d725402182c12cd7a61738ec6effc55c709ed4b8b6f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0068.png",
+      "bytes": 3001520,
+      "sha256": "ecf90b6e0076b8833c117f5576ce79963a7a0365635d7b118e229248a53e7c41"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0069.png",
+      "bytes": 3029219,
+      "sha256": "28395cc048f4423a1fcac1a2e835f13261ef00489f4a94aa97405a768594cfd2"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0070.png",
+      "bytes": 3003955,
+      "sha256": "d4128b2821271c1421177ee423ea5d52cf6cbfe9a4ed5884a97606234de9f2d9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0071.png",
+      "bytes": 3017042,
+      "sha256": "88d35f7cd289d826a9a53e921cdf01f74d502599c0527eefa8198426a68515e2"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0072.png",
+      "bytes": 3011386,
+      "sha256": "870dafd3adc9aeb1f5bb9095c15e3940adc51a2b0adac3b45dbcdfafbf5a6c03"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0073.png",
+      "bytes": 3005809,
+      "sha256": "d465cf5f3855d662959eff355cd1a11e4aaf111b9c222032a72f1e5891c0f52e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0074.png",
+      "bytes": 3026680,
+      "sha256": "03cf6e76fbe7deacb96e89f110867a482dc7372839cec24fce6a672c3401f42b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0075.png",
+      "bytes": 3027749,
+      "sha256": "6768e62f454a543126eef38821d2e90c150b83ae1d557305152ec92e91f0ddd5"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0076.png",
+      "bytes": 3020528,
+      "sha256": "f53602609ebec51f9219f14d07afc3bad5d7e6591a50cc4f131c8996568e707d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0077.png",
+      "bytes": 3047458,
+      "sha256": "3202699d1c741704ee8b8c4779091777e61d4e2dccb083a6c4b690f8ce74f46d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0078.png",
+      "bytes": 3011240,
+      "sha256": "a613df1622ab86d72b79f216c59586429262c169e29ad970adaa7f6d8a8bfdd9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0079.png",
+      "bytes": 3018644,
+      "sha256": "b686c212c1fe05800b687922bc2a0039d97b6a54c67d7f11e20955e84a7a2f16"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0080.png",
+      "bytes": 3006847,
+      "sha256": "19fffd8c83d5f1ac779a9d0d5e0dba6f6a045cc7fdb63f9ed9cbd48a5a60f1e7"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0081.png",
+      "bytes": 3040051,
+      "sha256": "5188f0cc2b8291e8ac8a1150dacbc5af7b229068c57e17779c4a82564aedc4ae"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0082.png",
+      "bytes": 3015230,
+      "sha256": "ea351194d23dc1b0e5b213ea47c2211da13720ec3911d1261f59e3921cc59f35"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0083.png",
+      "bytes": 3025705,
+      "sha256": "50b28c67af968634e0805795b71a277ce488589c694add41ce08643b2eaf1546"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0084.png",
+      "bytes": 3014343,
+      "sha256": "1867c594a5caefc8cda7466fdd23a10124716b4840c7f9e14d1b8bec3a725532"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0085.png",
+      "bytes": 3044430,
+      "sha256": "b7b47f1e73112789def3d1bd05f5e74c9674117e4f7e626d706f623360a81432"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0086.png",
+      "bytes": 3010760,
+      "sha256": "4f20a1c7e7f3eb2ffc40f9a7f0455e3ddc243335d941bfeb4c49b8155f35d014"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0087.png",
+      "bytes": 3021107,
+      "sha256": "2f461713fbef2e703aa46ae3af5d74a06c1a3acc5209977a5914e26335184389"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0088.png",
+      "bytes": 3010991,
+      "sha256": "3c97beb90124f2e1e90169af55ef0b7175a4cdb708015bcffcc592a58f19cb6d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0089.png",
+      "bytes": 3041730,
+      "sha256": "3953f049bbee81ac67c2f307999bfce88837c1bb5d68b8116623fbc2d1455d0b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0090.png",
+      "bytes": 3009468,
+      "sha256": "3b7877d8017ff8b2c36c0e36e00cbac717eeba680a346a3136d817105cce8b3a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0091.png",
+      "bytes": 3014641,
+      "sha256": "eef0cb777a456efcbe60a4ed7f402c7df275a838cb596bea8de0a3938c0b5318"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0092.png",
+      "bytes": 3009666,
+      "sha256": "812b143a697d5847b7e654bc11e46327c78adfe71701a1651c80401b56fda3bc"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0093.png",
+      "bytes": 3029075,
+      "sha256": "489047bb56f918c5dc182be6a89650c9121074c6b36f0d0f31cb4f85b934fa53"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0094.png",
+      "bytes": 3004339,
+      "sha256": "e9427b91fc66f15687d73e1b36be5f9f4c5fcb6f6de52b33d9efc60a2d6aab0a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0095.png",
+      "bytes": 3003342,
+      "sha256": "49dc3f7b09f5ac03a9a5822e00c2881c1a2853aa5f46f499cec923c17caacce4"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0096.png",
+      "bytes": 2996241,
+      "sha256": "5c77a62f0a671d11e5cabf13b67d8cf60c2a2e6b3b14bcec53104e2e9ade9fd2"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/breath/frame-0097.png",
+      "bytes": 3009735,
+      "sha256": "9158a4fa45d5a5de76e0cfe90e06a369d70bb061c15c5230b7966764f458dff6"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0001.png",
+      "bytes": 2736228,
+      "sha256": "1822dada3f623ad868ce6e8875e58458a6a98bf0cebe6454c28147563a779b1d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0002.png",
+      "bytes": 2809000,
+      "sha256": "d178606f69a9b27fcf0a8c8c5c8cb3f4e292cedf33d573755888313d4734645d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0003.png",
+      "bytes": 2858305,
+      "sha256": "9b759cf1cabbe4fde56dfc1d5f8a064d57eadafc6c8912f713fd0952e68ac962"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0004.png",
+      "bytes": 2872503,
+      "sha256": "edd02dea837da45b6ebce48443ffec688c7bfacca4b7127deab55c31fa350e18"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0005.png",
+      "bytes": 2875939,
+      "sha256": "04ff60adab5737ba99453c905e4b9aed4dff825e377edac05ce972fe2273a9b4"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0006.png",
+      "bytes": 2895882,
+      "sha256": "1a118e69462d65cd8dcdffa9127fb8938e2f8c6e56c256aab52be1948a74065c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0007.png",
+      "bytes": 2902113,
+      "sha256": "603123ccf0e568b895ec4d4373ce00116c8f68850e916680b8b2dc84b55c7c15"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0008.png",
+      "bytes": 2905748,
+      "sha256": "b14f23f3290f97e435dd902e1dfa73f87ef30509e8e94b63b8bdeb732c0f143e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0009.png",
+      "bytes": 2925923,
+      "sha256": "892b0aaec15b2d8ff45e713f750239019ad1fcb77bc7dba7e23ea2ac01a12cbf"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0010.png",
+      "bytes": 2926947,
+      "sha256": "45cc7fa1a5b2cef098388578d9c2eef0f1e4894310447655220ffa09aa1e34a1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0011.png",
+      "bytes": 2938868,
+      "sha256": "05bd2e9eadee990ddffd557bf58a48c989512807a4db91008eeb9881fbab2ae6"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0012.png",
+      "bytes": 2935160,
+      "sha256": "663c2830398dac11cff23fe4f7d29aa06175cfba5af0a170a9ce62070ceb4c67"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0013.png",
+      "bytes": 2946379,
+      "sha256": "ad778a7db237e0727a952a03f51d519d4372d895cc6744cb9a1151b4a81d24f3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0014.png",
+      "bytes": 2939955,
+      "sha256": "417f23c36d41d765117181bd707615d9ad63ac4df27f98a2c9c6da0877b1e861"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0015.png",
+      "bytes": 2931145,
+      "sha256": "9b7718945544897d15deb0354d2a32f0d1cadbab5e929cd32ec743d9a1b77288"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0016.png",
+      "bytes": 2932790,
+      "sha256": "da3ac3bf8f220c54d222d4280934e23736c72525a6696e3cf39e3550a49312f3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0017.png",
+      "bytes": 2938116,
+      "sha256": "e5cf9c5815110fbf5b15a8f469a5ab691edd2530ac3de24b64a38e528e33af57"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0018.png",
+      "bytes": 2927494,
+      "sha256": "6a999c6020f736d66ecfeb5324d58aaff2f153dc5fba507d188ca3bfc4c8d54b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0019.png",
+      "bytes": 2927592,
+      "sha256": "aa585d54bc4df85b0be9d7ec62fc81406e0e19b3be5bf2d506828b4cc4adc486"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0020.png",
+      "bytes": 2925436,
+      "sha256": "fbcb5af297ada3957beff77299708e2d553661ccaf902cb9f92613c940e46e51"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0021.png",
+      "bytes": 2939017,
+      "sha256": "0b419558fb5808f2245e64e81e2027aae150cd99acb43c25e18d398f0c0e7bf0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0022.png",
+      "bytes": 2921890,
+      "sha256": "9c1623bcb3286214966207ae4db2d2a7939987540c918ce83db86583f2cd4be5"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0023.png",
+      "bytes": 2925085,
+      "sha256": "8361005598baf2fc6e8e9999423a5183f532449768ef97c19c37b474d4350a7e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0024.png",
+      "bytes": 2924414,
+      "sha256": "697c9bb4c0e8f3a93ce48b443033c04760eb1025d951785fc2049461657ed22d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0025.png",
+      "bytes": 2953074,
+      "sha256": "e9d55b8850a01c993c240f7a62421d262cbb51c9a49b5f68583a8cefc02c42a9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0026.png",
+      "bytes": 2933386,
+      "sha256": "f33f72643e7aa594f4b5b0b585ee3ee5bb18908a71c1e744426a5e8ddf8aad3c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0027.png",
+      "bytes": 2940142,
+      "sha256": "eefa26fb884d4bcb5b5637da9ce8812a297e3c5626efb18f0b88485eac4d8dbd"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0028.png",
+      "bytes": 2940430,
+      "sha256": "75eab187332c7c24ce17fb7542594341cee5eff053d9ca80b48e812e55e1d06f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0029.png",
+      "bytes": 2965905,
+      "sha256": "49c12366e2b4dd25acaad2290a1aa26d08c54a1288169157fe2029b8e07e8814"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0030.png",
+      "bytes": 2954354,
+      "sha256": "29f79e4f418bd2f5dba0f5ff8845ea09aec7a8509e6240400507e642198093ae"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0031.png",
+      "bytes": 2957721,
+      "sha256": "4a09c8366821abd528a41568829bb0165b62b1b55fd9cad6ff4004032720b982"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0032.png",
+      "bytes": 2957704,
+      "sha256": "0045574736715f27402bb68c1fab26d7ceb052e938e13a2710da6f85b98f9833"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0033.png",
+      "bytes": 2983103,
+      "sha256": "4f36ff195af9eb059427c15d6551be3ece7a7cf0f3dfd6ba40783bff27dfc5b9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0034.png",
+      "bytes": 2966691,
+      "sha256": "6de9c92bdb0959120671a6034f169973a0523dfc2c7b19948a0e339cb7a1c7e8"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0035.png",
+      "bytes": 2983125,
+      "sha256": "1a4b88f104d87c7f0d26193dfe53c07d830c2967b6b3e155ec0568e5ff325b36"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0036.png",
+      "bytes": 2977517,
+      "sha256": "213c151780273d2649198d1cdb1015a563d731b45e633679bdc9a51cc025f0e2"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0037.png",
+      "bytes": 2998621,
+      "sha256": "02c8cb6e38bfd344f560cf861520d3598309e44d5088ba80bad52e2f8f55ad0a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0038.png",
+      "bytes": 2977328,
+      "sha256": "47fb5d8f14a6771845761fbd14efdf56e063a6e5dc1c4951c60dde1b186900d6"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0039.png",
+      "bytes": 2982044,
+      "sha256": "2865374dce80a997039a4885f1f3ad5d4086a9b60634702fbbc87c34c0f59366"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0040.png",
+      "bytes": 2979339,
+      "sha256": "1d8e98ee799b5b76f9433e941ec0185adf9f6a604ea6d4bcfe002f7e9dfd5e17"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0041.png",
+      "bytes": 3007632,
+      "sha256": "db4cab4fc22f79f9b5443f4ed54d9e9836a99954fb12107765ad41ce90347c00"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0042.png",
+      "bytes": 2981680,
+      "sha256": "048cc482fd403a541b223b1caf5703c7d4dc3a1f3f06fa550da9762f926f6927"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0043.png",
+      "bytes": 2991763,
+      "sha256": "e7fa46d203ba1730186a50957fb624c47efc7b86a95c7b563d2017df7cc848fe"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0044.png",
+      "bytes": 2982708,
+      "sha256": "bf298d21bc9c7ddfc60349c5aafd43ee7a17822d83ee9bf440c7889dbf07003d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0045.png",
+      "bytes": 3015632,
+      "sha256": "1de1e40e45b9efba9e38c29264ab8a05fb6c2dcc15d5b29343758e7b811ce584"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0046.png",
+      "bytes": 2985982,
+      "sha256": "7395889f4d7280213b2ec90f5c144f0150bc871d3f8873510ca3167647bf8cff"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0047.png",
+      "bytes": 2993011,
+      "sha256": "430a8639575e6e4ef0c3b41b04ec38a1e2081a9880a116013ecc6efb1a72e799"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0048.png",
+      "bytes": 2990209,
+      "sha256": "d5785273721b79dab8809b74a5737c491fb55c2db65007c8ca1beab24f8babd1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0049.png",
+      "bytes": 3017212,
+      "sha256": "aad1868bceb37ba510ec7857af4ac6168768b7b9c806b677d2f334ee68d37770"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0050.png",
+      "bytes": 2990891,
+      "sha256": "c6f924c7b8c34bc2577fef8e407c51fe6050964fb21f1363f9c00dc0ae0d9947"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0051.png",
+      "bytes": 2997350,
+      "sha256": "34c9ffdd30f0b4c60239b504a384a5ddcc7ababb64a5e21681dfea8dcece1069"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0052.png",
+      "bytes": 3001515,
+      "sha256": "500620fee5da1595d440f8edb429ae06377df2bcc4161dbfcf006e9ce86d7a47"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0053.png",
+      "bytes": 3026796,
+      "sha256": "2f19c29b116de40f0abcdcec1e0956999c1937e5845299bc56d7e2b0c11aa871"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0054.png",
+      "bytes": 2993814,
+      "sha256": "8649caa8d979f0c36ee10fcf3d74d616c82dc1ee7b5ca82e9ba3a6b76d58f469"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0055.png",
+      "bytes": 2997590,
+      "sha256": "5b3a95d76ec0818131f0678e846a3051a00e09d7b446ed978a52c345576a7cf1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0056.png",
+      "bytes": 3002990,
+      "sha256": "caaa243eefc58136e95535afe364fc5991cb15d74ded9aa38b2042708c89a523"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0057.png",
+      "bytes": 3028982,
+      "sha256": "733dd851751d563659b590f4db4571efdf361783dbe909c3ad352343a576b03c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0058.png",
+      "bytes": 2999646,
+      "sha256": "5f4e1fb6a11757b58d81066057e905d61e49fb8ab74070615eb38a9a424ee64d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0059.png",
+      "bytes": 3003946,
+      "sha256": "2559090569b3dc91594b1d92d5c608ac9fa719aaca68392f942a9695f391c8bb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0060.png",
+      "bytes": 3002823,
+      "sha256": "21b7197778fe03dab9187892c0e7215e250ddd588cffd2be3e71852575054991"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0061.png",
+      "bytes": 3027118,
+      "sha256": "eaac9b3853f17879c64d9839c76b66ebb8cc56ba4d8be8200a6d868d7022b36f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0062.png",
+      "bytes": 2999160,
+      "sha256": "b970d61058030c16330bf653dbd1bedfc23e94b78de1954979dbeec64ae7c1ec"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0063.png",
+      "bytes": 3000085,
+      "sha256": "4dc8166c12d22b813fa284d6414d8a185c998dc989bf401ba133feb793cdaf86"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0064.png",
+      "bytes": 3002737,
+      "sha256": "3ac14d37e783704e0ecb68c154f089061081d175288b1ce9ddab615b7250d679"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0065.png",
+      "bytes": 3027037,
+      "sha256": "3f857d7ef234b09ad4a1454c4c8d3732f17bea5906f2122f9b20a88b5ff90990"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0066.png",
+      "bytes": 3003751,
+      "sha256": "5421b8a88c0c187a87456ada6a6e8ce177d6f1df17fc12e758aa371760671bcb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0067.png",
+      "bytes": 3005463,
+      "sha256": "bc6349aa98e5741706395507e6b2798470a1202cba8a8bc2113e04751c01aedd"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0068.png",
+      "bytes": 3005383,
+      "sha256": "db8accc249ab20499d087423794c83a12c7188fb0e6833eb60322e48ff8b4946"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0069.png",
+      "bytes": 3027212,
+      "sha256": "098aee340d68bf9f652b5acf369eaa5b946e686c0f352327d7d4e5a8cf05cf7e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0070.png",
+      "bytes": 3001245,
+      "sha256": "08af267ef53ebecbeb968a09c12f12e996b051cc1a05b76f05ea698f13b66068"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0071.png",
+      "bytes": 3000518,
+      "sha256": "4d7714f349fa508a9362c0381109fdde82f4065a934065d1b30999215e9e77e0"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0072.png",
+      "bytes": 2999816,
+      "sha256": "95e400545718a4f5fceef6966db8504b37c06130c74a968aed8b46f7a595fe7a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0073.png",
+      "bytes": 3025196,
+      "sha256": "01e9d5f78331dd06dbcd64e79f6542d24a4659f14eba29e3871cae208e6e4610"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0074.png",
+      "bytes": 2993765,
+      "sha256": "a73e4412e1bbda7fb777bd4d2768cbed468a73cc7e4e98674cbbcc31bdaf53fc"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0075.png",
+      "bytes": 2994261,
+      "sha256": "de17394b8f616ea8a76267a67a7054259d2415c4eec9f71bbf4dda61b6abc03e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0076.png",
+      "bytes": 2997098,
+      "sha256": "076450c1919639a7d6e9129eb13476069a93b2f5dfa9b9780624144ef439168c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0077.png",
+      "bytes": 3019381,
+      "sha256": "76677c0dd43e1d0cefadd0c49868804903bc0ba1020826d9a68c4658f2e84243"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0078.png",
+      "bytes": 2989396,
+      "sha256": "b087fc1b5a63a71f50a379e506c22650f90d3318899b39a1f0bba9a1fd950943"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0079.png",
+      "bytes": 2993036,
+      "sha256": "c15fc399283e1d9be358a041c9d1d38939d10f0fb2a9dfd84908366e051c7e18"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0080.png",
+      "bytes": 2994577,
+      "sha256": "dea26e07806aa7edfb85069ba0551565fe858e50097963e9151f02b92c68c425"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0081.png",
+      "bytes": 3020770,
+      "sha256": "d2642d78e6014d32aa8013d05cd661d1db357baeb725ecd6f6e9faa44e4ddd9a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0082.png",
+      "bytes": 2988436,
+      "sha256": "d28e72375b642f2a187ad079aed719e121a3ec14e2f4ba874d43de64030a1fcb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0083.png",
+      "bytes": 2993518,
+      "sha256": "5e58e486c844cd5ff91a53642098c22abeeef624bbf72823c704e21d450a4b07"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0084.png",
+      "bytes": 2992194,
+      "sha256": "97d30d8db547cfec0deb20a60d7b1a69fc603ba0753deb69536af1422de3ca34"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0085.png",
+      "bytes": 3012854,
+      "sha256": "282469aaed835bddc7bfe0272e25336ee17778abe0f8bd5fd378f73feda4ca21"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0086.png",
+      "bytes": 2981457,
+      "sha256": "85f463d1f127d3c3e15b97dd8afa1eb84ea855eb111ec834980f91d4a9a2cc5a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0087.png",
+      "bytes": 2978291,
+      "sha256": "91c811c406cbe7e1fd67503b0cbacbb7a34925423b8836b8b8a9a04c2b1d2405"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0088.png",
+      "bytes": 2984174,
+      "sha256": "e1ec2079f43c9ae1126fd38cfffb1fc3686910c39503a3b66b862e3246ae6cef"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0089.png",
+      "bytes": 3010868,
+      "sha256": "8eb15b0caf2cefae641f7bc716b3c41bfe401ffa5bced0a271b98fffe09ce01c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0090.png",
+      "bytes": 2979901,
+      "sha256": "b71f7c7e3a343477f0aa3691a08c47219f3186c6cb2b2a44246026b7137fab5e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0091.png",
+      "bytes": 2984602,
+      "sha256": "941d71825cec0ed2014f47d89aafe758d252407ab59339caa1ceb4f008b9284e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0092.png",
+      "bytes": 2984342,
+      "sha256": "98c98f95917be61bf0b7da3e53585e51a75326be05b8cb7e48b7f4846cbe778d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0093.png",
+      "bytes": 3011047,
+      "sha256": "e120c4d5a834a7f26620a6f247119d63c5bf556f281d87d237e7d9b959afcd35"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0094.png",
+      "bytes": 2979084,
+      "sha256": "fd8bca4b4bef359141864c5d03104a2fc102a3c1259cda47ce5008d57cd3d28f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0095.png",
+      "bytes": 2983140,
+      "sha256": "ca343b060a33ef2f6132cb54824c3a2744836e25c1ad5a90315a5b72b1a32f50"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0096.png",
+      "bytes": 2998069,
+      "sha256": "dda7b2c62579d7aa25d0ebdfc63770c2a892b2e81de7eb6628f654ced6b51486"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0097.png",
+      "bytes": 3021495,
+      "sha256": "83b0306e84dfdd073583eec0731a5b7a07e8fb07f3a21a8e8728e8188837036a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0098.png",
+      "bytes": 2998790,
+      "sha256": "b3e8be3dc6abcf6daaadf26d4904ffc55f303e09d0d0a98936bcdec12246dc9e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0099.png",
+      "bytes": 3006066,
+      "sha256": "aee933db55497a049e4df16a89dd3fb88212edd6d4fc6e12071ae88202f0ee1e"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0100.png",
+      "bytes": 3013089,
+      "sha256": "bf3c3042fd5185fc77faf40726f5fe26e5fc06fd024646a2863b8d1cce9872c4"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0101.png",
+      "bytes": 3037954,
+      "sha256": "c91b3c6afbde6f460f2c4178697654cd964c366abdc9707fc0a03ed74832b5fd"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0102.png",
+      "bytes": 3018291,
+      "sha256": "01ccd30fdb6794db961d38c7671e66ba539f5f1a7f726246198d8789ce20aae6"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0103.png",
+      "bytes": 3025126,
+      "sha256": "0ba73c70cb47243223a9706a4ff7020f57d72f6142b1169e2411617f5297b552"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0104.png",
+      "bytes": 3023138,
+      "sha256": "c67b16a4147886a0cb8dec03713a22cc1cbec1c02d3ef6011f9a32fe0bfb3929"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0105.png",
+      "bytes": 3056953,
+      "sha256": "d9803d1b677302f54fee2791f3cac3ec51595ac1f2c9b67bba428204a4c8ecbf"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0106.png",
+      "bytes": 3034334,
+      "sha256": "dcca1e67ac35c15ef1e1819dde29476196fc0e9bf1360401aa075693d2539dff"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0107.png",
+      "bytes": 3037121,
+      "sha256": "be663e489f5330a2cf1a6eae5f812fee2f3f56cc63b8043f440b614da626a4e1"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0108.png",
+      "bytes": 3033602,
+      "sha256": "02a7b98de6e577778362c8171acc90f9945ddc77015af8693c76d352aa85da61"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0109.png",
+      "bytes": 3062123,
+      "sha256": "947cde39a2542b88ce6d1fff5b6bd7631199b687f729c568f866854fe2a00034"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0110.png",
+      "bytes": 3036074,
+      "sha256": "d6412765f6d95998e373395bf224427d7263a7dab359ac18e5c8aab93963bc2b"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0111.png",
+      "bytes": 3040793,
+      "sha256": "f7773499e4ebbfffb2da9af7b4de719baaea97a0b5fd4edbc94fc89a2d258da8"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0112.png",
+      "bytes": 3038103,
+      "sha256": "4435622e992fd14f1c5196fca7e9a438d37213bdada311e31adaed64c855a281"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0113.png",
+      "bytes": 3048171,
+      "sha256": "ee0b02215965e5607d659f261b94f2bc7aff5dc075f279b21eea534b314f9ff5"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0114.png",
+      "bytes": 3021484,
+      "sha256": "ff00c5bd2c15bf8ab9afa329870de637d3697df97dceea10c4e2a34ec22fda2d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0115.png",
+      "bytes": 3021872,
+      "sha256": "e940e31c6fff1585e321b01904761195bfa88fadc51f96fd4042d1fac1640c9c"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0116.png",
+      "bytes": 3019199,
+      "sha256": "ce84635604202cb1095511460b5e341db9ecbe860fb2d39ec5ac1158456d1b95"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0117.png",
+      "bytes": 3035741,
+      "sha256": "d1e57b808b193fedf1d19fc53d3d3b62b9dd5d416b1b83dbcd1e3522aa0c8d6f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0118.png",
+      "bytes": 3013325,
+      "sha256": "a2a5f03c02cd0a72794531f56928ce105605596aa8256f2ea526fafdf701d934"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0119.png",
+      "bytes": 3016493,
+      "sha256": "7bd12ecc3ff2923e548015d94d861341a66776d63e59d7db8858fc884e2738aa"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0120.png",
+      "bytes": 3015304,
+      "sha256": "b19de7ff7c4d4e533807329d04b799eb39612b5f4dfa3282bbf3bcf1f54e8e29"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0121.png",
+      "bytes": 3039182,
+      "sha256": "37b2cde98fcc616894e2251527837d546be615b90d678c3ab18bed6ac1a7fc71"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0122.png",
+      "bytes": 3011344,
+      "sha256": "256553e24f07d4efb01ca0e9c86a4d79ae0a57800da3acb16fc0242f0ba758eb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0123.png",
+      "bytes": 3019628,
+      "sha256": "463a1a514f475f8eeb5c5dd63f53b188555bb6d5437ace21598c07dad8c0c649"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0124.png",
+      "bytes": 3016108,
+      "sha256": "c4befc5c74bc25b7cecfe221112b5e436c92baa9eed860ea5b11b3eeeafc9d22"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0125.png",
+      "bytes": 3035313,
+      "sha256": "f4b8cd9e04b377f5b14365563609dddd0476b5875be35e2b326f9b12e90b9cae"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0126.png",
+      "bytes": 3012593,
+      "sha256": "1b69a976f2533f3df19d9a064c71a222715a048d88ebabd15129c61c857bb428"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0127.png",
+      "bytes": 3014603,
+      "sha256": "b0b06184e3e30fb7bc35a855bb8cd78ad8f307d88cd2ea2f02363185d76a4179"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0128.png",
+      "bytes": 3008805,
+      "sha256": "4f61f940b326d9e3b1e43789fdf7102769b7f4a23166fda756ca3a9e243a7430"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/drink/frame-0129.png",
+      "bytes": 3020871,
+      "sha256": "6c5814b93fe1d68ade5f2e53646f39a29d2dbdc0404265c3f683069aba886de6"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "status": "PREPARED",
+  "scripts": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/scripts/ComfyBreathEncode.java",
+      "sha256": "7879bb24e2db4af4ddfe5aca440807ad8c96fd7bcba033f65b8b2ff192d8f63d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/scripts/check-quality-edges.py",
+      "sha256": "d105e1d213387d7449e4a162152a6ee8d8f3ca70e4c1fb822f40989dfc0f9b2f"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/scripts/run.py",
+      "sha256": "9f63ac37cca4aa3ccb8ef7783c55fc04363285cea1fc14ef5061ed04d33736a3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/scripts/verify-media.py",
+      "sha256": "bf0e4fb94a111bd4db961c81382a87f89f4d23b986c53463f58a9beac1e73ec3"
+    }
+  ],
+  "verificationDecodeTraversals": 2
+}

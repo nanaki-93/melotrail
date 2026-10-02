@@ -1,0 +1,15 @@
+{
+  "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality",
+  "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/inputs/prepared-frames.png",
+  "sourceSha256": "333c89d529a3bf1f0680c29890315bf1d0cc975b02c782e82263bb87288ae091",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "storageRoots": [
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality"
+  ],
+  "port": 8199,
+  "promptId": "16b0f96e-578d-4c61-9476-662c3b9f55b1",
+  "clientId": "ff7428ed-6246-43cd-b5eb-d5f9f755d247",
+  "attemptId": "d8744c1d-0b47-43a0-b4f8-177077370f44",
+  "ownershipToken": "f3430bec-7085-4f08-b6dd-78d13a05244a",
+  "fingerprint": "a2e5ad91ddfc96c6e78b1c1d1e782116a7d04e26e5cff6f5f41d5c70e0956df1"
+}

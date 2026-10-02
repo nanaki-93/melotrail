@@ -1,0 +1,60 @@
+{
+  "createdAt": "2026-10-02T16:20:03.011692+00:00",
+  "authorization": {
+    "quote": "Run the higher-quality export",
+    "scope": "One core ComfyUI H.264 CRF12 encode from existing 97 lossless composite frames; no motion generation or image changes"
+  },
+  "native": {
+    "runnerAttempts": 1,
+    "automaticRetries": 0,
+    "wholeRunnerLimitSeconds": 120,
+    "cumulativeWithVerificationLimitSeconds": 180,
+    "observedProcessTreeRssLimitBytes": 8589934592,
+    "ownedEvidenceAndSessionLimitBytes": 536870912,
+    "minimumFreeDiskBytes": 21474836480,
+    "reviewEncodes": 1,
+    "verificationDecodeTraversals": 2
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/request.json",
+      "bytes": 964,
+      "sha256": "9c0f5a6bc239706b798ae76fc11397ca4bc99f1ee8ff97b49c43dd7a6354e5f9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/workflow/finish-full-frame-api.json",
+      "bytes": 608,
+      "sha256": "88d960c9b1af3ef9eb9244a56220597775d39ef12d96fee0094dc60ca257b150"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/inputs/prepared-frames.png",
+      "bytes": 83888138,
+      "sha256": "333c89d529a3bf1f0680c29890315bf1d0cc975b02c782e82263bb87288ae091"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/scripts/ComfyBreathEncode.java",
+      "bytes": 6789,
+      "sha256": "7879bb24e2db4af4ddfe5aca440807ad8c96fd7bcba033f65b8b2ff192d8f63d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/scripts/run.py",
+      "bytes": 7170,
+      "sha256": "9f63ac37cca4aa3ccb8ef7783c55fc04363285cea1fc14ef5061ed04d33736a3"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay/classes/ComfyBreathEncode.class",
+      "bytes": 13633,
+      "sha256": "c674f845f9042a1dee001d2972b2349da152c54b731d77364b26484aaeca125c"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay/runtime-classpath.txt",
+      "bytes": 2975,
+      "sha256": "cc0f4db15abb4f7854ec9dde645d41388ca2f773b040569e379f0454a0124489"
+    }
+  ]
+}

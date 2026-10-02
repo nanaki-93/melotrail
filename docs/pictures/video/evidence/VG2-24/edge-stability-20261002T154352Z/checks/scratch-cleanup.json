@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "exactScratchPath": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay",
+  "removed": true,
+  "preserved": "All required scripts, pins, native output, local assets, failed candidates and test reports remain under the current run or requested asset folder.",
+  "removedContents": "Task-private OpenCV wheel target, compiled harness classes, before/HEAD snapshots, validation scratch copies and empty native staging directories."
+}

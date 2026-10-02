@@ -1,0 +1,22 @@
+{
+  "status": "REVIEW_PREVIEWS_ONLY",
+  "frameRate": 25,
+  "fullFilm30FpsContractPassed": false,
+  "drinkColourMetadata": {
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": null,
+    "color_primaries": null
+  },
+  "breathQualityColourMetadata": {
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "iec61966-2-1",
+    "color_primaries": "bt709"
+  },
+  "limitations": [
+    "VideoToolbox drinking export reports BT.709 matrix but omits explicit transfer and primary tags despite the requested flags; final-delivery metadata is not proved.",
+    "The frame cadence remains the source 25 fps, not a completed 30 fps full-film export.",
+    "Human outline/motion approval and long-duration assembly remain open."
+  ]
+}

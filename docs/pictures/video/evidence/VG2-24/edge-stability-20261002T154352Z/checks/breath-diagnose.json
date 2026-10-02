@@ -1,0 +1,588 @@
+{
+  "action": "breath",
+  "mode": "diagnose",
+  "frames": 97,
+  "seconds": 12.500879334002093,
+  "peakRssBytes": 794066944,
+  "rows": [
+    {
+      "frame": 50,
+      "motionAlignedAlphaMae": 0.10043223947286606,
+      "motionAlignedEdgeRgbMae": 11.997400283813477,
+      "measuredBandPixels": 42132
+    },
+    {
+      "frame": 73,
+      "motionAlignedAlphaMae": 0.0976814329624176,
+      "motionAlignedEdgeRgbMae": 13.889191627502441,
+      "measuredBandPixels": 42885
+    },
+    {
+      "frame": 74,
+      "motionAlignedAlphaMae": 0.09380053728818893,
+      "motionAlignedEdgeRgbMae": 13.81931209564209,
+      "measuredBandPixels": 43190
+    },
+    {
+      "frame": 51,
+      "motionAlignedAlphaMae": 0.07683410495519638,
+      "motionAlignedEdgeRgbMae": 12.502813339233398,
+      "measuredBandPixels": 39242
+    },
+    {
+      "frame": 81,
+      "motionAlignedAlphaMae": 0.07229408621788025,
+      "motionAlignedEdgeRgbMae": 8.752001762390137,
+      "measuredBandPixels": 41998
+    },
+    {
+      "frame": 49,
+      "motionAlignedAlphaMae": 0.06991252303123474,
+      "motionAlignedEdgeRgbMae": 14.527642250061035,
+      "measuredBandPixels": 42384
+    },
+    {
+      "frame": 90,
+      "motionAlignedAlphaMae": 0.06832657754421234,
+      "motionAlignedEdgeRgbMae": 2.385420083999634,
+      "measuredBandPixels": 42651
+    },
+    {
+      "frame": 39,
+      "motionAlignedAlphaMae": 0.068291574716568,
+      "motionAlignedEdgeRgbMae": 8.928136825561523,
+      "measuredBandPixels": 35152
+    },
+    {
+      "frame": 45,
+      "motionAlignedAlphaMae": 0.06204568222165108,
+      "motionAlignedEdgeRgbMae": 9.51900863647461,
+      "measuredBandPixels": 34612
+    },
+    {
+      "frame": 78,
+      "motionAlignedAlphaMae": 0.06088901683688164,
+      "motionAlignedEdgeRgbMae": 4.249281406402588,
+      "measuredBandPixels": 44106
+    },
+    {
+      "frame": 69,
+      "motionAlignedAlphaMae": 0.060187917202711105,
+      "motionAlignedEdgeRgbMae": 6.741255760192871,
+      "measuredBandPixels": 41007
+    },
+    {
+      "frame": 38,
+      "motionAlignedAlphaMae": 0.05724305659532547,
+      "motionAlignedEdgeRgbMae": 4.282668113708496,
+      "measuredBandPixels": 43782
+    },
+    {
+      "frame": 85,
+      "motionAlignedAlphaMae": 0.05567585676908493,
+      "motionAlignedEdgeRgbMae": 8.674910545349121,
+      "measuredBandPixels": 41249
+    },
+    {
+      "frame": 80,
+      "motionAlignedAlphaMae": 0.054791610687971115,
+      "motionAlignedEdgeRgbMae": 8.993722915649414,
+      "measuredBandPixels": 31315
+    },
+    {
+      "frame": 26,
+      "motionAlignedAlphaMae": 0.05476432293653488,
+      "motionAlignedEdgeRgbMae": 6.889893054962158,
+      "measuredBandPixels": 44263
+    },
+    {
+      "frame": 42,
+      "motionAlignedAlphaMae": 0.054200418293476105,
+      "motionAlignedEdgeRgbMae": 8.687786102294922,
+      "measuredBandPixels": 32717
+    },
+    {
+      "frame": 25,
+      "motionAlignedAlphaMae": 0.05348470062017441,
+      "motionAlignedEdgeRgbMae": 5.8918938636779785,
+      "measuredBandPixels": 44387
+    },
+    {
+      "frame": 31,
+      "motionAlignedAlphaMae": 0.05330758914351463,
+      "motionAlignedEdgeRgbMae": 1.314611792564392,
+      "measuredBandPixels": 43238
+    },
+    {
+      "frame": 48,
+      "motionAlignedAlphaMae": 0.05327833071351051,
+      "motionAlignedEdgeRgbMae": 6.974244117736816,
+      "measuredBandPixels": 40101
+    },
+    {
+      "frame": 88,
+      "motionAlignedAlphaMae": 0.05150523781776428,
+      "motionAlignedEdgeRgbMae": 3.0332260131835938,
+      "measuredBandPixels": 44982
+    },
+    {
+      "frame": 91,
+      "motionAlignedAlphaMae": 0.051291391253471375,
+      "motionAlignedEdgeRgbMae": 2.218080759048462,
+      "measuredBandPixels": 44296
+    },
+    {
+      "frame": 54,
+      "motionAlignedAlphaMae": 0.050879865884780884,
+      "motionAlignedEdgeRgbMae": 5.921675205230713,
+      "measuredBandPixels": 42879
+    },
+    {
+      "frame": 36,
+      "motionAlignedAlphaMae": 0.05042620003223419,
+      "motionAlignedEdgeRgbMae": 1.9047446250915527,
+      "measuredBandPixels": 43015
+    },
+    {
+      "frame": 82,
+      "motionAlignedAlphaMae": 0.04986889660358429,
+      "motionAlignedEdgeRgbMae": 8.31236457824707,
+      "measuredBandPixels": 40117
+    },
+    {
+      "frame": 79,
+      "motionAlignedAlphaMae": 0.04979339987039566,
+      "motionAlignedEdgeRgbMae": 5.799827575683594,
+      "measuredBandPixels": 43626
+    },
+    {
+      "frame": 43,
+      "motionAlignedAlphaMae": 0.04871099442243576,
+      "motionAlignedEdgeRgbMae": 5.0632171630859375,
+      "measuredBandPixels": 43500
+    },
+    {
+      "frame": 77,
+      "motionAlignedAlphaMae": 0.04737827554345131,
+      "motionAlignedEdgeRgbMae": 3.8870434761047363,
+      "measuredBandPixels": 43405
+    },
+    {
+      "frame": 83,
+      "motionAlignedAlphaMae": 0.047179900109767914,
+      "motionAlignedEdgeRgbMae": 4.36161470413208,
+      "measuredBandPixels": 43807
+    },
+    {
+      "frame": 84,
+      "motionAlignedAlphaMae": 0.04694324731826782,
+      "motionAlignedEdgeRgbMae": 4.168649196624756,
+      "measuredBandPixels": 44412
+    },
+    {
+      "frame": 89,
+      "motionAlignedAlphaMae": 0.04660174250602722,
+      "motionAlignedEdgeRgbMae": 6.323822498321533,
+      "measuredBandPixels": 44253
+    },
+    {
+      "frame": 3,
+      "motionAlignedAlphaMae": 0.04621420055627823,
+      "motionAlignedEdgeRgbMae": 1.5032166242599487,
+      "measuredBandPixels": 44916
+    },
+    {
+      "frame": 21,
+      "motionAlignedAlphaMae": 0.04575610160827637,
+      "motionAlignedEdgeRgbMae": 0.6231868267059326,
+      "measuredBandPixels": 44432
+    },
+    {
+      "frame": 44,
+      "motionAlignedAlphaMae": 0.04545372352004051,
+      "motionAlignedEdgeRgbMae": 4.628711700439453,
+      "measuredBandPixels": 42931
+    },
+    {
+      "frame": 5,
+      "motionAlignedAlphaMae": 0.04529271274805069,
+      "motionAlignedEdgeRgbMae": 0.5585740208625793,
+      "measuredBandPixels": 44887
+    },
+    {
+      "frame": 52,
+      "motionAlignedAlphaMae": 0.04519864171743393,
+      "motionAlignedEdgeRgbMae": 4.44301176071167,
+      "measuredBandPixels": 43478
+    },
+    {
+      "frame": 86,
+      "motionAlignedAlphaMae": 0.045156899839639664,
+      "motionAlignedEdgeRgbMae": 3.632033586502075,
+      "measuredBandPixels": 45049
+    },
+    {
+      "frame": 40,
+      "motionAlignedAlphaMae": 0.044738780707120895,
+      "motionAlignedEdgeRgbMae": 5.159260272979736,
+      "measuredBandPixels": 43892
+    },
+    {
+      "frame": 46,
+      "motionAlignedAlphaMae": 0.044203806668519974,
+      "motionAlignedEdgeRgbMae": 3.501127004623413,
+      "measuredBandPixels": 42556
+    },
+    {
+      "frame": 72,
+      "motionAlignedAlphaMae": 0.04375981166958809,
+      "motionAlignedEdgeRgbMae": 6.226360321044922,
+      "measuredBandPixels": 40867
+    },
+    {
+      "frame": 87,
+      "motionAlignedAlphaMae": 0.04211568459868431,
+      "motionAlignedEdgeRgbMae": 2.7142632007598877,
+      "measuredBandPixels": 44714
+    },
+    {
+      "frame": 76,
+      "motionAlignedAlphaMae": 0.039380043745040894,
+      "motionAlignedEdgeRgbMae": 4.070391654968262,
+      "measuredBandPixels": 44011
+    },
+    {
+      "frame": 55,
+      "motionAlignedAlphaMae": 0.038895655423402786,
+      "motionAlignedEdgeRgbMae": 3.4084043502807617,
+      "measuredBandPixels": 43990
+    },
+    {
+      "frame": 47,
+      "motionAlignedAlphaMae": 0.03884167969226837,
+      "motionAlignedEdgeRgbMae": 3.4875001907348633,
+      "measuredBandPixels": 43133
+    },
+    {
+      "frame": 75,
+      "motionAlignedAlphaMae": 0.03847251459956169,
+      "motionAlignedEdgeRgbMae": 5.501828193664551,
+      "measuredBandPixels": 44115
+    },
+    {
+      "frame": 71,
+      "motionAlignedAlphaMae": 0.03711666911840439,
+      "motionAlignedEdgeRgbMae": 3.3749284744262695,
+      "measuredBandPixels": 43170
+    },
+    {
+      "frame": 66,
+      "motionAlignedAlphaMae": 0.036504607647657394,
+      "motionAlignedEdgeRgbMae": 2.001089096069336,
+      "measuredBandPixels": 43201
+    },
+    {
+      "frame": 41,
+      "motionAlignedAlphaMae": 0.034884802997112274,
+      "motionAlignedEdgeRgbMae": 5.175751686096191,
+      "measuredBandPixels": 43749
+    },
+    {
+      "frame": 65,
+      "motionAlignedAlphaMae": 0.03479894995689392,
+      "motionAlignedEdgeRgbMae": 4.110489845275879,
+      "measuredBandPixels": 42727
+    },
+    {
+      "frame": 15,
+      "motionAlignedAlphaMae": 0.034635357558727264,
+      "motionAlignedEdgeRgbMae": 0.37016934156417847,
+      "measuredBandPixels": 43234
+    },
+    {
+      "frame": 53,
+      "motionAlignedAlphaMae": 0.03421943262219429,
+      "motionAlignedEdgeRgbMae": 4.072799205780029,
+      "measuredBandPixels": 43322
+    },
+    {
+      "frame": 17,
+      "motionAlignedAlphaMae": 0.033418960869312286,
+      "motionAlignedEdgeRgbMae": 0.5701623558998108,
+      "measuredBandPixels": 43606
+    },
+    {
+      "frame": 58,
+      "motionAlignedAlphaMae": 0.03268492594361305,
+      "motionAlignedEdgeRgbMae": 1.7731926441192627,
+      "measuredBandPixels": 43109
+    },
+    {
+      "frame": 37,
+      "motionAlignedAlphaMae": 0.03252153843641281,
+      "motionAlignedEdgeRgbMae": 2.6070003509521484,
+      "measuredBandPixels": 43703
+    },
+    {
+      "frame": 35,
+      "motionAlignedAlphaMae": 0.031156029552221298,
+      "motionAlignedEdgeRgbMae": 1.518985629081726,
+      "measuredBandPixels": 43297
+    },
+    {
+      "frame": 30,
+      "motionAlignedAlphaMae": 0.03106694482266903,
+      "motionAlignedEdgeRgbMae": 2.011517286300659,
+      "measuredBandPixels": 43266
+    },
+    {
+      "frame": 56,
+      "motionAlignedAlphaMae": 0.030953016132116318,
+      "motionAlignedEdgeRgbMae": 2.234109401702881,
+      "measuredBandPixels": 44750
+    },
+    {
+      "frame": 59,
+      "motionAlignedAlphaMae": 0.030667375773191452,
+      "motionAlignedEdgeRgbMae": 1.5720951557159424,
+      "measuredBandPixels": 43687
+    },
+    {
+      "frame": 33,
+      "motionAlignedAlphaMae": 0.03044123388826847,
+      "motionAlignedEdgeRgbMae": 2.055359125137329,
+      "measuredBandPixels": 41780
+    },
+    {
+      "frame": 28,
+      "motionAlignedAlphaMae": 0.030295582488179207,
+      "motionAlignedEdgeRgbMae": 1.605305552482605,
+      "measuredBandPixels": 44141
+    },
+    {
+      "frame": 68,
+      "motionAlignedAlphaMae": 0.03002358414232731,
+      "motionAlignedEdgeRgbMae": 3.3112635612487793,
+      "measuredBandPixels": 43461
+    },
+    {
+      "frame": 60,
+      "motionAlignedAlphaMae": 0.02921138145029545,
+      "motionAlignedEdgeRgbMae": 1.3915547132492065,
+      "measuredBandPixels": 44868
+    },
+    {
+      "frame": 32,
+      "motionAlignedAlphaMae": 0.028940817341208458,
+      "motionAlignedEdgeRgbMae": 1.6791146993637085,
+      "measuredBandPixels": 41996
+    },
+    {
+      "frame": 34,
+      "motionAlignedAlphaMae": 0.02880641631782055,
+      "motionAlignedEdgeRgbMae": 1.7228082418441772,
+      "measuredBandPixels": 42344
+    },
+    {
+      "frame": 6,
+      "motionAlignedAlphaMae": 0.028764404356479645,
+      "motionAlignedEdgeRgbMae": 0.9330382347106934,
+      "measuredBandPixels": 45215
+    },
+    {
+      "frame": 4,
+      "motionAlignedAlphaMae": 0.028601868078112602,
+      "motionAlignedEdgeRgbMae": 1.0798873901367188,
+      "measuredBandPixels": 44715
+    },
+    {
+      "frame": 12,
+      "motionAlignedAlphaMae": 0.02814171463251114,
+      "motionAlignedEdgeRgbMae": 0.8616390228271484,
+      "measuredBandPixels": 44932
+    },
+    {
+      "frame": 2,
+      "motionAlignedAlphaMae": 0.0271389652043581,
+      "motionAlignedEdgeRgbMae": 1.429062008857727,
+      "measuredBandPixels": 43402
+    },
+    {
+      "frame": 16,
+      "motionAlignedAlphaMae": 0.027094196528196335,
+      "motionAlignedEdgeRgbMae": 0.7281533479690552,
+      "measuredBandPixels": 43428
+    },
+    {
+      "frame": 70,
+      "motionAlignedAlphaMae": 0.026152318343520164,
+      "motionAlignedEdgeRgbMae": 3.400407314300537,
+      "measuredBandPixels": 43013
+    },
+    {
+      "frame": 14,
+      "motionAlignedAlphaMae": 0.026056699454784393,
+      "motionAlignedEdgeRgbMae": 0.5711861252784729,
+      "measuredBandPixels": 45115
+    },
+    {
+      "frame": 63,
+      "motionAlignedAlphaMae": 0.024493791162967682,
+      "motionAlignedEdgeRgbMae": 1.0367298126220703,
+      "measuredBandPixels": 44654
+    },
+    {
+      "frame": 22,
+      "motionAlignedAlphaMae": 0.022544056177139282,
+      "motionAlignedEdgeRgbMae": 0.24833190441131592,
+      "measuredBandPixels": 45081
+    },
+    {
+      "frame": 19,
+      "motionAlignedAlphaMae": 0.02213311195373535,
+      "motionAlignedEdgeRgbMae": 0.2718121111392975,
+      "measuredBandPixels": 43153
+    },
+    {
+      "frame": 62,
+      "motionAlignedAlphaMae": 0.02211710810661316,
+      "motionAlignedEdgeRgbMae": 1.1594847440719604,
+      "measuredBandPixels": 43483
+    },
+    {
+      "frame": 67,
+      "motionAlignedAlphaMae": 0.021639497950673103,
+      "motionAlignedEdgeRgbMae": 1.7407417297363281,
+      "measuredBandPixels": 43937
+    },
+    {
+      "frame": 29,
+      "motionAlignedAlphaMae": 0.02108786068856716,
+      "motionAlignedEdgeRgbMae": 1.7600082159042358,
+      "measuredBandPixels": 44229
+    },
+    {
+      "frame": 20,
+      "motionAlignedAlphaMae": 0.020855726674199104,
+      "motionAlignedEdgeRgbMae": 0.6478943824768066,
+      "measuredBandPixels": 43451
+    },
+    {
+      "frame": 57,
+      "motionAlignedAlphaMae": 0.01969088800251484,
+      "motionAlignedEdgeRgbMae": 2.207494020462036,
+      "measuredBandPixels": 44705
+    },
+    {
+      "frame": 97,
+      "motionAlignedAlphaMae": 0.0196694303303957,
+      "motionAlignedEdgeRgbMae": 0.7026492953300476,
+      "measuredBandPixels": 44462
+    },
+    {
+      "frame": 92,
+      "motionAlignedAlphaMae": 0.019173143431544304,
+      "motionAlignedEdgeRgbMae": 1.719866394996643,
+      "measuredBandPixels": 43942
+    },
+    {
+      "frame": 96,
+      "motionAlignedAlphaMae": 0.016913365572690964,
+      "motionAlignedEdgeRgbMae": 0.7097822427749634,
+      "measuredBandPixels": 44655
+    },
+    {
+      "frame": 24,
+      "motionAlignedAlphaMae": 0.015289359726011753,
+      "motionAlignedEdgeRgbMae": 0.04558241367340088,
+      "measuredBandPixels": 45047
+    },
+    {
+      "frame": 27,
+      "motionAlignedAlphaMae": 0.014917573891580105,
+      "motionAlignedEdgeRgbMae": 0.6517323851585388,
+      "measuredBandPixels": 43855
+    },
+    {
+      "frame": 61,
+      "motionAlignedAlphaMae": 0.01484904158860445,
+      "motionAlignedEdgeRgbMae": 0.9595514535903931,
+      "measuredBandPixels": 45627
+    },
+    {
+      "frame": 9,
+      "motionAlignedAlphaMae": 0.01423984207212925,
+      "motionAlignedEdgeRgbMae": 0.5187661647796631,
+      "measuredBandPixels": 45170
+    },
+    {
+      "frame": 10,
+      "motionAlignedAlphaMae": 0.014202472753822803,
+      "motionAlignedEdgeRgbMae": 0.5674601197242737,
+      "measuredBandPixels": 45195
+    },
+    {
+      "frame": 94,
+      "motionAlignedAlphaMae": 0.011973832733929157,
+      "motionAlignedEdgeRgbMae": 0.9323768019676208,
+      "measuredBandPixels": 43993
+    },
+    {
+      "frame": 64,
+      "motionAlignedAlphaMae": 0.011360842734575272,
+      "motionAlignedEdgeRgbMae": 1.453095555305481,
+      "measuredBandPixels": 44362
+    },
+    {
+      "frame": 93,
+      "motionAlignedAlphaMae": 0.011060666292905807,
+      "motionAlignedEdgeRgbMae": 0.8071658611297607,
+      "measuredBandPixels": 44214
+    },
+    {
+      "frame": 8,
+      "motionAlignedAlphaMae": 0.010931858792901039,
+      "motionAlignedEdgeRgbMae": 0.7386927008628845,
+      "measuredBandPixels": 45097
+    },
+    {
+      "frame": 95,
+      "motionAlignedAlphaMae": 0.010833865962922573,
+      "motionAlignedEdgeRgbMae": 0.8945215940475464,
+      "measuredBandPixels": 44112
+    },
+    {
+      "frame": 7,
+      "motionAlignedAlphaMae": 0.010337447747588158,
+      "motionAlignedEdgeRgbMae": 0.45688319206237793,
+      "measuredBandPixels": 44883
+    },
+    {
+      "frame": 23,
+      "motionAlignedAlphaMae": 0.0103345587849617,
+      "motionAlignedEdgeRgbMae": 0.21411119401454926,
+      "measuredBandPixels": 44622
+    },
+    {
+      "frame": 11,
+      "motionAlignedAlphaMae": 0.006248796358704567,
+      "motionAlignedEdgeRgbMae": 0.30638623237609863,
+      "measuredBandPixels": 45130
+    },
+    {
+      "frame": 13,
+      "motionAlignedAlphaMae": 0.004216513130813837,
+      "motionAlignedEdgeRgbMae": 0.44109901785850525,
+      "measuredBandPixels": 44906
+    },
+    {
+      "frame": 18,
+      "motionAlignedAlphaMae": 0.0038075638003647327,
+      "motionAlignedEdgeRgbMae": 0.4651687741279602,
+      "measuredBandPixels": 43577
+    }
+  ],
+  "humanApproval": false,
+  "meanAlphaMae": 0.03761167704942636,
+  "meanEdgeRgbMae": 3.4717894604740045
+}

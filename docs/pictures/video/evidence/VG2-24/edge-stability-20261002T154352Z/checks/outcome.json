@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-10-02T16:32:42.981026+00:00",
+  "status": "DRINK_TECHNICAL_PASS_BREATH_TEMPORAL_GATE_FAILED",
+  "newHumanAppearanceAcceptance": false,
+  "movies": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/review/drink/tabi-drink-stable-edges-comfy-1080p.mp4",
+      "sha256": "e5f295baf473ad5b6a7cc0b5523643f6c00fda466aad563415ed4e7ee0280730",
+      "bytes": 11955340
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/review/tabi-breath-comfy-1080p.mp4",
+      "sha256": "c13d647b9ddca08df841e86f0169b3e88e8f54afc3223b36600639793ee209ae",
+      "bytes": 2854449
+    }
+  ],
+  "protectedInputCount": 24,
+  "protectedInputsUnchanged": true,
+  "derivedAssetFramesVerified": 226,
+  "stoppedRuntimeCleanupReceipts": [
+    "comfy/breath-0/checks/runtime-cleanup.json",
+    "comfy/breath-1-port/checks/runtime-cleanup.json",
+    "comfy/breath-2-port/checks/runtime-cleanup.json",
+    "comfy/drink-0-port/checks/runtime-cleanup.json",
+    "comfy/drink-1-port/checks/runtime-cleanup.json",
+    "comfy/drink-2-port/checks/runtime-cleanup.json",
+    "comfy/drink-3-port/checks/runtime-cleanup.json",
+    "breath-quality/checks/runtime-cleanup.json"
+  ],
+  "initialNativeAndMediaSeconds": 240.03471087501384,
+  "qualityNativeVerificationAndCachedFrameAuditSeconds": 54.35226208399649,
+  "initialScopeBytesBeforeValidationReports": 2998877839,
+  "qualityScopeRetainedBytes": 444153246,
+  "nativeMotionInferences": 0,
+  "encodes": {
+    "drink": 1,
+    "breathInitial": 1,
+    "breathExplicitlyApprovedQuality": 1
+  },
+  "nativeRetries": 0,
+  "preflightHarnessRepair": "Unique loopback ports after one JVM-only occupied-port rejection; first completed batch reused.",
+  "decoderTraversalsPerExport": 2,
+  "drinkEdgeReductionFraction": 0.1470043043620194,
+  "breathEdgeReductionFraction": 0.03448416434740875,
+  "unchangedEdgeGateReductionFraction": 0.05,
+  "remainingWork": "Stabilize breathing source linework and moving matte before a separately admitted export. Do not repeat encoding alone or lower the gate.",
+  "queue": {
+    "VG2-24": "REVIEW",
+    "VG2-27": "WAITING_USER"
+  },
+  "mediaStorage": "Local only; scripts/checks and owner documentation may be versioned."
+}

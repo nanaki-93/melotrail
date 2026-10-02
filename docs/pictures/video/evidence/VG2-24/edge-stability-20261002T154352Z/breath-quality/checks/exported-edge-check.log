@@ -1,0 +1,5 @@
+{"status": "REVIEW_REQUIRED", "action": "breath", "frames": 97, "oldExportEdgeMae": 3.4717894604740045, "newExportEdgeMae": 3.352067702139417, "reductionFraction": 0.03448416434740875, "seconds": 16.334446417000436, "humanAppearanceApproval": false, "limitation": "This is a motion-aligned edge-variation metric, not a perceptual flicker score or a claim that source artwork variation is eliminated."}
+Traceback (most recent call last):
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/breath-quality/scripts/check-quality-edges.py", line 44, in <module>
+    assert result["status"]=="PASS"
+AssertionError

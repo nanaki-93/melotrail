@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "counts": {
+    "tests": 81,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "excludedNativeWindow": "**/MidiCoreNativeResponsivenessTest*",
+  "reportsPreservedTemporarily": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-edge-stability-0hq9upay/focused-reports"
+}

@@ -561,6 +561,37 @@ are below 1 GiB, including the hash-verified stopped runtime session.
 No new motion inference or automatic retry occurs. Queue status remains REVIEW;
 no full-film or app-delivery claim follows from this preparation.
 
+**VG2-24 outline-flicker correction (2026-10-03):** evidence owner
+`docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/`.
+Six-pixel motion-aligned edge refinement preserves opaque interiors and changes
+mask area by less than 1% in all 226 saved layers. Original controls fail the
+improvement regression. Alpha residual decreases 37.75% for breathing and 40.59%
+for drinking; prepared edge RGB residual decreases 22.84% and 29.26%. Seven actual
+ComfyUI composition batches match independent alpha composition within 1/255 and
+keep cabin pixels outside support fixed. A duplicate-port preflight failure is
+retained, launches no graph, and receives a unique-port harness correction with a
+negative regression; the completed first batch is reused. No model runs occur.
+
+Both first exports pass all-frame timing, decode and face-content checks. The
+drinking export passes the predeclared 5% temporal-edge improvement gate with a
+14.70% decrease. Breathing fails it: the first encode increases residual 2.16%.
+The user explicitly approves one higher-quality ComfyUI CRF12 export using the
+same lossless frames. It completes in 28.550s at peak sampled RSS 4,402,053,120
+bytes, below its 180s/8 GiB/512 MiB limits; probe and decode consume 4.027s.
+All 97 frames have minimum 37.52 dB PSNR and maximum face MAE 1.943/255. Exact
+1920×1080, 25fps/3.88s, zero start and silence pass. Its edge residual decreases
+only 3.45%: the unchanged 5% gate remains FAILED. Better pixel fidelity does not
+substitute for temporal or human acceptance. Lossless breathing improves 8.06%;
+fixed-cabin matte/source linework variation remains before encoding. The measured
+residual is a diagnostic, not a perceptual flicker score.
+
+Original assets/reference movies and the previous two previews remain unchanged.
+Owned runtimes are stopped and external sessions removed after hash-verified
+preservation. Focused tests pass (81); filtered headless `make test`, `make build`,
+diff, resource and cleanup outcomes are recorded in this run's `checks/`.
+`MidiCoreNativeResponsivenessTest` is excluded; no live UI/editor validation or
+new human acceptance is claimed. VG2-24 remains REVIEW; long-film gates stay open.
+
 ### Standalone Blender feasibility checks (2026-10-01)
 
 VG2-11, separately user-requested; not VG2-08 guard repair or native admission.

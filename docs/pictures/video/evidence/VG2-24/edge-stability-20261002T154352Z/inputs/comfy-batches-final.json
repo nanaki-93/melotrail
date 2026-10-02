@@ -1,0 +1,57 @@
+[
+  {
+    "action": "breath",
+    "index": 0,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/breath-0",
+    "firstFrame": 1,
+    "frames": 32
+  },
+  {
+    "action": "breath",
+    "index": 1,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/breath-1-port",
+    "firstFrame": 33,
+    "frames": 32,
+    "port": 8193
+  },
+  {
+    "action": "breath",
+    "index": 2,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/breath-2-port",
+    "firstFrame": 65,
+    "frames": 33,
+    "port": 8194
+  },
+  {
+    "action": "drink",
+    "index": 0,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-0-port",
+    "firstFrame": 1,
+    "frames": 32,
+    "port": 8195
+  },
+  {
+    "action": "drink",
+    "index": 1,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-1-port",
+    "firstFrame": 33,
+    "frames": 32,
+    "port": 8196
+  },
+  {
+    "action": "drink",
+    "index": 2,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-2-port",
+    "firstFrame": 65,
+    "frames": 32,
+    "port": 8197
+  },
+  {
+    "action": "drink",
+    "index": 3,
+    "evidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-3-port",
+    "firstFrame": 97,
+    "frames": 33,
+    "port": 8198
+  }
+]

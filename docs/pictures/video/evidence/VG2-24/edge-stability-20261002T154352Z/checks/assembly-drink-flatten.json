@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "frames": 129,
+  "maximumComfyCompositionRgbError": 1,
+  "fixedCabinOutsideMovingSupport": true,
+  "faceDropoutNegativeRejected": true,
+  "seconds": 22.127738499999396
+}

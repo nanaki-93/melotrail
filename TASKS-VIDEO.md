@@ -688,6 +688,32 @@ VG2-24 remains REVIEW; VG2-27, 60 seconds, 180 seconds, 30fps conversion and the
 six-minute repeat gate remain open. Original sources and accepted clips stay local
 and unchanged. Validation and cleanup receipts are in this run's `checks/`.
 
+VG2-24 outline-flicker correction (2026-10-03): the user reports flicker in the
+last two previews, specifically “Around TABI’s outline”. Evidence:
+`docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/`.
+Motion-aligned adjacent saved frames refine only a six-pixel silhouette band;
+opaque face/hand/body interiors stay exact. All 226 layers are under the requested
+`tabi-assets/train-actions/edge-stability-20261002T154352Z/` asset owner. Seven
+actual ComfyUI core-node batches composite the fixed cabin without new inference.
+A port-reuse preflight rejection launches no ComfyUI graph; unique-port correction
+retains the first completed batch and covers duplicate ports with a negative check.
+
+The revised drinking export passes the unchanged temporal-edge gate (14.70%
+lower motion-aligned edge residual), exact 1080p25/5.16s timing and full decode:
+`review/drink/tabi-drink-stable-edges-comfy-1080p.mp4`, SHA-256
+`e5f295baf473ad5b6a7cc0b5523643f6c00fda466aad563415ed4e7ee0280730`.
+This new composite still needs human review; prior action acceptance is retained.
+The first breathing export fails that gate. The user then explicitly approves
+“Run the higher-quality export”: one ComfyUI CRF12 encode from the same 97
+lossless frames, 180s/8 GiB/512 MiB, no retry or new motion. Encoding and full
+decode pass, but edge residual improves only 3.45%, below the retained 5% gate.
+`breath-quality/review/tabi-breath-comfy-1080p.mp4` is an unselected repair
+candidate, SHA-256 `c13d647b9ddca08df841e86f0169b3e88e8f54afc3223b36600639793ee209ae`.
+The saved source linework and moving matte require further attention before
+another export; compression alone did not resolve flicker. No automatic retry or
+long-film assembly follows. VG2-24 stays REVIEW and VG2-27 stays WAITING_USER. Validation,
+source-protection and cleanup receipts are retained in this run's `checks/`.
+
 ### Route 1 — Standalone rig proof tasks
 
 **Deferred by the 2026-10-02 reset above.** The following dated evidence and

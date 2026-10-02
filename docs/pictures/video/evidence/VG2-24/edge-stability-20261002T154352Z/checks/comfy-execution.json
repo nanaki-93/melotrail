@@ -1,0 +1,14 @@
+{
+  "status": "STOPPED_BEFORE_SECOND_RUNTIME",
+  "seconds": 26.79419866600074,
+  "batches": [
+    {
+      "stage": "breath-0",
+      "seconds": 26.53,
+      "peakSampledRssBytes": 936558592
+    }
+  ],
+  "preflightFailure": "Loopback port 8192 is still unavailable immediately after prior runtime shutdown",
+  "failedAttemptSeconds": 10.187,
+  "modelOrGraphSubmissionsInFailedAttempt": 0
+}

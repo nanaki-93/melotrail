@@ -1,0 +1,42 @@
+{
+  "task": "VG2-24",
+  "createdAt": "2026-10-02T15:50:20.183083+00:00",
+  "authorization": {
+    "currentFeedback": "the 2 last video are flickering a little",
+    "localizedFeedback": "Around TABI\u2019s outline",
+    "existingScope": "Continue point 1: prepare stable moving silhouettes and breathing; ComfyUI workflow; media local only",
+    "scope": "One reversible correction of only the six-pixel outline band using motion-aligned adjacent saved frames, then actual ComfyUI fixed-cabin composition and one 1080p review encode for each of the two clips. No new motion inference."
+  },
+  "limits": {
+    "perRasterStageSeconds": 240,
+    "rasterProcessMemoryBytes": 2147483648,
+    "comfyAndMediaCumulativeSeconds": 600,
+    "singleComfySeconds": 180,
+    "comfyProcessTreeRssBytes": 8589934592,
+    "newEvidenceAndAssetsAndScratchBytes": 4294967296,
+    "minimumFreeDiskBytes": 21474836480,
+    "modelInferences": 0,
+    "automaticNativeRetries": 0,
+    "reviewEncodesPerClip": 1,
+    "verificationTraversalsPerClip": 2
+  },
+  "sourceMovies": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/finish/review/tabi-breath-comfy-1080p.mp4",
+      "bytes": 5524881,
+      "sha256": "8c49fbbf6e71fca7ce74b2754d3cd1550c9584c0b939ab5564444a8be57746d2"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/breath-outlines-20261002T130040Z/fixed-cabin-recovery/review/tabi-drink-fixed-cabin-comfy-1080p.mp4",
+      "bytes": 12079449,
+      "sha256": "a645e8cd015a8b59249ad09c09fd9e29d532768d3d665a4434f50e3a952894fc"
+    }
+  ],
+  "requiredBeforeNative": [
+    "Both alpha and edge-RGB motion-aligned errors decrease on each clip",
+    "Solid face/hand/body interiors and pixels outside the six-pixel band unchanged",
+    "Mask area change below 1 percent",
+    "Inspect before/after edge crops",
+    "Exact graph/input/class pins and one fresh owned runtime per batch"
+  ]
+}

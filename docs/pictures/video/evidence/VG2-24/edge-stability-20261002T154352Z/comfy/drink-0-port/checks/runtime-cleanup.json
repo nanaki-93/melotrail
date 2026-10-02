@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "runtimeState": "STOPPED",
+  "ownedSessionRemoved": true,
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-dfb7fbd3-24e0-48bb-ba0f-cd2645204538",
+  "allCopiesOrImmutableReferencesVerified": true,
+  "files": [
+    {
+      "runtimeFile": "input/backing.png",
+      "retained": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/breath-outlines-20261002T130040Z/fixed-cabin-cup-free-v2-1080p.png",
+      "sha256": "5f25b378753c825d9b0963acc7aae5604ef0970a1c5031e90a09160b396f19e5"
+    },
+    {
+      "runtimeFile": "input/layer-0.png",
+      "retained": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-0/inputs/layer.png",
+      "sha256": "f295a1cabfc9a7bc9315e789e01412ac1d68d8ef26c9e2dea3a13dbb7b1b1410"
+    },
+    {
+      "runtimeFile": "output/stable-drink-0_00001_.png",
+      "retained": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-0-port/review/batch-0.png",
+      "sha256": "1625fef81184dcb10af4b90b69f9f575393a57b0ded74a3a5819af208c29687b"
+    },
+    {
+      "runtimeFile": "user/comfyui.db",
+      "retained": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-0-port/runtime-metadata/user/comfyui.db",
+      "sha256": "69ab38b36620f3086dab4eac66948a2fbf600fb9272207774e55d607d7660bf5"
+    },
+    {
+      "runtimeFile": "user/comfyui.db.lock",
+      "retained": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/comfy/drink-0-port/runtime-metadata/user/comfyui.db.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

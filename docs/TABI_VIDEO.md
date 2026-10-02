@@ -285,6 +285,32 @@ This does not complete the 60-second combination, 180-second corridor, 30fps
 delivery, repeat join or any integrated Video-tab feature. All original assets/accepted
 movies are preserved; new media stay local and only helpers/checks/docs are versioned.
 
+### Outline-flicker correction (2026-10-03)
+
+The user identifies flicker around TABI in the last breathing/drinking previews.
+The bounded correction reuses their saved ComfyUI motion, aligns adjacent frames
+and smooths only the six-pixel edge band. Solid interiors remain exact. New RGBA
+layers stay in `pictures/video/tabi-assets/train-actions/edge-stability-20261002T154352Z/`;
+actual core ComfyUI nodes composite them over the fixed cabin in seven batches.
+Evidence owner: `pictures/video/evidence/VG2-24/edge-stability-20261002T154352Z/`.
+
+`review/drink/tabi-drink-stable-edges-comfy-1080p.mp4` passes technical outline,
+composition, face-content and full-decode checks at 1920×1080, 25fps/5.16s.
+Its motion-aligned edge residual decreases 14.70%; normal-speed human review is
+still required. The breathing composite's lossless residual improves 8.06%, but
+its first MP4 loses that gain. One separately approved ComfyUI CRF12 export
+improves pixel fidelity (minimum 37.52 dB PSNR) while reducing temporal edge
+residual only 3.45%, below the unchanged 5% gate. That 1080p25/3.88s movie is
+retained at `breath-quality/review/tabi-breath-comfy-1080p.mp4` as an unselected
+repair candidate. It is not an accepted flicker correction.
+
+Source frond/coat linework changes and moving-matte variation remain relevant;
+the old breathing clip animated its whole scene, whereas this candidate uses a
+fixed cabin. More encoding alone is not a demonstrated solution. These checks
+measure edge variation, not perceptual flicker or artistic acceptance. Originals
+remain unchanged; no new inference, 60/180-second assembly or automatic retry
+is authorized by this result. VG2-24 remains REVIEW.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the
