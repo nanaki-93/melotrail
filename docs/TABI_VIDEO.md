@@ -267,6 +267,23 @@ the original pixel conversion and acceptance limits. Native effectiveness awaits
 a fresh one-attempt admission, followed by the first wave only if colour passes.
 All media stay local under the user's storage choice.
 
+### VG2-17 installed-filter failure and PNG transport correction (2026-10-02)
+
+The user authorized the prepared colour correction and a wave conditional on its
+success. That correction stopped because the installed FFmpeg lacks `setparams`;
+its manifest and embedded build configuration confirm the missing filter. No new
+MP4, probe/decode or wave followed. The admitted attempt is retained under
+`pictures/video/evidence/VG2-17/repair-20261002T014011Z/` and its scratch is removed.
+
+The separately prepared `VG2-17/metadata-20261002T015459Z/` correction places matching
+Rec.709 cICP metadata on already converted PNG code values, using the pinned PNG
+decoder's supported path. Six in-memory checks preserve every compressed pixel
+byte and raw code value. Explicit comparison strips colour metadata in memory,
+then applies the declared inverse transfer, preventing an implicit second conversion.
+Required filters are checked against installed capabilities before dispatch. This
+is a non-live preparation result; actual encoded colour and the five-second wave
+still need a fresh admitted run and normal-speed review respectively.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

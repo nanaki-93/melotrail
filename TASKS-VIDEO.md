@@ -829,6 +829,45 @@ Both revised exact packets passed independent child-spy review. Focused JVM,
 `make build` (2m50s) and diff whitespace checks passed. The native-window test
 was excluded. The corrected native colour run and wave are still unstarted.
 
+VG2-17 explicitly admitted correction result (2026-10-02): the user answered
+“Run the corrected check and wave” to one corrected colour check (180s/128 MiB)
+and a conditional first wave (900s/2 GiB), with local media and no retries.
+`docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/` retains that event,
+12 hash-identical copied source/converted frames and the failed encode command.
+The installed FFmpeg reports `No such filter: 'setparams'`; its pinned manifest
+and binary configuration both exclude that filter. The source check passed, but
+encoding failed before producing an MP4. No probe, decode, review copy or Blender
+render ran. Three operations were irreversibly reserved, zero MP4 traversals;
+elapsed 8.37s, sampled owned RSS 39,714,816 bytes, peak new storage 3,405,079 bytes.
+The attempt and the conditional wave are stopped; their OS scratch is removed.
+The prior test omitted an installed-filter capability check; fixture passes did
+not prove that `setparams` existed. Original files, failures and budgets remain.
+
+VG2-17 second correction, non-live preparation:
+`docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/`. It uses existing
+`scale`/`format` filters and puts Rec.709 metadata on the converted PNG transport
+instead: cICP `[1,1,0,1]`, as supported by the pinned decoder revision
+`bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa`. Numeric sRGB→Rec.709 conversion and
+strict output/decoded limits remain. Metadata is removed only from in-memory
+comparison copies so the image reader cannot silently apply another transfer.
+The six saved-frame checks prove identical IDAT bytes and raw pixel codes; no
+PNG derivative or native media was produced by those checks. New negatives cover
+old/contradictory colour labels, CRC/truncation, and the actual unavailable-filter
+command. The supervisor now validates required filters against the hash-bound
+installed manifest/executable before any launch.
+
+Prepared colour packet SHA
+`b5d026f71f95b852373ebea52ae9bcc644d60cf7845064b7fb9587b72705b7c5`;
+wave proposal SHA `43714140bda81f2816d827ce80478d390b0d2e028f0b8009a4bf9c67f087cf81`.
+They retain the same one-attempt limits and two planned traversals per output;
+colour reuses six source frames and creates six metadata-only transport derivatives.
+No source rerender, tool installation/change or automatic retry. VG2-17 remains
+WAITING_USER for a fresh native admission; VG2-18 has still never started.
+Both revised packets passed independent child-spy review. Focused JVM, 81 Node
+and 22 direct supervision checks passed, with headless `make test` (2m33s),
+`make build` (2m32s) and diff whitespace checks. Each make gate executed one task
+with 13 up-to-date; the native-window test was excluded, not verified.
+
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
 `docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.

@@ -1,0 +1,13 @@
+{
+  "previousPacketOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z",
+  "failedColourOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z",
+  "colourOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z",
+  "waveOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z",
+  "status": "NON_LIVE_CORRECTION_ONLY_FRESH_NATIVE_PERMISSION_REQUIRED",
+  "reason": "Second data-only correction: assign cICP metadata to already converted PNG pixels, preserve compressed image data, and reject filters absent from the installed build manifest before launch.",
+  "storage": "User selects local media/frames; commit helpers, checks and hashes only.",
+  "originalPacketOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z",
+  "filterFailureOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z",
+  "pngDecoderSource": "https://github.com/FFmpeg/FFmpeg/blob/bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa/libavcodec/pngdec.c#L724",
+  "dataOnlyProof": "checks/saved-frames.json confirms identical compressed pixels and raw values in all six retained frames; no PNG derivative was written."
+}

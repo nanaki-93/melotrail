@@ -1,0 +1,170 @@
+{
+  "status": "AUTHORIZED",
+  "exactUserMessage": "Run the corrected check and wave",
+  "question": "Approve one corrected colour check using the six saved frames (maximum 3 minutes and 128 MiB), followed by the first five-second TABI wave if it passes (maximum 15 minutes and 2 GiB)? Both runs keep media local and allow no automatic retries. The repository requires fresh approval after the failed colour attempt.",
+  "packetSha256": "2dfb24d13e69eb6f7ed1166c618b4a0b888440a0a7332357c6f3a902c56a6ec2",
+  "limits": {
+    "attempts": 1,
+    "retries": 0,
+    "fallbacks": 0,
+    "cumulativeSeconds": 180,
+    "phaseSeconds": {
+      "render": 60,
+      "encode": 60,
+      "validationAndCopy": 60
+    },
+    "aggregateRssBytes": 4294967296,
+    "newStorageBytes": 134217728,
+    "minimumFreeDiskBytes": 19327352832,
+    "minimumFreeMemoryBytes": 3221225472,
+    "normalMemoryPressureSamples": 3,
+    "maximumSwapGrowthBytes": 0,
+    "freeDiskReserveBytes": 10737418240
+  },
+  "operations": [
+    {
+      "id": "render",
+      "phase": "render",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/colour_source.cjs",
+        "--generate"
+      ]
+    },
+    {
+      "id": "source",
+      "phase": "render",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/verify_pixels.cjs",
+        "source"
+      ]
+    },
+    {
+      "id": "encode",
+      "phase": "encode",
+      "decoderCost": 0,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-hide_banner",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-f",
+        "image2",
+        "-framerate",
+        "30",
+        "-start_number",
+        "1",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/frame-%04d.png",
+        "-frames:v",
+        "6",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-c:v",
+        "h264_videotoolbox",
+        "-allow_sw",
+        "0",
+        "-b:v",
+        "12M",
+        "-vf",
+        "scale=iw:ih:in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p,setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=bt709",
+        "-pix_fmt",
+        "yuv420p",
+        "-aspect",
+        "640:360",
+        "-colorspace",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-color_primaries",
+        "bt709",
+        "-color_range",
+        "tv",
+        "-video_track_timescale",
+        "15360",
+        "-movflags",
+        "+faststart",
+        "-f",
+        "mp4",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "probe",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+        "-v",
+        "error",
+        "-count_frames",
+        "-show_streams",
+        "-show_frames",
+        "-show_format",
+        "-of",
+        "json",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "decode",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-threads",
+        "1",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/preview.mp4",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-fps_mode",
+        "passthrough",
+        "-vf",
+        "scale=iw:ih:in_range=tv:out_range=full:in_color_matrix=bt709",
+        "-pix_fmt",
+        "rgba",
+        "-threads",
+        "1",
+        "-start_number",
+        "1",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/decoded/frame-%04d.png"
+      ]
+    },
+    {
+      "id": "pixels",
+      "phase": "validationAndCopy",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/verify_pixels.cjs",
+        "decoded"
+      ]
+    }
+  ],
+  "recordedUtc": "2026-10-02T01:52:22.819784+00:00",
+  "scope": "One corrected colour check reusing six saved source and converted frames. One first wave is conditionally authorized after passing colour and a final bound packet review. No automatic retries.",
+  "storage": "Keep media and proof frames locally; commit only scripts, checks and hashes.",
+  "head": "939e79b6bf20d6791be33031dabb7c5f99d3f5d1"
+}

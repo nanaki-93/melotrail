@@ -1,0 +1,1 @@
+{"status":"SOURCE_AND_EXPLICIT_TRANSFER_PASS","frames":6,"maxProtectedDelta":0,"changedPixels":0,"conversion":"sRGB EOTF -> linear -> Rec.709 OETF; RGB transport is already converted before YUV matrix encoding","converterSha256":"b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36"}

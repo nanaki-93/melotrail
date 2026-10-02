@@ -591,6 +591,31 @@ Both exact revised packets passed child-spy review. Focused JVM, 76 Node and
 `make build` (2m50s) and diff whitespace checks. The native-window test remains
 explicitly excluded; the corrected native media path is not yet verified.
 
+VG2-17 admitted correction failure (2026-10-02):
+`pictures/video/evidence/VG2-17/repair-20261002T014011Z/` records the user's explicit
+one-attempt permission, passing source copies, and the encoder diagnostic
+`No such filter: 'setparams'`. The installed manifest and binary string corroborate
+that absence without another tool invocation. No MP4 was produced; encode attempt
+one, completed encodes/probes/full decodes/Blender frames zero. The shared ledger
+retains all three reservations and refunds none. Elapsed 8.37s, sampled aggregate
+RSS 39,714,816 bytes, peak storage 3,405,079 bytes. Its scratch and the unused
+conditional wave scratch are removed; all 12 local frames have retained hashes.
+
+The next non-live candidate is
+`pictures/video/evidence/VG2-17/metadata-20261002T015459Z/`. Build-capability negatives
+reject the actual failed command before dispatch. PNG tests reject contradictory
+labels, malformed chunks and bad CRCs, preserve compressed image bytes and raw
+code values, and explicitly control colour interpretation during comparison.
+All six retained frames pass metadata-only checks in memory, producing no new PNGs
+or native media. The packet pins the installed manifest/executable and uses only
+available filters; cICP support is corroborated by the exact manifest source
+revision. Numeric conversion, strict media/pixel gates and finite budgets remain.
+A new native pass is not inferred from these data-only checks.
+Both exact new packets pass child-spy review; focused JVM, 81 Node and 22 direct
+supervision checks pass. Headless `make test` (2m33s), `make build` (2m32s) and diff
+checks pass, each make gate with one executed/13 up-to-date tasks. The native-window
+test remains excluded. No native result is claimed for this new transport path.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

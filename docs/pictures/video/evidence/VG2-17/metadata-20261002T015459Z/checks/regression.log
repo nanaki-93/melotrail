@@ -1,0 +1,13 @@
+✔ PNG CRC implementation matches the standard check vector (0.525917ms)
+✔ metadata correction preserves every compressed image byte and raw code value (5.698959ms)
+✔ old sRGB transport and contradictory colour declarations fail (0.799875ms)
+✔ damaged, truncated and trailing PNG bytes are rejected (0.224167ms)
+✔ installed filter regression and supervision run without native media tools (133.534875ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 332.025625

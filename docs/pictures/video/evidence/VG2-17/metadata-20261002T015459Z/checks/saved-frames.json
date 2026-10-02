@@ -1,0 +1,85 @@
+{
+  "status": "SIX_SAVED_FRAMES_METADATA_ONLY_PASS",
+  "nativeToolsLaunched": 0,
+  "outputPngFiles": 0,
+  "frames": [
+    {
+      "frame": 1,
+      "originalSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "inMemoryCorrectedSha256": "4bdea31868485f64a6971496ed949028074d06e73c93c04cb96a6ec195b1021d",
+      "idatSha256": "9f6c083c4fca8a8a626e904db156ed014b7d0a7f5fdbd2acb3c6fdc71cd6f0bd",
+      "pngCicp": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "changedPixelCodes": 0
+    },
+    {
+      "frame": 2,
+      "originalSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "inMemoryCorrectedSha256": "4bdea31868485f64a6971496ed949028074d06e73c93c04cb96a6ec195b1021d",
+      "idatSha256": "9f6c083c4fca8a8a626e904db156ed014b7d0a7f5fdbd2acb3c6fdc71cd6f0bd",
+      "pngCicp": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "changedPixelCodes": 0
+    },
+    {
+      "frame": 3,
+      "originalSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "inMemoryCorrectedSha256": "4bdea31868485f64a6971496ed949028074d06e73c93c04cb96a6ec195b1021d",
+      "idatSha256": "9f6c083c4fca8a8a626e904db156ed014b7d0a7f5fdbd2acb3c6fdc71cd6f0bd",
+      "pngCicp": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "changedPixelCodes": 0
+    },
+    {
+      "frame": 4,
+      "originalSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "inMemoryCorrectedSha256": "4bdea31868485f64a6971496ed949028074d06e73c93c04cb96a6ec195b1021d",
+      "idatSha256": "9f6c083c4fca8a8a626e904db156ed014b7d0a7f5fdbd2acb3c6fdc71cd6f0bd",
+      "pngCicp": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "changedPixelCodes": 0
+    },
+    {
+      "frame": 5,
+      "originalSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "inMemoryCorrectedSha256": "4bdea31868485f64a6971496ed949028074d06e73c93c04cb96a6ec195b1021d",
+      "idatSha256": "9f6c083c4fca8a8a626e904db156ed014b7d0a7f5fdbd2acb3c6fdc71cd6f0bd",
+      "pngCicp": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "changedPixelCodes": 0
+    },
+    {
+      "frame": 6,
+      "originalSha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "inMemoryCorrectedSha256": "4bdea31868485f64a6971496ed949028074d06e73c93c04cb96a6ec195b1021d",
+      "idatSha256": "9f6c083c4fca8a8a626e904db156ed014b7d0a7f5fdbd2acb3c6fdc71cd6f0bd",
+      "pngCicp": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "changedPixelCodes": 0
+    }
+  ]
+}

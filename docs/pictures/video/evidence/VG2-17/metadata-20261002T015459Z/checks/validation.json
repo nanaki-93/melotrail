@@ -1,0 +1,25 @@
+{
+  "status": "NON_LIVE_PNG_TRANSPORT_CHECKS_PASS",
+  "focusedJvm": "PASS",
+  "nodeTests": 81,
+  "directSupervisionTests": 22,
+  "sixSavedFrames": "PASS in memory; IDAT/raw pixel values unchanged; zero native tools and zero output PNGs",
+  "makeTest": "PASS 2m33s; 1 executed, 13 up-to-date",
+  "makeBuild": "PASS 2m32s; 1 executed, 13 up-to-date",
+  "excludedTests": [
+    "MidiCoreNativeResponsivenessTest"
+  ],
+  "nativeOperationsForNewCandidate": 0,
+  "logs": {
+    "checks/wave-packet-review.log": "bad19bc0599b301bb2152f970dbc9c17a3fa88020db6cb7507885354e3207c19",
+    "checks/regression.log": "2bc44f37cc1cba9837f97527b79adb6cbc997b49034f43d506d8994e3846bae3",
+    "checks/dry-run.log": "1a68f82eaaa17545c0d1da877039048a586d6153085d2a0fa5307bae7a01dad1",
+    "checks/focused-final.log": "b090878220dfe17fbe4d761aab8202ebd2bb85e45ebceabae6409acae7d1210f",
+    "checks/diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "checks/make-test.log": "81d874b3da7d7575b5e13eb0d39fa5bf70de1d3b85caa4c219b8d4aca28cde60",
+    "checks/make-build.log": "37396b7609fb782171392eb9d4dbd06c681fe95d05783f99d9b76c30b27a62bb",
+    "checks/colour-packet-review.log": "0e67dadb19ad462bc3380f8be620b5af9531d872315bb9463f9d1263317c31a0",
+    "checks/node-final.log": "22c37956aa8ac9c6165027c207f52a42f5bb4bfdbbba0bba86f8aff4ddbc797c",
+    "checks/python-final.log": "d22c310f3795fdc4e299e13807ef5d1be40afc3bef70758d16b5e109e19588f3"
+  }
+}

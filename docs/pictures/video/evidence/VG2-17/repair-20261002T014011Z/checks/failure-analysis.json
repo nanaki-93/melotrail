@@ -1,0 +1,86 @@
+{
+  "status": "CORRECTED_ATTEMPT_STOPPED_FILTER_UNAVAILABLE",
+  "failure": {
+    "status": "STOPPED_NO_RETRY",
+    "error": "Stage failed; evidence retained, no retry: encode",
+    "decoderReservations": 0,
+    "operationsReserved": 3,
+    "sampledPeakAggregateRssBytes": 39714816,
+    "peakNewStorageBytes": 3405079,
+    "elapsedSeconds": 8.368413083
+  },
+  "diagnostic": "[AVFilterGraph @ 0x7cd8c4c000] No such filter: 'setparams'\nError opening output file /Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/preview.mp4.\nError opening output files: Filter not found\n",
+  "actualCounts": {
+    "reusedSourceCopies": 6,
+    "reusedConvertedCopies": 6,
+    "encodeAttempts": 1,
+    "completedEncodes": 0,
+    "probeScans": 0,
+    "fullDecodes": 0,
+    "reviewCopies": 0,
+    "blenderFrames": 0
+  },
+  "mediaFiles": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/frame-0001.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/frame-0002.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/frame-0003.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/frame-0004.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/frame-0005.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/encoded_input/frame-0006.png",
+      "sha256": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+      "bytes": 272685
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/source/frame-0001.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/source/frame-0002.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/source/frame-0003.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/source/frame-0004.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/source/frame-0005.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z/live/source/frame-0006.png",
+      "sha256": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+      "bytes": 268819
+    }
+  ],
+  "scope": "Preserve failed attempted command and copied lossless frames. The conditional wave did not start. No retry or budget refund."
+}
