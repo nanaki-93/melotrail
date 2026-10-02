@@ -33,7 +33,9 @@ The old wave/Blender route remains deferred; this request does not resume it.
 
 The user explicitly authorizes needed TABI assets in `docs/pictures/video/tabi-assets/`
 and new same-style Tokyo points of interest in `scenario/`. Four initial built-in
-imagegen calls created the following local reference candidates, preserving originals:
+imagegen calls created the following local reference candidates, preserving originals.
+The three action scenes below are superseded by the book corrections in the next
+subsection; keep them as source evidence, not current notebook references:
 
 | Candidate | Saved local asset |
 | --- | --- |
@@ -51,6 +53,39 @@ images, not registered character layers. The panorama is 2172×724, with no dept
 separation or proven seam. Exact prompts, source/result pins, dimensions and
 inspection limits: `docs/pictures/video/evidence/VG2-23/action-scope-20261002T030904Z/checks/`.
 Media stay local. No new moving clip was produced by these four image calls.
+
+### Book correction and exterior variety (2026-10-02)
+
+The user requires varied scenery **outside** the train window and corrects the
+notebook orientation in the current scenes. Four new complete scene candidates
+are saved in `docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/`:
+`00-neutral-book-facing-tabi.png`, `01-drinking-book-facing-tabi.png`,
+`02-reading-book-facing-tabi.png` and `03-window-watch-book-facing-tabi.png`.
+Use these for subsequent character preparation. All page illustrations face TABI:
+tower base, train wheels and temple base toward TABI at the far edge; tower tip
+and illustrated roofs toward the viewer at the near edge. The earlier `19` book
+revision corrected the tower alone and is not the complete corrected spread.
+Static inspection finds the four poses and connected paws retained. These are
+1672×941 opaque generated scenes, not byte-exact page patches or aligned cutouts.
+
+Six additional panoramas are saved in
+`docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/`:
+Asakusa/Senso-ji, Sumida River/Skytree, Ueno/Shinobazu Pond, Yanaka residential
+rooftops, Shinjuku skyline and Tokyo Bay/Rainbow Bridge. They keep the reference's
+warm sunset illustration style and show only exterior scenery, without TABI,
+train cabin or window frames. This adds historic, riverside, park, residential,
+modern-city and bay views to the earlier Tokyo Station picture. They are roughly
+3:1 (Asakusa 2170×725, Shinjuku 2171×724, the other four 2172×724); later preparation
+must account for these dimensions rather than assume identical sizes.
+
+Ten built-in imagegen calls produced this follow-up, one per saved image, with no
+retry. Exact prompts, source/result pins and visual inspection notes are in
+`docs/pictures/video/evidence/VG2-23/book-panorama-20261002T033127Z/checks/assets.json`.
+Original artwork and both successful videos remain unchanged. The new media stay
+local; only documentation/checks are versioned. Depth separation, moving joins,
+three-minute coverage and human artwork/motion review remain pending.
+
+### Motion preparation after the reference images
 
 The motion target is continuous breathing/head/watch, cup reach/lift/sip/return,
 and attentive reading/return. Do not flip/crossfade the new stills and call that

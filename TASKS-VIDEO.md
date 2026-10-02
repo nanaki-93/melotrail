@@ -428,7 +428,7 @@ code changed, so full `make test`/`make build` were not repeated for this reset.
 | VG2-23 | Inspect existing scene/action references and prepare initial scene-matched drink/read/watch and additional Tokyo scenery reference candidates in the user-requested asset folders. Keep the original scene/props/style, pin sources/results and disclose missing registration/motion capability. This row delivers static candidates, not animation-ready layers or artistic approval. | VG2-21 | DONE |
 | VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | TODO |
 | VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-24 | TODO |
-| VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | TODO |
+| VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | TODO |
 | VG2-27 | Review the exact breath/head/watch, drink and read clips at normal speed and relevant in-betweens. Record identity/style, attachment, contact, prop continuity, cadence and return decisions for every required activity. Repair rejected actions before the full film; no test score or static candidate substitutes. | VG2-24, VG2-25, VG2-26 | WAITING_USER |
 
 VG2-23 first preparation: `docs/pictures/video/evidence/VG2-23/action-scope-20261002T030904Z/`.
@@ -449,6 +449,19 @@ Media stay local; only docs/checks are committed. The user explicitly permits
 additional assets when needed; do not ask again merely to create those assets.
 Native motion stages require concrete finite execution scopes and preserved
 failure evidence, without treating the cancelled wave's allowance as reusable.
+
+VG2-23 user-requested follow-up: `docs/pictures/video/evidence/VG2-23/book-panorama-20261002T033127Z/checks/`.
+Ten built-in imagegen calls, no retries: four corrected neutral/drink/read/watch
+scenes in `docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/`
+and six exterior-only Tokyo panoramas in
+`docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/`.
+The corrected scenes supersede the original neutral and first action candidates
+for future preparation: every notebook sketch faces TABI, including the train
+and temple, not just the tower. Scenery adds Asakusa, Sumida, Ueno, Yanaka,
+Shinjuku and Tokyo Bay in the existing sunset style, with no cabin/window frame.
+The ten files were visually inspected and pinned; no human art approval, alpha
+registration, continuous motion, moving scenery join or 180-second coverage is
+inferred. VG2-24–27 and VG4-05/06 retain their existing states.
 
 ### Route 1 — Standalone rig proof tasks
 

@@ -1,0 +1,40 @@
+{
+  "task": "VG2-23",
+  "run": "book-panorama-20261002T033127Z",
+  "status": "ARTWORK_SAVED_AND_CHECKED",
+  "checks": {
+    "savedPngs": 10,
+    "bookCorrectedScenes": 4,
+    "exteriorPanoramas": 6,
+    "pngSignatureChunkCrcAndZlib": "PASS",
+    "sourceAndPriorResultPins": 9,
+    "successfulVideoPins": 2,
+    "preservedPins": "PASS",
+    "staticVisualInspection": "COMPLETE",
+    "humanArtApproval": "PENDING",
+    "gitDiffCheck": "PASS"
+  },
+  "tests": {
+    "command": "JAVA_HOME=/Users/marcoandreose/.sdkman/candidates/java/21.0.11-tem ./gradlew -I <temporary-headless-init.gradle> :test --tests '*DocumentationIntegrityTest' --tests '*TargetArchitectureRulesTest'",
+    "headlessInit": "allprojects { tasks.withType(org.gradle.api.tasks.testing.Test).configureEach { systemProperty 'java.awt.headless', 'true'; exclude '**/MidiCoreNativeResponsivenessTest*' } }",
+    "passed": 18,
+    "failed": 0,
+    "errors": 0,
+    "scope": "Root documentation and architecture only; desktop suite and native-window test not run.",
+    "log": "headless-focused.log",
+    "fullMakeTestAndBuild": "Not run for artwork and documentation-only changes; no production or test wiring modified."
+  },
+  "productionChanges": 0,
+  "newVideoRenders": 0,
+  "originalMediaOverwritten": 0,
+  "imagegenMode": "built-in",
+  "imagegenCalls": 10,
+  "imagegenRetries": 0,
+  "storage": "All ten output PNGs are saved under the user's tabi-assets/train-actions and tabi-assets/scenario folders. Media stay local and uncommitted; only docs and checks are committed.",
+  "inspectionLimits": [
+    "Page direction is visually inspected, not text recognition or automated art approval.",
+    "Full-scene image edits may change pixels outside the book; these are references for later aligned/masked preparation.",
+    "Panoramas are opaque single images with slightly different dimensions; no seam, depth-plane, 180-second or loop continuity is established."
+  ],
+  "scratchPolicy": "Remove the unique task-owned temporary directory after preserving this evidence; do not remove existing artifacts, virtual environments, tool caches or generated-image originals."
+}

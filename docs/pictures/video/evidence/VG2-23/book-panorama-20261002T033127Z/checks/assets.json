@@ -1,0 +1,272 @@
+{
+  "task": "VG2-23",
+  "run": "book-panorama-20261002T033127Z",
+  "tool": "built-in image_gen",
+  "userRequest": "Add more different Tokyo exterior scenes for the view outside the train window and correct the upside-down notebook in TABI pictures. Save images under tabi-assets and scenario.",
+  "mediaStorage": "Local PNG files; commit only documentation and checks.",
+  "files": [
+    {
+      "key": "bookNeutral",
+      "name": "00-neutral-book-facing-tabi.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png",
+        "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-6406a2da-9510-4e14-aad3-aacb6e8fc2ed.png"
+      ],
+      "review": "Resting pose retained; notebook tower spire, train roof and temple roof face the viewer/near edge, bases/wheels face TABI.",
+      "prompt": "Use case: precise-object-edit\nImage 1 is the EDIT TARGET. Image 2 is ONLY the supporting reference for the CORRECTED NOTEBOOK PAGE INK. Transfer Image 2's corrected notebook ink to the notebook in Image 1, preserving Image 1's resting pose with one paw supporting the cheek, the other near the book, and the cup standing on the table. Do not copy Image 2's character pose.\nOnly the ink on both notebook pages may change. Match the complete corrected spread in Image 2: all drawings and handwriting face TABI seated BEHIND the table, so they intentionally appear UPSIDE DOWN to the camera. The tower drawing has its WIDE BASE toward TABI at the far/upper side of the page and its THIN SPIRE toward the camera at the near/lower side. The little train has WHEELS toward TABI/up and ROOF toward camera/down. The temple has its BASE toward TABI/up and ROOF toward camera/down. All handwriting is likewise turned 180 degrees in the paper plane, not mirrored. Keep the blossoms, ink colors and travel-journal character.\nPreserve Image 1's physical book geometry, page fold, paper perspective, covers, page curl and dark-gold pen. Keep EVERYTHING ELSE in Image 1 visually unchanged: TABI's face/eyes/head pose, headphones on head, star, gills, attached hands and arms, coat, tail, feet, cup location/design, train/table/bag/cabin/window, exterior skyline, lighting, textured illustrated style, camera and full wide framing. No new props, closeup insets, labels or borders. Return one complete opaque wide scene.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-65c0e74b-0a8a-4a01-a7e6-108cf41ad54f.png",
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/00-neutral-book-facing-tabi.png",
+      "group": "corrected-character-scene",
+      "status": "visually-inspected-static-candidate",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "key": "bookDrink",
+      "name": "01-drinking-book-facing-tabi.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/01-drinking-keyframe-candidate.png",
+        "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-6406a2da-9510-4e14-aad3-aacb6e8fc2ed.png"
+      ],
+      "review": "Drinking pose retained with cup held at mouth and no duplicate cup; complete corrected notebook spread.",
+      "prompt": "Use case: precise-object-edit\nImage 1 is the EDIT TARGET: TABI drinking in the train. Image 2 is a SUPPORTING REFERENCE ONLY for the CORRECTED NOTEBOOK PAGE INK. Transfer the notebook's corrected page design and orientation from Image 2 onto the same open notebook in Image 1. Keep Image 1's drinking pose, cup held to mouth and empty cup position on table. Do not copy Image 2's character pose or cup position.\nCorrect ONLY the ink on BOTH notebook pages. Every sketch and all handwriting must be readable by TABI behind the table and intentionally UPSIDE DOWN to the camera. Match Image 2: the tower's WIDE BASE at the far/upper edge beside TABI, its THIN SPIRE pointing down toward the viewer/near edge; the small train WHEELS toward TABI/up and ROOF toward viewer/down; temple BASE toward TABI/up and ROOF toward viewer/down. Turn all handwriting likewise 180 degrees in the plane of the paper, not mirrored. Keep the blossom embellishments and same ink drawing scale.\nKeep the physical book, cover, crease, page perspective and dark-gold pen exactly where they are in Image 1. Only page ink is editable. Preserve all other visible content: TABI's identity, face, gold star, headphones ON head, drinking gesture, attached paws/wrists/cuffs, cup, coat, tail/feet, table, bag, cabin, train window, Tokyo exterior, framing and warm painterly illustration texture. Do not redesign the shot or move the camera. Return the complete opaque wide 16:9 scene with the corrected book.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-4dad9ec6-5b0f-443a-9b6e-c7c6bb0c2cd5.png",
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/01-drinking-book-facing-tabi.png",
+      "group": "corrected-character-scene",
+      "status": "visually-inspected-static-candidate",
+      "bytes": 2136264,
+      "sha256": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "key": "bookRead",
+      "name": "02-reading-book-facing-tabi.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/02-reading-keyframe-candidate.png"
+      ],
+      "review": "Head/eyes stay directed toward pages; complete notebook spread faces TABI, including tower, train and temple.",
+      "prompt": "Use case: precise-object-edit\nEdit target: supplied full-frame TABI reading scene. Correct ONLY the ink on BOTH pages of the open travel notebook on the table. The book is currently readable by the CAMERA and therefore upside down to TABI. Turn ALL the page content 180 degrees IN THE PLANE OF THE PAPER so the drawings and handwriting are readable from TABI's seat behind the table, and appear UPSIDE DOWN to us viewing this image. This intentional upside-down-to-camera appearance is essential.\nConcrete orientation: on the left page the Tokyo tower drawing must have its WIDE BASE at the FAR/UPPER edge closest to TABI's paws, and its long thin spire pointing down toward the NEAR/LOWER edge closest to the camera. The small illustrated train on that page must likewise have its WHEELS toward TABI/up in the image, and ROOF toward the camera/down. The right-page temple must have its BASE toward TABI/up and ROOF toward the camera/down. Turn the handwriting the same way. Keep the same travel sketches, blossoms and cream paper texture, at similar sizes. Do not merely fix the tower and leave the other motifs facing the camera. Do not mirror the page content.\nKeep the physical open book, covers, page perspective, page curl and central fold exactly in place; do not turn the actual notebook, lift it or close it. Keep the dark and gold pen in the identical position ON TOP of the book.\nEverything outside the page ink stays visually unchanged: TABI's reading pose, eyes, head, forehead star, headphones on head, connected paws/cuffs/arms, coat, feet, tail, cup on table, table, bag, train interior, window and Tokyo skyline, lighting, textures and original wide 16:9 framing. No new props, no camera change, no labels or inset close-up. Output the complete full-frame opaque scene.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-6406a2da-9510-4e14-aad3-aacb6e8fc2ed.png",
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png",
+      "group": "corrected-character-scene",
+      "status": "visually-inspected-static-candidate",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "key": "bookWatch",
+      "name": "03-window-watch-book-facing-tabi.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/03-window-watch-keyframe-candidate.png",
+        "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-6406a2da-9510-4e14-aad3-aacb6e8fc2ed.png"
+      ],
+      "review": "Head still turned toward right window, paws remain attached and cup on table; complete corrected notebook spread.",
+      "prompt": "Use case: precise-object-edit\nImage 1 is the EDIT TARGET. Image 2 is ONLY the supporting reference for the CORRECTED NOTEBOOK PAGE INK. Transfer Image 2's corrected notebook ink to the notebook in Image 1, preserving Image 1's window-watching pose with head turned toward the right window, both paws resting on the table, and the cup standing on the table. Do not copy Image 2's character pose.\nOnly the ink on both notebook pages may change. Match the complete corrected spread in Image 2: all drawings and handwriting face TABI seated BEHIND the table, so they intentionally appear UPSIDE DOWN to the camera. The tower drawing has its WIDE BASE toward TABI at the far/upper side of the page and its THIN SPIRE toward the camera at the near/lower side. The little train has WHEELS toward TABI/up and ROOF toward camera/down. The temple has its BASE toward TABI/up and ROOF toward camera/down. All handwriting is likewise turned 180 degrees in the paper plane, not mirrored. Keep the blossoms, ink colors and travel-journal character.\nPreserve Image 1's physical book geometry, page fold, paper perspective, covers, page curl and dark-gold pen. Keep EVERYTHING ELSE in Image 1 visually unchanged: TABI's face/eyes/head pose, headphones on head, star, gills, attached hands and arms, coat, tail, feet, cup location/design, train/table/bag/cabin/window, exterior skyline, lighting, textured illustrated style, camera and full wide framing. No new props, closeup insets, labels or borders. Return one complete opaque wide scene.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-88dfff3f-598e-4a1a-b6c5-d453c212b1fc.png",
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/03-window-watch-book-facing-tabi.png",
+      "group": "corrected-character-scene",
+      "status": "visually-inspected-static-candidate",
+      "bytes": 2235205,
+      "sha256": "5b3ba59efe869e1158be5ce4d770a33fa1ed0c7fa6e29ed4d608c5c747bcf59a",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "key": "asakusa",
+      "name": "01-asakusa-sensoji-panorama.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png"
+      ],
+      "prompt": "Use case: illustration-story\nAsset: ONE continuous exterior-only Tokyo panorama for the moving background OUTSIDE a train window. Supplied image is STYLE, PALETTE AND CAMERA-HEIGHT REFERENCE only, not an edit target. Invent a new district composition, do not repeat its clock building or river layout.\nFormat and camera: extra-wide horizontal 3:1 landscape, same dimensions/aspect as reference (2172x724 if possible). Calm level broadside view from a passing elevated train, distant-to-midrange scenery that can slide horizontally. Buildings and trees stay vertical. Avoid deep vanishing-point streets, aerial isometric views, wide-angle lens distortion or tilted horizon. Landmark silhouettes remain fully inside the frame with room above; quiet continuation of the district occupies both 10% side margins.\nMatch the reference's fine dark architectural outlines, richly painted yet crisp anime-background illustration, subtle paper texture, warm peach/coral sunset sky, sparse lavender clouds, muted lavender distant skyline, soft golden lit windows and spring cherry blossoms. Same golden-hour brightness across the series, no night or weather shift. Stable visual scale and clear foreground/middle/far depth cues. Exterior artwork fills the entire frame edge to edge.\nABSOLUTELY NO train interior, no window outline/frame/glass, no table, no TABI, no character portrait, no border, no panels/collage, no caption, no logos, no readable signage. Do not insert a train window merely because this art will be seen through one. Small incidental distant people optional, never the focal point. Opaque full landscape.\nDISTRICT CONTENT: Asakusa temple district: the red Senso-ji temple hall and a slender five-storey pagoda seen broadside across a quiet low tiled boundary wall and old shop roofs. Temple complex offset from center, not a giant frontal gate filling the image. Several layered grey-blue tiled roofs, muted vermilion woodwork, small golden details, cherry trees and mature green trees around the complex. Quiet side streets and low traditional shops continue left and right; a few soft modern city silhouettes far behind. Use a LAND foreground of low rooftops/garden wall, NOT a canal, not a waterfront. Rich historic architecture and varied roof heights give a recognisably different exterior section.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-e427f2e0-88f5-4d32-8327-1a86a06e4521.png",
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/01-asakusa-sensoji-panorama.png",
+      "group": "exterior-panorama",
+      "status": "visually-inspected-static-candidate",
+      "review": "Temple hall, pagoda and layered residential roofs over land; no interior or window border; golden-hour palette and level exterior framing.",
+      "bytes": 2702053,
+      "sha256": "fc39b3d0bdc632ac2cfbea90a68f148507745f9f71a0dc1d13c5d18e0b7420f8",
+      "dimensions": [
+        2170,
+        725
+      ]
+    },
+    {
+      "key": "sumida",
+      "name": "02-sumida-river-skytree-panorama.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png"
+      ],
+      "prompt": "Use case: illustration-story\nAsset: ONE continuous exterior-only Tokyo panorama for the moving background OUTSIDE a train window. Supplied image is STYLE, PALETTE AND CAMERA-HEIGHT REFERENCE only, not an edit target. Invent a new district composition, do not repeat its clock building or river layout.\nFormat and camera: extra-wide horizontal 3:1 landscape, same dimensions/aspect as reference (2172x724 if possible). Calm level broadside view from a passing elevated train, distant-to-midrange scenery that can slide horizontally. Buildings and trees stay vertical. Avoid deep vanishing-point streets, aerial isometric views, wide-angle lens distortion or tilted horizon. Landmark silhouettes remain fully inside the frame with room above; quiet continuation of the district occupies both 10% side margins.\nMatch the reference's fine dark architectural outlines, richly painted yet crisp anime-background illustration, subtle paper texture, warm peach/coral sunset sky, sparse lavender clouds, muted lavender distant skyline, soft golden lit windows and spring cherry blossoms. Same golden-hour brightness across the series, no night or weather shift. Stable visual scale and clear foreground/middle/far depth cues. Exterior artwork fills the entire frame edge to edge.\nABSOLUTELY NO train interior, no window outline/frame/glass, no table, no TABI, no character portrait, no border, no panels/collage, no caption, no logos, no readable signage. Do not insert a train window merely because this art will be seen through one. Small incidental distant people optional, never the focal point. Opaque full landscape.\nDISTRICT CONTENT: A spacious Sumida River crossing view: wide blue-violet water with peach-gold rippling reflections in lower quarter, a low pale-blue steel arch road bridge extending HORIZONTALLY across the midground, cherry-lined river embankments and urban blocks behind. Tokyo Skytree stands slender and recognisable right of center in the distance, fully visible with its tip below the top edge; keep it scaled as a distant tower, not filling most of the image. Small waterside apartment buildings, green riverside parks, one tiny riverboat. Open sky and water provide contrast with the dense town sections. No foreground train, rails or window.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-32f068a3-d074-433f-9b91-381ffdd95b9d.png",
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/02-sumida-river-skytree-panorama.png",
+      "group": "exterior-panorama",
+      "status": "visually-inspected-static-candidate",
+      "review": "Wide river, horizontal steel bridge, distant Skytree and small boat; no interior/window; distinct water and open sky.",
+      "bytes": 2439262,
+      "sha256": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20",
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "key": "ueno",
+      "name": "03-ueno-shinobazu-pond-panorama.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png"
+      ],
+      "prompt": "Use case: illustration-story\nAsset: ONE continuous exterior-only Tokyo panorama for the moving background OUTSIDE a train window. Supplied image is STYLE, PALETTE AND CAMERA-HEIGHT REFERENCE only, not an edit target. Invent a new district composition, do not repeat its clock building or river layout.\nFormat and camera: extra-wide horizontal 3:1 landscape, same dimensions/aspect as reference (2172x724 if possible). Calm level broadside view from a passing elevated train, distant-to-midrange scenery that can slide horizontally. Buildings and trees stay vertical. Avoid deep vanishing-point streets, aerial isometric views, wide-angle lens distortion or tilted horizon. Landmark silhouettes remain fully inside the frame with room above; quiet continuation of the district occupies both 10% side margins.\nMatch the reference's fine dark architectural outlines, richly painted yet crisp anime-background illustration, subtle paper texture, warm peach/coral sunset sky, sparse lavender clouds, muted lavender distant skyline, soft golden lit windows and spring cherry blossoms. Same golden-hour brightness across the series, no night or weather shift. Stable visual scale and clear foreground/middle/far depth cues. Exterior artwork fills the entire frame edge to edge.\nABSOLUTELY NO train interior, no window outline/frame/glass, no table, no TABI, no character portrait, no border, no panels/collage, no caption, no logos, no readable signage. Do not insert a train window merely because this art will be seen through one. Small incidental distant people optional, never the focal point. Opaque full landscape.\nDISTRICT CONTENT: A peaceful Ueno Park and Shinobazu Pond exterior: pond in the lower third, gentle peach reflections, a restrained scatter of lotus leaves and reeds in the near shallows, a small red Bentendo pavilion with a green octagonal roof on a tree-covered island left of center. Long rows of soft pink flowering cherry trees and spring green foliage span the middle distance, with small muted city blocks farther behind and plenty of sunset sky above. Keep pavilion small and at a believable distance, foliage varied rather than a repeated blossom wall. The park and water dominate; no giant landmark tower, bridge or commercial storefronts. Broadside composition for horizontal travel.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-3a9e18f6-14a4-499b-810d-a66b90df1e65.png",
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/03-ueno-shinobazu-pond-panorama.png",
+      "group": "exterior-panorama",
+      "status": "visually-inspected-static-candidate",
+      "review": "Park pond with pavilion, varied trees, reflections and near reeds/lotus; no interior/window; quieter open setting.",
+      "bytes": 2592770,
+      "sha256": "41bd4ad859c62e83ff802422a2479431954cc98e0cb91122ce04a84265e149a2",
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "key": "yanaka",
+      "name": "04-yanaka-residential-rooftops-panorama.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png"
+      ],
+      "prompt": "Use case: illustration-story\nAsset: ONE continuous exterior-only Tokyo panorama for the moving background OUTSIDE a train window. Supplied image is STYLE, PALETTE AND CAMERA-HEIGHT REFERENCE only, not an edit target. Invent a new district composition, do not repeat its clock building or river layout.\nFormat and camera: extra-wide horizontal 3:1 landscape, same dimensions/aspect as reference (2172x724 if possible). Calm level broadside view from a passing elevated train, distant-to-midrange scenery that can slide horizontally. Buildings and trees stay vertical. Avoid deep vanishing-point streets, aerial isometric views, wide-angle lens distortion or tilted horizon. Landmark silhouettes remain fully inside the frame with room above; quiet continuation of the district occupies both 10% side margins.\nMatch the reference's fine dark architectural outlines, richly painted yet crisp anime-background illustration, subtle paper texture, warm peach/coral sunset sky, sparse lavender clouds, muted lavender distant skyline, soft golden lit windows and spring cherry blossoms. Same golden-hour brightness across the series, no night or weather shift. Stable visual scale and clear foreground/middle/far depth cues. Exterior artwork fills the entire frame edge to edge.\nABSOLUTELY NO train interior, no window outline/frame/glass, no table, no TABI, no character portrait, no border, no panels/collage, no caption, no logos, no readable signage. Do not insert a train window merely because this art will be seen through one. Small incidental distant people optional, never the focal point. Opaque full landscape.\nDISTRICT CONTENT: Yanaka's quiet residential neighbourhood, seen broadside just above low tiled rooftops: a varied line of modest two-storey Japanese wooden houses, a tiny local grocery, balconies with potted plants, narrow gaps between buildings, a few warm shop awnings, utility poles with fine horizontal wires, and lush garden greenery with scattered cherry blossoms. Roofs in slate blue and facades in warm cream, muted tan and dark timber. A narrow level residential lane runs left-to-right across the lower frame, with low garden fences, a parked bicycle and a couple of small utility boxes. NO river, pond, bridge, giant pagoda or famous tower. Sparse distant low city blocks behind. This is the intimate everyday neighbourhood section of the journey, visually distinct from landmark postcards. Keep building scale coherent and the camera level; no street disappearing into a vanishing point.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-b01a8945-d3c6-435d-99bc-4a2e0cda12a6.png",
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/04-yanaka-residential-rooftops-panorama.png",
+      "group": "exterior-panorama",
+      "status": "visually-inspected-static-candidate",
+      "review": "Low residential houses, roofs, garden greenery and horizontal lane; domestic scale distinct from monuments/water; no train interior/window.",
+      "bytes": 2719261,
+      "sha256": "bde1a4827cc8716292dcb3ea0bfac44951f0e1ce2c6621d7b23c558b86803182",
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "key": "shinjuku",
+      "name": "05-shinjuku-skyline-panorama.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png"
+      ],
+      "prompt": "Use case: illustration-story\nAsset: ONE continuous exterior-only Tokyo panorama for the moving background OUTSIDE a train window. Supplied image is STYLE, PALETTE AND CAMERA-HEIGHT REFERENCE only, not an edit target. Invent a new district composition, do not repeat its clock building or river layout.\nFormat and camera: extra-wide horizontal 3:1 landscape, same dimensions/aspect as reference (2172x724 if possible). Calm level broadside view from a passing elevated train, distant-to-midrange scenery that can slide horizontally. Buildings and trees stay vertical. Avoid deep vanishing-point streets, aerial isometric views, wide-angle lens distortion or tilted horizon. Landmark silhouettes remain fully inside the frame with room above; quiet continuation of the district occupies both 10% side margins.\nMatch the reference's fine dark architectural outlines, richly painted yet crisp anime-background illustration, subtle paper texture, warm peach/coral sunset sky, sparse lavender clouds, muted lavender distant skyline, soft golden lit windows and spring cherry blossoms. Same golden-hour brightness across the series, no night or weather shift. Stable visual scale and clear foreground/middle/far depth cues. Exterior artwork fills the entire frame edge to edge.\nABSOLUTELY NO train interior, no window outline/frame/glass, no table, no TABI, no character portrait, no border, no panels/collage, no caption, no logos, no readable signage. Do not insert a train window merely because this art will be seen through one. Small incidental distant people optional, never the focal point. Opaque full landscape.\nDISTRICT CONTENT: Modern Shinjuku skyline seen at a moderate distance across low city rooftops and a strip of mature green trees. Include the recognisable twin-tower silhouette inspired by the Tokyo Metropolitan Government Building slightly left of center, stepped office towers, one slender gently tapered glass skyscraper and different rectangular midrise buildings. Carefully distinguish tower silhouettes and facades; subtle gold-lit windows and salmon sky reflected in glass. Show the uppermost tips completely, leave breathing room above. The near strip is a low urban retaining wall with shrubs and a few pink cherry trees, with compact buildings behind it, not water. NO historic station, pagoda, Skytree or river. All exterior cityscape, level broadside horizontal travel composition. No logos, billboard writing or crowds.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-1224f3cc-fd4c-42a7-8652-a81ee97ed08e.png",
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/05-shinjuku-skyline-panorama.png",
+      "group": "exterior-panorama",
+      "status": "visually-inspected-static-candidate",
+      "review": "Distinct modern skyline silhouettes with midrise foreground and land strip; no train interior/window; same warm evening palette.",
+      "bytes": 2410530,
+      "sha256": "54940a967372d259cb3661997b152ffb410156d1d8ad58e82c900fcbbba0fe67",
+      "dimensions": [
+        2171,
+        724
+      ]
+    },
+    {
+      "key": "tokyoBay",
+      "name": "06-tokyo-bay-rainbow-bridge-panorama.png",
+      "inputs": [
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png"
+      ],
+      "prompt": "Use case: illustration-story\nAsset: ONE continuous exterior-only Tokyo panorama for the moving background OUTSIDE a train window. Supplied image is STYLE, PALETTE AND CAMERA-HEIGHT REFERENCE only, not an edit target. Invent a new district composition, do not repeat its clock building or river layout.\nFormat and camera: extra-wide horizontal 3:1 landscape, same dimensions/aspect as reference (2172x724 if possible). Calm level broadside view from a passing elevated train, distant-to-midrange scenery that can slide horizontally. Buildings and trees stay vertical. Avoid deep vanishing-point streets, aerial isometric views, wide-angle lens distortion or tilted horizon. Landmark silhouettes remain fully inside the frame with room above; quiet continuation of the district occupies both 10% side margins.\nMatch the reference's fine dark architectural outlines, richly painted yet crisp anime-background illustration, subtle paper texture, warm peach/coral sunset sky, sparse lavender clouds, muted lavender distant skyline, soft golden lit windows and spring cherry blossoms. Same golden-hour brightness across the series, no night or weather shift. Stable visual scale and clear foreground/middle/far depth cues. Exterior artwork fills the entire frame edge to edge.\nABSOLUTELY NO train interior, no window outline/frame/glass, no table, no TABI, no character portrait, no border, no panels/collage, no caption, no logos, no readable signage. Do not insert a train window merely because this art will be seen through one. Small incidental distant people optional, never the focal point. Opaque full landscape.\nDISTRICT CONTENT: Tokyo Bay and Odaiba waterfront at the same warm sunset hour: an elegant pale suspension bridge inspired by Rainbow Bridge stretches HORIZONTALLY across the middle distance, two slender white pylons and delicate catenary cables fully visible below open sky. Blue-violet open bay water fills the lower quarter with soft gold reflections; distant muted port buildings and a few small cranes sit low along the horizon, contemporary waterfront towers gathered toward one side, tiny distant boats. Foreground consists only of a restrained strip of low waterfront shrubs and promenade at the very bottom corners, leaving generous water and air. Wide calm maritime view, no temple, no Skytree, no train interior, no huge close-up railings. Bridge viewed BROADSIDE, not from on its roadway; no dominant road converging at camera. Match the series' fine architectural ink outlines and painted sunset palette.",
+      "generatedSource": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-e5385911-2f9e-4059-8e5b-74d1689f6e49.png",
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/06-tokyo-bay-rainbow-bridge-panorama.png",
+      "group": "exterior-panorama",
+      "status": "visually-inspected-static-candidate",
+      "review": "Wide suspension bridge, open bay, waterfront towers and small boats; no train interior/window; broadside maritime view.",
+      "bytes": 2438089,
+      "sha256": "54850c937d59c1023c95996c1c73d9ac43b11913e507dca13dee400f8bf3bd60",
+      "dimensions": [
+        2172,
+        724
+      ]
+    }
+  ],
+  "limits": [
+    "Static opaque illustrations, not registered animation layers or proof of a three-minute corridor.",
+    "Original scenes and successful videos preserved; corrected set supersedes current neutral/drink/read/watch candidates for future preparation.",
+    "Human artwork and moving approval remain pending.",
+    "Generated full-scene edits are not byte-exact outside the book and remain unregistered; preserve original cabin/compositor layers during later integration.",
+    "Six scenery pictures are not depth-separated, seam-joined or motion-reviewed. Asakusa is 2170x725 and Shinjuku 2171x724; other panoramas are 2172x724. Normalize intentionally during preparation, not by assuming equal dimensions.",
+    "Illustrated Tokyo-inspired locations are not a surveyed geographic rail route."
+  ],
+  "imagegenCalls": 10,
+  "bookEditCalls": 4,
+  "exteriorGenerationCalls": 6,
+  "retryCalls": 0,
+  "bookOrientation": "All page illustrations face TABI: bases and train wheels toward TABI/far upper edge; tower spire and illustrated roofs toward camera/near lower edge. No physical book or camera rotation.",
+  "inputPins": [
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png",
+      "bytes": 2554183,
+      "sha256": "01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e",
+      "dimensions": [
+        1664,
+        936
+      ]
+    },
+    {
+      "path": "/Users/marcoandreose/.codex/generated_images/01a0f874-9fae-79d3-917c-5d41bfcbd9a7/exec-6406a2da-9510-4e14-aad3-aacb6e8fc2ed.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "dimensions": [
+        1672,
+        941
+      ],
+      "retainedEquivalent": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png"
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/01-drinking-keyframe-candidate.png",
+      "bytes": 2220579,
+      "sha256": "f7ca98849b4370d7a319436fe73a3c73fea3fb2e5b849f885f4dd2ec76312593",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/02-reading-keyframe-candidate.png",
+      "bytes": 2251441,
+      "sha256": "397df96020faf6390c3a9da8fe3efcfc313eca181a571028cafe26dd35dc7e9d",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/03-window-watch-keyframe-candidate.png",
+      "bytes": 2399280,
+      "sha256": "4f46c9eaf18967814a3d89a2bc8db3c8129e5af8c17046041759371990ee1159",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png",
+      "bytes": 2425907,
+      "sha256": "fadd6ada400114dc4c89857be0cc59970f286bf7e175d6c6c557f5fc9f5df879",
+      "dimensions": [
+        2172,
+        724
+      ]
+    }
+  ]
+}

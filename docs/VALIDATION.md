@@ -81,6 +81,17 @@ Breathing is a motion task; a still is not evidence of it. Prompt/tool/source/re
 records and checks are in `docs/pictures/video/evidence/VG2-23/action-scope-20261002T030904Z/`.
 No video inference/render/encode/decode or new app capability occurred here.
 
+VG2-23 book/exterior follow-up: ten built-in imagegen calls with no retries created
+four corrected full-scene poses and six distinct exterior-only Tokyo panoramas.
+The complete notebook spread now faces TABI; the superseded pictures and original
+videos are preserved. Saved-file pins, dimensions, exact prompts and visual
+inspection notes are in
+`docs/pictures/video/evidence/VG2-23/book-panorama-20261002T033127Z/checks/`.
+These are local opaque art candidates. Generated scenes are not byte-exact patches;
+panoramas have slightly different dimensions and no depth separation or proved
+join. File checks and static inspection do not establish human artwork approval,
+action motion, three-minute coverage or the six-minute repeat boundary.
+
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
 verifier checks 68 local file pins, including both exact reference MP4s and every
