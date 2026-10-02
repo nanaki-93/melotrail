@@ -92,6 +92,39 @@ panoramas have slightly different dimensions and no depth separation or proved
 join. File checks and static inspection do not establish human artwork approval,
 action motion, three-minute coverage or the six-minute repeat boundary.
 
+The subsequent project-user response “now they're ok,you can continue with it”
+accepts all ten images listed in the VG2-24
+`head-watch-20261002T035933Z/checks/artwork-acceptance.json` record. This is retained
+human static-art evidence, not inferred approval of animation or scenery joins.
+The new VG2-24 request is a single local 5.16-second, 768×448, 129-frame/25-fps
+character-motion study using the existing pinned ComfyUI/LTX/Gemma path.
+Its request/setup preflight and native media checks pass. Review copy SHA-256:
+`5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2`.
+One inference, zero retries, 257.524 seconds for the whole runner; sampled owned
+process-tree RSS peaked at 14,393,049,088 bytes (excludes some Metal/GPU memory).
+Normal/warning host pressure was observed, with no stop condition. Runtime final
+state is STOPPED; all three observed run PIDs are absent. The fresh runtime
+session is preserved and byte-verified in the evidence owner, with its external
+temporary session removed.
+
+All 129 frames were decoded for diagnostics; nine were visually inspected.
+Head lift/turn/return is visible, but the prompt did not keep the exterior still.
+Cabin/cup/notebook regions also change, so this does not pass protected-source
+composition or a seamless return. The user then answers “Keep this motion direction”
+for the exact raw clip. This is scoped acceptance of its head lift/window glance/
+return direction. VG2-24 remains REVIEW; no composition/long-film pass follows
+from the technical checks. Retain complete local frames/media and commit only
+helper sources, request/pins, checks and owner updates.
+
+VG2-24 validation: focused ComfyUI/backend/documentation/architecture checks and
+headless filtered `make test`/`make build` pass. Root reports contain 794 tests,
+desktop reports 239 cached tests, all with zero failures/errors.
+`MidiCoreNativeResponsivenessTest` is excluded, not passed. Exact commands/logs,
+full-suite report digests and retained headless init are under the run's evidence
+owner. Production/test wiring, approved asset bytes and the two selected baseline
+videos are unchanged. The generated raw clip still needs composition repair
+despite the accepted motion direction and these technical passes.
+
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
 verifier checks 68 local file pins, including both exact reference MP4s and every

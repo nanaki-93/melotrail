@@ -1,0 +1,142 @@
+{
+  "task": "VG2-24",
+  "recordedAt": "2026-10-02T04:14:33.375692+00:00",
+  "status": "RAW_MOTION_CANDIDATE_REVIEW_AND_COMPOSITION_REPAIR_REQUIRED",
+  "video": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/output/publication/generated/vg2-24-head-watch/attempt-bb0cb1c2-3c85-49bc-815a-0ca79b060102/805976ff-5db3-3280-a484-dbe19e91f7f6-melotrail-short-shot_00001_.mp4",
+    "sha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2",
+    "videoCodec": "h264",
+    "width": 768,
+    "height": 448,
+    "durationSeconds": 5.16,
+    "frameRate": 25.0,
+    "decodedFrameCount": 129,
+    "audioStreamCount": 0
+  },
+  "reviewCopy": "review/tabi-head-watch-5s-768x448-candidate.mp4",
+  "runtime": {
+    "exitCode": 0,
+    "stopReason": null,
+    "elapsedSeconds": 257.524,
+    "peakSampledOwnedRssBytes": 14393049088,
+    "observedPids": [
+      74854,
+      74965,
+      75733
+    ],
+    "note": "RSS samples exclude some Metal/GPU allocations; production pressure/swap safeguards remain unchanged."
+  },
+  "pressureCodesObserved": [
+    "1",
+    "2"
+  ],
+  "maximumSampledOwnedStorageBytes": 11004720,
+  "visualFramesInspectedZeroBased": [
+    0,
+    16,
+    32,
+    48,
+    64,
+    80,
+    96,
+    112,
+    128
+  ],
+  "observations": [
+    "Clear head lift from notebook, turn toward the right window, hold, then return toward reading.",
+    "Sampled paws remain attached through the cuffs; cup and open book remain in their intended places; the page drawings continue facing TABI.",
+    "The exterior translates and changes despite the explicit stationary-exterior prompt; it cannot be used as the rigid panorama stage.",
+    "Cabin, notebook and cup regions show generated pixel drift. Static-source preservation is not established.",
+    "A quiet torso/neck change accompanies the head action; independently readable breathing and normal-speed cadence remain human-review questions.",
+    "Final head position resembles the opening but pixels and exterior state differ; no seamless loop or pose return contract is proved."
+  ],
+  "diagnostics": {
+    "head": {
+      "peakFromFirstMeanDelta": 49.3848,
+      "peakFrame": 70,
+      "lastFromFirst": {
+        "meanAbsoluteChannelDelta": 8.9332,
+        "pixelsWithChannelDeltaOver10": 14526,
+        "pixelCount": 43608,
+        "maximumChannelDelta": 163
+      }
+    },
+    "upperBodyAndHands": {
+      "peakFromFirstMeanDelta": 25.5253,
+      "peakFrame": 92,
+      "lastFromFirst": {
+        "meanAbsoluteChannelDelta": 7.3216,
+        "pixelsWithChannelDeltaOver10": 5325,
+        "pixelCount": 15762,
+        "maximumChannelDelta": 98
+      }
+    },
+    "cabinPoster": {
+      "peakFromFirstMeanDelta": 4.3483,
+      "peakFrame": 92,
+      "lastFromFirst": {
+        "meanAbsoluteChannelDelta": 3.2502,
+        "pixelsWithChannelDeltaOver10": 327,
+        "pixelCount": 4888,
+        "maximumChannelDelta": 23
+      }
+    },
+    "leftSeat": {
+      "peakFromFirstMeanDelta": 5.933,
+      "peakFrame": 84,
+      "lastFromFirst": {
+        "meanAbsoluteChannelDelta": 3.4954,
+        "pixelsWithChannelDeltaOver10": 966,
+        "pixelCount": 13865,
+        "maximumChannelDelta": 66
+      }
+    },
+    "windowExterior": {
+      "peakFromFirstMeanDelta": 33.2023,
+      "peakFrame": 128,
+      "lastFromFirst": {
+        "meanAbsoluteChannelDelta": 33.2023,
+        "pixelsWithChannelDeltaOver10": 65625,
+        "pixelCount": 85680,
+        "maximumChannelDelta": 196
+      }
+    },
+    "cup": {
+      "peakFromFirstMeanDelta": 6.9344,
+      "peakFrame": 77,
+      "lastFromFirst": {
+        "meanAbsoluteChannelDelta": 6.0868,
+        "pixelsWithChannelDeltaOver10": 797,
+        "pixelCount": 3640,
+        "maximumChannelDelta": 93
+      }
+    },
+    "notebook": {
+      "peakFromFirstMeanDelta": 8.592,
+      "peakFrame": 77,
+      "lastFromFirst": {
+        "meanAbsoluteChannelDelta": 5.7203,
+        "pixelsWithChannelDeltaOver10": 2502,
+        "pixelCount": 11025,
+        "maximumChannelDelta": 61
+      }
+    }
+  },
+  "humanDecision": {
+    "reviewer": "project user",
+    "recordedAt": "2026-10-02T04:23:12.764971+00:00",
+    "quote": "Keep this motion direction",
+    "artifactSha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2",
+    "scope": "Accept the head lift/window glance/return motion direction. Does not certify protected cabin/scenery/props, independent breathing, resolution or a seamless loop."
+  },
+  "scopeLimits": [
+    "Native 768x448 at 25 fps, not a 1080p30 deliverable.",
+    "Single composed-image conditioning; no multi-reference or masked generation.",
+    "No character alpha layer, protected compositing or long-film assembly was produced.",
+    "Do not advance to DONE or scale this raw whole-scene clip solely because technical media checks pass."
+  ],
+  "nextWork": [
+    "Prepare and verify isolation of the character motion with fixed cabin/book/cup and approved independent exterior; no static silhouette assumed valid for all head poses.",
+    "Only after the short action method is usable, proceed to the drinking and reading motion proofs; retain original 180-second pilot target."
+  ]
+}

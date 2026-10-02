@@ -426,7 +426,7 @@ code changed, so full `make test`/`make build` were not repeated for this reset.
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
 | VG2-23 | Inspect existing scene/action references and prepare initial scene-matched drink/read/watch and additional Tokyo scenery reference candidates in the user-requested asset folders. Keep the original scene/props/style, pin sources/results and disclose missing registration/motion capability. This row delivers static candidates, not animation-ready layers or artistic approval. | VG2-21 | DONE |
-| VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | TODO |
+| VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | REVIEW |
 | VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-24 | TODO |
 | VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | TODO |
 | VG2-27 | Review the exact breath/head/watch, drink and read clips at normal speed and relevant in-betweens. Record identity/style, attachment, contact, prop continuity, cadence and return decisions for every required activity. Repair rejected actions before the full film; no test score or static candidate substitutes. | VG2-24, VG2-25, VG2-26 | WAITING_USER |
@@ -462,6 +462,38 @@ Shinjuku and Tokyo Bay in the existing sunset style, with no cabin/window frame.
 The ten files were visually inspected and pinned; no human art approval, alpha
 registration, continuous motion, moving scenery join or 180-second coverage is
 inferred. VG2-24–27 and VG4-05/06 retain their existing states.
+
+VG2-24 continuation (2026-10-02): the user says “now they're ok,you can continue
+with it”, accepting the ten corrected character/exterior images for further work.
+Exact reviewed paths/hashes are recorded in
+`docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/checks/artwork-acceptance.json`.
+The next proof uses the corrected reading scene as the single LTX image input:
+gentle breathing, lift/turn toward the window, settle back, stationary paws/props
+and cabin. Current setup/request checks passed; one new local 768×448,
+129-frame/25-fps take completed through the existing ComfyUI runtime/backend/job
+owners. Review copy: that run's `review/tabi-head-watch-5s-768x448-candidate.mp4`,
+SHA-256 `5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2`.
+One inference, zero retries; 5.16 seconds, no audio, full media decode passed.
+The owned runtime stopped and its session was copied/hash-verified into retained
+evidence before removing only that new runtime session.
+
+Nine sampled frames show the head lift/turn/hold/return and connected paws, but
+the exterior moves despite the stationary prompt. All 129 decoded frames were
+compared in head/body/cabin/prop regions: background and prop pixel drift remain.
+The raw full-scene result is **not** an isolated character layer, rigid-background
+pass or seamless loop. The user subsequently answers “Keep this motion direction”
+for this exact clip. That accepts the head lift/window glance/return direction;
+independently readable breathing and final composition remain unproved. Prepare
+valid character isolation/fixed cabin and props before scaling or marking DONE.
+The fresh request, helpers, no-retry admission, media facts and diagnostics are in
+the run's evidence owner. The old wave stays deferred; no hosted job or new model.
+
+Validation for this checkpoint: focused ComfyUI/backend/documentation/architecture
+tests and headless filtered `make test`/`make build` pass. Root suite: 794 tests;
+desktop: 239 cached tests, zero failures/errors; `MidiCoreNativeResponsivenessTest`
+excluded. No production or test wiring changed. Original approved art and both
+selected baseline videos remain byte exact; media stay local, docs/helpers/checks
+are versioned. Headless checks do not award the pending motion/composition pass.
 
 ### Route 1 — Standalone rig proof tasks
 

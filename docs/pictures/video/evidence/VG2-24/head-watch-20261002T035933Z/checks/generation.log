@@ -1,0 +1,16 @@
+SESSION=/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-e5e52396-cb5f-4f75-9ffa-b9d73e27173e
+SUBMITTED=attempt-bb0cb1c2-3c85-49bc-815a-0ca79b060102
+OBSERVATION=15 state=ACTIVE
+OBSERVATION=30 state=ACTIVE
+OBSERVATION=45 state=ACTIVE
+OBSERVATION=60 state=ACTIVE
+OBSERVATION=75 state=ACTIVE
+OBSERVATION=90 state=ACTIVE
+ACTION_PILOT_PASSED video=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/output/publication/generated/vg2-24-head-watch/attempt-bb0cb1c2-3c85-49bc-815a-0ca79b060102/805976ff-5db3-3280-a484-dbe19e91f7f6-melotrail-short-shot_00001_.mp4 sha256=5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2
+MEDIA_FACTS=VideoMediaMetadata(videoCodec=h264, width=768, height=448, durationSeconds=5.16, frameRate=25.0, decodedFrameCount=129, audioStreamCount=0)
+MEDIA_REPORT=/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/output/media-proof/video-media-probe-report.json
+RUNTIME_FINAL=STOPPED
+ELAPSED_MILLIS=244595
+REQUEST_UNCHANGED=true
+IMAGE_UNCHANGED=true
+GRAPH_UNCHANGED=true

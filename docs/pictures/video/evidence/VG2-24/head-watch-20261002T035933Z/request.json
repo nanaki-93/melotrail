@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "runId": "vg2-24-head-watch-20261002T035933Z",
+  "applicationSupportRoot": "/Users/marcoandreose/Library/Application Support/MelotrailVideo",
+  "outputDirectory": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/output",
+  "mediaToolsDirectory": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin",
+  "composedImage": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/inputs/approved-reading-scene.png",
+  "composedImageSha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+  "prompt": "One continuous locked-off shot in the exact supplied warm illustrated train scene. TABI is the same lavender axolotl with gold forehead star, pink external gills, rose headphones worn on the head, green coat and leopard cuffs. TABI starts quietly reading the existing open notebook. Over five seconds, show one gentle relaxed breath in the chest and shoulders while TABI slowly lifts the head, turns the head and eyes slightly to the right to look out of the large train window, pauses to watch, then gently settles the head and gaze back toward the notebook. Keep the motion small but clearly visible and fluid, with one natural soft blink. Both paws remain resting at the same table positions, continuously attached to the wrists, cuffs, sleeves and shoulders. Keep the seat contact, feet and tail fixed. The cup with black lid, the correctly oriented notebook and its drawings, and the pen remain completely still and unchanged. The camera, train cabin, table, walls, seat, window frames and exterior Tokyo scenery are absolutely stationary throughout this isolated character-motion study. Animate only TABI's upper-body breathing, head and eyes. Preserve the exact character proportions, face, star, headphones, outfit, painted texture and golden-hour palette. No camera motion, zoom, pan, cut, time lapse, moving background, flickering architecture, speaking, mouth opening, new limbs, detached paws, changing props, page turn, text or logos. A single natural small action with a calm settled ending, not a sequence of still pictures.",
+  "width": 768,
+  "height": 448,
+  "durationMillis": 5160,
+  "framesPerSecond": 25,
+  "expectedFrameCount": 129,
+  "port": 8192,
+  "pollIntervalMillis": 2000,
+  "protectedMidiRoots": [
+    "/Users/marcoandreose/DEV/lab/melotrail/data"
+  ]
+}

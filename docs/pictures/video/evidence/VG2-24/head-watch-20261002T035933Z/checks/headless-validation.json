@@ -1,0 +1,51 @@
+{
+  "commands": [
+    {
+      "name": "focused",
+      "command": [
+        "./gradlew",
+        "-I",
+        "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-24-p0td2sp1/headless.init.gradle",
+        ":test",
+        "--tests",
+        "*ComfyVideoRuntimeTest",
+        "--tests",
+        "*ComfyVideoClientTest",
+        "--tests",
+        "*ComfyVideoHostCheckTest",
+        "--tests",
+        "*LocalVideoBackendTest",
+        "--tests",
+        "*DocumentationIntegrityTest",
+        "--tests",
+        "*TargetArchitectureRulesTest"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 15.408
+    },
+    {
+      "name": "make-test",
+      "command": [
+        "make",
+        "GRADLE=./gradlew -I /var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-24-p0td2sp1/headless.init.gradle",
+        "test"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 150.313
+    },
+    {
+      "name": "make-build",
+      "command": [
+        "make",
+        "GRADLE=./gradlew -I /var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-24-p0td2sp1/headless.init.gradle",
+        "build"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 146.822
+    }
+  ],
+  "excluded": [
+    "MidiCoreNativeResponsivenessTest"
+  ],
+  "note": "Headless filtered tests/build, not the original unfiltered desktop suite; no UI/model/media probe tasks."
+}

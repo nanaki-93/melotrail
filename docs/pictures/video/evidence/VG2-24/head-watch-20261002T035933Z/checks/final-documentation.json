@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "results": [
+    {
+      "suite": "app.melotrail.architecture.TargetArchitectureRulesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "app.melotrail.documentation.DocumentationIntegrityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0
+    }
+  ]
+}

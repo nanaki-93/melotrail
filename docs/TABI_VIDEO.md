@@ -85,7 +85,34 @@ Original artwork and both successful videos remain unchanged. The new media stay
 local; only documentation/checks are versioned. Depth separation, moving joins,
 three-minute coverage and human artwork/motion review remain pending.
 
+Subsequent user artwork decision: “now they're ok,you can continue with it”
+accepts these ten specific images for future preparation. Their exact paths and
+SHA-256 values are frozen in
+`docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/checks/artwork-acceptance.json`.
+The source images now have this scoped artistic approval; registration, generated
+motion, scenery joins and full-video acceptance remain separate.
+
 ### Motion preparation after the reference images
+
+VG2-24's first new local motion candidate is
+`docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/tabi-head-watch-5s-768x448-candidate.mp4`
+(SHA-256 `5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2`).
+One pinned ComfyUI/LTX/Gemma submission used the approved corrected reading image
+and text only; no second image conditioning or new model. It produced 129 frames
+at 25 fps, 5.16 seconds, native 768×448, no audio. Media checks and complete frame
+decode pass. Nine sampled frames show TABI lifting the head, watching the window
+and returning toward the notebook, with coherent paws and page orientation.
+
+The model also moves the exterior against the explicit stationary instruction;
+cup/book/cabin pixels drift. Diagnostics over all 129 frames and precise limits
+are in that run's `checks/motion-review.json`. Do not use the generated scenery
+as the rigid Tokyo corridor or assume a static head mask fits the moving gills.
+Character isolation, fixed-source compositing, independent breathing/cadence
+review and final return continuity are still unproved. This is a raw motion
+candidate, not a 1080p30 action layer or a complete VG2-24 pass. The subsequent
+user response “Keep this motion direction” accepts this exact clip's head
+lift/window glance/return direction. Preserve that motion while preparing the
+fixed cabin/props and independent scenery; the remaining limits still apply.
 
 The motion target is continuous breathing/head/watch, cup reach/lift/sip/return,
 and attentive reading/return. Do not flip/crossfade the new stills and call that

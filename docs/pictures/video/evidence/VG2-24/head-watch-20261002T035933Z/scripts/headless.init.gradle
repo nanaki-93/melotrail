@@ -1,0 +1,17 @@
+allprojects {
+    tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        systemProperty "java.awt.headless", "true"
+        exclude "**/MidiCoreNativeResponsivenessTest*"
+    }
+}
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    root.tasks.register('vg224ReadClasspath') {
+        dependsOn(root.tasks.named('testClasses'))
+        doLast {
+            def out = new File('/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-24-p0td2sp1/runtime-classpath.txt')
+            if (out.exists()) throw new GradleException('Refusing existing classpath output')
+            out.text = root.sourceSets.test.runtimeClasspath.asPath
+        }
+    }
+}

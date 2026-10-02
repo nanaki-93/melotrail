@@ -1,0 +1,84 @@
+{
+  "task": "VG2-24",
+  "createdAt": "2026-10-02T04:02:11.228937+00:00",
+  "sourceHead": "ae5fdd44dd53f5ee0c99a70780707e9bcce6c1c5",
+  "authorization": {
+    "quote": "now they're ok,you can continue with it",
+    "interpretation": "Approved the ten current images and authorized continuing the planned local breathing/head/watch proof; ordinary bounded implementation choices resolved within that scope.",
+    "priorPacketReused": false
+  },
+  "scope": "One new local continuous character-motion candidate from the corrected reading scene; inspect actual frames before integration.",
+  "imageConditioning": "One approved composed reading image plus text. Approved watch image informs motion direction, not an additional model input.",
+  "native": {
+    "workflow": "Bundled ComfyUI LTX-2.3 distilled 1.1 Q4 with Gemma; unchanged installed graph/model/runtime profile",
+    "width": 768,
+    "height": 448,
+    "frameCount": 129,
+    "fps": 25,
+    "durationSeconds": 5.16,
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "cancellationTestSubmissions": 0,
+    "inferenceLimitSeconds": 1200,
+    "wholeRunnerLimitSeconds": 1500,
+    "observedProcessTreeRssLimitBytes": 38654705664,
+    "rssLimitation": "Sampled RSS excludes some GPU/Metal allocations; unchanged production critical/unknown pressure and 8-GiB extra-swap safeguards also apply.",
+    "ownedEvidenceAndSessionLimitBytes": 2147483648,
+    "minimumFreeDiskBytes": 21474836480,
+    "mediaProbePerProcessLimitSeconds": 120,
+    "additionalReviewDecodeTraversals": 1,
+    "hostedFallback": false,
+    "modelDownloads": false
+  },
+  "processOwnership": "ComfyVideoRuntime owns and reaps the only model server. VideoMediaProcess owns native media commands. The outside guard observes only its own JVM tree and requests graceful JVM shutdown on a limit.",
+  "output": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/output",
+  "storage": "MP4s and any frame PNGs remain local; commit request, helper sources, input pins, checks and owner status only.",
+  "pins": [
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/request.json",
+      "bytes": 2477,
+      "sha256": "ffff9342ecc43d482dcdcd70c886cb23adba0dbe85cf2a3528fc6ed787a4387a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/scripts/ActionPilot.java",
+      "bytes": 9573,
+      "sha256": "4f5a56ef34ce168cd7e1cc87444682f96fe4672090b3c9cade8b3c6dd740ed77"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/scripts/MotionTools.java",
+      "bytes": 2200,
+      "sha256": "9ac343b53c6db47f1938e093a95c4da5070cdd8cf9761a97f90550f2dfc14a09"
+    },
+    {
+      "path": "src/main/resources/video/comfyui/short-shot-api.json",
+      "bytes": 4036,
+      "sha256": "c1d27b28313ba882659c0a7f52d94e666cabce45bfa5ce0fa3d256cc58b79bc7"
+    },
+    {
+      "path": "src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+      "bytes": 4636440,
+      "sha256": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+      "bytes": 4443016,
+      "sha256": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json",
+      "bytes": 1904,
+      "sha256": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/scripts/run.py",
+      "bytes": 7130,
+      "sha256": "18c31d971f5ab8b0b34e6efdbfbcf7201deaeae7a086a971e92ce71003369f5c"
+    }
+  ],
+  "preflightFreeDiskBytes": 264385761280
+}

@@ -1,0 +1,34 @@
+{
+  "ownedPidsAbsent": [
+    74854,
+    74965,
+    75733
+  ],
+  "runtimeState": "STOPPED",
+  "originalSession": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-e5e52396-cb5f-4f75-9ffa-b9d73e27173e",
+  "preservedSession": "docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/runtime-session",
+  "allSessionFilesCopiedAndVerified": true,
+  "taskOwnedRuntimeSessionRemoved": true,
+  "files": [
+    {
+      "path": "input/composed-scene.png",
+      "bytes": 2144723,
+      "sha256": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13"
+    },
+    {
+      "path": "output/shots/melotrail-short-shot_00001_.mp4",
+      "bytes": 1910375,
+      "sha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2"
+    },
+    {
+      "path": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "074e0c4faa1522bf91ecc2d84d4866915c47f3b1e8f1fe5ba7d8204467631538"
+    },
+    {
+      "path": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
