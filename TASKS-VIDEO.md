@@ -502,7 +502,7 @@ movie as an animation baseline.
 | VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | DONE |
 | VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | DONE |
 | VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | DONE |
-| VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | TODO |
+| VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | DONE |
 | VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | TODO |
 | VG2-18 | Execute one explicitly admitted five-second/150-frame rigged wave with fixed cabin/head/body contact, encode/probe/full-decode and publish a new validated review copy. Measure stage time/RSS/disk and every frame's geometry/occlusion/edge/colour/PTS/return checks. No automatic retry, import, take selection or short-success-to-full-film promotion. Preserve source PNGs, rig/action/input pins and all failed media. | VG2-17 | TODO |
 | VG2-19 | After both actions and description mapping pass, run one separately bounded pair of 20–30-second standalone scene tests with identical approved rig/art/action versions but two materially different supported descriptions/order/timing. Include rest, both activities, returns and bounded scenery travel within measured coverage. No manual keyframe/rig edit between requests, regenerated character or whole-clip repeat. Validate both complete outputs, absolute-frame repeatability/chunk parity and changed-request dependencies; each clip gets its own explicit one-attempt budget. | VG2-10, VG4-08, VG2-17 | TODO |
@@ -763,6 +763,37 @@ diff checking passes. Receipts are retained in `checks/`; the native-window test
 excluded, not passed. Blender pixels/colour and normal-speed quality are unproved.
 Next is VG2-16's non-live supervision/colour/wave packet preparation; no media
 admission or second-action approval follows from this geometry checkpoint.
+
+VG2-16 non-live packet checkpoint (2026-10-02): owner
+`docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/` copies the proven
+direct supervisor/path boundary into fresh helpers. Two packets name every command,
+destination, stage/count and installed-tool/rig/part pin: `packets/colour-v2.json`
+(SHA `ab1eae9ea50203894ae164fda59e9e57a71837e26aad5f485dc978cbb0503103`)
+and `packets/wave-proposal-v2.json`
+(SHA `cfbc0703fbf37366fb5b450065db6c6d50daaabda762c875ef74d7bf2eda7e47`).
+Each permits one attempt, one encode, one combined frame/PTS scan, one full decode
+and one validated review copy; no retries or historical socket/allowance reuse.
+Tiny colour is six 640×360 frames, 180 seconds/128 MiB; wave is 150 1080p30 frames,
+900 seconds/2 GiB. Both retain 4-GiB aggregate owned RSS, 18-GiB disk admission,
+10-GiB reserve, three NORMAL/≥3-GiB-free samples and zero swap growth. Shared phase
+clocks include validation/publication; process groups, reservations and cancellation
+fail closed. Unique OS scratch is separate and cleaned after success/failure.
+
+The colour path explicitly maps sRGB through linear light to Rec.709 before
+RGB-to-YUV encoding, then compares fully decoded pixels in common sRGB. Fixed
+patch limits reject blind retagging. Fresh data tests cover cancellation, decoder
+costs, alias/collision, receipt replacement, failed preflight and real supervisor
+phase dispatch. Both exact packets passed independent child-spy review with six
+spies and zero native-tool launches. Initial preflight rejected a path-order bug
+while file sets were unchanged; canonical string ordering fixes it, with the failed
+packets/helpers and regression retained. The wave's final packet cannot run until
+passing colour evidence is separately bound. No new movie or colour result exists
+at this checkpoint. The user's storage decision is retained in `inputs/storage-decision.json`:
+media/frames stay locally; only helpers, checks and hashes enter Git. Native execution
+gets its own admission bound to the existing point-2 continuation and exact packet.
+Focused JVM checks, 74 Node tests, 18 supervision checks, headless `make test`
+(2m36s), `make build` (2m41s) and `git diff --check` passed. The native-window
+`MidiCoreNativeResponsivenessTest` was excluded, not verified. VG2-16 is DONE.
 
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under

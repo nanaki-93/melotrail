@@ -1,0 +1,6 @@
+{
+  "userAnswer": "Keep media locally; commit scripts and checks (Recommended)",
+  "localDate": "2026-10-02",
+  "decision": "Retain native MP4, lossless source/converted/decoded frames and any failures under the exact local VG2-17/VG2-18 proof owners. Commit scripts, checks and hash records only. Do not force-add ignored MP4s or stage frame sequences.",
+  "scope": "This storage decision accompanies the existing instruction to continue point 2. No public upload or hosted spending."
+}

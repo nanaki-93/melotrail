@@ -1,0 +1,43 @@
+{
+  "error": "Runtime inventory drift: /Applications/Blender.app/Contents",
+  "nativeProcesses": 0,
+  "cause": "Path-object sorting differs from sorting relative path strings. Final inventory must use the verifier canonical string order.",
+  "facts": [
+    {
+      "root": "/Applications/Blender.app/Contents",
+      "sameSet": true,
+      "sameOrder": false,
+      "firstDifference": [
+        "Resources/5.2/python/lib/python3.13/site-packages/Cython-3.0.11-py3.13.egg-info/PKG-INFO",
+        "Resources/5.2/python/lib/python3.13/site-packages/Cython/Build/BuildExecutable.py"
+      ]
+    },
+    {
+      "root": "/opt/homebrew/Cellar/node/25.8.2",
+      "sameSet": true,
+      "sameOrder": false,
+      "firstDifference": [
+        "libexec/lib/node_modules/npm/lib/cli.js",
+        "libexec/lib/node_modules/npm/lib/cli/entry.js"
+      ]
+    },
+    {
+      "root": "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/node_modules",
+      "sameSet": true,
+      "sameOrder": false,
+      "firstDifference": [
+        "@napi-rs/canvas-darwin-arm64/README.md",
+        "@napi-rs/canvas/LICENSE"
+      ]
+    },
+    {
+      "root": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9",
+      "sameSet": true,
+      "sameOrder": false,
+      "firstDifference": [
+        "lib/python3.9/site-packages/altgraph-0.17.2.dist-info/INSTALLER",
+        "lib/python3.9/site-packages/altgraph/Dot.py"
+      ]
+    }
+  ]
+}

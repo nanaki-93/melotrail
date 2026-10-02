@@ -1,0 +1,366 @@
+{
+  "status": "FROZEN_PROPOSAL_NOT_AUTHORIZED",
+  "kind": "colour",
+  "owner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z",
+  "tools": {
+    "node": "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+    "ffmpeg": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+    "ffprobe": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+    "blender": "/Applications/Blender.app/Contents/MacOS/Blender",
+    "python": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+    "sandbox": "/usr/bin/sandbox-exec"
+  },
+  "files": {
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/preview.py": "db324c02f8e59855250c9a946098a3ee8cc8da9bc959767aadf041e803057ed7",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/paths.py": "60178ec2e66d67413263be25ef53610d89ebdf039c0769b5d0b99975546b1791",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/colour_source.cjs": "ff7ef33e8dd55549602f74dfc4583eb36e6c1f977cf27cc213dccd9bc2d61d4b",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/render_wave.py": "0e16566243fcda545c3e2553fadf47fc4fdbbeea460e9787d35b0b289b295a6c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/freeze.py": "3579960c7e332ab4993a9ee25a722b9450c5869a6998de10420d91415b3763d1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/verify_pixels.cjs": "957fafbef3f65b74a0afe6920ca225859e0ae7d2ea18a581ed8a16838bb4e7fc",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/review_packet.py": "53443149a17ad1cd83c284850903310a67cf6a62e31ee12a05a46e7986561bf1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/colour.cjs": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/check-supervision.py": "b0aec69974861422f02df03fe710aa2b8bfcbe40780a35cabb2db5f39c6c708a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/inputs/scope.json": "911d979ae51a9f432ed7940e68769380ff4bf215b269208459ac1b8c66db6284",
+    "/Users/marcoandreose/DEV/lab/melotrail/build/vg2-character-art-a3/full-foreground.png": "e9d69d59f21ecac1d15561487c193d19d3cef2e65ca2970a1669c062dec9e93a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/upper_sleeve_candidate_v1.png": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/kit-freeze.json": "abd44d15a3230db153c4b827fecb65b59f21b1e7d75be42bb1a4c2861f0f0107",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-front.png": "16ae432fb9b63d1185297cd23e710a2ff8dd114d6a40b3f31b43550ebe550651",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-overlap.png": "cf734e9489a82cae424b692addacf7835b27742633a129dc29d2c6db8014962f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-front.png": "6a3a046b1bf62b765918fc84f5060e5c84f148c378e3eeb3f60a920f88dec8d2",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-overlap.png": "859cb421af6cd434b2b6fb3b02223d9a6bfac01c9b3f7192d22583d5bf8c3423",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/assemble-wrists.cjs": "b0df7acfa31b8c2ae7ed8c03ea03ddb9a2aaf9da659d3fd39786baab19dcf8c5",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/build-geometry-v3.json": "18fef5d1973700b3cad06b201749a93da000d2da61031363ce7d2d207c525db6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/check-geometry-v3.json": "46673f27744137e157b034a2cf596b7d91eb7a1869aac564a7c1a0631d07b771",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-failure-v2.json": "6694dea6eebd0c18b071629e07fb8d8d87d2d53a69ea647a9e07f4ace44d4c90",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-result-v3.json": "5c6772542e55221f30b49736fc88977b1520d0684b5e87f561b35536991d0202",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-result.json": "bd3d46695739fb8ee995ccae1377f3a0a06e00a9bb0692fc2ee94e572aca2946",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/initial-support-failure.json": "c46c33a23df4db6d21501853839b737cdc5ff23ec9b028e2cc76e88fe98bfbda",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/support-final.json": "38758b361ecd0fe2c9c204bf42f553710be681a5d44925199a71f41fad6cec00",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/admission.json": "67704251744cb0ec5851c24b2854875342bf9a46440fea5e7ba0362cb33d8937",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/baseline-status.txt": "9028ea009e4904950413d40bfe83c493ee6823f2693083cad13242e3cf8ce372",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/boundaries.json": "7adb27912685c6b950f157a54e17055ebb5ce4a5bc96fd55191916e6b1d3995c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig-v2.json": "bdffe144c0729ad693aa6e993bd7cad114ba0f6689353538adc75ae0faa98793",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig.json": "267cd0336e137cf1774449886403ebefa3f2b0a34ee5a0154e5d467c61f5445d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v2.blend": "856bd913f8af91954c7e4138197f555a1505145c5e6b3ad5505c072d70948526",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend": "ed1b388299b7f672b259d1ca8381da91fc53d6a52b036007abeec8d5117d4821",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave.blend": "bc6ad7eecef5596e5ab60bddc5edc6aa00d0306ec2765ac3b23353f0102117b9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-data.py": "f85fe8cd1edafa38ed3be25c8f4d75e5fd2745137f19b4a8c129a8850f8513a9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-handoff.cjs": "0f0215e6506306156d12f297e2df75748325bf33beb0e139af99be3c6cb62884",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-support.cjs": "21fc26554e60795531840949508036158bdeb16601f26bd9799b2a06450af593",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/evaluate.py": "4f06252d167043f3fc9c7a28bde33afc3100ab5c5302f5bbb75a1cc5ac0ebf40",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/motion.py": "b5c67bc9d2afa24c90df0fb5c49250a25c2ec216621f7ebd6f362ffb0e70d85a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/prepare.cjs": "7be8748918cfc2fa7c3de04ff4a2146c4e25067a5c42f08129c3a92f2de0346e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py": "95c26229c42e85d80c5328ba0f082e7c438077331f0df72128b26b038393b483",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig_guard.py": "7809cccbd59b91f1d0304fb9630f42f30f2c7603a6a25efb508e043297fbeda6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/validate.sh": "53ac9537581cde00080ac796caecb74ea01b97c5a7fb2076bf9cfc41382424b9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/allowed.png": "4b8221992026414485689cb3543d258f7b63bfd3a30a7d3a97643a32b3032f1f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/forearm_separate.png": "779172217a62df81538b0339d9a38ff7f50a65478addd59c7470666bb82a8d47",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/hidden_shoulder_elbow_overlap.png": "fb51a410627d4112ca6c906fcff564bd521519529f0f6e0791f93089e810465f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/occlusion.png": "be1ad8fe17af81c8f9fa768017a136af1ab54405e1be993a9322e5d7497acf5a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/protected.png": "54e594265f2ec78a0b8c82d0a3231c2c28138dab974b7c1ee6fe7731735f1318",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/revealed_torso_cabin_backing.png": "ed5b018850c1977ffded4c7d27c88a15f3405ed1851bee24599755e832f356e6",
+    "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-rig-motion.test.cjs": "73d7f31e150f7d4aeb42966cde2f8529cf549200274d9b52cd0b8881f51fe452",
+    "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-rig-support.test.cjs": "53f3a9510da87c680fa18925badc87064d4436d87a5568553034fe2bb039d866",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/handoff-final.json": "c6adebf06ff97fc77ed494970d4d9a59c2c8250e9b15a95795030803ebcbb6db"
+  },
+  "runtimeFile": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/inputs/runtime-v2.json",
+    "sha256": "1fc93364f80b01e077f55764561d8750c1fc77eac4f6b191516bd82164f9b217"
+  },
+  "destinations": {
+    "work": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live",
+    "review": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/review/colour.mp4",
+    "stagedReview": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/review/.colour.mp4.partial"
+  },
+  "destinationContract": {
+    "paths": {
+      "work": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live",
+      "review": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/review/colour.mp4",
+      "stagedReview": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/review/.colour.mp4.partial"
+    },
+    "ancestors": [
+      {
+        "path": "/",
+        "device": 16777229,
+        "inode": 2
+      },
+      {
+        "path": "/Users",
+        "device": 16777229,
+        "inode": 18416
+      },
+      {
+        "path": "/Users/marcoandreose",
+        "device": 16777229,
+        "inode": 287433
+      },
+      {
+        "path": "/Users/marcoandreose/DEV",
+        "device": 16777229,
+        "inode": 3518029
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab",
+        "device": 16777229,
+        "inode": 3518030
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail",
+        "device": 16777229,
+        "inode": 46036015
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs",
+        "device": 16777229,
+        "inode": 46789313
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures",
+        "device": 16777229,
+        "inode": 46717955
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video",
+        "device": 16777229,
+        "inode": 60958782
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence",
+        "device": 16777229,
+        "inode": 110571326
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17",
+        "device": 16777229,
+        "inode": 111740538
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z",
+        "device": 16777229,
+        "inode": 111740539
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/review",
+        "device": 16777229,
+        "inode": 111740540
+      }
+    ]
+  },
+  "scratch": {
+    "path": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-colour-mtphn60h",
+    "device": 16777229,
+    "inode": 111755824
+  },
+  "sandboxProfile": "(version 1)\n(allow default)\n(deny network*)\n(deny process-fork)\n(deny file-write* (require-not (require-any (subpath \"/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live\") (subpath \"/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-colour-mtphn60h\"))))\n",
+  "operations": [
+    {
+      "id": "render",
+      "phase": "render",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/colour_source.cjs",
+        "--generate"
+      ]
+    },
+    {
+      "id": "source",
+      "phase": "render",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/verify_pixels.cjs",
+        "source"
+      ]
+    },
+    {
+      "id": "encode",
+      "phase": "encode",
+      "decoderCost": 0,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-hide_banner",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-f",
+        "image2",
+        "-framerate",
+        "30",
+        "-start_number",
+        "1",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-%04d.png",
+        "-frames:v",
+        "6",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-c:v",
+        "h264_videotoolbox",
+        "-allow_sw",
+        "0",
+        "-b:v",
+        "12M",
+        "-vf",
+        "scale=iw:ih:in_range=full:out_range=tv:out_color_matrix=bt709",
+        "-pix_fmt",
+        "yuv420p",
+        "-aspect",
+        "640:360",
+        "-colorspace",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-color_primaries",
+        "bt709",
+        "-color_range",
+        "tv",
+        "-video_track_timescale",
+        "15360",
+        "-movflags",
+        "+faststart",
+        "-f",
+        "mp4",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "probe",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+        "-v",
+        "error",
+        "-count_frames",
+        "-show_streams",
+        "-show_frames",
+        "-show_format",
+        "-of",
+        "json",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "decode",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-threads",
+        "1",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/preview.mp4",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-fps_mode",
+        "passthrough",
+        "-vf",
+        "scale=iw:ih:in_range=tv:out_range=full:in_color_matrix=bt709",
+        "-pix_fmt",
+        "rgba",
+        "-threads",
+        "1",
+        "-start_number",
+        "1",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/decoded/frame-%04d.png"
+      ]
+    },
+    {
+      "id": "pixels",
+      "phase": "validationAndCopy",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/verify_pixels.cjs",
+        "decoded"
+      ]
+    }
+  ],
+  "limits": {
+    "attempts": 1,
+    "retries": 0,
+    "fallbacks": 0,
+    "cumulativeSeconds": 180,
+    "phaseSeconds": {
+      "render": 60,
+      "encode": 60,
+      "validationAndCopy": 60
+    },
+    "aggregateRssBytes": 4294967296,
+    "newStorageBytes": 134217728,
+    "minimumFreeDiskBytes": 19327352832,
+    "minimumFreeMemoryBytes": 3221225472,
+    "normalMemoryPressureSamples": 3,
+    "maximumSwapGrowthBytes": 0,
+    "freeDiskReserveBytes": 10737418240
+  },
+  "delivery": {
+    "frames": 6,
+    "fps": 30,
+    "seconds": 0.2,
+    "width": 640,
+    "height": 360,
+    "codec": "h264",
+    "audioStreams": 0
+  },
+  "pixelContract": {
+    "sourceProtectedMaxDelta": 2,
+    "decodedSrgbMae": 5,
+    "armSrgbMae": 6,
+    "patchSrgbMaxDelta": 4,
+    "decodedReturnMae": 2.5
+  },
+  "artSample": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/revealed_torso_cabin_backing.png",
+    "sha256": "ed5b018850c1977ffded4c7d27c88a15f3405ed1851bee24599755e832f356e6"
+  },
+  "allowedMask": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/allowed.png",
+    "sha256": "4b8221992026414485689cb3543d258f7b63bfd3a30a7d3a97643a32b3032f1f"
+  },
+  "rig": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend",
+    "sha256": "ed1b388299b7f672b259d1ca8381da91fc53d6a52b036007abeec8d5117d4821"
+  },
+  "rigHelper": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py",
+    "sha256": "95c26229c42e85d80c5328ba0f082e7c438077331f0df72128b26b038393b483"
+  },
+  "geometry": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/check-geometry-v3.json",
+    "sha256": "46673f27744137e157b034a2cf596b7d91eb7a1869aac564a7c1a0631d07b771"
+  },
+  "colourProof": null,
+  "colourPath": "Explicit CPU sRGB EOTF -> Rec.709 OETF PNG transport, then Rec.709 RGB/YUV matrix. Decoded comparisons invert both transfer functions into common sRGB.",
+  "nativeCounts": {
+    "renderBatches": 0,
+    "sourceFrames": 6,
+    "pngConversions": 6,
+    "encodes": 1,
+    "probeScans": 1,
+    "fullDecodes": 1,
+    "validatedReviewCopies": 1
+  },
+  "admissionBoundary": "A fresh per-packet admission binds the user continuation instruction to these exact operations and finite limits. Wave requires a separate final packet with passing colour evidence. No media runs from preflight/tests.",
+  "storage": "Retain immutable local source/converted/decoded frames, failed outputs and review MP4 under this proof owner. MP4 is ignored; later tracking/archival selection must preserve exact bytes and hashes.",
+  "limitOfProof": "One local colour experiment or one five-second standalone rig wave; no production import, selected take, app feature, second activity or full-film acceptance."
+}

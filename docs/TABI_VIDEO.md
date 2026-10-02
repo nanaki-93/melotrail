@@ -242,6 +242,19 @@ the inherited sleeve/body seam, hand/cuff switch and actual renderer alpha/colou
 still require pixel and normal-speed checks. This is a standalone proof artifact,
 not an implemented Melotrail feature or a second reviewed activity.
 
+### VG2-16 render/colour preparation (2026-10-02)
+
+`pictures/video/evidence/VG2-16/packets-20261002T011754Z/` retains fresh exact
+colour/wave proposals, installed runtime pins and independent data-only reviews.
+The colour check will use six synthetic 640×360 frames with known patches and
+selected art; the wave will use the frozen 150-frame articulated scene. Each has
+one encode and two counted MP4 traversals. Explicit sRGB→linear→Rec.709 conversion
+precedes encoding; comparisons invert that conversion rather than comparing unlike
+code values. No native output is claimed yet. The user chooses to retain media and
+lossless proof frames locally and commit scripts/checks/hashes; full-frame sequences
+and ignored MP4s will not be added to Git. The exact wave still needs normal-speed
+review before any second activity.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

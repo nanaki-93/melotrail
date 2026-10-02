@@ -552,6 +552,24 @@ Python and make checks are retained beside the evidence; the native-window test
 is excluded. Renderer colour/alpha, hand/cuff switches and moving quality remain
 unproved; this does not authorize new media or further action expansion.
 
+VG2-16 non-live evidence (2026-10-02):
+`pictures/video/evidence/VG2-16/packets-20261002T011754Z/` has separate colour and
+wave proposals with exact commands, output owners, immutable counters, aggregate
+resource/phase limits, source/rig/installed-runtime hashes and OS scratch cleanup.
+Independent reviews exercise all six real supervisor dispatches using child spies;
+no native tools run. Source-to-Rec.709 and inverse-to-sRGB formula tests include a
+blind-retagging negative. Eighteen supervision checks cover exhausted/changed/
+concurrent operations, cancelled/failed delegates, aliases, replaced receipts,
+preflight failure, shared deadlines and canonical runtime inventory ordering.
+The initial inventory-order refusal and packets are retained; only ordering was
+corrected, not the equality requirement. Colour and wave still need separately
+bound native admissions and actual pixel/media checks. The user explicitly selects
+local media/frame retention with only scripts, checks and hashes committed.
+Focused JVM checks, 74 Node tests and 18 direct supervision checks pass. Headless
+`make test` (2m36s) and `make build` (2m41s) each report one executed and 13
+up-to-date tasks. `MidiCoreNativeResponsivenessTest` was explicitly excluded; no
+interactive window or media tool ran. The final diff whitespace check passes.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain
