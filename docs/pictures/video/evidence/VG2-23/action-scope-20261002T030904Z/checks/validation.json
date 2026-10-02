@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-02T03:19:23.016405+00:00",
+  "candidateHead": "7a78e2d12e07839429852a2eb9bd4035db3e4740",
+  "tests": [
+    {
+      "name": "DocumentationIntegrityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "TargetArchitectureRulesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "command": "JAVA_HOME=/Users/marcoandreose/.sdkman/candidates/java/21.0.11-tem ./gradlew -I <temporary-headless.init.gradle> :test --tests *DocumentationIntegrityTest --tests *TargetArchitectureRulesTest",
+  "headless": true,
+  "nativeWindowClassExcluded": "MidiCoreNativeResponsivenessTest",
+  "desktopTestsInvoked": false,
+  "fullMakeTestBuildRepeated": false,
+  "scope": "Documentation/asset preparation only; production/runtime/test wiring unchanged.",
+  "preservedBaseline": {
+    "status": "PASS",
+    "checkedFiles": 68,
+    "failures": [],
+    "mediaModelOrDecoderLaunches": 0,
+    "scope": "Retained source/recipe identity only; no current runtime or moving pass."
+  },
+  "diffCheck": "PASS",
+  "unrelatedOriginalDocChangesPreserved": true,
+  "imagegenCalls": 4,
+  "newVideoInferenceRendersEncodesDecodes": 0,
+  "limits": "Still reference candidates, not registered layers, moving acceptance, full 180-second output or repeat-boundary proof."
+}

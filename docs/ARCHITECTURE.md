@@ -92,9 +92,10 @@ reject without migration or artifact rewriting. Proposal persistence is not
 executable readiness: application integration, continuous execution/checkpoints
 and complete export orchestration remain VG4–VG5 work. `VideoAssemblyActionKind`
 still has scalar scheduled actions and no pose-sequence or rig semantics. The
-2026-10-02 reset first binds the existing blink/parallax controls through current
-assembly/planner/store/preparation/job/media owners. Optional future articulated
-actions need an explicitly selected contract and adapter; VG4-07/09 are deferred.
+2026-10-02 clarification requires drink/read/breath/head/watch actions. Bind only
+the method that passes isolated local motion proof through current assembly/planner/
+store/preparation/job/media owners under VG4-07/09. This does not select a rig or
+claim that existing scalar controls can already execute a sip/read sequence.
 Runtime held-pose admission is neither rig support nor episode-schedule integration.
 Video code cannot write a
 MIDI project or import MIDI application/storage owners. Only the application
@@ -147,29 +148,37 @@ Audition timbre is not authoritative and does not render audio files.
 
 ## Video isolation and remaining integration
 
-Production order (updated 2026-10-02): recover the successful 20/30-second
-blink/parallax references → short current-runtime comparison with the accepted
-mask correction → scenery extension/moving join → bounded runner and reviewed
-60 seconds → complete 180-second Tokyo film → second-city reuse → app integration.
-The product range remains 180–300 seconds. See [PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order)
-and [current recipe](TABI_VIDEO.md#selected-blinkparallax-baseline-2026-10-02).
+Production order (clarified 2026-10-02): preserve the recovered visual baseline,
+prepare missing scene-matched artwork → required breath/head/watch, drink and read
+motion proofs/review → compatible Tokyo scenery joins and minimum proven-motion
+binding → combined 60-second internal test → complete 180-second film with an
+end-to-start join → second-city reuse and app integration. The user will duplicate
+the completed segment externally to six minutes. Product durations remain 180–300s;
+this does not silently change current schema/frame limits or implement repeat export.
+See [current plan](../PLAN-VIDEO.md#selected-route--tabi-actions-and-a-repeatable-three-minute-tokyo-film-2026-10-02).
 
-ComfyUI supplied the scenery paintings; existing Kotlin controlled-media services,
-Node/Canvas and FFmpeg produced the successful videos. The cabin and character
-stay fixed apart from the registered blink. The pending Blender wave encode was
-cancelled before admission and rig integration is deferred. No archived renderer,
-legacy schema, second job ledger or MIDI dependency is introduced by recovery.
-The current renderer has evolved; verify current import/runtime/output against
-the retained recipe before a longer run. Do not replay historical admission packets.
+The existing local ComfyUI and controlled-media services remain the first route.
+ComfyUI supplied the reference scenery and supports separately measured short I2V;
+current Node/Canvas controls handle blink and limited breathing/planar head motion.
+Held-pose replacement does not provide continuous cup lifting or reading. First
+prove the missing motion locally, protect rigid cabin/scenery using valid prepared
+layers, then scope only the required adapter/contract through current owners.
+No second job ledger, automatic Blender adoption or MIDI dependency is introduced.
 
-Limit pre-pilot engineering to the existing controls' continuous execution,
-verified completed-chunk continuation and bounded encoding. Reuse current
-planner/store/decoder work; app caller cleanup and UI follow the proven recipe.
-Future character actions are isolated experiments requiring compatible inputs
-and moving review before use. For another city, reuse compatible cabin/TABI/props
-and replace exterior art plus the supported episode brief through the same owners.
-Account for all visible exterior apertures; static small panes in the references
-do not prove a full new-city replacement. Generic scenarios remain valid.
+The user's additional assets live under `docs/pictures/video/tabi-assets/` and
+its `scenario/` folder; check/prompt/input/output evidence remains in the task
+owner. Static generated references need registration, proper backing/support,
+compatible moving masks, prop continuity and artifact review before production.
+Full-duration scenery coverage and closing-loop state are explicit readiness
+requirements. A static-head mask cannot follow new head/arm silhouettes.
+
+At virtual frame 5,400, character/props/effect phases and every scenery plane must
+join the opening state at the same travel velocity. The delivered last frame is
+5,399; do not duplicate a final endpoint as a pause. Test the last seconds followed
+by the first seconds, using valid temporal support at that boundary. Existing
+CLIP_TO_SCENE planning does not prove this cyclic support or a seamless loop.
+Keep the first 180 seconds fully authored; the user-selected external whole-segment
+repeat is distinct from manufacturing its duration with repeated short footage.
 
 The deferred Blender work remains a standalone proof
 candidate, outside production projects/jobs. New ignored rig/scripts/input data
@@ -180,7 +189,8 @@ New reusable proof helpers/inputs/checks go under
 locations and sealed records stay unchanged. Use separate disposable OS scratch
 and remove only owned temporary files; follow [storage and cleanup](VALIDATION.md#evidence-storage-and-temporary-file-cleanup).
 Local ComfyUI artwork preparation is external and separately bounded; it does
-not add in-app picture generation. This recovery starts no model or media job.
+not add in-app picture generation. The current preparation generated four static
+reference candidates; it did not run video inference/render/encode/decode.
 
 The initial full-film assembly route is verified absolute chunk PNGs followed by
 one immutable numbered image sequence and a pinned FFmpeg image2/H.264 encode.
@@ -225,9 +235,9 @@ applies alpha once, not a dissolve or native articulated interpolation, and reje
 simultaneous blink/breathing/head/subject-steam controls. Synthetic production-
 imported tests and later matching-kit source checks pass, but seven-pose moving
 quality is rejected; the deferred rig route is not implemented by this control.
-The recovered baseline uses the accepted fixed-character mask correction. If a
-future action moves the head/body, revalidate support and occlusion for its entire
-motion; the fixed-head mask does not automatically cover that new capability. Original art/masks/videos
+The recovered reference uses the accepted fixed-character mask correction. The
+required head/arm actions need support and occlusion checked over their entire
+moving silhouette; that old mask is not automatically compatible. Original art/masks/videos
 remain immutable. The Video tab/application composition, visible motion setup and
 full assembly/export remain planned in VG2–VG6. For this series, VG6's full app
 export uses the selected second city/different script only after complete corridor/

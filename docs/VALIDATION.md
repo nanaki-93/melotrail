@@ -56,24 +56,30 @@ This documentation change does not remove test sources or implement new runners.
 
 ## Production-first video gates (2026-09-28)
 
-Updated 2026-10-02: the user selects the existing 20-second Tokyo parallax and
-30-second TABI continuity videos as the successful baseline and rejects the recent
-picture/direction. This supersedes rig-first scheduling. Keep the original fixed
-TABI/cabin and approved blink; new character actions are later isolated experiments.
-Roadmap: [PLAN-VIDEO](../PLAN-VIDEO.md#6-step-by-step-delivery-order). Active scope:
-[TASKS-VIDEO](../TASKS-VIDEO.md#baseline-recovery-2026-10-02). Recipe and exact
-sources: [TABI](TABI_VIDEO.md#selected-blinkparallax-baseline-2026-10-02).
+Updated 2026-10-02 after the user's correction: keep the successful reference
+look, require drinking/reading/breathing/head/watch actions, and deliver at least
+three minutes of Tokyo. The user explicitly intends a full-segment external repeat
+to six minutes. The earlier blink-only-first gate order is superseded; the old
+wave remains cancelled. [Plan](../PLAN-VIDEO.md#selected-route--tabi-actions-and-a-repeatable-three-minute-tokyo-film-2026-10-02)
+and [queue](../TASKS-VIDEO.md#required-actions-and-three-minute-tokyo-2026-10-02) own current scope.
 
 | Production gate | Required evidence and real decision |
 | --- | --- |
-| VG2-21 · Recover references | Match selected MP4/source/receipt pins and recover ComfyUI graphs, scenery, blink and render settings. Record current-source differences and cancel the unadmitted wave. No new runtime or moving pass is inferred. |
-| VG2-22 · Short baseline check | Verify current-schema import/runtime compatibility; one separately admitted ten-second output preserves the original character/cabin, blink, speed/depth and uses the accepted leaf/window correction. Fully check output and obtain artifact-specific review. No new art, rig or inference. |
-| VG4-05 · Scenery extension/join | Preserve fixed-character mattes and style/scale/speed; verify supplied 60-second extent/alpha/shutter coverage, one moving offscreen join and user seam review. Account for selected exterior apertures. New scenery uses a separately bounded preparation step. |
-| VG4-02, VG5-01/02 · Continuous execution | Bind existing controls through current plan/job/media owners, prove absolute chunk/state parity, completed-chunk restart, resource bounds and immutable encoding. No rig schema or second ledger. |
-| VG5-03/05 · 60 seconds | Original fixed TABI/cabin plus blink and extended parallax; full decode, timing/joins, measured stages/resources and normal-speed review. No mandatory new character action in this baseline milestone. |
-| VG4-06, VG5-06/07 · Complete Tokyo pilot | Full supplied corridor and a separately admitted 180s/5400-frame batch with continuous depth travel, distinct views and quiet intervals. Fully check and review the supplied whole film; no repeat-to-fill or inferred app/release pass. |
-| VG5-08/09/10 · Second city | New exterior artwork and episode-specific supported brief through the same owners; separately admitted 20–30-second proof and review. Check all visible apertures. Any new character motif gets a separate moving proof. |
-| VG6-05/06 · Full app output | Separate headless app-integration/package checks and one complete selected second-city export with whole-film/release decisions. Earlier harness/short-video evidence cannot substitute. |
+| VG2-23 · Reference preparation | Source/result pins and candidate inspection for scene-matched drink/read/watch and added Tokyo art in the requested folders; no static-to-moving approval. |
+| VG2-24/25/26/27 · Required actions | Continuous breath/head/watch, cup reach/lift/sip/return and attentive reading/return; inspect identity, connected limbs, contact, props and masks, then record normal-speed decisions. Still flips/crossfades and camera pans do not meet the action requirement. |
+| VG4-05/06 · Tokyo corridor | Same-style points of interest, quiet travel and full 180-second far/middle/near coverage; verify alpha/shutter/overlap, moving joins and a closing section compatible with the opening. |
+| VG4-07/09/02, VG5-01/02 · Proven-motion execution | Bind only the locally proved character-motion method through existing owners; absolute action/prop/scenery state, truthful process ownership, completed-chunk restart and finite time/memory/disk limits. |
+| VG5-03/05 · Internal 60-second check | All requested action groups and scenery work together, with complete decode, timing/contact/matte/join/resource checks and actual review. This does not replace the three-minute deliverable. |
+| VG5-06/07 · Complete film and repeat seam | Full 180s/5,400-frame silent film, all required actions, varied Tokyo scenery and quiet intervals. Review the whole film and end followed by start; cup/book/hands/head, blink/breath phase, depth positions and velocity join naturally. The user may duplicate the complete segment externally to six minutes. |
+| VG5-08/09/10 and VG6 · Reuse/app output | Later second-city and headless app-delivery gates remain; no short proof or static art certifies full export, release or live usability. |
+
+VG2-23 initial preparation uses four built-in imagegen calls with no correction
+retries. Three opaque action scene candidates (1672×941) and one Tokyo Station
+panorama (2172×724) are saved in the requested TABI/scenario folders. They are
+unreviewed static references, with no registered alpha/layers or motion proof.
+Breathing is a motion task; a still is not evidence of it. Prompt/tool/source/result
+records and checks are in `docs/pictures/video/evidence/VG2-23/action-scope-20261002T030904Z/`.
+No video inference/render/encode/decode or new app capability occurred here.
 
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
@@ -105,8 +111,8 @@ new current-schema descriptors and output destinations, never historical rewrite
 Each new native step retains exact input/tool/output pins and finite time/memory/
 storage/traversal limits. Reuse current process/job ownership; do not rerun consumed
 historical packets. The pending rig encode is cancelled, not awaiting approval.
-New actions, if later selected, need compatible support/mattes and their own moving
-review. No live app, editor, GUI or model session is part of this recovery check.
+The now-required actions need compatible support/mattes and their own moving
+review. The historical recovery check used no live app/editor/GUI/model session.
 
 VG2-06 technical character output (2026-09-29): after one memory-only
 pre-launch refusal, a separately authorized retry sealed a 217-frame isolated

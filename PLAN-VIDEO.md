@@ -39,12 +39,11 @@ Create/open Video project → import finished artwork → enter motion prompt
 Neither workstream waits for the other's artistic acceptance. They share one
 Kotlin/Compose application, not projects, musical timing or generation state.
 
-**Production-first priority (updated 2026-10-02):** recover the user-selected
-20/30-second Tokyo references, preserve their artwork and blink/parallax motion,
-then extend passing scenery before app integration. Keep the existing production
-services and local ComfyUI preparation route. A successful short video does not
-establish long scenery coverage or complete 3–5-minute delivery. The later rig
-experiments are deferred by this decision; their technical evidence is retained.
+**Production-first priority (clarified 2026-10-02):** preserve the two successful
+videos' look while adding required TABI actions and at least three minutes of
+Tokyo scenery. The user will double the finished segment to six minutes. The
+blink-only recovery plan was too narrow and is superseded by the scope below.
+Historical source recovery remains valid; wave/Blender experiments stay deferred.
 
 ### Current TABI train-series direction (2026-09-30)
 
@@ -59,49 +58,78 @@ timing, quiet intervals and returns. A city name or changed seed does not
 create new scenery or a new story. This is the user's series brief, not a
 mandatory train/TABI preset or a restriction on generic Video projects.
 
-### Selected route — Recover the blink/parallax baseline (2026-10-02)
+### Selected route — TABI actions and a repeatable three-minute Tokyo film (2026-10-02)
 
-The user explicitly selects these earlier successful results after rejecting the
-recent picture/direction:
+**Required output:** a continuous 180-second/5,400-frame silent 1080p30 Tokyo
+train film with TABI drinking, reading, gently breathing/moving the head and
+watching outside. The user says the scenery should extend to **at least three
+minutes**, so they can duplicate that segment into a six-minute video. Plan the
+first deliverable at exactly 180 seconds and verify its repeat boundary.
+These actions are required now, not optional improvements after a blink-only film.
 
-- [30-second TABI continuity](docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4):
-  original fixed TABI/cabin, three moving scenery planes and the approved blink.
-- [20-second Tokyo parallax](docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4):
-  the same artwork and exterior motion direction with a fixed character.
+The [30-second continuity reference](docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4)
+and [20-second parallax reference](docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4)
+anchor the character, train, warm illustration style, depth and scenery speed.
+Preserve original media. Keep the existing local ComfyUI/controlled-motion services;
+a new rig/backend is not presumed necessary. ComfyUI made the reference scenery;
+Node/Canvas and FFmpeg made their blink/parallax motion and output.
 
-```text
-Recover exact assets/graphs/settings → short current-runtime baseline check
-→ extend scenery and review one moving join → measured/reviewed 60-second video
-→ complete 180-second blink/parallax film → second-city reuse → app integration
-```
+1. **TABI actions:** prepare only missing scene-compatible inputs, then prove
+   breathing/head/watch, drinking and reading in separate short continuous tests.
+   Drink means lift the existing takeaway cup, sip and put it back; read means
+   attend to the existing open notebook with visible eye/head/hand motion and a
+   settled return. Keep headphones/outfit and hand–wrist–cuff–arm attachment
+   consistent. Looking outside must be a character head/gaze change. Do not use
+   pose cuts/crossfades, a camera pan or a static reading still as moving proof.
+2. **Tokyo extension:** add matching landmarks/districts and quiet scenery for
+   the entire 180 seconds at the reference speed. Reuse the existing depth planes,
+   prepare new far/middle/near sections, and prove offscreen joins and the final
+   return to the opening scenery. New art lives in the requested asset folders.
+3. **Combine and scale:** after action and scenery proof, integrate only the
+   necessary motion binding through existing video owners. Use a 60-second
+   combination as an internal validation step, then deliver the full 180 seconds
+   with all required actions, quiet intervals and clean prop/neutral returns.
+4. **Repeat boundary:** review the end followed immediately by the start. Cup,
+   notebook, hands, head, blink/breath phase, camera/depth positions and motion
+   velocity must form a natural join. The user performs the 180s + 180s duplication
+   externally. Do not create the initial 180 seconds by looping the old short clip.
 
-ComfyUI generated the native scenery drawings (Klein/Qwen/VAE), followed by
-RealESRGAN finishing. Kotlin's existing controlled-media services, Node/Canvas
-and FFmpeg created these videos. This is the working layered recipe; whole-scene
-ComfyUI I2V is a separate capability. The original body, hands, head, props and
-cabin stay fixed, with only the registered eye poses animated. Retain the approved
-warm style, scale, speed, depth ordering and absolute blink timing.
+The user authorizes creating missing TABI artwork under
+`docs/pictures/video/tabi-assets/` and same-style Tokyo additions under
+`docs/pictures/video/tabi-assets/scenario/`. Keep original assets; use new descriptive
+filenames/subfolders. Reusable proof checks stay in the evidence owner. This is
+external asset preparation, not in-app picture generation. Four initial built-in
+imagegen calls produced drink/read/watch scene reference candidates and a Tokyo
+Station panorama; they are still candidates, not animation-ready registered layers.
 
-VG2-21 recovers the exact local sources without moving historical files. VG2-22
-checks current-schema import/tool compatibility and prepares one new ten-second
-baseline test using the accepted leaf/window correction. It needs no new art,
-rig or ComfyUI inference. Do not overwrite or rerender the original reference
-videos, rerun historical packets, roll back current schemas or adopt an archived
-renderer as a second backend. Preserve appearance when checking the current output.
+**Motion implementation limits:** the current compositor has blink, bounded
+whole-subject breathing and masked planar head rotation. It has no demonstrated
+continuous sip/read action; held `POSE_REPLACE` states do not supply it. Try the
+selected local ComfyUI workflow first for isolated character motion where the
+existing controls are insufficient. Protect the rigid cabin/scenery through valid
+layers/compositing; whole-scene distortion fails. Prepare missing backing, moving
+support, props and compatible masks explicitly. Prove one action before expanding
+or adopting a new production motion representation. No unselected hosted fallback,
+new model or resurrection of the cancelled wave is implied.
 
-The measured near scenery reaches about 30.63 seconds at the selected speed.
-For 60 seconds at the existing placement, the old extent analysis requires at
-least 82 extra far-plane pixels and 2,117 near-plane pixels before join/filtering
-margins. Reuse unused supplied art first; prepare missing scenery through the
-selected local ComfyUI workflow only in a separately bounded artwork step.
-No stretching, slowing, padding or repeated short footage can replace coverage.
+**Draft 180-second activity/scenery structure** (timings refine after motion proof):
 
-The wave/rig/description route below is **deferred**, including its pending encode.
-Keep the longer-term activity goal, but test any new action separately after the
-base video is stable; it no longer blocks baseline or scenery progress. The first
-recovered full-film milestone uses the proved blink/parallax vocabulary. Additional
-actions require their own compatible assets and moving review before combination.
-[TASKS-VIDEO](TASKS-VIDEO.md#baseline-recovery-2026-10-02) owns current scope/status.
+| Time | TABI activity | Exterior direction |
+| --- | --- | --- |
+| 0–30s | Settle, breathe, small head motion and watch | Existing warm rooftops/Tokyo Tower direction |
+| 30–60s | Reach, lift cup, sip, return cup, quiet travel | Tokyo Station/Marunouchi and connecting streets |
+| 60–90s | Look down and read the table notebook | Ginza storefronts/clock-front district |
+| 90–120s | Lift gaze and turn toward the window | Asakusa/Senso-ji and Sumida/Skytree views |
+| 120–150s | Brief reading/drink variation with calm breathing | Ueno/Yanaka/cherry-lined neighbourhoods |
+| 150–180s | Watch, return props and settle to opening state | Quiet scenery designed to reconnect to the opening |
+
+These are illustrative content choices, not a validated geographic rail route or
+already prepared scenery packs. At the old speed/placement, horizontal authored
+extent lower bounds for 180 seconds are 5,467/10,173/14,420 pixels (far/middle/near),
+before alpha, join/filtering and repeat-boundary margins. One new panorama cannot
+establish that coverage. Do not slow, stretch or count empty padding as scenery.
+The full three-minute film remains pending.
+[TASKS-VIDEO](TASKS-VIDEO.md#required-actions-and-three-minute-tokyo-2026-10-02) owns execution.
 
 ### Route 1 — Rigged video proof before Melotrail integration
 
@@ -232,8 +260,8 @@ implementation/evidence identities, not a clean release or artistic approvals.
 | --- | --- | --- |
 | Video assets/runtime | Independent project/asset/prepared-scene/job stores, ready-artwork admission, owned ComfyUI API/runtime and pinned media supervision | Application integration and current end-to-end proof |
 | Controlled motion | Durable controlled-media bridge/result import, reviewed 30-second blink/parallax reference and fixture-tested held `POSE_REPLACE` (manifest 4/tool 1.2.0); invocations ≤300 frames | Current-runtime reproduction and verified completed-chunk restart; rejected arm/rig experiments are deferred |
-| Continuous planning | Exact-frame proposals, scoped dependencies and guarded proposal persistence | Executable blink/parallax continuity/coverage and restart, app integration and short-shot retirement after pilot/cross-city proof; optional rig binding is deferred |
-| Production inputs | Approved blink/parallax direction, accepted original-scene mask and historical static neutral/pose appearances; six-second source-pixel proof | Current moving check of the accepted fixed-character mask correction and full city scenery coverage; new character activities remain unproved |
+| Continuous planning | Exact-frame proposals, scoped dependencies and guarded proposal persistence | Required action-method binding, full scenery/repeat-boundary support and restart; app integration follows pilot/cross-city proof; no rig choice presumed |
+| Production inputs | Approved blink/parallax direction, accepted original-scene mask and historical static neutral/pose appearances; six-second source-pixel proof | Required drink/read/breath/head/watch motion with compatible moving support/mattes, full 180-second scenery and repeat-boundary proof |
 | Video UI and full output | No delivered `desktop/video` workspace, in-app moving preview or full-video export | Prove the production recipe first, then integrate it; `make video` still passes an unsupported `--video` option |
 | Removed runtime | No active audio-production/worker or Swift companion application | Do not rebuild them; preserve external evidence and unrelated local data |
 
@@ -244,7 +272,8 @@ Important planning corrections:
 - `VideoShotPlanner` still models short unique/repeated shots. Replace its primary
   app flow with the persisted continuous-scene plan after the production workflow
   is proven; that caller cleanup is not a prerequisite for character experiments.
-  Never expose whole-clip repeat-to-fill.
+  Do not fill the source film by repeating short clips. The user may duplicate
+  the completed three-minute segment externally after its repeat seam passes.
 - ComfyUI and the controlled compositor are different execution stages. Reuse
   the verified durable media bridge rather than making ComfyUI claim compositor
   support. Whole-scene I2V distorted buildings/eyes; prefer stable supplied pixels,
@@ -266,7 +295,7 @@ Important planning corrections:
 3. Video projects and job/output storage are outside MIDI roots, including symlink
    aliases. Preserve imported artwork and prior takes/exports; reject unsupported
    schemas before writes. No old-project migration or compatibility pipeline.
-4. Reuse the existing local ComfyUI artwork and controlled blink/parallax paths.
+4. Reuse the existing local ComfyUI artwork/motion and controlled-compositor paths.
    The later Blender rig route is deferred; no automatic backend replacement.
    No automatic downloads, new models, cloud fallback, uploads or paid jobs.
    Hosted use needs explicit provider selection, disclosed inputs and a bounded
@@ -328,10 +357,10 @@ is missing. A flat scene can enter I2V without falsely claiming regional control
    from `docs/pictures/video/tabi-assets/scenario/` and the sibling TABI asset
    folders; require separate registered layers before independent character motion.
    Review/selection is optional refinement; unreviewed does not mean approved.
-5. For the selected TABI series, recover the original fixed-character scene and
-   blink/parallax first. Verify the accepted mask correction in a new short output.
-   Additional character actions are optional isolated experiments after this base
-   is stable; static pose approval is not moving approval.
+5. For the selected TABI series, prove the required drinking, reading,
+   breathing/head movement and looking outside against the recovered visual
+   baseline. Use scene-compatible assets and genuine continuous motion; static
+   pose approval is not moving approval. Keep cup/book/headphones consistent.
 
 **Exit:** real moving previews can be generated, reopened, rejected and replaced
 without scripts or a second job ledger. Do not call a camera pan character action.
@@ -354,32 +383,37 @@ synthetic preview, fictional progress, soundtrack prerequisite or image-generati
 
 ### Feature VG4 — One continuous scene, exact duration
 
-After the recovered baseline passes, prove one coherent offscreen scenery join. Establish 60-second coverage before extending the
+Prove coherent offscreen scenery joins alongside the required action tests. Establish 60-second coverage before extending the
 same method to the full 180-second pilot corridor. Do not generate a large untested
 asset library. Missing full-length coverage blocks a full render, not an honestly
 bounded shorter probe with its own validated inputs and identity.
 
 1. Reuse the versioned continuous plan for exact frames, shared clock/seed,
-   component reuse, blink and rigid scenery in bounded chunks. Bind the proven
-   controls through existing owners without a rig schema or second ledger.
-   After full-pilot and second-city reuse review, integrate app callers and retire
-   exclusive short-shot/repeat planning behind tests.
+   component reuse, required action schedule and rigid scenery in bounded chunks.
+   Bind only the proven character-motion method through existing owners under
+   VG4-07/09; no second ledger or automatic Blender adoption. After full-pilot and
+   second-city review, integrate app callers and retire obsolete repeat planning.
 2. Validate externally prepared scenery against the complete camera trajectory;
    derive rigid far/middle/near movement and occlusion from that trajectory. For
    the Tokyo pilot, plan distinct passing landmarks or district moments about
    every 5–10 seconds (roughly 18–36 over three minutes), with quieter painted
    travel between them. Keep the approved warm side-on style; do not stretch,
    paste obvious repeats or count transparent padding as authored scenery.
-3. Join scenery outside the visible region and carry blink/scenery state across
-   chunks and verified restart. Preserve the fixed character/cabin composition.
-   Optional new activities need a separate supported contract, compatible inputs
-   and moving review; do not disguise held poses as articulated motion.
+3. Join scenery offscreen and carry character/prop/blink/scenery state across
+   chunks and verified restart. Schedule drinking, reading, breathing/head motion,
+   window watching and quiet intervals across the pilot. Check each action's
+   contact, silhouette, masks, entry and return. For this user-selected segment,
+   prepare a last-to-first join with matching state and velocity at virtual frame
+   5,400; delivered frame 5,399 must advance naturally into frame 0, not duplicate
+   an endpoint as a freeze. The user may repeat the complete segment externally.
 4. Recompute only dependent work when inputs change. Report fresh action footage,
    procedural motion and reused components without double-counting layered time.
 
 **Exit:** exact 5,400/7,200/9,000-frame plans for 180/240/300 seconds at 30 fps,
-with no hidden gaps, morphing buildings, visible wraps, reverse-to-fill, freezes
-or whole-clip loops. Missing coverage requests more external artwork.
+with no hidden gaps, morphing buildings, visible seams, reverse-to-fill or freezes.
+Do not fill those durations by looping short footage. The explicit full-segment
+repeat boundary is checked for the user's later external six-minute edit. Missing
+coverage requests more external artwork.
 
 ### Feature VG5 — Full-length rendering, review and silent export
 
@@ -393,7 +427,8 @@ or whole-clip loops. Missing coverage requests more external artwork.
 3. Measure and review a real combined 60-second proof with scene/pose-compatible
    window and foreground mattes, then extend coverage and
    produce one complete 180-second pilot (5,400 frames) with moving depth-plane
-   parallax, distinct passing views and the approved blink inside the fixed cabin. Inspect the
+   parallax, distinct passing views and all four required TABI activity groups
+   inside the fixed cabin, with a verified last-to-first repeat boundary. Inspect the
    entire timeline, including quiet stretches and all joins; a repeated short
    loop or static still sequence does not qualify. Fixture checks remain mandatory
    but cannot substitute for the real film. Estimate preparation,
@@ -439,25 +474,23 @@ coffee are examples, never mandatory content or presets.
 
 ## 6. Step-by-step delivery order
 
-**Current production order (updated 2026-10-02): recover the successful
-blink/parallax recipe and extend it before further character experiments.**
-Historical rig/pose failures and all supplied media remain retained.
+**Current production order (clarified 2026-10-02): required character actions
+and a complete repeatable three-minute Tokyo film.** Recovery is complete; a
+blink-only baseline rerender is no longer the first deliverable.
 
 | Step | Feature delivery | What unlocks next |
 | --- | --- | --- |
-| 1 | VG2-21 recover selected 20/30-second references, assets, graphs and settings | Verified local identities and a clear recipe; no rerender of the reference files |
-| 2 | VG2-22 short current-runtime baseline check | Same TABI/cabin, blink, speed and depth; accepted leaf-mask correction checked in motion |
-| 3 | VG4-05 extend supplied scenery and prove one moving join | 60-second coverage and reviewed seam without changing TABI |
-| 4 | VG4-02 → VG5-01/02 bind existing controls and bounded runner/encode | Absolute chunk state, completed-chunk restart and measured resource limits |
-| 5 | VG5-03/05 60-second blink/parallax proof and review | Whole-result quality and runtime/storage/memory evidence |
-| 6 | VG4-06 → VG5-06/07 full 180-second Tokyo film and review | Complete scenery corridor, distinct views and quiet travel; no repeat-to-fill |
-| 7 | VG5-08/09/10 selected second-city 20–30-second proof | Same reusable cabin/TABI with genuinely new exterior art and episode brief |
-| 8 | VG4 app integration → VG3 → VG5 controls → VG6 | Separate UI design approval, headless integration/package proof and full second-city export |
+| 1 | VG2-23 inspect/create scene-matched action and scenery references | Drink/read/watch candidates, preserved original style/props, explicit missing motion inputs |
+| 2 | VG2-24/25/26 → VG2-27 required action proofs/review | Continuous breath/head/watch, cup lift/sip/return and reading/return with sound attachment/contact |
+| 3 | VG4-05 then VG4-06 extend Tokyo scenery toward 180 seconds | Matching points of interest, quiet travel, depth/alpha/shutter coverage and loop-closing joins |
+| 4 | VG4-07/09/02 → VG5-01/02 minimal proven-motion binding/runner | Absolute state, compatible action/scenery masks, completed-chunk restart and bounded encoding |
+| 5 | VG5-03/05 combined 60-second check | All requested actions plus passing scenery work together; this is an internal scale check |
+| 6 | VG5-06/07 full 180-second film and repeat-boundary review | Complete 5,400-frame silent film the user can duplicate to six minutes externally |
+| 7 | Selected second-city reuse → app workflow → VG6 | Reusable controls and complete app output after the Tokyo recipe works |
 
-New quiet character activities remain a later isolated improvement. The deferred
-VG2-07/09/10/18–20 and VG4-07/08/09 rig/action rows are not dependencies of this
-baseline/scenery path. Revisit them only with an explicit new choice and compatible
-moving proof; no earlier failure is cleared by the reset.
+The cancelled wave/Blender proof and standalone rig-description experiments stay
+deferred. Required actions may use the selected local workflow without resuming
+those packets. Fresh proof is needed before any permanent backend/contract choice.
 
 [Audio verification and release](TASKS-AUDIO.md) remain independent MIDI
 work; they do not block the video pilot. Human waits permit independent bounded
@@ -474,7 +507,7 @@ in-app picture generation, change the provider or authorize new models.
 
 - In-app image creation, outfit/style transfer, automatic semantic extraction,
   invented scenery and generative asset libraries.
-- Whole-clip repeat-to-fill, multi-scene/general timeline editing, vertical output,
+- Short-clip repeat-to-fill, multi-scene/general timeline editing, vertical output,
   longer compilations, LoRA training or a provider marketplace.
 - MIDI arrangement and its acceptance/release are independently scoped in
   [PLAN-AUDIO](PLAN-AUDIO.md), not video-delivery prerequisites.

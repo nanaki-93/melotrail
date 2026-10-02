@@ -22,30 +22,35 @@ Video has independent project/asset/job storage, prepared-scene validation, an
 owned ComfyUI adapter, pinned media supervision and bounded controlled motion.
 The Video tab, moving playback and complete 3–5-minute export remain planned.
 
-**Current priority (updated 2026-10-02): return to the successful Tokyo
-blink/parallax recipe.** The user selects the existing
+**Current priority (clarified 2026-10-02): animate TABI's activities and build
+at least three minutes of Tokyo travel, ready for the user's six-minute repeat.**
+Keep the visual style of the successful
 [30-second continuity video](docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4)
-and [20-second parallax video](docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4)
-as the visual baseline. Their hashes, original assets, ComfyUI graphs and render
-settings have been recovered. ComfyUI made the scenery paintings; the existing
-Node/Canvas compositor moved the depth layers and blended the supplied eye poses,
-with FFmpeg encoding the silent video. TABI's body, hands and the cabin stayed fixed.
+and [20-second parallax video](docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4).
+Drinking, reading, gentle breathing/head motion and looking outside are required
+parts of this pilot. A blink-only film does not meet the clarified request.
 
-The later arm/Blender rig route is deferred; its pending encode was cancelled
-before admission. Preserve its evidence without treating it as the next step.
-First check the recovered recipe on current tools in a new short output using
-the accepted leaf/window-mask correction. Then extend scenery for 60 seconds,
-prove the bounded runner, and scale the accepted recipe toward 180 seconds.
-New character activities remain separate optional experiments after the baseline
-is stable. Different cities reuse the cabin/TABI and replace exterior artwork;
-future app integration follows the proven video workflow.
+First prove those actions in short continuous motion tests using compatible
+scene-matched artwork, then combine them with the extended Tokyo corridor in one
+180-second film. Keep the original character/outfit, cabin/camera, warm painted
+style and rigid parallax. Add same-style Tokyo points of interest and quiet travel;
+new TABI assets belong in `docs/pictures/video/tabi-assets/`, new scenery in its
+`scenario/` folder. The old wave/Blender route remains deferred.
 
-The existing scenery reaches about 30 seconds at the approved speed. Longer
-coverage, current-runtime output and the complete film still need proof. This
-recovery starts no model or media job and leaves the two reference videos intact.
-See [current route](PLAN-VIDEO.md#selected-route--recover-the-blinkparallax-baseline-2026-10-02),
-[recovery tasks](TASKS-VIDEO.md#baseline-recovery-2026-10-02), and
-[recipe/evidence](docs/TABI_VIDEO.md#selected-blinkparallax-baseline-2026-10-02).
+Three new full-scene action reference candidates (drink, read, watch) and a Tokyo
+Station panorama candidate are saved in the requested folders. These are static
+references, not registered animation layers or moving approval. Current controls
+cover blink and limited breathing/head gestures; continuous drink/read motion,
+compatible masks/backing and full scenery coverage still need proof.
+
+Target exactly 180 seconds/5,400 frames first. Design and check the last-to-first
+join for character/props, blink/breath phase, scenery and travel speed, so the user
+can duplicate the completed segment to six minutes in an external editor. This
+explicit whole-segment repeat is permitted; filling the initial three minutes
+with the old short clip is not the request. Future app integration follows the
+proven workflow. See [current plan](PLAN-VIDEO.md#selected-route--tabi-actions-and-a-repeatable-three-minute-tokyo-film-2026-10-02),
+[active action tasks](TASKS-VIDEO.md#required-actions-and-three-minute-tokyo-2026-10-02),
+and [asset details](docs/TABI_VIDEO.md#required-action-and-duration-clarification-2026-10-02).
 
 Planning is split into two independent workstreams:
 - **Audio/MIDI:** [PLAN-AUDIO](PLAN-AUDIO.md) describes CORE and AC1–AC5;
@@ -115,8 +120,10 @@ validated rather than invented. The target is one continuous 180–300-second
 motion foundations remain; the selected baseline reuses the existing controlled
 compositor. Blender experiments are deferred. Hosted fallback remains optional
 and needs explicit authorization.
-No in-app image generation, outfit transfer, whole-clip repeat-to-fill, MIDI
+No in-app image generation, outfit transfer, short-clip repeat-to-fill, MIDI
 dependency, soundtrack synchronization or public upload is part of this delivery.
+The user explicitly plans to duplicate the completed three-minute segment externally
+to six minutes; the pilot includes a last-to-first join check for that purpose.
 Separately authorized external artwork preparation for the pilot does not change
 that app boundary. A successful production harness is not VG6 app/release proof.
 

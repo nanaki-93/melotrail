@@ -17,13 +17,65 @@ This document preserves supplied artwork, scoped artistic decisions and runtime
 measurements. Older task IDs, commands and dated status statements below identify
 their original evidence; they are not active queue dependencies or authorization
 to resume an experiment. TASKS-VIDEO alone owns current video work. Production-pilot reviews
-now precede app development: **VG2-22** recovered blink/parallax, **VG5-05**
-combined 60 seconds, and **VG5-07** full-film artifact review. New character
-actions are deferred optional experiments after the recovered base is stable. Later **app** gates remain VG6-02 and
+now precede app development: **VG2-24–27** required character actions, **VG5-05**
+combined 60 seconds, and **VG5-07** full-film plus repeat-boundary artifact review. Later **app** gates remain VG6-02 and
 VG6-06; none of these new/later gates is passed. VG3 design permission/approval is
 still separate. Earlier “next VG4-01” or app-first statements are historical.
 
+## Required action and duration clarification (2026-10-02)
+
+The user's correction requires TABI drinking, reading, gentle breathing/head
+movement and looking outside, with **at least three minutes** of Tokyo scenery
+so the finished segment can be doubled into six minutes. This supersedes the
+preceding blink-only-first/optional-action interpretation. The successful 20/30s
+videos remain the style/camera/parallax reference, not the complete action brief.
+The old wave/Blender route remains deferred; this request does not resume it.
+
+The user explicitly authorizes needed TABI assets in `docs/pictures/video/tabi-assets/`
+and new same-style Tokyo points of interest in `scenario/`. Four initial built-in
+imagegen calls created the following local reference candidates, preserving originals:
+
+| Candidate | Saved local asset |
+| --- | --- |
+| Drink from the original takeaway cup | `tabi-assets/train-actions/scene-matched-20261002T030904Z/01-drinking-keyframe-candidate.png` |
+| Read the table notebook, headphones on head | `tabi-assets/train-actions/scene-matched-20261002T030904Z/02-reading-keyframe-candidate.png` |
+| Turn head toward the window | `tabi-assets/train-actions/scene-matched-20261002T030904Z/03-window-watch-keyframe-candidate.png` |
+| Tokyo Station/Marunouchi exterior study | `tabi-assets/scenario/tokyo-extension-20261002T030904Z/01-tokyo-station-panorama-candidate.png` |
+
+The old drinking reference uses a ceramic mug; the old reading reference changes
+headphones/book placement. These new scenes retain the original takeaway cup,
+headphones and table notebook. Visual inspection finds connected paws/cuffs and
+coherent static poses, not a human approval or in-between motion pass. The three
+action candidates are 1672×941 versus the 1664×936 original, opaque full-scene
+images, not registered character layers. The panorama is 2172×724, with no depth
+separation or proven seam. Exact prompts, source/result pins, dimensions and
+inspection limits: `docs/pictures/video/evidence/VG2-23/action-scope-20261002T030904Z/checks/`.
+Media stay local. No new moving clip was produced by these four image calls.
+
+The motion target is continuous breathing/head/watch, cup reach/lift/sip/return,
+and attentive reading/return. Do not flip/crossfade the new stills and call that
+animation. The current renderer's breathing and masked planar head controls do
+not establish sipping, genuine head turns or reading; held POSE_REPLACE is also
+insufficient. Try the selected local ComfyUI path for needed continuous character
+motion, retaining a stable cabin and separate rigid scenery. Add only necessary
+scene backing, support, masks and prop inputs, with moving review per action.
+
+Plan 180 seconds/5,400 frames first, with all required actions and quiet intervals.
+At the retained speed and placement, horizontal extent lower bounds are far 5,467,
+middle 10,173 and near 14,420 pixels before alpha, overlap/filter and closing-join
+margins. The new panorama is an initial art candidate, not a three-minute corridor.
+The draft route/timing is in the sole [roadmap](../PLAN-VIDEO.md#selected-route--tabi-actions-and-a-repeatable-three-minute-tokyo-film-2026-10-02).
+
+For external 180s + 180s duplication, prove the end→start boundary: cup/book/hands/
+head restored, compatible blink/breath phase, continuous depth-plane position and
+velocity. Render temporal support around the join correctly; identical endpoint
+stills alone do not prove a smooth loop. The initial three minutes may not be filled
+with the old 20/30-second clip. Full motion, corridor and loop review remain pending.
+
 ## Selected blink/parallax baseline (2026-10-02)
+
+**Historical recovery scope.** Its recovered bytes/settings remain valid; the
+later action/duration clarification above supersedes its optional-action sequence.
 
 The project user rejects the recent picture/direction and explicitly selects
 [tokyo-parallax-20s-1080p.mp4](pictures/video/tests/tokyo-parallax-20s-1080p.mp4)

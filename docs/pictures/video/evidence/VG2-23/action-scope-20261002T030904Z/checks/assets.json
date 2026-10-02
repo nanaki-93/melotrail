@@ -1,0 +1,109 @@
+{
+  "status": "STATIC_REFERENCE_CANDIDATES",
+  "tool": "built-in image_gen",
+  "imagegenCalls": 4,
+  "correctionCalls": 0,
+  "userInstruction": "Make TABI drink, read, move the head like breathing and watch outside; at least 3 minutes of Tokyo for doubling to 6 minutes. New TABI and scenery assets authorized in their existing folders.",
+  "prompts": {
+    "drink": "Use case: precise-object-edit\nAsset type: scene-matched drinking action reference for later TABI animation; one full-frame illustration, not a storyboard or sprite sheet.\nInput images: Image 1 is the EDIT TARGET and authoritative finished train scene. Image 2 is only a gesture/anatomy reference for how TABI grips and drinks, not a replacement design or camera.\nPrimary request: in Image 1, make TABI take a quiet sip from the EXISTING tan takeaway cup with its black lid and cherry-blossom motif. Move that exact cup from the table to TABI's mouth, cradled naturally in TABI's paws. The sipping opening in the lid meets the mouth. Leave no duplicate cup on the table.\nKeep Image 1's camera, wide 16:9 composition, character size and position on the bench, pink/lavender axolotl identity, gold forehead star and freckles, fronds, rose headphones ON THE HEAD, emerald green outfit with leopard trim, tail, legs, feet, original train/cabin/table/notebook/pen/bag and warm Tokyo sunset artwork. Do not replace its table notebook with the reference's props. Do not move the camera or crop.\nChange only the arm/paw pose and the small mouth/eye adjustment needed for sipping. Each paw must remain clearly attached through a continuous wrist into its leopard cuff, forearm, elbow and sleeve; preserve coherent shoulder attachment and believable bent arms. The cheek-rest hand leaves the cheek to grip the cup, revealing the corresponding cheek/sleeve area naturally. Keep the gentle original three-quarter side view. Do not substitute the cream ceramic mug from Image 2.\nStyle: match the target's richly textured painted illustration, fine dark outlines, fabric texture and soft golden illumination exactly.\nAvoid detached hands, severed wrists, duplicated arms or cups, new wardrobe, different face proportions, lipstick, extra fingers, ghosted outlines, scene redesign, text labels, grid or borders.\nReturn a single opaque high-quality landscape reference image.",
+    "read": "Use case: precise-object-edit\nAsset type: one scene-matched TABI reading keyframe reference for later animation.\nInput images: Image 1 is the authoritative edit target: keep its whole train scene and original TABI identity. Image 2 is only a reference for TABI's attentive reading expression; do not copy its front-facing pose, handheld red book or headphones around the neck.\nPrimary request: TABI quietly reads the EXISTING open notebook on the train table. Gently tilt TABI's head and gaze down toward those pages, with the cheek-rest paw lowered so both paws rest naturally at the edges of the open notebook. Reading should be clear from the eyeline and small forward head inclination, with a relaxed closed smile.\nPreserve the original three-quarter seated angle, character scale, gold forehead star/freckles, pink/lavender colour, fronds, headphones ON the head, green coat and leopard trim, tail/feet, warm lighting, original train walls/windows/bench/table/bag, tan cherry-blossom takeaway cup with black lid in its original table position, open notebook and pen, Tokyo sunset background, wide composition and camera.\nEach paw must connect visibly and naturally through its wrist/cuff/forearm/sleeve to its shoulder. No detached hands, duplicated limbs or implausible joints. Keep the body seated on the same cushion.\nChange only the arm/paw pose and small head/eye adjustment needed for reading. Do not redraw the scene design or introduce a second book. Match the target's rich painted texture, fine outlines and golden illumination. No text labels, montage, borders or multiple panels.\nReturn one opaque landscape image at the target framing.",
+    "watch": "Use case: precise-object-edit\nAsset type: one scene-matched TABI looking-outside keyframe reference for later animation.\nInput images: Image 1 is the authoritative EDIT TARGET. Image 2 is an identity/quiet-watching gesture reference only; keep Image 1's camera, scene, scale, outfit and composition.\nPrimary request: TABI turns the head gently farther toward the big right train window to watch the passing Tokyo skyline. Make the change readable through a modest three-quarter-to-near-profile turn toward screen right and an attentive eyeline into the distance, while TABI's torso stays seated in its original position. Keep the head naturally attached to the neck/collar; carry the fronds, gold forehead star and rose headphones consistently with the head turn. A gentle closed-mouth expression.\nThe cheek-rest paw has lowered to rest on the table beside the notebook; the other paw remains relaxed near the notebook. Paws, wrists, leopard cuffs and green sleeves must form continuous anatomically coherent arms, with no detached or duplicated parts.\nPreserve original TABI identity/proportions, pink/lavender skin and gold speckles, green outfit/leopard trim, headphones on the head, tail/feet/seat contact. Preserve the tan cherry-blossom takeaway cup, black lid, notebook, pen, table, train cabin/bench/bag, Tokyo sunset, warm painted texture, fine dark outlines and original wide camera framing.\nChange only the head/eyes and the minimum arm movement needed to release the cheek. Do not add a hand against the window, hide the head behind scenery, rotate the entire body, move props, redraw the train, add panels, labels or text. Single opaque landscape frame.",
+    "tokyoStation": "Use case: style-transfer\nAsset type: wide exterior scenery artwork candidate for a side-scrolling Tokyo train-window video.\nInput image: visual style reference only. Match its illustration technique, scale, warm peach sunset palette, crisp fine dark architectural outlines, soft painted textures, muted lavender skyline, warm lit windows and cherry blossoms. Create a NEW Tokyo district section in that same series.\nPrimary request: a panoramic broadside view of Tokyo Station's recognisable historic Marunouchi red-brick building, cream stone accents, long low symmetrical facade, grey domed roof towers and central entrance. Place modern Marunouchi office silhouettes behind at a believable far depth and small cherry trees/shrubs along the station plaza in front. Keep architecture straight, coherent and grounded, with a quiet open approach at each side for a future scenery join.\nComposition: very wide horizontal 3:1 panorama, level side-on view from a passing train, no foreground train interior, no TABI or other prominent people. Show the entire main station silhouette and domes without cropping the tops. Maintain consistent horizon and architectural scale, leave useful quiet scenery at both horizontal edges; do not stretch buildings.\nLight: the same calm warm golden-hour glow as the supplied style reference; salmon/peach sky with light violet clouds, no night lighting or sudden weather change.\nOne continuous richly illustrated exterior, no frames, collage, labels, text, readable signs, watermarks or added landmarks. This is a composed scenery reference, not a map and not separate layers. Opaque landscape image."
+  },
+  "limits": [
+    "Full-scene opaque candidates, not registered animation layers or proof of moving quality.",
+    "Generated action images are 1672x941, original is 1664x936; registration and protected-background composition remain necessary.",
+    "Breathing reuses an approved neutral/scene-supported preparation; a new static still would not establish breathing.",
+    "One Tokyo Station panorama does not establish 180-second scenery coverage.",
+    "Current held-pose replacement does not animate drinking/reading; local continuous-motion proof precedes integration."
+  ],
+  "review": {
+    "drink": "Visually coherent paws/cuffs and existing takeaway-cup design; cup removed from table. Static inspection only.",
+    "read": "Eyes/head follow existing table notebook, headphones stay on head and cup stays on table. Static inspection only.",
+    "watch": "Visible head turn toward window with seated body and props. New silhouette needs its own mask/support.",
+    "tokyoStation": "Warm illustrated station/district candidate with side-on architecture; requires art review, depth preparation and joins."
+  },
+  "assetDirectory": "docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z",
+  "sceneryDirectory": "docs/pictures/video/tabi-assets/scenario/tokyo-extension-20261002T030904Z",
+  "mediaStorage": "Local files; commit only documentation and checks, not generated media.",
+  "files": [
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/01-drinking-keyframe-candidate.png",
+      "bytes": 2220579,
+      "sha256": "f7ca98849b4370d7a319436fe73a3c73fea3fb2e5b849f885f4dd2ec76312593",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/02-reading-keyframe-candidate.png",
+      "bytes": 2251441,
+      "sha256": "397df96020faf6390c3a9da8fe3efcfc313eca181a571028cafe26dd35dc7e9d",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/scene-matched-20261002T030904Z/03-window-watch-keyframe-candidate.png",
+      "bytes": 2399280,
+      "sha256": "4f46c9eaf18967814a3d89a2bc8db3c8129e5af8c17046041759371990ee1159",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tokyo-extension-20261002T030904Z/01-tokyo-station-panorama-candidate.png",
+      "bytes": 2502290,
+      "sha256": "b9b5fd9bcfbba948c392bed900863c693228ebb2f37b03d69a0347251cbb9a28",
+      "dimensions": [
+        2172,
+        724
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tabi-quiet-ride-through-tokyo.png",
+      "sha256": "01e4db852ceed7bc4d17708c3d181103d0699e5caed54bbc44eda1d83932473e",
+      "dimensions": [
+        1664,
+        936
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/tokyo-sideon-district-variety-study.png",
+      "sha256": "fadd6ada400114dc4c89857be0cc59970f286bf7e175d6c6c557f5fc9f5df879",
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/01-drinking-coffee.png",
+      "sha256": "f8ac8dcfcb1635a8913ea6a1eb2a8a52af428458203ec1770a3bd68d3ef09235",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/02-reading-book.png",
+      "sha256": "e2ad419d6122a43a405257e81e3a4bfb1c77b35eea06bc9c6bbde88fc55641a5",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/06-looking-out-window.png",
+      "sha256": "2aec9990ae32442588e9b620d8033483d80f7e7cd24e2cd67c43981090d96fbb",
+      "dimensions": [
+        1254,
+        1254
+      ]
+    }
+  ]
+}
