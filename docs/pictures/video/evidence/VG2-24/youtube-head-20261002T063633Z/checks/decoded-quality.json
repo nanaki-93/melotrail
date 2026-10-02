@@ -1,0 +1,262 @@
+{
+  "rows": [
+    {
+      "ordinal": 0,
+      "sourceSha256": "3f2784114dcd8b5d4426142146fb928c56919b0205d70b5ef79f40c9ba77ced9",
+      "decodedSha256": "aa7db9ea8f425b6606963e64c7f48091c4a73807f086ffb988216acedd63fb6d",
+      "encoded709": {
+        "meanAbsoluteDelta": 3.6386371527777777,
+        "maximumDelta": 82
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 3.5807095550411523,
+        "maximumDelta": 85
+      },
+      "head": {
+        "meanAbsoluteDelta": 3.7775532692415807,
+        "maximumDelta": 85
+      },
+      "cup": {
+        "meanAbsoluteDelta": 3.3172294372294373,
+        "maximumDelta": 35
+      },
+      "book": {
+        "meanAbsoluteDelta": 3.8614973262032084,
+        "maximumDelta": 53
+      }
+    },
+    {
+      "ordinal": 20,
+      "sourceSha256": "8b340a9a79db7445738c989d35af5ee668c1de4eaafa8587294a5ae3e1380c03",
+      "decodedSha256": "5d1e7562a31dd88967cabdbfc9b7401aa0fb321a95b6200597754730728c69b0",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.857171585648148,
+        "maximumDelta": 72
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.8543831983024692,
+        "maximumDelta": 68
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.0462292685669308,
+        "maximumDelta": 56
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.352813852813853,
+        "maximumDelta": 19
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.7474010695187165,
+        "maximumDelta": 36
+      }
+    },
+    {
+      "ordinal": 24,
+      "sourceSha256": "b39691550e691fceb11b604e505a3f8455487014d5a70a6db9d8cfd47a968622",
+      "decodedSha256": "cce6063d6811c96684ab75127afdf3b21cc10fc69b5864974ea0b89423ca4e09",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.869202031893004,
+        "maximumDelta": 68
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.8659027777777777,
+        "maximumDelta": 64
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.0913352448417384,
+        "maximumDelta": 64
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.3504761904761904,
+        "maximumDelta": 19
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.7493048128342246,
+        "maximumDelta": 36
+      }
+    },
+    {
+      "ordinal": 28,
+      "sourceSha256": "c7ca1518a6b039ed679b094423214c5172175b505fce2636fe9bb960f975f90c",
+      "decodedSha256": "0777ef067fbaa3586782c3da4ff75ace60e4602c89cf78219016f70df14ed5db",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.9657261123971193,
+        "maximumDelta": 73
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.9634575938786007,
+        "maximumDelta": 69
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.338739528869399,
+        "maximumDelta": 58
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.3866666666666667,
+        "maximumDelta": 19
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.8076078431372549,
+        "maximumDelta": 36
+      }
+    },
+    {
+      "ordinal": 32,
+      "sourceSha256": "28ce64edb9284b99b29da4b6c2c264b773ab8e0c4254ef4775ad2ac134ede285",
+      "decodedSha256": "f4d137041c343b323387ca47847dc957f07db478476777a8202ff253e567bdcf",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.9818327224794239,
+        "maximumDelta": 71
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.9825043402777778,
+        "maximumDelta": 67
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.430527913644797,
+        "maximumDelta": 64
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.3887445887445888,
+        "maximumDelta": 19
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.8075579322638147,
+        "maximumDelta": 36
+      }
+    },
+    {
+      "ordinal": 64,
+      "sourceSha256": "5a9355070cc93e28b06b03916f3834141b0bda895a16cde3e2db7e6fa3256a39",
+      "decodedSha256": "4f9082803de9f4e5a54305e9cab957bbee8385ddf0ccbb357784cd728471d0e5",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.9265578382201647,
+        "maximumDelta": 75
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.9222632137345679,
+        "maximumDelta": 69
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.280810704447068,
+        "maximumDelta": 65
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.4033766233766234,
+        "maximumDelta": 18
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.8009483065953653,
+        "maximumDelta": 39
+      }
+    },
+    {
+      "ordinal": 100,
+      "sourceSha256": "7cc08deffe4a70ec6537445a56c61ea7fd35b6e2c9a458a47452818839e53cad",
+      "decodedSha256": "2fe2a189edca62ef8d7cb5a9fbdf968b1457b6634c3ceebd2796ba2248418b85",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.9030007394547326,
+        "maximumDelta": 66
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.887956211419753,
+        "maximumDelta": 66
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.115690110755046,
+        "maximumDelta": 54
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.3978354978354979,
+        "maximumDelta": 18
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.8056470588235294,
+        "maximumDelta": 38
+      }
+    },
+    {
+      "ordinal": 104,
+      "sourceSha256": "48b28be3e0871b1d85585433b2a5c8dee85636a5429bbe421372ba4f1679d199",
+      "decodedSha256": "baf612ff85a5c4e686469ab415d6a9644c4b325d802fa4ddfc0032af666baa5d",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.8788345550411523,
+        "maximumDelta": 67
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.8669275655864197,
+        "maximumDelta": 64
+      },
+      "head": {
+        "meanAbsoluteDelta": 1.9556395120031485,
+        "maximumDelta": 56
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.3998268398268399,
+        "maximumDelta": 18
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.8207201426024955,
+        "maximumDelta": 36
+      }
+    },
+    {
+      "ordinal": 108,
+      "sourceSha256": "ce31f2b9ba7381902e3a469246a3f444285a0c8d727831f67fa57e63cf4b7b37",
+      "decodedSha256": "e7f4085f826aeda1535e7a8dd49b5f380c5b12d2f5e1cd6781888fcb49ef8f12",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.9788946759259258,
+        "maximumDelta": 84
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.9705034722222223,
+        "maximumDelta": 79
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.3262450104008545,
+        "maximumDelta": 66
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.3951515151515153,
+        "maximumDelta": 18
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.8171764705882354,
+        "maximumDelta": 36
+      }
+    },
+    {
+      "ordinal": 128,
+      "sourceSha256": "3b63d1f7ec83037e36a0ff010be11577446a0ab647082a4fe1588330502fdfeb",
+      "decodedSha256": "312163a55ba66b6c3fb88536e7c6b576479593be46f284c2eec80c89c8d9075d",
+      "encoded709": {
+        "meanAbsoluteDelta": 1.8849103009259258,
+        "maximumDelta": 64
+      },
+      "displayEquivalentSrgb": {
+        "meanAbsoluteDelta": 1.8730393197016462,
+        "maximumDelta": 60
+      },
+      "head": {
+        "meanAbsoluteDelta": 2.0531590487434643,
+        "maximumDelta": 60
+      },
+      "cup": {
+        "meanAbsoluteDelta": 1.4038095238095238,
+        "maximumDelta": 18
+      },
+      "book": {
+        "meanAbsoluteDelta": 1.814288770053476,
+        "maximumDelta": 37
+      }
+    }
+  ],
+  "comparison": "Read raw PNG values with metadata removed and filtering disabled. Rec.709-to-sRGB conversion precedes comparison with original sRGB proof.",
+  "limits": {
+    "globalMean": 5,
+    "headMean": 7,
+    "propsMean": 5
+  },
+  "pass": true,
+  "note": "Finite decoded-frame colour/compression checks, not artistic acceptance or full timestamp/loop approval."
+}

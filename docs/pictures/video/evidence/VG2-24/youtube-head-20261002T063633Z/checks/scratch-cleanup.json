@@ -1,0 +1,68 @@
+{
+  "at": "2026-10-02T07:27:41.866482+00:00",
+  "scratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-youtube-head-fmih06_y",
+  "removed": true,
+  "files": [
+    {
+      "path": "runtime-classpath.txt",
+      "bytes": 2975,
+      "sha256": "cc0f4db15abb4f7854ec9dde645d41388ca2f773b040569e379f0454a0124489"
+    },
+    {
+      "path": "context.json",
+      "bytes": 271,
+      "sha256": "e1ffb4507e7a3d7c536df2150b81d65c3975cf16d4ad8f00a6b6e8e21b3f61de"
+    },
+    {
+      "path": "classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "path": "head/TASKS-VIDEO.md",
+      "bytes": 259228,
+      "sha256": "3fdc19fdad4441246977387fd00d44c962bf195fd9af3a5d939e5e16f2cdd9d0"
+    },
+    {
+      "path": "head/docs/VALIDATION.md",
+      "bytes": 159991,
+      "sha256": "4b2046bba3a2e0c6ebf24cd707c90c6fa7da8c5e12dcb24cf4a504c1dbad68f2"
+    },
+    {
+      "path": "head/docs/TABI_VIDEO.md",
+      "bytes": 345572,
+      "sha256": "c0b389a76feb5522a1359e30f2fd04d2251a58e77f36c90ed6701504f710c026"
+    },
+    {
+      "path": "selected/TASKS-VIDEO.md",
+      "bytes": 260860,
+      "sha256": "2cfa1047c9e8d67c3abe4b5a430813710270996eda32eec3a57912c317cd12f9"
+    },
+    {
+      "path": "selected/docs/VALIDATION.md",
+      "bytes": 161536,
+      "sha256": "218e1e5ee7ab41967a543fe8efe13e4e8fecf7cc1173baf4cc35b7b66c32f72c"
+    },
+    {
+      "path": "selected/docs/TABI_VIDEO.md",
+      "bytes": 346857,
+      "sha256": "772f78bf8ebc16ebe9cb3fdcdef96ee3777b3f5294f257728662d1de939aef5a"
+    },
+    {
+      "path": "before/TASKS-VIDEO.md",
+      "bytes": 262196,
+      "sha256": "6c7728b4bbf556527fcb159c282d86bb7c860bc175fa757eae1e99cb6c42b4a6"
+    },
+    {
+      "path": "before/docs/VALIDATION.md",
+      "bytes": 163862,
+      "sha256": "3b5e36e1e94334e5610d9c5ff9cc6e610f9043f27a0479a4cf8717165d939972"
+    },
+    {
+      "path": "before/docs/TABI_VIDEO.md",
+      "bytes": 346166,
+      "sha256": "3bc2df70ddaed6be967da7b1022652972ed8ac2f4fe2ce0aa5b78d0abd5b7af4"
+    }
+  ],
+  "scope": "Only the unique task-owned OS scratch directory. Retain local review media, lossless frames, matte inputs and failure/review evidence; preserve unrelated user changes, environments and caches."
+}

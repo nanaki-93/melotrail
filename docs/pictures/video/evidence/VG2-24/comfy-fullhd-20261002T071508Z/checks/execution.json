@@ -1,0 +1,11 @@
+{
+  "exitCode": 0,
+  "stopReason": null,
+  "elapsedSeconds": 91.775,
+  "peakSampledOwnedRssBytes": 9067855872,
+  "observedPids": [
+    25693,
+    25915
+  ],
+  "note": "RSS samples exclude some Metal/GPU allocations; production pressure/swap safeguards remain unchanged."
+}

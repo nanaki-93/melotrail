@@ -1,0 +1,75 @@
+{
+  "mode": "samples",
+  "dimensions": [
+    1920,
+    1080
+  ],
+  "fps": 25,
+  "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png",
+  "headDetail": "RealESRGAN x2 on the accepted native motion; not native 1080p synthesis",
+  "frameCount": 10,
+  "frames": [
+    {
+      "frame": 0,
+      "sha256": "1750281a06e81f74c4c81e890c90c4b048a0d853ea42b4bcfb7336edf15a9a19",
+      "bytes": 2984627,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 20,
+      "sha256": "62c2e4ecc1ad79cb8eff2eb735e1a390c5290c949dc8012b7a6247a4cd6a5ed5",
+      "bytes": 2973782,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 24,
+      "sha256": "056af42539bc5b02dc7173df1746ae18be8a6f921a2da715b862ac1a1feb91d0",
+      "bytes": 2978582,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 28,
+      "sha256": "1be90ca8458d4de8b6940ee83f5046ea2ace4e224fcdba6f1e0bec322234436a",
+      "bytes": 2990662,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 32,
+      "sha256": "74d232cd2230e737522d3268a1d19db9138a5e78929731e3e73fb61aef8af3df",
+      "bytes": 2989929,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 64,
+      "sha256": "b45de17e7e06700c91b2607b09221704f412b9a51c4492415f02d6e0ad7eb0fb",
+      "bytes": 2974850,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 100,
+      "sha256": "d7a4216872bca5f15f13467d58647b4c4b98d3644ab047b2f2d058199fe96413",
+      "bytes": 2951333,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 104,
+      "sha256": "60de9f314353e562ae2497e64ed57ef717ad19fbee3a509daf687af759cf555f",
+      "bytes": 2949587,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 108,
+      "sha256": "2e7612eb85be54dd089192f560c768a3ebb35e295036160444f9d85cc9fdbd2f",
+      "bytes": 2937664,
+      "fixedRegionChangedChannels": 98105
+    },
+    {
+      "frame": 128,
+      "sha256": "6de846d96d3ce282e910ed56bce7adfee13f5c80c6fd672544063578bcd82eee",
+      "bytes": 2931349,
+      "fixedRegionChangedChannels": 98105
+    }
+  ],
+  "totalBytes": 29662365,
+  "colour": "sRGB inspection PNG"
+}

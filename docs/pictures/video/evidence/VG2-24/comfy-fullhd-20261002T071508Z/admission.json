@@ -1,0 +1,96 @@
+{
+  "task": "VG2-24",
+  "createdAt": "2026-10-02T07:17:55.660766+00:00",
+  "sourceHead": "c6c01a5ca49d4bb67bbe85345770c3e54e005578",
+  "authorization": {
+    "quote": "the animation is correct, but there's some crop and bad shadoing in the face, for some reason is disappeared also. Remember that we have to use ComfyUI, otherwise we're not testing the workflow",
+    "interpretation": "User accepts animation and rejects masking/face defects, directing this continuation into ComfyUI. One whole-frame finishing graph with the previously offered 10-minute/512-MiB limit; no new motion generation or automatic prompt replay."
+  },
+  "native": {
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "wholeRunnerLimitSeconds": 600,
+    "observedProcessTreeRssLimitBytes": 34359738368,
+    "ownedEvidenceAndSessionLimitBytes": 536870912,
+    "minimumFreeDiskBytes": 21474836480,
+    "videoEncodes": 1,
+    "postExportVerificationTraversals": 2
+  },
+  "workflow": {
+    "source": "Accepted original ComfyUI/LTX 768x448, 129-frame/25-fps clip",
+    "nodes": [
+      "LoadVideo",
+      "GetVideoComponents",
+      "UpscaleModelLoader",
+      "ImageUpscaleWithModel",
+      "ImageScale",
+      "CreateVideo",
+      "SaveVideo"
+    ],
+    "upscaler": "Installed RealESRGAN x2plus",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "resize": "Whole-frame Lanczos with crop disabled; small aspect adjustment from the native canvas",
+    "encoding": "ComfyUI SaveVideo H264, CRF16, sRGB, silent",
+    "disclosure": "Enhanced existing motion, not native-1080 synthesis. Reuses original generated exterior and prop motion; independent Tokyo corridor/fixed props remain later work. No masks, compositing, external shadow or alpha edits."
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/request.json",
+      "bytes": 780,
+      "sha256": "73f53f326aac7746f07db02e4d0fe0cebfe9698c63670adc1d11e23c2189febb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/workflow/finish-full-frame-api.json",
+      "bytes": 801,
+      "sha256": "c304343b1190027ad7a86ab156cf42df43a56eaa26a9dd39cdcf2f23a0781966"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/scripts/ComfyFinish.java",
+      "bytes": 6709,
+      "sha256": "e3f7d97765e200a354e864600ed3b060a14b62918b82563c8d6a056ee13442c3"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/scripts/MediaStage.java",
+      "bytes": 1475,
+      "sha256": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/scripts/headless.init.gradle",
+      "bytes": 175,
+      "sha256": "39eae9c3befb740254c63a657521633570c34ab5d60d1b65aee6949df8b311e9"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/scripts/run.py",
+      "bytes": 7118,
+      "sha256": "eac13c049853348f3794406890d7aec7a8520993b4cf567aeedc397a3088951a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/tabi-head-watch-5s-768x448-candidate.mp4",
+      "bytes": 1910375,
+      "sha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/upscale_models/RealESRGAN_x2plus.pth",
+      "bytes": 67061725,
+      "sha256": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-comfy-fullhd-cf04t6gk/classes/ComfyFinish.class",
+      "bytes": 13418,
+      "sha256": "c783c986bf55c8c52318e704c9cd884b5363e308d68fde3447172a755a30543c"
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-comfy-fullhd-cf04t6gk/classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    }
+  ]
+}

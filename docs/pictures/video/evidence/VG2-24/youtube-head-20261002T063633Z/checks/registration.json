@@ -1,0 +1,93 @@
+{
+  "referenceDimensions": [
+    1672,
+    941
+  ],
+  "nativeDimensions": [
+    768,
+    448
+  ],
+  "testedRegions": [
+    [
+      20,
+      20,
+      65,
+      151
+    ],
+    [
+      109,
+      22,
+      65,
+      62
+    ],
+    [
+      252,
+      15,
+      56,
+      64
+    ],
+    [
+      400,
+      346,
+      106,
+      22
+    ],
+    [
+      573,
+      347,
+      180,
+      75
+    ]
+  ],
+  "best": [
+    {
+      "mode": "cover",
+      "dx": 0,
+      "dy": 0,
+      "meanAbsoluteDelta": 5.006128904705418
+    },
+    {
+      "mode": "cover",
+      "dx": 0,
+      "dy": 1,
+      "meanAbsoluteDelta": 6.687149070778964
+    },
+    {
+      "mode": "cover",
+      "dx": 0,
+      "dy": -1,
+      "meanAbsoluteDelta": 6.720205614867536
+    },
+    {
+      "mode": "cover",
+      "dx": 0,
+      "dy": -2,
+      "meanAbsoluteDelta": 8.375879794385133
+    },
+    {
+      "mode": "cover",
+      "dx": 0,
+      "dy": 2,
+      "meanAbsoluteDelta": 8.469315935152235
+    },
+    {
+      "mode": "cover",
+      "dx": 1,
+      "dy": 0,
+      "meanAbsoluteDelta": 8.622064056939502
+    },
+    {
+      "mode": "cover",
+      "dx": -1,
+      "dy": 0,
+      "meanAbsoluteDelta": 9.477224199288257
+    },
+    {
+      "mode": "cover",
+      "dx": 1,
+      "dy": -1,
+      "meanAbsoluteDelta": 9.903558718861209
+    }
+  ],
+  "assumption": "Reference-to-native affine check only; generated pixels are not source-exact."
+}

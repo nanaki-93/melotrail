@@ -135,6 +135,61 @@ owner. Production/test wiring, approved asset bytes and the two selected baselin
 videos are unchanged. The generated raw clip still needs composition repair
 despite the accepted motion direction and these technical passes.
 
+The user's “go with it” and Full-HD quality request authorize the new VG2-24
+`youtube-head-20261002T063633Z` study: 600 supervised seconds/512 MiB, one installed
+2× enhancement pass per frame, one encode, two verification traversals, no new
+motion generation or automatic retry. Initial composition plus two corrections
+retain real-frame failures and fix six contour witnesses and a lower-coat stripe.
+All 129 full-size source frames preserve the specified fixed interior regions;
+ten decoded samples have display-equivalent sRGB mean error at most 3.581/255
+globally and 3.778/255 over the head. These numeric checks do not certify every
+edge: transition softness/frond distortion and a left coat/tail blend are visible.
+
+The local MP4 SHA-256 is
+`3d1d004337379ff804e3ac58676d4f02bb601fde04dd08ebf2c2da7d55d6dbe3`;
+12,674,490 bytes, silent 1920×1080 H.264 High/yuv420p/BT.709, 19,798,808 video bps,
+129 completely counted frames. The two verification traversals complete. Read-only
+sample-table inspection detects 511/512/513-tick presentation intervals at
+1/12800, a 0.04-second start and 5.120078-second reported duration. Exact 25-fps/
+5.16-second delivery fails; no second encode was run. Native motion remains
+768×448 with enhanced detail, and square-pixel aspect is not explicitly signalled
+in the probe. Retain this as Full-HD quality review only. VG2-24 stays BLOCKED for
+a further bounded quality/timing correction; no human approval or full-film pass
+is inferred. Original media remain protected and all new media stay local.
+
+The user then rejects the composite's face cropping/shading/disappearance and
+requires ComfyUI while accepting the animation direction. A single new full-frame
+finishing graph executes in `VG2-24/comfy-fullhd-20261002T071508Z` through the
+existing owned runtime/client. It enhances the unchanged native source with
+installed RealESRGAN x2plus and ComfyUI ImageScale/CreateVideo/SaveVideo; there is
+no character mask, crop or new motion synthesis. The API graph, acknowledged
+prompt/history, node definitions and hashes are retained. One prompt, one video
+encode, no automatic retries, 91.775 seconds for the runner; sampled process-tree
+RSS peaked at 9,067,855,872 bytes, with normal pressure. This excludes some GPU
+allocations; existing runtime pressure/swap controls remained active.
+
+The new movie SHA-256 is
+`fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b`.
+Two complete verification traversals pass: 1920×1080, 129 H.264 High/yuv420p
+frames, no audio, 25fps, zero start, 5.16s, every presentation time exactly i/25.
+Colour is BT.709 matrix/primaries and sRGB transfer, as the native ComfyUI node
+declares; this is not the rejected composite's explicit Rec.709-transfer path.
+All-frame native-size face comparison has maximum mean RGB difference 5.228/255
+and at least 99.82% of tested face-support pixels within 40/255; a blacked-out
+face negative fails. Six full-size decoded frames were visually inspected.
+These detect gross content loss/darkening, not all fine frond deformation, style
+quality or a loop. The stopped runtime session was copied/hash-verified, then
+only its owned external directory was removed. VG2-24 is REVIEW; new movie
+appearance, independent breathing, rigid scenery/props and long-film acceptance
+remain open. Source motion is still native 768×448, enhanced to Full HD.
+
+Final focused ComfyUI client/runtime/documentation/architecture tests pass: 60
+tests, zero failures/errors. Filtered headless `make test`/`make build` already
+passed in this same finishing run (794 root tests and 239 cached desktop tests;
+native-window test excluded). No production/test source or wiring changed during
+the ComfyUI continuation; the final focused suite plus actual graph/media checks
+cover that update. Exact validation scope is retained in its `checks/validation.json`.
+
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
 verifier checks 68 local file pins, including both exact reference MP4s and every

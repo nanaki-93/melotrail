@@ -1,0 +1,48 @@
+{
+  "task": "VG2-24",
+  "status": "REVIEW",
+  "workflow": "Actual owned ComfyUI full-frame finishing graph, acknowledged and completed once through production runtime/client",
+  "source": "Accepted original ComfyUI 768x448 motion; user-directed continuation after rejecting external mask/face artefacts",
+  "movie": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/review/tabi-head-watch-comfy-1080p.mp4",
+  "sha256": "fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b",
+  "dimensions": [
+    1920,
+    1080
+  ],
+  "frames": 129,
+  "fps": 25,
+  "seconds": 5.16,
+  "audioStreams": 0,
+  "exactCadencePass": true,
+  "allFrameFaceContentPass": true,
+  "visualReview": {
+    "inspectedFullSizeFrames": [
+      1,
+      29,
+      33,
+      65,
+      105,
+      129
+    ],
+    "observed": "Complete face/coat retained, with the previous compositing seam absent. Native generative frond detail still deforms during transition.",
+    "humanAcceptance": "Not inferred; animation direction accepted before this finishing graph, this new movie still awaits artistic review."
+  },
+  "limits": {
+    "nativeElapsedSeconds": 91.775,
+    "totalSupervisedSeconds": 97.818,
+    "modelFinishingSubmissions": 1,
+    "newMotionGenerations": 0,
+    "videoEncodes": 1,
+    "verificationTraversals": 2,
+    "automaticRetries": 0,
+    "ownedBytesAtCheck": 344822926
+  },
+  "remaining": [
+    "Final artistic review and independently readable breathing",
+    "Native frond deformation and generated prop/scenery drift",
+    "Other requested actions",
+    "Independent varied Tokyo corridor and full 180-second film",
+    "Seamless external six-minute repeat"
+  ],
+  "methodDisclosure": "Whole-frame 2x enhancement then crop-disabled Lanczos resize to 1920x1080. Slight aspect adjustment, no external matte/shadow operation, not native-1080 motion synthesis. No app integrated full-delivery claim."
+}

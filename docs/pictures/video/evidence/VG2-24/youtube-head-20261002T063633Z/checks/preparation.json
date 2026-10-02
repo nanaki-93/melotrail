@@ -1,0 +1,1306 @@
+{
+  "nativeSize": [
+    768,
+    448
+  ],
+  "crop": [
+    80,
+    72,
+    304,
+    232
+  ],
+  "frames": [
+    {
+      "frame": 0,
+      "sourceSha256": "0ca4b079d24088ef353d1ebaafa5d7387bdcbae1bdde93f539d1687bada2bb6f",
+      "crop": "inputs/motion-crops/frame-0001.rgb",
+      "cropSha256": "b24039fabf0758242ed05f2f10a6f1431447892bfabec8882f35a533b78ccc1a",
+      "matte": "inputs/mattes/frame-0001.alpha",
+      "matteSha256": "28d7e637defc61534c834eeb3e8331ef5c32f7851827038c281242f140877716",
+      "area": 37694,
+      "maximumRowBoundaryChange": 0
+    },
+    {
+      "frame": 1,
+      "sourceSha256": "d35698140f71c592b2bfee24bfaa608ea269bb21100602402fcc2c1d5f233e91",
+      "crop": "inputs/motion-crops/frame-0002.rgb",
+      "cropSha256": "a8a6272f2bf44e7439a9eecf8e5c1ac3e9a2c9eea6e2685ecee55a6a4ec438ab",
+      "matte": "inputs/mattes/frame-0002.alpha",
+      "matteSha256": "3de048ab7f12785f4557828fe345457643acdef8079cb50cbebf152b5c99e475",
+      "area": 37690,
+      "maximumRowBoundaryChange": 5
+    },
+    {
+      "frame": 2,
+      "sourceSha256": "93b6f9c0f89a3bf483240d9c5aa7e18c72c21649cbecebab753d10771cdc833e",
+      "crop": "inputs/motion-crops/frame-0003.rgb",
+      "cropSha256": "d7c42d266816be9feed4b83b5047f767987667bfd2fd2662fcb5eb50c691b90a",
+      "matte": "inputs/mattes/frame-0003.alpha",
+      "matteSha256": "3ab24d08bf94eb962f2737b2c6064b9ec0d971105e03f3f85d802757751add85",
+      "area": 37677,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 3,
+      "sourceSha256": "cf853d452ac643c27db948dcba1303fa3c4c662775bf0d3d84e204ad7599ec9a",
+      "crop": "inputs/motion-crops/frame-0004.rgb",
+      "cropSha256": "80998e4ccf98c5aa0c5bc403f24c26180a48dbc615b5f02801ad4fd49c4c10f8",
+      "matte": "inputs/mattes/frame-0004.alpha",
+      "matteSha256": "d09854226166aa73176ccc0666f0400ea446f971ac9157ecc341a395ba196b7c",
+      "area": 37673,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 4,
+      "sourceSha256": "da3ebbd3c1a9f156b1a29db7d04f3d8b4dda122926700b4f8df595e6df9fa497",
+      "crop": "inputs/motion-crops/frame-0005.rgb",
+      "cropSha256": "664aee0e763a6bb52039f00f34f19ca282b6074ab3fc872a081f4805bd924862",
+      "matte": "inputs/mattes/frame-0005.alpha",
+      "matteSha256": "71445cc9bb83af9ff7e653156f047159fd8129909ca749c458f39eee44d233ce",
+      "area": 37618,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 5,
+      "sourceSha256": "9dc3c4d7cb13993bf0c8a8b675ce230a1cad98e65678b5439dd1dcdd2a251af2",
+      "crop": "inputs/motion-crops/frame-0006.rgb",
+      "cropSha256": "6d2811c913009ef1643a67aa83645316fffed88cb5233a3a8c6397b715c24911",
+      "matte": "inputs/mattes/frame-0006.alpha",
+      "matteSha256": "5b63bf3d4686b254a2b884551ac9b99e8f404f55441d174987b0f0d969f60660",
+      "area": 37675,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 6,
+      "sourceSha256": "1635d159f630c5caced1d2519a745f37726ae5b2afbc36cb87be56ff103d3844",
+      "crop": "inputs/motion-crops/frame-0007.rgb",
+      "cropSha256": "b912f69f312940bbfbd7b374ed0341772c676bbf394686c8deb1ac2a7149fa11",
+      "matte": "inputs/mattes/frame-0007.alpha",
+      "matteSha256": "c176417547c939d770dae9a947c8c33fc05e2f8ec4f75717c1eff7afa3b70e38",
+      "area": 37651,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 7,
+      "sourceSha256": "d88063168bc55efa34043b5e2947fcadcb07fb48bfb7031b7c376852985e3891",
+      "crop": "inputs/motion-crops/frame-0008.rgb",
+      "cropSha256": "ed499425bf26d4d9a42026e0ec5a3fcd24cef67395a281821bec02a0b301632d",
+      "matte": "inputs/mattes/frame-0008.alpha",
+      "matteSha256": "e936bd0ff532e38b072d7503546ce929e67294e85043d3ae649928a8f44d77db",
+      "area": 37665,
+      "maximumRowBoundaryChange": 5
+    },
+    {
+      "frame": 8,
+      "sourceSha256": "8533b6b651105ddab0d7e4f116593b662edcc43862fcc7599469cd5783a26f12",
+      "crop": "inputs/motion-crops/frame-0009.rgb",
+      "cropSha256": "548699bb12b774ca79f96de60b7b210b5d4f36e7b16e20c874d70e3d7f191c47",
+      "matte": "inputs/mattes/frame-0009.alpha",
+      "matteSha256": "b572332b1c1a5c18d5abbf3a8e9e551b2f1b28a9b3f871d8b5d94422f3f76ecf",
+      "area": 37647,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 9,
+      "sourceSha256": "0c243b6069e9dee3241831e493ce4903697413bccc20c68292cfec99b2511194",
+      "crop": "inputs/motion-crops/frame-0010.rgb",
+      "cropSha256": "0ebc8d9394df8e7feacebc48c5145d5d7f4740014c36ac73c03c8b174e907ef1",
+      "matte": "inputs/mattes/frame-0010.alpha",
+      "matteSha256": "36100477086db9081103dd05c402928783290b5a39413d40e97b7d9d64edd898",
+      "area": 37639,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 10,
+      "sourceSha256": "98413e92f51ea8abfdbdfbf9c0cb929afd4d45052f4484ba61e3e134a4230c94",
+      "crop": "inputs/motion-crops/frame-0011.rgb",
+      "cropSha256": "de495e500559f5a92d95826292eccae888937cd093da1f6e5d862e58a30f4277",
+      "matte": "inputs/mattes/frame-0011.alpha",
+      "matteSha256": "c54d57dedfa4f40fc1230bbc782d1a2d2e326261554f5f4e5825ae18c309c3d0",
+      "area": 37667,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 11,
+      "sourceSha256": "f2ab948a3f3df301462bf05d0fb4fc2c9801eecb7fa814707fc37bd27116c3c9",
+      "crop": "inputs/motion-crops/frame-0012.rgb",
+      "cropSha256": "ddbac5c7821c10597b43cfac35f0a13da4e640ffc33ba75ee23d9d2cf58c5d3a",
+      "matte": "inputs/mattes/frame-0012.alpha",
+      "matteSha256": "c22b5502f660884bc00fe4f35c6497030a68b7a6b8ecbe1989200d1b0b41d878",
+      "area": 37664,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 12,
+      "sourceSha256": "d9f8d4505fcad78c5ce4beae2f267822343f7215423dafb719da7d214053865c",
+      "crop": "inputs/motion-crops/frame-0013.rgb",
+      "cropSha256": "c1fc7b347b7c8baecc39e93204695426d109e3249f23b78a20634af6a64c339f",
+      "matte": "inputs/mattes/frame-0013.alpha",
+      "matteSha256": "9b0a28431dd79acf6ac708405a62606539b64ab68630faa15f380cca71784f5c",
+      "area": 37657,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 13,
+      "sourceSha256": "f00b187aee8b82bc8121652ac027ec8a01f733bbc2d4f0171f2c4a11e62eba96",
+      "crop": "inputs/motion-crops/frame-0014.rgb",
+      "cropSha256": "9fda130b8e663b1c0abff5e6d404df88c7ffd1d64219188e06e791678cb42912",
+      "matte": "inputs/mattes/frame-0014.alpha",
+      "matteSha256": "576aba715be746a285d83ea7e613be2fbad1a1610c97140028a7e238ed8ca1cf",
+      "area": 37648,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 14,
+      "sourceSha256": "36ec46f0c04aa0b34bb9b883ca9c8ee8255887039e4e35c4585873af5781b6a6",
+      "crop": "inputs/motion-crops/frame-0015.rgb",
+      "cropSha256": "bd4e39449ab15c317524d1f99ec72203c3f360c7bec83827cc28be29438269a0",
+      "matte": "inputs/mattes/frame-0015.alpha",
+      "matteSha256": "0caf030e4c95d5e543ba23728ca5955e788122d0c0d4d1247a0f075093cb8615",
+      "area": 37660,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 15,
+      "sourceSha256": "c2d55f962822bba26ab90ecc4ccdad6a3b11371f3528b22217c749ebaf013015",
+      "crop": "inputs/motion-crops/frame-0016.rgb",
+      "cropSha256": "68490d0fc7e488e724db8fe102de76d5311f2789cc151cbadb18e849fd6abc0a",
+      "matte": "inputs/mattes/frame-0016.alpha",
+      "matteSha256": "b645621a659d445d4a4361fa065baee060e8296d9f24a4c0ae103f2ca72f216b",
+      "area": 37670,
+      "maximumRowBoundaryChange": 5
+    },
+    {
+      "frame": 16,
+      "sourceSha256": "f49e54bad3a95ae676d2687686f4f0b9b7ff5bcd1b4ba65792d2dcaee52e80f4",
+      "crop": "inputs/motion-crops/frame-0017.rgb",
+      "cropSha256": "0ceadf5ff5100536a7b116041d363f112d44f14ad5516cefdf2f060dbfcd91db",
+      "matte": "inputs/mattes/frame-0017.alpha",
+      "matteSha256": "20e474c0d2574697be43aae8f2e0e982e501131aee70a4b3089a14592e8c3d5d",
+      "area": 37640,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 17,
+      "sourceSha256": "dd9bff7d49028c949274dc1d64a1ee61cf081fbbddb7dd0608c65d207d5e02f2",
+      "crop": "inputs/motion-crops/frame-0018.rgb",
+      "cropSha256": "058d6552bae80f113c492a0c01a3b0874edb7f5fefd1330a68978e4771dd999f",
+      "matte": "inputs/mattes/frame-0018.alpha",
+      "matteSha256": "af5fb55b8f5ae48db3864f06e55207952473e5471ddab18e92e6ba3461a141df",
+      "area": 37629,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 18,
+      "sourceSha256": "3be2c4b2199fc7e4caa09e7fefddb6f9a10bcec8ebfaaeb344de13fd5d100233",
+      "crop": "inputs/motion-crops/frame-0019.rgb",
+      "cropSha256": "0db6bc0304a825d88689b61553763d9d1cc00ecba4fb74c1f8ea99df579d9daa",
+      "matte": "inputs/mattes/frame-0019.alpha",
+      "matteSha256": "7f94eca76011156d556b136f90abe3e3a50540a6eae61955ac65e868c142e78d",
+      "area": 37766,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 19,
+      "sourceSha256": "6f9ed570873287c72cda77f7560c3c58b7bdc71e38366782b8ffe6643eadca3f",
+      "crop": "inputs/motion-crops/frame-0020.rgb",
+      "cropSha256": "b4903050f317d9bc589c84240d38905f8d73a07b0b2d8af78466e21e5a75ff3d",
+      "matte": "inputs/mattes/frame-0020.alpha",
+      "matteSha256": "b86c8df4774f747b20acf4206e519492a05b0b2f2d3bf68892fd2325d05877b5",
+      "area": 37849,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 20,
+      "sourceSha256": "7f35f52deb3cbd6e361c5db32756de6cb1aef73f0c759045f19d4fe1f6590ee3",
+      "crop": "inputs/motion-crops/frame-0021.rgb",
+      "cropSha256": "0d085fa14f79c8db9d1a93e66fc367b91bc2d89b9d6a8d159c61317a36ed95c0",
+      "matte": "inputs/mattes/frame-0021.alpha",
+      "matteSha256": "d3bef4f6423c08276acdfb2ae2d35c85877e57533f3829f4be9139e8558a33c0",
+      "area": 37858,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 21,
+      "sourceSha256": "8c85a43ccf7713ca3acd198ec4811fd19ee373a64b41d8fb44f69758b0851b89",
+      "crop": "inputs/motion-crops/frame-0022.rgb",
+      "cropSha256": "f95bd46b5df98bb64885676fdb6a955c29d955268887897cc1b1b7bfb7759de3",
+      "matte": "inputs/mattes/frame-0022.alpha",
+      "matteSha256": "0b3f9a7a62e9fa97dbbc5be3a682cb20cd43ffe3c08744130853573eae946c33",
+      "area": 37730,
+      "maximumRowBoundaryChange": 11
+    },
+    {
+      "frame": 22,
+      "sourceSha256": "a700d16370eab4a0860f36b52d1bbcc6da12b2d2a655ac258e255ae8fe736605",
+      "crop": "inputs/motion-crops/frame-0023.rgb",
+      "cropSha256": "5d88fbdf00a9d82d48ae36180a338120aa9344cd6cc23fcf88886f5e819c8914",
+      "matte": "inputs/mattes/frame-0023.alpha",
+      "matteSha256": "1ec95a3299b79519edd8415a86d0f6048cc2ed945798115889c7fa0104c05987",
+      "area": 37397,
+      "maximumRowBoundaryChange": 16
+    },
+    {
+      "frame": 23,
+      "sourceSha256": "6975dd03da54a550434e89722e30caad0714d77c11e5d80d75f8d140e85e70e0",
+      "crop": "inputs/motion-crops/frame-0024.rgb",
+      "cropSha256": "71572013690d5ba0261b9d3d3fb701b8aed7b85fa8d5bf1641eee1bf4c280a1c",
+      "matte": "inputs/mattes/frame-0024.alpha",
+      "matteSha256": "ac9f0204368fe56112c86638fe0f68deef84931b693b5bf8a7a37c42c015016a",
+      "area": 37176,
+      "maximumRowBoundaryChange": 14
+    },
+    {
+      "frame": 24,
+      "sourceSha256": "879c7df12f4f9b52eb4fe74e5937fd545dfaa1bccd587d36cea2591ed43877f8",
+      "crop": "inputs/motion-crops/frame-0025.rgb",
+      "cropSha256": "d35090b5d79d6859fc91125a2130d1c736bfac60d33bcff1f36432189c673b81",
+      "matte": "inputs/mattes/frame-0025.alpha",
+      "matteSha256": "922f165d8bcceab7b1281e8eb8210f005ecc66c0ef4d85232b3d8f12e5bd7c9b",
+      "area": 37592,
+      "maximumRowBoundaryChange": 10
+    },
+    {
+      "frame": 25,
+      "sourceSha256": "36c5cfe3fe0388ad607062579f96ea87e454aa79fd79320984d4a734ae07e210",
+      "crop": "inputs/motion-crops/frame-0026.rgb",
+      "cropSha256": "29dee1aeeeaccd1158c1bbe81953d681c4fc3938a58b07c9d8233702a9f2f3fb",
+      "matte": "inputs/mattes/frame-0026.alpha",
+      "matteSha256": "274f47c53391d0e8169c4f0be516281a0ee485ce52da432fdb72c72ffe514730",
+      "area": 37291,
+      "maximumRowBoundaryChange": 17
+    },
+    {
+      "frame": 26,
+      "sourceSha256": "8f5afab730d57885962dd9973fe67c1e419f24f5cbd7a0a795e5c8012ce227b5",
+      "crop": "inputs/motion-crops/frame-0027.rgb",
+      "cropSha256": "3da61326d8904995015ef4a78e8d760ad656be2cdebbb1f663ec7425fcf1545b",
+      "matte": "inputs/mattes/frame-0027.alpha",
+      "matteSha256": "1571284ce0e6f496f749d7b36409e7a7cacc2e90b98af2195b390845fd888f9e",
+      "area": 37715,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 27,
+      "sourceSha256": "746c411ae053d3e25da60ab1d7c496ef6b7030ea6f24ee8146674b8efff66ecb",
+      "crop": "inputs/motion-crops/frame-0028.rgb",
+      "cropSha256": "89260ffd9b08050c38da89e404e55f03df880a08e26274d59880a3ea78227a9e",
+      "matte": "inputs/mattes/frame-0028.alpha",
+      "matteSha256": "d6d37a3bc06351719794ef3c4d84b51d1e0126ea2a308b63d03f69c4dd4c563c",
+      "area": 37573,
+      "maximumRowBoundaryChange": 12
+    },
+    {
+      "frame": 28,
+      "sourceSha256": "2600c7145bb5e182c8d7ff953e1a310b7f01edc43ab7af8f8a64515e620c0302",
+      "crop": "inputs/motion-crops/frame-0029.rgb",
+      "cropSha256": "421077c21ad80fb8a496aa894e69c947aacc11825821cda4792c7b6391fb42fa",
+      "matte": "inputs/mattes/frame-0029.alpha",
+      "matteSha256": "e6b3730233ce0e5e0b56df94349d9ef0e175bf10d590e32fbf8f2ce7f66282bb",
+      "area": 38124,
+      "maximumRowBoundaryChange": 11
+    },
+    {
+      "frame": 29,
+      "sourceSha256": "0659c6c1e18cc21288838517af83b4e20eebc8cc3e3961d6aed81561f6a940fb",
+      "crop": "inputs/motion-crops/frame-0030.rgb",
+      "cropSha256": "0c6ace4751d36dd4e88cdb3a57d145ff444372dd6b02042ce966b75ea768eeaf",
+      "matte": "inputs/mattes/frame-0030.alpha",
+      "matteSha256": "1739af889c989d372326d41b3ef34ae224c7c38f391890e5ddb88824120ea568",
+      "area": 37869,
+      "maximumRowBoundaryChange": 14
+    },
+    {
+      "frame": 30,
+      "sourceSha256": "f4d2b0ddb9838f8bbd6fa616f80a02b5eab48e070b3d32c092da0b52719343f0",
+      "crop": "inputs/motion-crops/frame-0031.rgb",
+      "cropSha256": "0726373bc59fccbcfc23b231a1a49f40b262de6f253682de550a80283730de84",
+      "matte": "inputs/mattes/frame-0031.alpha",
+      "matteSha256": "9d55192bacfc7c76660fb60b68d8b75b3db0103213af45c67ed83d9eedd608e6",
+      "area": 37831,
+      "maximumRowBoundaryChange": 14
+    },
+    {
+      "frame": 31,
+      "sourceSha256": "cc2f752372c7191abfb46edcabb9067011c3460b6d3a32fa0e8db91cdbf16ac3",
+      "crop": "inputs/motion-crops/frame-0032.rgb",
+      "cropSha256": "bffd7b1b30afe2bd44e754068ca4c3ec1a19173189a5595a15c5bf796ea07081",
+      "matte": "inputs/mattes/frame-0032.alpha",
+      "matteSha256": "03e3194b9c14aacf8d598d8662425bd72fb8ee5224efe75919d092b4c9bc02bd",
+      "area": 37649,
+      "maximumRowBoundaryChange": 11
+    },
+    {
+      "frame": 32,
+      "sourceSha256": "91e1e6050f829bece5f0fd4a155d5a48d5e9990e8b7457a55f976fd5eea49412",
+      "crop": "inputs/motion-crops/frame-0033.rgb",
+      "cropSha256": "7efaa675345477462d5e55dcf9b6f6d74059b0dff70f54aadeecba15beae3ae9",
+      "matte": "inputs/mattes/frame-0033.alpha",
+      "matteSha256": "521dcb3fa47fe8e4b8d2c17d3418c95f89de00d4229fdaebebea23d1e54be3ea",
+      "area": 37291,
+      "maximumRowBoundaryChange": 10
+    },
+    {
+      "frame": 33,
+      "sourceSha256": "8d950f9c2bd2d39bd755ca39cb2cf03abe460eec3864e88a7f7ff4a7674e1708",
+      "crop": "inputs/motion-crops/frame-0034.rgb",
+      "cropSha256": "a890db6ed1a0ada81e6498026df90bcf2fac771aaf27904ad65a6b99e0b7a8ef",
+      "matte": "inputs/mattes/frame-0034.alpha",
+      "matteSha256": "e7d3609286c1c0d2b5421162dfb218a41da78c953fb135cb385df2ee2643ac16",
+      "area": 37281,
+      "maximumRowBoundaryChange": 7
+    },
+    {
+      "frame": 34,
+      "sourceSha256": "51760466e00d078422e11ae60d8cf7225fc768aff6cf5e18388a4b102196fe78",
+      "crop": "inputs/motion-crops/frame-0035.rgb",
+      "cropSha256": "487e562d1537db7eb83c4120c2fd83b2a69ca256c7be40902b2062b6fcb79f40",
+      "matte": "inputs/mattes/frame-0035.alpha",
+      "matteSha256": "b411529a547176b37d58f1ee2fbe345f1283aff8c0049fdba7b3b9dd7de5e13b",
+      "area": 37326,
+      "maximumRowBoundaryChange": 7
+    },
+    {
+      "frame": 35,
+      "sourceSha256": "96b03d0fdfec0f5d267ac1c92d26b743f55d11bce120d4500b333fe43d5e4f96",
+      "crop": "inputs/motion-crops/frame-0036.rgb",
+      "cropSha256": "cd04d1b7c3056d5b11848d7165d185956a57e7774f69aa653b260e80cbe9e8b9",
+      "matte": "inputs/mattes/frame-0036.alpha",
+      "matteSha256": "349c75e5910a9fac460e8caeb5b428bdd049c0e2e0a277403323711009f735f7",
+      "area": 37333,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 36,
+      "sourceSha256": "cc052314841c7dd3afdb6fc176abff3db322d56c502d4bcc0f71ba277c27831c",
+      "crop": "inputs/motion-crops/frame-0037.rgb",
+      "cropSha256": "bc11186dfce9b99aa51432bf4932f647f4351f99ba0d709f2e691fdef8020e3f",
+      "matte": "inputs/mattes/frame-0037.alpha",
+      "matteSha256": "de15d7024ad76357d7f6a1b1d5975acc4e9c9c0ee4a9570bef2da66dbda2a8f2",
+      "area": 37262,
+      "maximumRowBoundaryChange": 10
+    },
+    {
+      "frame": 37,
+      "sourceSha256": "d419d0d75d843a0597e5cd38a5647a8347726e3c225d41a925ff0614bf8bad37",
+      "crop": "inputs/motion-crops/frame-0038.rgb",
+      "cropSha256": "c511278922534f1158b2fb96a240ab7b0dc95f07894f30d00eaf74e95639a42e",
+      "matte": "inputs/mattes/frame-0038.alpha",
+      "matteSha256": "1e3d70bda0d32727b5db550b5a6b3c5e1f89f035fd2967c9d20e559f8c3731da",
+      "area": 37371,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 38,
+      "sourceSha256": "e7db18b75b869d0e709734b242cb7e5168f12375cdc5945130a3a6cfa8b71223",
+      "crop": "inputs/motion-crops/frame-0039.rgb",
+      "cropSha256": "592e62bdf92b48b48ef74eb9a10a08d66b8b08b034d049889781a4e2e0622783",
+      "matte": "inputs/mattes/frame-0039.alpha",
+      "matteSha256": "57300d5854e926895b95ad7103b884cf38582bd544ffbf23614506c15f38403a",
+      "area": 37343,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 39,
+      "sourceSha256": "fb034dfa0d70dfe0e3ece8eb6f96ac5a43e05c94fceb827e544b7119d193e7f1",
+      "crop": "inputs/motion-crops/frame-0040.rgb",
+      "cropSha256": "354ad3544e6823bb950eac4d75909f3202bf2e67d6e78e748ed3ee190949cd82",
+      "matte": "inputs/mattes/frame-0040.alpha",
+      "matteSha256": "7764d6f383fbbda0518e41f9d01095d7a554935b1948816b6c7b02fdc10685a5",
+      "area": 37290,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 40,
+      "sourceSha256": "50d19ac46efe33dec8d5f0141a4ab7b57c8836f0e2776fe0712015f42ba40298",
+      "crop": "inputs/motion-crops/frame-0041.rgb",
+      "cropSha256": "12e2bf6c8b1fb7120ddc46d444d6b9a0207b92bef4a66f927a32cf1ff775d6d5",
+      "matte": "inputs/mattes/frame-0041.alpha",
+      "matteSha256": "9f7ed7b2578132737588bc77cb0464bab0bf16196f24250b670eadb4b444f06e",
+      "area": 37227,
+      "maximumRowBoundaryChange": 7
+    },
+    {
+      "frame": 41,
+      "sourceSha256": "9d9a6159e56a92b9f1858bd31377e1f78cb1165c6ac374dc881b5998af1d23f3",
+      "crop": "inputs/motion-crops/frame-0042.rgb",
+      "cropSha256": "0b7e16c6c02c84a9671430357bb8906a95d73e5db6e9c21d61beacb22c225483",
+      "matte": "inputs/mattes/frame-0042.alpha",
+      "matteSha256": "18f26b7f33189d43f93ca5cb107919511a55a2a57c3fd0f605d845dd8b7657ba",
+      "area": 37094,
+      "maximumRowBoundaryChange": 12
+    },
+    {
+      "frame": 42,
+      "sourceSha256": "0896c3e612f854cca9fbca792becc406dc176bdde00e630e5d1ba75cf76d7fe7",
+      "crop": "inputs/motion-crops/frame-0043.rgb",
+      "cropSha256": "1e0616d1b0848698a792830ddd361e0c2d0a21d372b0feb31fbb3f819a428b4a",
+      "matte": "inputs/mattes/frame-0043.alpha",
+      "matteSha256": "5715b047ed48b0c90725e2f68ed1a4b63e6282493e571b40008a50f42799e57b",
+      "area": 36858,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 43,
+      "sourceSha256": "f48eb050f2cd8d7402f7fa2bb767f0e470d7d3ebd4e4042052b260d34e93fb4b",
+      "crop": "inputs/motion-crops/frame-0044.rgb",
+      "cropSha256": "8c4325f721360c80c26be11fc139ce73577534399a77dd19b6abd726c5fadbed",
+      "matte": "inputs/mattes/frame-0044.alpha",
+      "matteSha256": "b5d33ffe670ede429ee1e88c5d1794b6f4355496deb33eebfb0d4b66e4edf825",
+      "area": 36617,
+      "maximumRowBoundaryChange": 9
+    },
+    {
+      "frame": 44,
+      "sourceSha256": "b29b7f5a4d3552e5d578726cb641f1275dc45b6d32796dd05724445620cd359b",
+      "crop": "inputs/motion-crops/frame-0045.rgb",
+      "cropSha256": "6549f4a4425c42fb283bc2037d226f6deeb4e110b0e8d95225256a687bf5f23c",
+      "matte": "inputs/mattes/frame-0045.alpha",
+      "matteSha256": "a4aebf527b80b867fd6d6995d8486368efee90463c5d0c8b1c71b1398e264c9a",
+      "area": 36299,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 45,
+      "sourceSha256": "4969b6b6e366f0392025a9815b0017406af41a185d12030fca966d9ecf5eba65",
+      "crop": "inputs/motion-crops/frame-0046.rgb",
+      "cropSha256": "58d88ccece0dbbe5616a133ec65aa586d53b2b896af681bf73606d161541b2a8",
+      "matte": "inputs/mattes/frame-0046.alpha",
+      "matteSha256": "1f7ab02191cd2e5d86a88086be2ce4cb9f2df10776c3f242678fecbdf393b453",
+      "area": 36137,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 46,
+      "sourceSha256": "1477afa8229594de1a8cbcae71294d5559dfcb6b7eb17101aa8ea2020d955284",
+      "crop": "inputs/motion-crops/frame-0047.rgb",
+      "cropSha256": "f5df7d64c1356798d5cc54fb88dbd321dd8b01294727c2c717ba4215a78e05dc",
+      "matte": "inputs/mattes/frame-0047.alpha",
+      "matteSha256": "4794ea6a987fb7f89671b5ae360453f7d7bef3a801431878c09ba8a666451d2b",
+      "area": 35935,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 47,
+      "sourceSha256": "e5ebb2974046ec30108b4af4bc009dfd3f7ab7ab52a9a95b16d7e62f187472c4",
+      "crop": "inputs/motion-crops/frame-0048.rgb",
+      "cropSha256": "bde9780bad322cef85738e999fab6d787f303034526688c5bfd89823acbdc595",
+      "matte": "inputs/mattes/frame-0048.alpha",
+      "matteSha256": "8c7c8ea50ec2b30523acb1b8f5354a14db902497d36d5cf2f2f5e849a766dd0c",
+      "area": 35778,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 48,
+      "sourceSha256": "431c7916a29bb16a29af24dd2ec9dd097a5310a14d43cc3b92da12b53d2ea6e7",
+      "crop": "inputs/motion-crops/frame-0049.rgb",
+      "cropSha256": "4fb8d3f336aefa3c7b498d27953ca67fd83b347500fb0423622fbb7d7aa7110f",
+      "matte": "inputs/mattes/frame-0049.alpha",
+      "matteSha256": "1beb64a65f38b09ef34142670c7655dc8dc27ef8140158a3160439b2ac721bfd",
+      "area": 35810,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 49,
+      "sourceSha256": "5dae22de9e1ed214b3adea5e593dafbab0875f19a001a93e1dc27cc0a1aaeb66",
+      "crop": "inputs/motion-crops/frame-0050.rgb",
+      "cropSha256": "3fc74dfaf5723540394aa9345be020665a6aeb249f2654a4a805d7794c127ccb",
+      "matte": "inputs/mattes/frame-0050.alpha",
+      "matteSha256": "c78635abd9efdc1d689cdf951f942fc0b1b9a9142b261ee0e85813e38e7ae25f",
+      "area": 35870,
+      "maximumRowBoundaryChange": 5
+    },
+    {
+      "frame": 50,
+      "sourceSha256": "f2b8c18e943088ce4305e09157175a69efc32bf3b9eaf6b1410b2b04eef681c6",
+      "crop": "inputs/motion-crops/frame-0051.rgb",
+      "cropSha256": "dcd6ad310c1430b3cf9cc72f3a4b4c80be0acaf65c46e8eba58619ddf74478e6",
+      "matte": "inputs/mattes/frame-0051.alpha",
+      "matteSha256": "d5acfc67907e647ed47dfaf8e86b8a31021d13fd320179410e21ad76c0efe378",
+      "area": 36890,
+      "maximumRowBoundaryChange": 7
+    },
+    {
+      "frame": 51,
+      "sourceSha256": "23e7d94418cdcb7b28f8ef2d6c1f2930fbd6a90c1ef2b4e5d767356f5ea00499",
+      "crop": "inputs/motion-crops/frame-0052.rgb",
+      "cropSha256": "0d39bbf46eb14c19107be9b99aaf82179e2260bf524a69999334870837246ce3",
+      "matte": "inputs/mattes/frame-0052.alpha",
+      "matteSha256": "67c747d5d03ca952a3d3d1a52b4829308e72642eb992ec2c23b671c4a6be3b4a",
+      "area": 36949,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 52,
+      "sourceSha256": "f633a696ba08235a9d27cceb2f2c71219ed778716b1df8284cdb756b093b06ad",
+      "crop": "inputs/motion-crops/frame-0053.rgb",
+      "cropSha256": "8c17dfb0f818094a84a64450c8865d9d63061639387d60926066d27d4f61abc3",
+      "matte": "inputs/mattes/frame-0053.alpha",
+      "matteSha256": "4503ef55e696d9a648eebdb70e0ff5378d2c3aa105867ab732461b59908e124d",
+      "area": 37334,
+      "maximumRowBoundaryChange": 10
+    },
+    {
+      "frame": 53,
+      "sourceSha256": "38aefb87cb54f9219912e134a54e5a4dc158104829980b6ea6efd8303b53860f",
+      "crop": "inputs/motion-crops/frame-0054.rgb",
+      "cropSha256": "63e75170eb158482ec2fac2229ae574721d18774db93083c78be19c13c176847",
+      "matte": "inputs/mattes/frame-0054.alpha",
+      "matteSha256": "a85ed59641e2955087d54bc9e81ff55cca796acba3bcb1f12c245be25a50852a",
+      "area": 37467,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 54,
+      "sourceSha256": "7f0a12379792b1451cf0d90a9bfda370a740c5487b29e30ca62a30fa9deecdf5",
+      "crop": "inputs/motion-crops/frame-0055.rgb",
+      "cropSha256": "0276f6bd251017a7099cf7ac303a776872f9c6a69543fd30e207e66c03a730b3",
+      "matte": "inputs/mattes/frame-0055.alpha",
+      "matteSha256": "d8fbd0a7ca01a5d23811c2e91c96085de527978c7544a8a2c9ab4b2660b9b501",
+      "area": 37345,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 55,
+      "sourceSha256": "af5a10cf7053f3369d90b26775088ea647531eed9fc4ffaf996f7c936588b484",
+      "crop": "inputs/motion-crops/frame-0056.rgb",
+      "cropSha256": "e878e876fc70315be8f0c346f67683efed9686be0006e445e1df65914d6233b0",
+      "matte": "inputs/mattes/frame-0056.alpha",
+      "matteSha256": "6f6d7979365bfb28737ed2c2fa4ef2f72a3b633fcc66aa7ab26d175a34873761",
+      "area": 37358,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 56,
+      "sourceSha256": "416d70f565ff6857ac14f3eaf6d06bdf8b9ee38c30dedbc8e1edeb5046ab66e4",
+      "crop": "inputs/motion-crops/frame-0057.rgb",
+      "cropSha256": "f0c8badfcfdc07c59b304aa38c0c18679338e8ffafe51d9c372045bf155a1bdb",
+      "matte": "inputs/mattes/frame-0057.alpha",
+      "matteSha256": "7057fddfec0ce949e66a2f9f11f20ec25aaa0fad73fcf61d431271cc0f4961f4",
+      "area": 37325,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 57,
+      "sourceSha256": "72690c9ecc3deb2ca1c49c87cd22c7a465aef172613f43f772e8350eaed7dc3d",
+      "crop": "inputs/motion-crops/frame-0058.rgb",
+      "cropSha256": "f10754531c831909abba74b66ed881a99798417b7fd32c91d127a9f74abebe61",
+      "matte": "inputs/mattes/frame-0058.alpha",
+      "matteSha256": "0a05165bccb294a90dd97b0da9cbb1a76596fff446093c4dc9ca102f00ecd6a4",
+      "area": 37454,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 58,
+      "sourceSha256": "33f58a36ceb604eafe7a4016122bc0e4d5af387666758a7d8ff186a358f00b88",
+      "crop": "inputs/motion-crops/frame-0059.rgb",
+      "cropSha256": "f1add20df34f807b28eb0a052137101826745677a2d47b9e6ac9b7064865b844",
+      "matte": "inputs/mattes/frame-0059.alpha",
+      "matteSha256": "756a6b2875c48b4ad980a96348580faa2744c6bad3dbc6194178c8ee1e3d63a8",
+      "area": 37390,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 59,
+      "sourceSha256": "f9d9e2bef77d0c3bc7d1072f5349de660a10c6141319a34a0fd7de399a34c244",
+      "crop": "inputs/motion-crops/frame-0060.rgb",
+      "cropSha256": "ef7a7fbffaf8a241bb4598f89d52027794abb037b13235e49343526ec472653e",
+      "matte": "inputs/mattes/frame-0060.alpha",
+      "matteSha256": "3d21f03fee1fcb7b3922f7a07f4e6dc72c177dcf393a343577e51fa059478577",
+      "area": 37418,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 60,
+      "sourceSha256": "ebb2ec37c07be82cb6a3fc3b2707fe4818cc9d04e1ed253c04b6de5436f24f60",
+      "crop": "inputs/motion-crops/frame-0061.rgb",
+      "cropSha256": "f4e35dce7de2318790ed4aa2ecbd9471c327f32b1062307a19a85634561f96c2",
+      "matte": "inputs/mattes/frame-0061.alpha",
+      "matteSha256": "362e72b54d625461989c3ecf915c57db5641bc081e01b458e0513c893699cbd4",
+      "area": 37377,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 61,
+      "sourceSha256": "d618af2c9a36c18f63cdef7a61fee1a452b1f9780ec3286c5ccbe21c5c1bf96a",
+      "crop": "inputs/motion-crops/frame-0062.rgb",
+      "cropSha256": "fa04d540df93ca54730b2e559f308f1ab5327286b6a7158e6b262b4a661803af",
+      "matte": "inputs/mattes/frame-0062.alpha",
+      "matteSha256": "52cb1dbfc0a56060e7d278175bb1008fa3ea784c46072a9b6dfb44f99df936b9",
+      "area": 37437,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 62,
+      "sourceSha256": "0f79b281bd0e0ea4aefda2aa47c4b67201051f6d30e4fe0f3c4d3b44a268356f",
+      "crop": "inputs/motion-crops/frame-0063.rgb",
+      "cropSha256": "10bc537e6ee7fc9ed755a12e8b79e21279b1c83289d21efd9446ce9315753400",
+      "matte": "inputs/mattes/frame-0063.alpha",
+      "matteSha256": "da0e8d9ba57da300604588863c28485293b006fc0c46fa62313a2127ee0a1dd4",
+      "area": 37435,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 63,
+      "sourceSha256": "39febb052d5a6db4d8288055914d1414bbcd19db0a6d6d2e93c229a0d921d166",
+      "crop": "inputs/motion-crops/frame-0064.rgb",
+      "cropSha256": "33d73945c42011ec7567055252e577587a07978897d8bc34f4bd431d97ea2f16",
+      "matte": "inputs/mattes/frame-0064.alpha",
+      "matteSha256": "ce7d929913ccda4979c8d4d0e4f2e6b080b896a56d3b73815c75249c31d13de2",
+      "area": 37388,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 64,
+      "sourceSha256": "319a6bb838ac9f22deb228dc5d909bbc878f2bde0d62d25f26657541b85ca1e6",
+      "crop": "inputs/motion-crops/frame-0065.rgb",
+      "cropSha256": "9afe3418488bf5f7c6eef12bb7bcd0235b85d439e972d5cfecb0dacebac1e8ec",
+      "matte": "inputs/mattes/frame-0065.alpha",
+      "matteSha256": "235545bc26ba6fe09552ac2b0884e5277855b97d4b9738cbfa1d4befcc8614fd",
+      "area": 37367,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 65,
+      "sourceSha256": "c213873115f4d47024624484de17d4babd220b3a8a7fc94cc1d4532eddb4d7ff",
+      "crop": "inputs/motion-crops/frame-0066.rgb",
+      "cropSha256": "d3d884b69723d81c1ed29fd39e0034684dcf2a3dc8e90a8259e3cbb968dee051",
+      "matte": "inputs/mattes/frame-0066.alpha",
+      "matteSha256": "1b19b6b121c9a4d18872376bb740fbb23d7ff88b116bc0d4407f8496e94953e7",
+      "area": 37452,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 66,
+      "sourceSha256": "636f7743a369323bc623c54a660de6e26ae31fb72ad9cb0b85358910b5ffb985",
+      "crop": "inputs/motion-crops/frame-0067.rgb",
+      "cropSha256": "dd12d5e34806fb935c7342f93eacb79519854608c4a7bc92bf53958c9f1f3964",
+      "matte": "inputs/mattes/frame-0067.alpha",
+      "matteSha256": "0505cd752416b0a1330bd1598f1774f51ab705e4757de98d145c09ca710c2a86",
+      "area": 37451,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 67,
+      "sourceSha256": "d6d7aaf1af08870bec143f4899cbffab8739c2a0ca5c27cc4014bc3910d3af36",
+      "crop": "inputs/motion-crops/frame-0068.rgb",
+      "cropSha256": "3a98f2ce73e96b1dd451f80f7705eba3dc4581dd2ebe3ee79ee562e301c37467",
+      "matte": "inputs/mattes/frame-0068.alpha",
+      "matteSha256": "f79ccf9830430339d3521aa804c9fecb321e185b54cee8f7a69589ce66c527ad",
+      "area": 37393,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 68,
+      "sourceSha256": "e417a93993b32e8746692daac651a8216de93f5050cb15515a3d0113d255ebcd",
+      "crop": "inputs/motion-crops/frame-0069.rgb",
+      "cropSha256": "0e0cf65b963fee16f8fd030cafc5fa8e8c8289d4f6ab8b310b8f4a137a892431",
+      "matte": "inputs/mattes/frame-0069.alpha",
+      "matteSha256": "c295085db23803ee52046154cec546ea94e7b8b813e63d8580df642bf3915d0d",
+      "area": 37409,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 69,
+      "sourceSha256": "37cf820f8a5621b35eccf7282beeee76292deee42f9596f6251538efc929bf61",
+      "crop": "inputs/motion-crops/frame-0070.rgb",
+      "cropSha256": "dff4ce75cc8ba4fdbace1b3ade1d9690da8a37610c38d4f5fead686ac1c27dcf",
+      "matte": "inputs/mattes/frame-0070.alpha",
+      "matteSha256": "580864e577bb22b1458c82d6f762837b27c408380555d01ed0d45efc06c6457d",
+      "area": 37455,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 70,
+      "sourceSha256": "b244af220eb629a449e0a5485816d18c9c88eb38b65e0a8c8308a8277ae0cab2",
+      "crop": "inputs/motion-crops/frame-0071.rgb",
+      "cropSha256": "5b7b2c2b80376bb20ec3e483c47bde694e6f9c34544216f045785c2ca9ebbc71",
+      "matte": "inputs/mattes/frame-0071.alpha",
+      "matteSha256": "a3640945ec58c7c7fb19858efe677b38ddc38c99f918e6199a00ee5afb2572aa",
+      "area": 37444,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 71,
+      "sourceSha256": "a95f97d1fcc6c998b54ac2baeeeac42c3c703fe5561ba8129bcdd6bb2266f6cb",
+      "crop": "inputs/motion-crops/frame-0072.rgb",
+      "cropSha256": "2a59c26a36354ba1dc3a204b2ec43c830c335d56ee77d38b6c75fb153c7cad3c",
+      "matte": "inputs/mattes/frame-0072.alpha",
+      "matteSha256": "7035fb4eb0760fe9cf016e817e8f605e16d3627a83bedd95259d72661374b973",
+      "area": 37456,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 72,
+      "sourceSha256": "113e8136edd5e0e09afcad8db06835a007dd674063671097e49d76931731170e",
+      "crop": "inputs/motion-crops/frame-0073.rgb",
+      "cropSha256": "41cc354d4cdeb48fbd8e85393e472269474ba2c9cdbaaa72e201b51dfae139c4",
+      "matte": "inputs/mattes/frame-0073.alpha",
+      "matteSha256": "b68593c96d37677a5a87faebae7be9607bff7260cde9d58ccb16b1b8ac199898",
+      "area": 37448,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 73,
+      "sourceSha256": "d8e09da896adbb248f7f143d100ee029e2d31fee0b38421e49ef6900f3267cfe",
+      "crop": "inputs/motion-crops/frame-0074.rgb",
+      "cropSha256": "967effc6113ab2afbeb0fe816b34615bc0dc4bfa6f66cbbe61e86abf2a9fe346",
+      "matte": "inputs/mattes/frame-0074.alpha",
+      "matteSha256": "a1115c8a1baab0dfb1b1db7312f4cfe4a97670095ba24c5621ed138ef382cdb4",
+      "area": 37527,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 74,
+      "sourceSha256": "2ab87706dbb1a77a6a27d1057f71c1c5a215c95e1f04b330038e6201696bd754",
+      "crop": "inputs/motion-crops/frame-0075.rgb",
+      "cropSha256": "5b30b0006dbcfddb1776fbc0897d437c560c11315eca8c1614ec4ebb1c38cf7d",
+      "matte": "inputs/mattes/frame-0075.alpha",
+      "matteSha256": "b1f90886cd18da6d81848ebb0514797a6cea8a7507bc70ed1636f71870c4eba4",
+      "area": 37538,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 75,
+      "sourceSha256": "a96fbe0013ce5216ae9cb340bff1bca0d942fa2ac5b7a875f9bba3ac6e31a166",
+      "crop": "inputs/motion-crops/frame-0076.rgb",
+      "cropSha256": "8902b1a3ead93062f091fa0c61702262ea5ada7d63523ba52271565b26babd6b",
+      "matte": "inputs/mattes/frame-0076.alpha",
+      "matteSha256": "31bbc0b5b2ff4dd73e5e9e66c397a46d6e821d3e484f975ef74e98b6083e5110",
+      "area": 37568,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 76,
+      "sourceSha256": "41adbeba5406807a199fb5441cfe29c90deca50efe15489496964e022b6cf9de",
+      "crop": "inputs/motion-crops/frame-0077.rgb",
+      "cropSha256": "7a1842e76246f221d6a6193e36a8e841d581a251f930eed4836472fdfcd6b478",
+      "matte": "inputs/mattes/frame-0077.alpha",
+      "matteSha256": "95381c94dc691b8be202edc20043c1bf897957b133f0799cae85bcd4395c74fd",
+      "area": 37532,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 77,
+      "sourceSha256": "2899a3dc45dde0dfc72f85002bf1c75cc4784d70535da8de7f9a0d53df100756",
+      "crop": "inputs/motion-crops/frame-0078.rgb",
+      "cropSha256": "1965e1fa0a994ce82e2b3db729ae2d6de350c15a7a6a9ac2ffc68b49e15619dc",
+      "matte": "inputs/mattes/frame-0078.alpha",
+      "matteSha256": "b538117da714f310b49451a1499d314eaec2a5487d5f93c504f05c64058e0abe",
+      "area": 37551,
+      "maximumRowBoundaryChange": 2
+    },
+    {
+      "frame": 78,
+      "sourceSha256": "8746cb1bbedc500e155c91c97160c23d8b9308400e8008266ed223254f838fe0",
+      "crop": "inputs/motion-crops/frame-0079.rgb",
+      "cropSha256": "b7513a969fcffe63462bafe2753776e32419110a1bf40e6fbfe3fe17d5f9a8f1",
+      "matte": "inputs/mattes/frame-0079.alpha",
+      "matteSha256": "ed599662c240993454cf2c0ff398c84b1d4e9d522492194ce8183f990e1b0ab9",
+      "area": 37495,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 79,
+      "sourceSha256": "f6809dbcd118bb57b778ce8711fa34f6caac1aab4d6fc5044cb86e5b22512075",
+      "crop": "inputs/motion-crops/frame-0080.rgb",
+      "cropSha256": "4c671d721bcb38d3dee3e0054fbe319c175d6a5c728e107bb2f9658cd2ebf817",
+      "matte": "inputs/mattes/frame-0080.alpha",
+      "matteSha256": "c3515badb00667ae6af56a2cb248f163b2ee817863b4ffbf7a4de7f2ef3199eb",
+      "area": 37562,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 80,
+      "sourceSha256": "5f555a2fb9b5c790f59bb2df191cb8bfb00e62e1e9387fdac8c6f097baec642d",
+      "crop": "inputs/motion-crops/frame-0081.rgb",
+      "cropSha256": "ab73290ab2e0e0c2597560f16c71d8234e8017ee8e8dcef4f074ade5ac77f35e",
+      "matte": "inputs/mattes/frame-0081.alpha",
+      "matteSha256": "035e457da86d2c0930fa00907448207e33173b97613ed21513b2b133ca359b6d",
+      "area": 37494,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 81,
+      "sourceSha256": "fd0653a5c13ab0fdfe219b8998333117386a1dcc34dd7d2feb9a78933107fc35",
+      "crop": "inputs/motion-crops/frame-0082.rgb",
+      "cropSha256": "2c6ee3b19e70bddb52072ad4719f1cfaf88ebe0e573abb78b97f52170118fa8f",
+      "matte": "inputs/mattes/frame-0082.alpha",
+      "matteSha256": "fd1c9b334cd267c1fd4fe7ddc3b5bcddba6447f916197764a9ff9ae502785310",
+      "area": 37542,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 82,
+      "sourceSha256": "05ae4180d2a64c0aa55234c0b72ef08a305e72997de7feef00f46754cade9a89",
+      "crop": "inputs/motion-crops/frame-0083.rgb",
+      "cropSha256": "a9f22082d31a325eeeb82a64fa5a5ed3b9f6823b4bc9969bca515266994819b9",
+      "matte": "inputs/mattes/frame-0083.alpha",
+      "matteSha256": "9eaa6b7e16f902d385ecfa48698f264d3cb0fd133f71fb92b041ed46438369e5",
+      "area": 37576,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 83,
+      "sourceSha256": "bd06dc89d9f67d1254643b54ad8ff222507f73b39610768a581daa39654d48df",
+      "crop": "inputs/motion-crops/frame-0084.rgb",
+      "cropSha256": "00875574ba80653fd50954a1502ac89864cda420de1d85afd508eea9f43a92d5",
+      "matte": "inputs/mattes/frame-0084.alpha",
+      "matteSha256": "d894fe2adf0d19494c6a1c0dc508d7838e697835c1d4556fe6062efa6dadac81",
+      "area": 37600,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 84,
+      "sourceSha256": "601489460aa8a919e3407e83faa2d726686a4fb83d5bca662abcc1784345d105",
+      "crop": "inputs/motion-crops/frame-0085.rgb",
+      "cropSha256": "2c26bd27b3697977da44ea3626ef80d4f5af68c4fe44a3638afc59c0b9c90970",
+      "matte": "inputs/mattes/frame-0085.alpha",
+      "matteSha256": "2bf7d1bc34854e3c2b36f1c0dc01a2bc0315d3aad31c53e87c2cbf4155f32188",
+      "area": 37476,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 85,
+      "sourceSha256": "bfd990e5148c5813c1bf78cdf5d9c4a4d6b8810aa5d44de19d1a8a3f33ace7da",
+      "crop": "inputs/motion-crops/frame-0086.rgb",
+      "cropSha256": "83c8bd094041ff9dd816f527cf35dac3fa6c57ca70f07e679e5679b255ef260d",
+      "matte": "inputs/mattes/frame-0086.alpha",
+      "matteSha256": "3d5340b79b8adafe70f3880cc3cabfd4fc409cf8f14dda47a2907be8f327ca10",
+      "area": 37475,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 86,
+      "sourceSha256": "92982c552ba0b576cb02aa4ad879cdf1d9ce1dbc9d9027ff35f87043db57e26b",
+      "crop": "inputs/motion-crops/frame-0087.rgb",
+      "cropSha256": "5c88d301c06df6bd74c7a604479935b5212c892710c68220b2c9ebed03505528",
+      "matte": "inputs/mattes/frame-0087.alpha",
+      "matteSha256": "6ad8d2d7ae4eadc4f19d1af6d3b03749fb6181b51c6043e46440319efda00f08",
+      "area": 37469,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 87,
+      "sourceSha256": "21e727342458f84610c0ce74ff84cd6ff2b0a26038bd6fafb9f1efe004fcb765",
+      "crop": "inputs/motion-crops/frame-0088.rgb",
+      "cropSha256": "3bd7aebb198b79720a3b14e93e95d669e3fe3c0583ffb264f6a890bcb07510d1",
+      "matte": "inputs/mattes/frame-0088.alpha",
+      "matteSha256": "5b8017be4619efe237d40e4580e13c33fc69429a3365c9545585a7081a3a397f",
+      "area": 37540,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 88,
+      "sourceSha256": "c2279e7b064cf86063e91b913cbf2e4b138a339aa55945fb0d530f28e6d1a01e",
+      "crop": "inputs/motion-crops/frame-0089.rgb",
+      "cropSha256": "28112f559a32c6fcba193a61d9206a09dea58eb45fd757b712ac32b5b1942741",
+      "matte": "inputs/mattes/frame-0089.alpha",
+      "matteSha256": "cba708daf89df711ddeb7ea12df3543088fa0532fa55b2f6bfbc102641d1c50a",
+      "area": 37480,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 89,
+      "sourceSha256": "510be81b05f53c693b4eab91ea79334e17a4df35078fc4395eea751acfc500fe",
+      "crop": "inputs/motion-crops/frame-0090.rgb",
+      "cropSha256": "6fe9c7a6932e5b5f29fdf5408c510ec8a85bc38b5d03e8251a31a408a0f88905",
+      "matte": "inputs/mattes/frame-0090.alpha",
+      "matteSha256": "49223dd2c74177a27b5904ab49e1ceec00d54199ec3e98ae2b9e3f97e6c8e9d6",
+      "area": 37512,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 90,
+      "sourceSha256": "3e5537f515bb26fa122351bb2004d74539b3ca5344bf2e1796e78efa2d93cbcb",
+      "crop": "inputs/motion-crops/frame-0091.rgb",
+      "cropSha256": "6166b11cc16df3757f4da6d99d020273ec1c168a307c96b2e54885900054525a",
+      "matte": "inputs/mattes/frame-0091.alpha",
+      "matteSha256": "5a298cd47d73e9e15159f78bbba4706fdb62f02e7bcaf1245c6e5637cf304516",
+      "area": 37529,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 91,
+      "sourceSha256": "d98dec678c0bd54b28dd1b579f4485a5bafab3e9f6e411fadcced472e42d7b09",
+      "crop": "inputs/motion-crops/frame-0092.rgb",
+      "cropSha256": "a45f76fc8488c59889df5470754dd4a4320b1bad8d61f2e3740843ad50cdbb53",
+      "matte": "inputs/mattes/frame-0092.alpha",
+      "matteSha256": "b6f69b5f7b9f11a625931a81378bbcb5a6fb53874af27b55c25dfc6a6c5780fa",
+      "area": 37484,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 92,
+      "sourceSha256": "2c7162828f8e921266be88e40e2d96859b57c32ab61e396423e7b5da91cb6ea6",
+      "crop": "inputs/motion-crops/frame-0093.rgb",
+      "cropSha256": "cb876b3861777e63523bc2b487157b55f0bd5c32eb1ceac893977df105726083",
+      "matte": "inputs/mattes/frame-0093.alpha",
+      "matteSha256": "2005e9266f7b719251f02f9ee3f9f12d4ca31fdb025c504b22e3314d17a83509",
+      "area": 37481,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 93,
+      "sourceSha256": "eafcdc02d0f5cbb8e604a2820aed33b9d8b0da48f23d1a51846b17bf0edd56e1",
+      "crop": "inputs/motion-crops/frame-0094.rgb",
+      "cropSha256": "a9e033515e28f9ddf1be5bd0e607c893efec2f80d9bc0205f24b09a00bf7bb5d",
+      "matte": "inputs/mattes/frame-0094.alpha",
+      "matteSha256": "5a140d3a4a9e8264a5ec697f51df5c0343434e8accca6c814409e13f83a85c5e",
+      "area": 37518,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 94,
+      "sourceSha256": "8388b9255efbf56f6a65c10fefeeacab38e077dbc0808e0f436c2964b24626f6",
+      "crop": "inputs/motion-crops/frame-0095.rgb",
+      "cropSha256": "4d6fca458b25650f2519bfd7d8642f0e5c72ab835642b81250c8968658978e68",
+      "matte": "inputs/mattes/frame-0095.alpha",
+      "matteSha256": "d5b5d3abe8dfd94a1a18300bbe2e532a2a694cdad4ce39907491ca34ace7e569",
+      "area": 37485,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 95,
+      "sourceSha256": "27d31331eb45970ab4f447d8aebf2198513e8f36c5630d116a1050483aaad705",
+      "crop": "inputs/motion-crops/frame-0096.rgb",
+      "cropSha256": "c0e671aaf3c31d8b5c8409f919d488ef2f94d4c23827ba9283efc988cef5b70d",
+      "matte": "inputs/mattes/frame-0096.alpha",
+      "matteSha256": "55433e20f1a2cadbf6fdc32c248c2feb980c2d35e8c0ce335e443857e1bbc2f7",
+      "area": 37480,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 96,
+      "sourceSha256": "ba5b136154762fc080dd13a9f7701343ff21d138cf3cf041c963e76c9f32b384",
+      "crop": "inputs/motion-crops/frame-0097.rgb",
+      "cropSha256": "a14d9d59a5197ee954e0ce6f6665b4a1035589947b9e9acd20828125f6666131",
+      "matte": "inputs/mattes/frame-0097.alpha",
+      "matteSha256": "8982382a3271b8f739db0e63b4f4d755d869247df92e75e08819fd2bf2fb1d6b",
+      "area": 37631,
+      "maximumRowBoundaryChange": 7
+    },
+    {
+      "frame": 97,
+      "sourceSha256": "1550682621e61851dfe3f4778f43169e26472996092c141d40f47302d47d42f0",
+      "crop": "inputs/motion-crops/frame-0098.rgb",
+      "cropSha256": "d78c22c82bae97d4c448b141e757f4e4a4fbd025f2158d49c0f690e3c52f02d2",
+      "matte": "inputs/mattes/frame-0098.alpha",
+      "matteSha256": "63b0ae16ae5b0cb65ea4aa138b07844e7092d5e914be0986ea588a09b99d5cac",
+      "area": 37945,
+      "maximumRowBoundaryChange": 14
+    },
+    {
+      "frame": 98,
+      "sourceSha256": "2f61e3c358ef70b3a202922b24e5af18f5a4d0703f3dcbb11f39fb8abca1042d",
+      "crop": "inputs/motion-crops/frame-0099.rgb",
+      "cropSha256": "50d8dbef1f42510ff29bfaaed97855306d6763f752a16c97f723c81878da886a",
+      "matte": "inputs/mattes/frame-0099.alpha",
+      "matteSha256": "7827e209a2db763b199b8c0c5fdf1cac6eef039b69a6fc45e843878e246e1858",
+      "area": 38397,
+      "maximumRowBoundaryChange": 15
+    },
+    {
+      "frame": 99,
+      "sourceSha256": "cc2fe9e45be44826fa32e61d4613bbf6af3b9096fb623e979ab2c816f017b72e",
+      "crop": "inputs/motion-crops/frame-0100.rgb",
+      "cropSha256": "76466fb7f7663b9a41685d0844b60de5af7c58b68ecc925c99d342e1bcef964a",
+      "matte": "inputs/mattes/frame-0100.alpha",
+      "matteSha256": "f27ad93b16d4a734a78e9c3cc41d07e9a5e61c977bbeeb67a13c151c71098b0c",
+      "area": 38575,
+      "maximumRowBoundaryChange": 16
+    },
+    {
+      "frame": 100,
+      "sourceSha256": "c5dcb8421c2e47fdcb782a0f1fb8ec5f2baf57d6aeea14ca5abdc2acc28e8721",
+      "crop": "inputs/motion-crops/frame-0101.rgb",
+      "cropSha256": "d3e24645c0cfb2854fd6249c8cc29fe04bac7ffd4b713f82a97e328f890725c6",
+      "matte": "inputs/mattes/frame-0101.alpha",
+      "matteSha256": "8b77543fa8ae833ab74ed1814d9b1796c1b395c6bd01c1562ddf1cc80373ecec",
+      "area": 39028,
+      "maximumRowBoundaryChange": 14
+    },
+    {
+      "frame": 101,
+      "sourceSha256": "fa2ea87a1d4dc48f578bc63e90de6acf626101cd9ebce4cccaf47122337eba5b",
+      "crop": "inputs/motion-crops/frame-0102.rgb",
+      "cropSha256": "48c18b24d77f13f395c07f7fd49f8e0462a32b47caaabb0a4c04fcf490568137",
+      "matte": "inputs/mattes/frame-0102.alpha",
+      "matteSha256": "84d4a313cd27c0b42c8a5559df7ef83a82028a7114dc12403344b9ba59e23951",
+      "area": 39525,
+      "maximumRowBoundaryChange": 14
+    },
+    {
+      "frame": 102,
+      "sourceSha256": "e8c59f7b40cedb0bd9aff3978c94297a1361c4fb06ebed749837ca1476af3b05",
+      "crop": "inputs/motion-crops/frame-0103.rgb",
+      "cropSha256": "2a183b9a3ca85341c81aabefaf73f4dbed396421ba5622cbb82b5c03387c51fd",
+      "matte": "inputs/mattes/frame-0103.alpha",
+      "matteSha256": "b87e5d5d3094010011e62536e527d207535220d8515278a86569841e65f76674",
+      "area": 38978,
+      "maximumRowBoundaryChange": 14
+    },
+    {
+      "frame": 103,
+      "sourceSha256": "0b6cf5ec59a696594d766ef2570f151d54a54015b7073d6e55016ab73f78dff5",
+      "crop": "inputs/motion-crops/frame-0104.rgb",
+      "cropSha256": "cda49baa2663da42417733006c250429afa6985b1ec55c486146760f5a1b9b2d",
+      "matte": "inputs/mattes/frame-0104.alpha",
+      "matteSha256": "db62fd9663f4da7e811933982caf6ffc5f9e5320f303f05da81aaef933e21785",
+      "area": 39394,
+      "maximumRowBoundaryChange": 15
+    },
+    {
+      "frame": 104,
+      "sourceSha256": "a524590df0ffdb13be460e66e842ee3c7dd7c8502a2595aaf401d4d02a928846",
+      "crop": "inputs/motion-crops/frame-0105.rgb",
+      "cropSha256": "ffa9828b48bdf5d7cfbce3a3c7d7ea9c6900676e5db52df05826d9055442fd26",
+      "matte": "inputs/mattes/frame-0105.alpha",
+      "matteSha256": "5b5193b7423b4f5c1d44a6b4c642d312b09169e39d53368deec5060b91505d10",
+      "area": 38958,
+      "maximumRowBoundaryChange": 16
+    },
+    {
+      "frame": 105,
+      "sourceSha256": "3ed91c4ecdc28c3088b98105780e90989a6d1d91ec72fd8723deec33254b9f37",
+      "crop": "inputs/motion-crops/frame-0106.rgb",
+      "cropSha256": "8c787af7a2d26c56b6df124335507df80549f6831b5fcd2b1e6773e78f1a640e",
+      "matte": "inputs/mattes/frame-0106.alpha",
+      "matteSha256": "0a06843d2c2b243a84ea2e50512aaf746b7f3c523b0e50caeb0110926c37f87f",
+      "area": 39210,
+      "maximumRowBoundaryChange": 16
+    },
+    {
+      "frame": 106,
+      "sourceSha256": "83c8dd55cd49e82adb06bb2c5d4b4be350c54d8877e23432db05dcd2e641f47e",
+      "crop": "inputs/motion-crops/frame-0107.rgb",
+      "cropSha256": "31ce1ca21c7a31448b800f4577d5aa3816274357e64e77203dac7cc6df70b7c0",
+      "matte": "inputs/mattes/frame-0107.alpha",
+      "matteSha256": "7dbdc9f1262cdfdddf6df433282860ce81638d57b0aab25531c0554d8f50441a",
+      "area": 38960,
+      "maximumRowBoundaryChange": 16
+    },
+    {
+      "frame": 107,
+      "sourceSha256": "545f3bcd39369dea6a5538958f6695a25e5c5079184e0c9de6c7fb315b63064d",
+      "crop": "inputs/motion-crops/frame-0108.rgb",
+      "cropSha256": "560aaf2109212ea623b0ee13b946be689276997ac30c880109cf49f97997a98c",
+      "matte": "inputs/mattes/frame-0108.alpha",
+      "matteSha256": "f18f705141766d543175bb125ab53ab4e83d0bf4c922eace70014e4d4ea83d8f",
+      "area": 38988,
+      "maximumRowBoundaryChange": 12
+    },
+    {
+      "frame": 108,
+      "sourceSha256": "dda5ea09e3c9b04e6ca1ede759fc2ea21443089abd7e1e568ed52b11c69eaa12",
+      "crop": "inputs/motion-crops/frame-0109.rgb",
+      "cropSha256": "1f747e40a71ab10e670cd4899e3eea9e19723b089787785d5024e3cfbcf8b17e",
+      "matte": "inputs/mattes/frame-0109.alpha",
+      "matteSha256": "9b1e4a3aef8d188c6b751c4fc9c46367e45970073886b6242450f06d8de1221f",
+      "area": 38686,
+      "maximumRowBoundaryChange": 13
+    },
+    {
+      "frame": 109,
+      "sourceSha256": "ea1f4662ebf6da161a27d51348e506a4052b541a331cefd2feb0fab1f12539a0",
+      "crop": "inputs/motion-crops/frame-0110.rgb",
+      "cropSha256": "e0f82e861152fd2f926412a1cddf246069002045cc5d4fe1de40d5fb6d88b0ea",
+      "matte": "inputs/mattes/frame-0110.alpha",
+      "matteSha256": "a91e9fce7c2e97af6d909da9eeaa0e6caf3df85542e100dd4ca6e847f7025d45",
+      "area": 38552,
+      "maximumRowBoundaryChange": 5
+    },
+    {
+      "frame": 110,
+      "sourceSha256": "641d8d2fd5106bd2056b61ae1eeb5c825a5bdb8b362f6265917a00f780e88a74",
+      "crop": "inputs/motion-crops/frame-0111.rgb",
+      "cropSha256": "87448adbafc37f1d0782528d943245095d04b25b93a4b4fef7562ad1e8db1453",
+      "matte": "inputs/mattes/frame-0111.alpha",
+      "matteSha256": "092ec8820a8ddd59d2472194fabde13ac19db8c5167a6066d77463658901aa69",
+      "area": 38186,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 111,
+      "sourceSha256": "71bbe7104d94220f10878ef9710076c8ec681158bfea1691d958e7624ac5bd79",
+      "crop": "inputs/motion-crops/frame-0112.rgb",
+      "cropSha256": "ee6419f030078f38c102770ca8c4d3975c876a704c83323795351266b1e1770c",
+      "matte": "inputs/mattes/frame-0112.alpha",
+      "matteSha256": "cddaae9036aa5397b09ea1af71805c5f563f4312891991c6a2c92ee0752658e3",
+      "area": 38046,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 112,
+      "sourceSha256": "d51fcf411ea41e3833006254fce02602e2b026d60b31b2864adba2c1f4a36b23",
+      "crop": "inputs/motion-crops/frame-0113.rgb",
+      "cropSha256": "c99f22e09e0cabde3587cf19acb4af057e6c914bbd479a4d8f4330bbb017a9a8",
+      "matte": "inputs/mattes/frame-0113.alpha",
+      "matteSha256": "ab6aa1377cc01458ed8538b288bf27535148d0d1f2237fbe56fecba6348f46d2",
+      "area": 37760,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 113,
+      "sourceSha256": "81dbea5d7f6f4ca01a3d692e73269f81b1cf205f675d55ae204c2ef72f9a31fb",
+      "crop": "inputs/motion-crops/frame-0114.rgb",
+      "cropSha256": "818d0225b2cedc09dd524ca164c029a733fbcc4f99352a5e90174fa769dda871",
+      "matte": "inputs/mattes/frame-0114.alpha",
+      "matteSha256": "00ad7e23ed2618c9e62a5dc544eab907f41338a6eca553662de23677f857cc98",
+      "area": 37777,
+      "maximumRowBoundaryChange": 5
+    },
+    {
+      "frame": 114,
+      "sourceSha256": "d59755901e7d49c7d32e2f456b50b09cee322a8f7e01de7b47247b3f5c908dd9",
+      "crop": "inputs/motion-crops/frame-0115.rgb",
+      "cropSha256": "4d1b34897d9cbcea6023673996ab76a840c564a9f759ba1ada60b7f5f44adef9",
+      "matte": "inputs/mattes/frame-0115.alpha",
+      "matteSha256": "ca71c1d808ef004b621070824809bcf5fd5c7b003b0c309ee155836428866a15",
+      "area": 37714,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 115,
+      "sourceSha256": "3e305ad5b3fa5b52e513b06c97a1460a120e75f8268705e61cab648a6277ce69",
+      "crop": "inputs/motion-crops/frame-0116.rgb",
+      "cropSha256": "3314a3e27665c5fdacaeed3a8e6f96e760c070bf1c7c11ab527117d5a3983766",
+      "matte": "inputs/mattes/frame-0116.alpha",
+      "matteSha256": "f5b930af1ca715d8e5b7c2e7c4dcac7b6b739acb38cab84bd8b2f6def98ad00f",
+      "area": 37730,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 116,
+      "sourceSha256": "15ac54d65eb848a87422245ed96eb2c240dea996089b39c830a7cc6d4467f887",
+      "crop": "inputs/motion-crops/frame-0117.rgb",
+      "cropSha256": "c6bf08e63dfe12c477fcb2b48f6a35c0365565aa4aace310d981cca001cc48ed",
+      "matte": "inputs/mattes/frame-0117.alpha",
+      "matteSha256": "dc998b689e79e141c85a1a3b888619ebbbb7b582ee581c8ec16437f9d6290044",
+      "area": 37706,
+      "maximumRowBoundaryChange": 6
+    },
+    {
+      "frame": 117,
+      "sourceSha256": "41b65e0e5d3aecc5089b7b18fe037f2acf5b54e211b60352936ec2eb35453695",
+      "crop": "inputs/motion-crops/frame-0118.rgb",
+      "cropSha256": "31aaae973fbfb078e5e74f767534ebb8237f46e03f38b7c25e2de5ddc8dbf3e6",
+      "matte": "inputs/mattes/frame-0118.alpha",
+      "matteSha256": "343ecaa82fd8dafb36aff7248ab35488bd43655b36c1917f5bef80e734834edd",
+      "area": 37743,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 118,
+      "sourceSha256": "a2fee7c7a0deeee905ca4246db76aea0733b8518482fab26d908fa03e87c5751",
+      "crop": "inputs/motion-crops/frame-0119.rgb",
+      "cropSha256": "bf5039f106ce2f514d48d8cc4d019d8eb3282d2063b360c18ba88f734f0cd888",
+      "matte": "inputs/mattes/frame-0119.alpha",
+      "matteSha256": "e162644f9731356938b4c61b533b1455511057ebe767ddb856ea51b3b361e414",
+      "area": 37742,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 119,
+      "sourceSha256": "b2966f575a0d0dd383fcc7ddca18b238f41de95213526549bb07282f819dd775",
+      "crop": "inputs/motion-crops/frame-0120.rgb",
+      "cropSha256": "a546dcb47423952c531d61014d83b563567ac4aa656da2218aff6baa01169647",
+      "matte": "inputs/mattes/frame-0120.alpha",
+      "matteSha256": "a6d4c2c914c803e19be3d13824a13f797f99c202491a1e401213dd6039aab101",
+      "area": 37735,
+      "maximumRowBoundaryChange": 3
+    },
+    {
+      "frame": 120,
+      "sourceSha256": "35990a46a9edbd36d905c931e49ca6494625441b03d871939fbaf2439c26f5a6",
+      "crop": "inputs/motion-crops/frame-0121.rgb",
+      "cropSha256": "693b89c963ff4d8f03f105bd8152c32a300b5b17eba790c226d31a4a57dd964e",
+      "matte": "inputs/mattes/frame-0121.alpha",
+      "matteSha256": "c816ddb96ad6df601d14a2d87f3a89481389a463fe3daf98a43b6dc560f0a5da",
+      "area": 37701,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 121,
+      "sourceSha256": "af7b1a2fa416e3987b0d17be4f7c106d33f1bd65e659a5db4c687e03537205f7",
+      "crop": "inputs/motion-crops/frame-0122.rgb",
+      "cropSha256": "5dde5fab2fb0c78fc058cdc0bb6e04dee5763b2bdb6df2a140c0741d3d435a3a",
+      "matte": "inputs/mattes/frame-0122.alpha",
+      "matteSha256": "7207e268d0fd2b6ed6254dbaf120dc8bfeefde5e48c125b356e9c8ae7fb6dcb4",
+      "area": 37687,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 122,
+      "sourceSha256": "484b07a7eb12ef67a55fed41389f4db0307a82fd55bfdc5c415b55d1498324c5",
+      "crop": "inputs/motion-crops/frame-0123.rgb",
+      "cropSha256": "4725e9200ef5c44e45273beb7129b94a719d74cb7f07cb2a9bd82267b4d89fba",
+      "matte": "inputs/mattes/frame-0123.alpha",
+      "matteSha256": "8f6f5783f63b979a9b0b789b9a6bac34515ce7ff6d5046d380e139fe77b13e0a",
+      "area": 37675,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 123,
+      "sourceSha256": "b2e068a29bcf8f00452bc505551fe5684cd13f8d37aab3383767dcbd4ffdd97e",
+      "crop": "inputs/motion-crops/frame-0124.rgb",
+      "cropSha256": "29b8d9ec3342bc98825b91a1e263771506eb7a527b75fb3cebc0ddb6220c67dc",
+      "matte": "inputs/mattes/frame-0124.alpha",
+      "matteSha256": "6474c425c4ae1d7297829dcaed2e47542ef3b0e8847518a91c5026381b593173",
+      "area": 37707,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 124,
+      "sourceSha256": "a775eed2c2f20eed6192fc6961c9427b8673989bdaa5a15b29c9085b78697f35",
+      "crop": "inputs/motion-crops/frame-0125.rgb",
+      "cropSha256": "aa949e099def0c88f3b57b26af6ec23f7c25856cc2711b04ff7164683d324722",
+      "matte": "inputs/mattes/frame-0125.alpha",
+      "matteSha256": "d88f4b60d00d01832abc033dc86ad7c7e88ca8087b3d273cb5d8924c1c25b735",
+      "area": 37694,
+      "maximumRowBoundaryChange": 4
+    },
+    {
+      "frame": 125,
+      "sourceSha256": "3ecce8a5d05d5f768e41e5548fd3098f8d8c9234840251fc0036b66896acd00a",
+      "crop": "inputs/motion-crops/frame-0126.rgb",
+      "cropSha256": "5fa42abae4540e83229a97fb1448c3cc3de28e4e6eb29b1f0a532e13910beeef",
+      "matte": "inputs/mattes/frame-0126.alpha",
+      "matteSha256": "aa9ba71322216aa3d428a9dd8996e1770584c838efa83d2404eb61894fd2384e",
+      "area": 37671,
+      "maximumRowBoundaryChange": 0
+    },
+    {
+      "frame": 126,
+      "sourceSha256": "3875eadc57d089c57a5aba3da0db1d2562086ba263f7bf44251a59af748d08c7",
+      "crop": "inputs/motion-crops/frame-0127.rgb",
+      "cropSha256": "ac6242aa079578474e0f57054921ed15590235bcde8b235c8e098e67690f2d42",
+      "matte": "inputs/mattes/frame-0127.alpha",
+      "matteSha256": "5d5db8ef14b1b02eb341f76123c7c38e1a38a70ec52988f7e9e033e72e208982",
+      "area": 37689,
+      "maximumRowBoundaryChange": 1
+    },
+    {
+      "frame": 127,
+      "sourceSha256": "642b602126773f728289aa91e3eca4fcef3c8edd62c4357e20897bb917150c93",
+      "crop": "inputs/motion-crops/frame-0128.rgb",
+      "cropSha256": "567d01a208cbdeab5074ef3a8ebb11bfb216c6bbfe240aa3d619f30a1ad4d593",
+      "matte": "inputs/mattes/frame-0128.alpha",
+      "matteSha256": "16726b30d1ff7723b8ef72b9f9e5a43526ec620cbc6577dcc8297f7792614512",
+      "area": 37666,
+      "maximumRowBoundaryChange": 8
+    },
+    {
+      "frame": 128,
+      "sourceSha256": "6bd29c38a496dd383510a1bb5f81956b97ad2c090b708b738e1343707d096ac3",
+      "crop": "inputs/motion-crops/frame-0129.rgb",
+      "cropSha256": "8aca63297f69321c24d0e77e4a0a46645d4e74468c2401a72b731a75d4614d12",
+      "matte": "inputs/mattes/frame-0129.alpha",
+      "matteSha256": "1880c4c9f5e632458ba556d4888a65c61912da696e93cbfdce997f6404d2b65d",
+      "area": 37669,
+      "maximumRowBoundaryChange": 1
+    }
+  ],
+  "regressions": [],
+  "claim": "Actual-frame silhouette study; point witnesses alone do not pass visual inspection."
+}

@@ -1,0 +1,631 @@
+{
+  "regressions": [
+    {
+      "frame": 104,
+      "x": 329,
+      "y": 172,
+      "label": "foreground",
+      "priorPass": false,
+      "currentPass": true
+    },
+    {
+      "frame": 104,
+      "x": 330,
+      "y": 189,
+      "label": "foreground",
+      "priorPass": false,
+      "currentPass": true
+    },
+    {
+      "frame": 104,
+      "x": 333,
+      "y": 137,
+      "label": "foreground",
+      "priorPass": false,
+      "currentPass": true
+    },
+    {
+      "frame": 0,
+      "x": 368,
+      "y": 230,
+      "label": "background",
+      "priorPass": false,
+      "currentPass": true
+    },
+    {
+      "frame": 0,
+      "x": 371,
+      "y": 222,
+      "label": "background",
+      "priorPass": false,
+      "currentPass": true
+    },
+    {
+      "frame": 0,
+      "x": 377,
+      "y": 206,
+      "label": "background",
+      "priorPass": false,
+      "currentPass": true
+    }
+  ],
+  "seam": {
+    "box": [
+      390,
+      728,
+      110,
+      18
+    ],
+    "before": {
+      "changedChannels": 3539,
+      "meanAbsoluteDelta": 25.59259259259259,
+      "maximumDelta": 113
+    },
+    "after": {
+      "changedChannels": 72,
+      "meanAbsoluteDelta": 0.012121212121212121,
+      "maximumDelta": 1
+    }
+  },
+  "fixed": [
+    {
+      "name": "frame-0001.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0021.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0025.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0029.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0033.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0065.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0101.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0105.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0109.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "frame-0129.png",
+      "regions": {
+        "bookPen": {
+          "source": {
+            "changedChannels": 49608,
+            "meanAbsoluteDelta": 0.5124919786096257,
+            "maximumDelta": 7
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "cupInterior": {
+          "source": {
+            "changedChannels": 1659,
+            "meanAbsoluteDelta": 0.16493506493506493,
+            "maximumDelta": 3
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "leftCabin": {
+          "source": {
+            "changedChannels": 45584,
+            "meanAbsoluteDelta": 0.5014732142857142,
+            "maximumDelta": 5
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        },
+        "tableFront": {
+          "source": {
+            "changedChannels": 2032,
+            "meanAbsoluteDelta": 0.17437557816836263,
+            "maximumDelta": 2
+          },
+          "timeline": {
+            "changedChannels": 0,
+            "meanAbsoluteDelta": 0,
+            "maximumDelta": 0
+          }
+        }
+      }
+    }
+  ],
+  "boxes": {
+    "bookPen": [
+      570,
+      810,
+      550,
+      85
+    ],
+    "cupInterior": [
+      978,
+      656,
+      50,
+      77
+    ],
+    "leftCabin": [
+      55,
+      50,
+      140,
+      320
+    ],
+    "tableFront": [
+      1160,
+      884,
+      188,
+      23
+    ]
+  },
+  "allFixedInteriorRegionsExact": true,
+  "sourceQuantizationWithinOneCodeValue": false,
+  "note": "Finite technical witnesses and full-size sample inspection only. Native transition texture/line softness remains visible; human quality approval is not inferred."
+}

@@ -1,0 +1,75 @@
+{
+  "mode": "samples-final",
+  "dimensions": [
+    1920,
+    1080
+  ],
+  "fps": 25,
+  "source": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png",
+  "headDetail": "RealESRGAN x2 on the accepted native motion; not native 1080p synthesis",
+  "frameCount": 10,
+  "frames": [
+    {
+      "frame": 0,
+      "sha256": "57ee31d1c1a64455db4e1273f4cba3c452dd8575bf2a6387bdf920631ad38502",
+      "bytes": 2995650,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 20,
+      "sha256": "0d2660673d7c4963aa9a983d1f9fd7d07bbdde99c2512ce491a7a9db167859bf",
+      "bytes": 2984996,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 24,
+      "sha256": "7faa9d251b609d8c5a663f97498b6df1f0c4ccad8eed7850dba69f24efcf9c11",
+      "bytes": 2989117,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 28,
+      "sha256": "0b097d18c4f7261e66c52f1356ace91510b32a17a5aecd9086d294cff34cf73c",
+      "bytes": 3000672,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 32,
+      "sha256": "d7a3f7047a546c9b35e29ab0cfe3668451a0791bffc00c0e753758e47b2a078f",
+      "bytes": 3000293,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 64,
+      "sha256": "7dda602816f7621337b919cfea08bcd8647374344f59ee06236d6cfc6719f7ce",
+      "bytes": 2984766,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 100,
+      "sha256": "c6d4194bd0f9eda077bd337c33991b0fad094839ee397112d58a75fb3c7abc85",
+      "bytes": 2961397,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 104,
+      "sha256": "8db5538551ebcd3ac89df713efe1ae6b431c8f7e536448a1e61855270ffef1ed",
+      "bytes": 2959835,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 108,
+      "sha256": "6cfd57f7bc94e29c059db75e44ff140754ab64c4cc2c20cdd7cf61d8c07375ee",
+      "bytes": 2948771,
+      "fixedRegionChangedChannels": 0
+    },
+    {
+      "frame": 128,
+      "sha256": "fddd7ea688990d537236e2a49a6ebb39a401133407378cf7d380ca314dd64aea",
+      "bytes": 2942646,
+      "fixedRegionChangedChannels": 0
+    }
+  ],
+  "totalBytes": 29768143,
+  "colour": "sRGB inspection PNG"
+}

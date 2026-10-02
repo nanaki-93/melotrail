@@ -144,6 +144,45 @@ movie was encoded. Retained helpers, source pins and failure samples are under
 `docs/pictures/video/evidence/VG2-24/head-isolation-20261002T042812Z/`; a fresh
 precise-contour repair allowance is requested before another attempt.
 
+The user subsequently authorizes that repair and asks for YouTube-quality output.
+The Full-HD study in
+`docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/` retains the
+approved high-resolution cabin/book/cup, moves the Sumida exterior independently
+and enhances the accepted cropped native motion once with installed RealESRGAN
+x2plus. Its local `review/tabi-window-watch-1080p.mp4` is 1920×1080, H.264 High,
+BT.709, about 19.8 Mbps, silent, with 129 decoded frames. It is enhanced footage
+from native 768×448 motion, not native-1080 generation or the full Tokyo film.
+
+Contour/stripe regressions and fixed-region checks pass, but sampled transitional
+frond detail remains distorted/soft and the left coat/tail blend remains visible.
+One encode was consumed: nominal 25 fps, actual container duration 5.120078s,
+0.04s start and small nonuniform presentation intervals. These facts are recorded
+in `checks/container.json`; colour/compression checks cover ten decoded samples.
+The initial composition and two corrections are retained; no automatic re-encode
+or additional generation follows. VG2-24 remains BLOCKED for quality/timing repair.
+The candidate can be reviewed at Full HD; it has no final artistic, exact-cadence,
+seamless-loop or YouTube-ready acceptance.
+
+The user rejects that composite's face cropping/shading/disappearance, accepts
+the movement and requires the real ComfyUI workflow. The replacement finishing
+proof is `docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/`.
+Its saved `workflow/finish-full-frame-api.json` actually runs in the pinned owned
+ComfyUI server through the existing production protocol client. It loads the
+accepted original video, extracts all frames, applies installed RealESRGAN
+x2plus, resizes the whole frame to 1920×1080 with crop disabled, then uses native
+CreateVideo/SaveVideo at the original 25fps and H.264 CRF16. No face/character
+matte, external shadow edit or new motion generation is involved. The original
+slightly taller canvas receives a small aspect adjustment to 16:9 without cropping.
+
+The new `review/tabi-head-watch-comfy-1080p.mp4` has 129 fully decoded frames,
+uniform 25fps, zero start, exact 5.16-second duration, no audio and about 16.7 Mbps.
+All-frame face-content checks pass against the accepted source; sampled complete
+face/coat contours retain no external masking seam. Fine frond deformation from
+the original animation remains visible. This is enhanced native-768 footage and
+retains the original generated scenery and prop drift, not the separate Sumida
+panorama or a completed rigid corridor. VG2-24 is REVIEW for the exact new movie;
+the three-minute film and seamless six-minute duplication remain unproved.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the

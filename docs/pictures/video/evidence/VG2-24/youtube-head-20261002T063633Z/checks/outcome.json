@@ -1,0 +1,51 @@
+{
+  "task": "VG2-24",
+  "recordedAt": "2026-10-02T07:09:23.213150+00:00",
+  "sourceHead": "c6c01a5ca49d4bb67bbe85345770c3e54e005578",
+  "state": "BLOCKED",
+  "artifact": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/review/tabi-window-watch-1080p.mp4",
+    "sha256": "3d1d004337379ff804e3ac58676d4f02bb601fde04dd08ebf2c2da7d55d6dbe3",
+    "bytes": 12674490,
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "frames": 129,
+    "nominalFps": 25,
+    "reportedSeconds": "5.120078",
+    "audioStreams": 0
+  },
+  "sourceDisclosure": "Accepted 768x448 motion, cropped and enhanced once with installed RealESRGAN x2plus; high-resolution source cabin/props and Sumida scene compose at 1920x1080. No native-1080 motion claim.",
+  "passes": [
+    "All 129 fixed-cabin source frames retain declared protected interior pixels",
+    "Six old-fail/new-pass real-frame contour witnesses",
+    "Lower-coat horizontal stripe regression",
+    "Complete frame count/decode",
+    "Ten decoded colour/compression checks"
+  ],
+  "remaining": [
+    "Native transition softness and right-frond line distortion",
+    "Visible blended coat/tail edge in mid-turn sample",
+    "Container cadence/duration differs from exact admitted 25fps/5.16s target",
+    "Human composition and independently readable breathing review",
+    "Other actions, 180-second Tokyo corridor and seamless external repeat"
+  ],
+  "execution": {
+    "initialCompositions": 1,
+    "compositionCorrections": 2,
+    "motionGenerations": 0,
+    "modelEnhancementsPerFrame": 1,
+    "videoEncodes": 1,
+    "verificationTraversals": 2,
+    "aggregateSupervisedSeconds": 113.103,
+    "automaticRetries": 0
+  },
+  "humanDecision": {
+    "quote": "the animation is correct, but there's some crop and bad shadoing in the face, for some reason is disappeared also. Remember that we have to use ComfyUI, otherwise we're not testing the workflow",
+    "decision": "Animation direction accepted; composed face/masks rejected. Require real ComfyUI workflow for continuation.",
+    "recordedAt": "2026-10-02T07:18:37.020721+00:00"
+  },
+  "admissionHistory": "Original admission and final corrected admission are retained with helper snapshots. The first corrected admission was updated for the second correction; no claim of an immutable historical manifest receipt for that intermediate state.",
+  "nextAction": "Superseded by the user-directed whole-frame ComfyUI finishing proof, comfy-fullhd-20261002T071508Z; do not repair or replay this composite."
+}

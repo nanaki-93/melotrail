@@ -1,0 +1,27 @@
+{
+  "files": [
+    {
+      "path": "TASKS-VIDEO.md",
+      "originalWipPreserved": true,
+      "beforeSha256": "6c7728b4bbf556527fcb159c282d86bb7c860bc175fa757eae1e99cb6c42b4a6",
+      "selectedSha256": "c757ae6971e145123cec0896c3decd07bc3780c4688f3a844665120c02bffc5a",
+      "selectedBlob": "bff045c01bb7688f619a2af1441539eeb180dfd5"
+    },
+    {
+      "path": "docs/TABI_VIDEO.md",
+      "originalWipPreserved": true,
+      "beforeSha256": "3bc2df70ddaed6be967da7b1022652972ed8ac2f4fe2ce0aa5b78d0abd5b7af4",
+      "selectedSha256": "b8788e5c43facc3a51b9676fb893cda569a4d2da00291c5d256901c59ff1f89f",
+      "selectedBlob": "69e1e40d303a97c8cf061d59874cd22368537328"
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "originalWipPreserved": true,
+      "beforeSha256": "3b5e36e1e94334e5610d9c5ff9cc6e610f9043f27a0479a4cf8717165d939972",
+      "selectedSha256": "61e21ecc070f88a025491a585ce39c89d8dbaf68f2f927966ea2e6ac8e776426",
+      "selectedBlob": "976024117035f45c8865b684347b7bbe32d9110f"
+    }
+  ],
+  "remainingDiffMatchesOriginal": true,
+  "remainingNumstat": "16\t0\tAGENTS.md\n6\t2\tPLAN-AUDIO.md\n6\t2\tPLAN-VIDEO.md\n8\t1\tREADME.md\n16\t4\tTASKS-AUDIO.md\n53\t13\tTASKS-VIDEO.md\n6\t2\tdocs/ARCHITECTURE.md\n9\t0\tdocs/TABI_VIDEO.md\n60\t1\tdocs/VALIDATION.md\n"
+}

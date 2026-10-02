@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-02T07:27:41.902934+00:00",
+  "scratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-comfy-fullhd-cf04t6gk",
+  "removed": true,
+  "files": [
+    {
+      "path": "runtime-classpath.txt",
+      "bytes": 2975,
+      "sha256": "cc0f4db15abb4f7854ec9dde645d41388ca2f773b040569e379f0454a0124489"
+    },
+    {
+      "path": "context.json",
+      "bytes": 371,
+      "sha256": "66d2a999a298397c4dd9e22932524f962831e51a69ee4888a323d1fb67bca8e9"
+    },
+    {
+      "path": "java.pid",
+      "bytes": 5,
+      "sha256": "78b60293cc71380498af0bb9b1bfe1e5c860a89dcefdf12ba7e91252c911e026"
+    },
+    {
+      "path": "classes/ComfyFinish.class",
+      "bytes": 13418,
+      "sha256": "c783c986bf55c8c52318e704c9cd884b5363e308d68fde3447172a755a30543c"
+    },
+    {
+      "path": "classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    }
+  ],
+  "scope": "Only the unique task-owned OS scratch directory. Retain local review media, lossless frames, matte inputs and failure/review evidence; preserve unrelated user changes, environments and caches."
+}

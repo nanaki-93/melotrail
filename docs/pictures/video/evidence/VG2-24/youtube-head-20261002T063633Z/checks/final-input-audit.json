@@ -1,0 +1,975 @@
+{
+  "checkedAt": "2026-10-02T07:06:51.962602+00:00",
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/scripts/matte.cjs",
+      "expected": "bf80efc67dafc3b23cd01d3e1a253c6666bce43895dc9f5db30949c3a8b67185",
+      "actual": "bf80efc67dafc3b23cd01d3e1a253c6666bce43895dc9f5db30949c3a8b67185",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/scripts/MediaStage.java",
+      "expected": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d",
+      "actual": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/scripts/headless.init.gradle",
+      "expected": "39eae9c3befb740254c63a657521633570c34ab5d60d1b65aee6949df8b311e9",
+      "actual": "39eae9c3befb740254c63a657521633570c34ab5d60d1b65aee6949df8b311e9",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/scripts/compose.cjs",
+      "expected": "63fe2e841775ae3fbdb377bb01a0c3247d4fbf25addea3b37f346af994855437",
+      "actual": "63fe2e841775ae3fbdb377bb01a0c3247d4fbf25addea3b37f346af994855437",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/scripts/run-stage.py",
+      "expected": "56f89fb4bf71ece0aeb903a9445028500c550d860ced855174bce7a2918bd14a",
+      "actual": "56f89fb4bf71ece0aeb903a9445028500c550d860ced855174bce7a2918bd14a",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/scripts/inspect-registration.cjs",
+      "expected": "24f30dbc93520bd82cb4fe10746835077e5db14a2bebbc3c8d423f1552259a6f",
+      "actual": "24f30dbc93520bd82cb4fe10746835077e5db14a2bebbc3c8d423f1552259a6f",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/scripts/finish-motion.py",
+      "expected": "7e0389d31624a8d5ed92fecc34d10676e0df50ef708109c73608753366f3317f",
+      "actual": "7e0389d31624a8d5ed92fecc34d10676e0df50ef708109c73608753366f3317f",
+      "pass": true
+    },
+    {
+      "path": "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+      "expected": "fdfd102dbe86b0af5dfc540a9c8dcb2fa0c5a3166d4a6c067eaf78d49568af40",
+      "actual": "fdfd102dbe86b0af5dfc540a9c8dcb2fa0c5a3166d4a6c067eaf78d49568af40",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/.pyenv/versions/3.12.0/bin/python3.12",
+      "expected": "ad9cd693cb6d5281e8f5381504500fc0cdf2b3a1259bd6578bf72061b45b7645",
+      "actual": "ad9cd693cb6d5281e8f5381504500fc0cdf2b3a1259bd6578bf72061b45b7645",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+      "expected": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+      "actual": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+      "expected": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264",
+      "actual": "666c4ecdff7d14153d53e35cd83f0b0f37bffb7250080e994b90b59c575cd264",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json",
+      "expected": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+      "actual": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+      "pass": true
+    },
+    {
+      "path": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-youtube-head-fmih06_y/classes/MediaStage.class",
+      "expected": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e",
+      "actual": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png",
+      "expected": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "actual": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/20-breathing-book-facing-tabi-clean-cabin-candidate.png",
+      "expected": "c3f792692d7c40248c2e7742983804b8c55577d87b23ff4f4da03a75f08f8008",
+      "actual": "c3f792692d7c40248c2e7742983804b8c55577d87b23ff4f4da03a75f08f8008",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/02-sumida-river-skytree-panorama.png",
+      "expected": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20",
+      "actual": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/colour.cjs",
+      "expected": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+      "actual": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/png_transport.cjs",
+      "expected": "1e010b89b533c0d63780f644ff4e680777f212b750b6f9c19702f501bfa8a461",
+      "actual": "1e010b89b533c0d63780f644ff4e680777f212b750b6f9c19702f501bfa8a461",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/upscale_models/RealESRGAN_x2plus.pth",
+      "expected": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb",
+      "actual": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0001.png",
+      "expected": "0ca4b079d24088ef353d1ebaafa5d7387bdcbae1bdde93f539d1687bada2bb6f",
+      "actual": "0ca4b079d24088ef353d1ebaafa5d7387bdcbae1bdde93f539d1687bada2bb6f",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0002.png",
+      "expected": "d35698140f71c592b2bfee24bfaa608ea269bb21100602402fcc2c1d5f233e91",
+      "actual": "d35698140f71c592b2bfee24bfaa608ea269bb21100602402fcc2c1d5f233e91",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0003.png",
+      "expected": "93b6f9c0f89a3bf483240d9c5aa7e18c72c21649cbecebab753d10771cdc833e",
+      "actual": "93b6f9c0f89a3bf483240d9c5aa7e18c72c21649cbecebab753d10771cdc833e",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0004.png",
+      "expected": "cf853d452ac643c27db948dcba1303fa3c4c662775bf0d3d84e204ad7599ec9a",
+      "actual": "cf853d452ac643c27db948dcba1303fa3c4c662775bf0d3d84e204ad7599ec9a",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0005.png",
+      "expected": "da3ebbd3c1a9f156b1a29db7d04f3d8b4dda122926700b4f8df595e6df9fa497",
+      "actual": "da3ebbd3c1a9f156b1a29db7d04f3d8b4dda122926700b4f8df595e6df9fa497",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0006.png",
+      "expected": "9dc3c4d7cb13993bf0c8a8b675ce230a1cad98e65678b5439dd1dcdd2a251af2",
+      "actual": "9dc3c4d7cb13993bf0c8a8b675ce230a1cad98e65678b5439dd1dcdd2a251af2",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0007.png",
+      "expected": "1635d159f630c5caced1d2519a745f37726ae5b2afbc36cb87be56ff103d3844",
+      "actual": "1635d159f630c5caced1d2519a745f37726ae5b2afbc36cb87be56ff103d3844",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0008.png",
+      "expected": "d88063168bc55efa34043b5e2947fcadcb07fb48bfb7031b7c376852985e3891",
+      "actual": "d88063168bc55efa34043b5e2947fcadcb07fb48bfb7031b7c376852985e3891",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0009.png",
+      "expected": "8533b6b651105ddab0d7e4f116593b662edcc43862fcc7599469cd5783a26f12",
+      "actual": "8533b6b651105ddab0d7e4f116593b662edcc43862fcc7599469cd5783a26f12",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0010.png",
+      "expected": "0c243b6069e9dee3241831e493ce4903697413bccc20c68292cfec99b2511194",
+      "actual": "0c243b6069e9dee3241831e493ce4903697413bccc20c68292cfec99b2511194",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0011.png",
+      "expected": "98413e92f51ea8abfdbdfbf9c0cb929afd4d45052f4484ba61e3e134a4230c94",
+      "actual": "98413e92f51ea8abfdbdfbf9c0cb929afd4d45052f4484ba61e3e134a4230c94",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0012.png",
+      "expected": "f2ab948a3f3df301462bf05d0fb4fc2c9801eecb7fa814707fc37bd27116c3c9",
+      "actual": "f2ab948a3f3df301462bf05d0fb4fc2c9801eecb7fa814707fc37bd27116c3c9",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0013.png",
+      "expected": "d9f8d4505fcad78c5ce4beae2f267822343f7215423dafb719da7d214053865c",
+      "actual": "d9f8d4505fcad78c5ce4beae2f267822343f7215423dafb719da7d214053865c",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0014.png",
+      "expected": "f00b187aee8b82bc8121652ac027ec8a01f733bbc2d4f0171f2c4a11e62eba96",
+      "actual": "f00b187aee8b82bc8121652ac027ec8a01f733bbc2d4f0171f2c4a11e62eba96",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0015.png",
+      "expected": "36ec46f0c04aa0b34bb9b883ca9c8ee8255887039e4e35c4585873af5781b6a6",
+      "actual": "36ec46f0c04aa0b34bb9b883ca9c8ee8255887039e4e35c4585873af5781b6a6",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0016.png",
+      "expected": "c2d55f962822bba26ab90ecc4ccdad6a3b11371f3528b22217c749ebaf013015",
+      "actual": "c2d55f962822bba26ab90ecc4ccdad6a3b11371f3528b22217c749ebaf013015",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0017.png",
+      "expected": "f49e54bad3a95ae676d2687686f4f0b9b7ff5bcd1b4ba65792d2dcaee52e80f4",
+      "actual": "f49e54bad3a95ae676d2687686f4f0b9b7ff5bcd1b4ba65792d2dcaee52e80f4",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0018.png",
+      "expected": "dd9bff7d49028c949274dc1d64a1ee61cf081fbbddb7dd0608c65d207d5e02f2",
+      "actual": "dd9bff7d49028c949274dc1d64a1ee61cf081fbbddb7dd0608c65d207d5e02f2",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0019.png",
+      "expected": "3be2c4b2199fc7e4caa09e7fefddb6f9a10bcec8ebfaaeb344de13fd5d100233",
+      "actual": "3be2c4b2199fc7e4caa09e7fefddb6f9a10bcec8ebfaaeb344de13fd5d100233",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0020.png",
+      "expected": "6f9ed570873287c72cda77f7560c3c58b7bdc71e38366782b8ffe6643eadca3f",
+      "actual": "6f9ed570873287c72cda77f7560c3c58b7bdc71e38366782b8ffe6643eadca3f",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0021.png",
+      "expected": "7f35f52deb3cbd6e361c5db32756de6cb1aef73f0c759045f19d4fe1f6590ee3",
+      "actual": "7f35f52deb3cbd6e361c5db32756de6cb1aef73f0c759045f19d4fe1f6590ee3",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0022.png",
+      "expected": "8c85a43ccf7713ca3acd198ec4811fd19ee373a64b41d8fb44f69758b0851b89",
+      "actual": "8c85a43ccf7713ca3acd198ec4811fd19ee373a64b41d8fb44f69758b0851b89",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0023.png",
+      "expected": "a700d16370eab4a0860f36b52d1bbcc6da12b2d2a655ac258e255ae8fe736605",
+      "actual": "a700d16370eab4a0860f36b52d1bbcc6da12b2d2a655ac258e255ae8fe736605",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0024.png",
+      "expected": "6975dd03da54a550434e89722e30caad0714d77c11e5d80d75f8d140e85e70e0",
+      "actual": "6975dd03da54a550434e89722e30caad0714d77c11e5d80d75f8d140e85e70e0",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0025.png",
+      "expected": "879c7df12f4f9b52eb4fe74e5937fd545dfaa1bccd587d36cea2591ed43877f8",
+      "actual": "879c7df12f4f9b52eb4fe74e5937fd545dfaa1bccd587d36cea2591ed43877f8",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0026.png",
+      "expected": "36c5cfe3fe0388ad607062579f96ea87e454aa79fd79320984d4a734ae07e210",
+      "actual": "36c5cfe3fe0388ad607062579f96ea87e454aa79fd79320984d4a734ae07e210",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0027.png",
+      "expected": "8f5afab730d57885962dd9973fe67c1e419f24f5cbd7a0a795e5c8012ce227b5",
+      "actual": "8f5afab730d57885962dd9973fe67c1e419f24f5cbd7a0a795e5c8012ce227b5",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0028.png",
+      "expected": "746c411ae053d3e25da60ab1d7c496ef6b7030ea6f24ee8146674b8efff66ecb",
+      "actual": "746c411ae053d3e25da60ab1d7c496ef6b7030ea6f24ee8146674b8efff66ecb",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0029.png",
+      "expected": "2600c7145bb5e182c8d7ff953e1a310b7f01edc43ab7af8f8a64515e620c0302",
+      "actual": "2600c7145bb5e182c8d7ff953e1a310b7f01edc43ab7af8f8a64515e620c0302",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0030.png",
+      "expected": "0659c6c1e18cc21288838517af83b4e20eebc8cc3e3961d6aed81561f6a940fb",
+      "actual": "0659c6c1e18cc21288838517af83b4e20eebc8cc3e3961d6aed81561f6a940fb",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0031.png",
+      "expected": "f4d2b0ddb9838f8bbd6fa616f80a02b5eab48e070b3d32c092da0b52719343f0",
+      "actual": "f4d2b0ddb9838f8bbd6fa616f80a02b5eab48e070b3d32c092da0b52719343f0",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0032.png",
+      "expected": "cc2f752372c7191abfb46edcabb9067011c3460b6d3a32fa0e8db91cdbf16ac3",
+      "actual": "cc2f752372c7191abfb46edcabb9067011c3460b6d3a32fa0e8db91cdbf16ac3",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0033.png",
+      "expected": "91e1e6050f829bece5f0fd4a155d5a48d5e9990e8b7457a55f976fd5eea49412",
+      "actual": "91e1e6050f829bece5f0fd4a155d5a48d5e9990e8b7457a55f976fd5eea49412",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0034.png",
+      "expected": "8d950f9c2bd2d39bd755ca39cb2cf03abe460eec3864e88a7f7ff4a7674e1708",
+      "actual": "8d950f9c2bd2d39bd755ca39cb2cf03abe460eec3864e88a7f7ff4a7674e1708",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0035.png",
+      "expected": "51760466e00d078422e11ae60d8cf7225fc768aff6cf5e18388a4b102196fe78",
+      "actual": "51760466e00d078422e11ae60d8cf7225fc768aff6cf5e18388a4b102196fe78",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0036.png",
+      "expected": "96b03d0fdfec0f5d267ac1c92d26b743f55d11bce120d4500b333fe43d5e4f96",
+      "actual": "96b03d0fdfec0f5d267ac1c92d26b743f55d11bce120d4500b333fe43d5e4f96",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0037.png",
+      "expected": "cc052314841c7dd3afdb6fc176abff3db322d56c502d4bcc0f71ba277c27831c",
+      "actual": "cc052314841c7dd3afdb6fc176abff3db322d56c502d4bcc0f71ba277c27831c",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0038.png",
+      "expected": "d419d0d75d843a0597e5cd38a5647a8347726e3c225d41a925ff0614bf8bad37",
+      "actual": "d419d0d75d843a0597e5cd38a5647a8347726e3c225d41a925ff0614bf8bad37",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0039.png",
+      "expected": "e7db18b75b869d0e709734b242cb7e5168f12375cdc5945130a3a6cfa8b71223",
+      "actual": "e7db18b75b869d0e709734b242cb7e5168f12375cdc5945130a3a6cfa8b71223",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0040.png",
+      "expected": "fb034dfa0d70dfe0e3ece8eb6f96ac5a43e05c94fceb827e544b7119d193e7f1",
+      "actual": "fb034dfa0d70dfe0e3ece8eb6f96ac5a43e05c94fceb827e544b7119d193e7f1",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0041.png",
+      "expected": "50d19ac46efe33dec8d5f0141a4ab7b57c8836f0e2776fe0712015f42ba40298",
+      "actual": "50d19ac46efe33dec8d5f0141a4ab7b57c8836f0e2776fe0712015f42ba40298",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0042.png",
+      "expected": "9d9a6159e56a92b9f1858bd31377e1f78cb1165c6ac374dc881b5998af1d23f3",
+      "actual": "9d9a6159e56a92b9f1858bd31377e1f78cb1165c6ac374dc881b5998af1d23f3",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0043.png",
+      "expected": "0896c3e612f854cca9fbca792becc406dc176bdde00e630e5d1ba75cf76d7fe7",
+      "actual": "0896c3e612f854cca9fbca792becc406dc176bdde00e630e5d1ba75cf76d7fe7",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0044.png",
+      "expected": "f48eb050f2cd8d7402f7fa2bb767f0e470d7d3ebd4e4042052b260d34e93fb4b",
+      "actual": "f48eb050f2cd8d7402f7fa2bb767f0e470d7d3ebd4e4042052b260d34e93fb4b",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0045.png",
+      "expected": "b29b7f5a4d3552e5d578726cb641f1275dc45b6d32796dd05724445620cd359b",
+      "actual": "b29b7f5a4d3552e5d578726cb641f1275dc45b6d32796dd05724445620cd359b",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0046.png",
+      "expected": "4969b6b6e366f0392025a9815b0017406af41a185d12030fca966d9ecf5eba65",
+      "actual": "4969b6b6e366f0392025a9815b0017406af41a185d12030fca966d9ecf5eba65",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0047.png",
+      "expected": "1477afa8229594de1a8cbcae71294d5559dfcb6b7eb17101aa8ea2020d955284",
+      "actual": "1477afa8229594de1a8cbcae71294d5559dfcb6b7eb17101aa8ea2020d955284",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0048.png",
+      "expected": "e5ebb2974046ec30108b4af4bc009dfd3f7ab7ab52a9a95b16d7e62f187472c4",
+      "actual": "e5ebb2974046ec30108b4af4bc009dfd3f7ab7ab52a9a95b16d7e62f187472c4",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0049.png",
+      "expected": "431c7916a29bb16a29af24dd2ec9dd097a5310a14d43cc3b92da12b53d2ea6e7",
+      "actual": "431c7916a29bb16a29af24dd2ec9dd097a5310a14d43cc3b92da12b53d2ea6e7",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0050.png",
+      "expected": "5dae22de9e1ed214b3adea5e593dafbab0875f19a001a93e1dc27cc0a1aaeb66",
+      "actual": "5dae22de9e1ed214b3adea5e593dafbab0875f19a001a93e1dc27cc0a1aaeb66",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0051.png",
+      "expected": "f2b8c18e943088ce4305e09157175a69efc32bf3b9eaf6b1410b2b04eef681c6",
+      "actual": "f2b8c18e943088ce4305e09157175a69efc32bf3b9eaf6b1410b2b04eef681c6",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0052.png",
+      "expected": "23e7d94418cdcb7b28f8ef2d6c1f2930fbd6a90c1ef2b4e5d767356f5ea00499",
+      "actual": "23e7d94418cdcb7b28f8ef2d6c1f2930fbd6a90c1ef2b4e5d767356f5ea00499",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0053.png",
+      "expected": "f633a696ba08235a9d27cceb2f2c71219ed778716b1df8284cdb756b093b06ad",
+      "actual": "f633a696ba08235a9d27cceb2f2c71219ed778716b1df8284cdb756b093b06ad",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0054.png",
+      "expected": "38aefb87cb54f9219912e134a54e5a4dc158104829980b6ea6efd8303b53860f",
+      "actual": "38aefb87cb54f9219912e134a54e5a4dc158104829980b6ea6efd8303b53860f",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0055.png",
+      "expected": "7f0a12379792b1451cf0d90a9bfda370a740c5487b29e30ca62a30fa9deecdf5",
+      "actual": "7f0a12379792b1451cf0d90a9bfda370a740c5487b29e30ca62a30fa9deecdf5",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0056.png",
+      "expected": "af5a10cf7053f3369d90b26775088ea647531eed9fc4ffaf996f7c936588b484",
+      "actual": "af5a10cf7053f3369d90b26775088ea647531eed9fc4ffaf996f7c936588b484",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0057.png",
+      "expected": "416d70f565ff6857ac14f3eaf6d06bdf8b9ee38c30dedbc8e1edeb5046ab66e4",
+      "actual": "416d70f565ff6857ac14f3eaf6d06bdf8b9ee38c30dedbc8e1edeb5046ab66e4",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0058.png",
+      "expected": "72690c9ecc3deb2ca1c49c87cd22c7a465aef172613f43f772e8350eaed7dc3d",
+      "actual": "72690c9ecc3deb2ca1c49c87cd22c7a465aef172613f43f772e8350eaed7dc3d",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0059.png",
+      "expected": "33f58a36ceb604eafe7a4016122bc0e4d5af387666758a7d8ff186a358f00b88",
+      "actual": "33f58a36ceb604eafe7a4016122bc0e4d5af387666758a7d8ff186a358f00b88",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0060.png",
+      "expected": "f9d9e2bef77d0c3bc7d1072f5349de660a10c6141319a34a0fd7de399a34c244",
+      "actual": "f9d9e2bef77d0c3bc7d1072f5349de660a10c6141319a34a0fd7de399a34c244",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0061.png",
+      "expected": "ebb2ec37c07be82cb6a3fc3b2707fe4818cc9d04e1ed253c04b6de5436f24f60",
+      "actual": "ebb2ec37c07be82cb6a3fc3b2707fe4818cc9d04e1ed253c04b6de5436f24f60",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0062.png",
+      "expected": "d618af2c9a36c18f63cdef7a61fee1a452b1f9780ec3286c5ccbe21c5c1bf96a",
+      "actual": "d618af2c9a36c18f63cdef7a61fee1a452b1f9780ec3286c5ccbe21c5c1bf96a",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0063.png",
+      "expected": "0f79b281bd0e0ea4aefda2aa47c4b67201051f6d30e4fe0f3c4d3b44a268356f",
+      "actual": "0f79b281bd0e0ea4aefda2aa47c4b67201051f6d30e4fe0f3c4d3b44a268356f",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0064.png",
+      "expected": "39febb052d5a6db4d8288055914d1414bbcd19db0a6d6d2e93c229a0d921d166",
+      "actual": "39febb052d5a6db4d8288055914d1414bbcd19db0a6d6d2e93c229a0d921d166",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0065.png",
+      "expected": "319a6bb838ac9f22deb228dc5d909bbc878f2bde0d62d25f26657541b85ca1e6",
+      "actual": "319a6bb838ac9f22deb228dc5d909bbc878f2bde0d62d25f26657541b85ca1e6",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0066.png",
+      "expected": "c213873115f4d47024624484de17d4babd220b3a8a7fc94cc1d4532eddb4d7ff",
+      "actual": "c213873115f4d47024624484de17d4babd220b3a8a7fc94cc1d4532eddb4d7ff",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0067.png",
+      "expected": "636f7743a369323bc623c54a660de6e26ae31fb72ad9cb0b85358910b5ffb985",
+      "actual": "636f7743a369323bc623c54a660de6e26ae31fb72ad9cb0b85358910b5ffb985",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0068.png",
+      "expected": "d6d7aaf1af08870bec143f4899cbffab8739c2a0ca5c27cc4014bc3910d3af36",
+      "actual": "d6d7aaf1af08870bec143f4899cbffab8739c2a0ca5c27cc4014bc3910d3af36",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0069.png",
+      "expected": "e417a93993b32e8746692daac651a8216de93f5050cb15515a3d0113d255ebcd",
+      "actual": "e417a93993b32e8746692daac651a8216de93f5050cb15515a3d0113d255ebcd",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0070.png",
+      "expected": "37cf820f8a5621b35eccf7282beeee76292deee42f9596f6251538efc929bf61",
+      "actual": "37cf820f8a5621b35eccf7282beeee76292deee42f9596f6251538efc929bf61",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0071.png",
+      "expected": "b244af220eb629a449e0a5485816d18c9c88eb38b65e0a8c8308a8277ae0cab2",
+      "actual": "b244af220eb629a449e0a5485816d18c9c88eb38b65e0a8c8308a8277ae0cab2",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0072.png",
+      "expected": "a95f97d1fcc6c998b54ac2baeeeac42c3c703fe5561ba8129bcdd6bb2266f6cb",
+      "actual": "a95f97d1fcc6c998b54ac2baeeeac42c3c703fe5561ba8129bcdd6bb2266f6cb",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0073.png",
+      "expected": "113e8136edd5e0e09afcad8db06835a007dd674063671097e49d76931731170e",
+      "actual": "113e8136edd5e0e09afcad8db06835a007dd674063671097e49d76931731170e",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0074.png",
+      "expected": "d8e09da896adbb248f7f143d100ee029e2d31fee0b38421e49ef6900f3267cfe",
+      "actual": "d8e09da896adbb248f7f143d100ee029e2d31fee0b38421e49ef6900f3267cfe",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0075.png",
+      "expected": "2ab87706dbb1a77a6a27d1057f71c1c5a215c95e1f04b330038e6201696bd754",
+      "actual": "2ab87706dbb1a77a6a27d1057f71c1c5a215c95e1f04b330038e6201696bd754",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0076.png",
+      "expected": "a96fbe0013ce5216ae9cb340bff1bca0d942fa2ac5b7a875f9bba3ac6e31a166",
+      "actual": "a96fbe0013ce5216ae9cb340bff1bca0d942fa2ac5b7a875f9bba3ac6e31a166",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0077.png",
+      "expected": "41adbeba5406807a199fb5441cfe29c90deca50efe15489496964e022b6cf9de",
+      "actual": "41adbeba5406807a199fb5441cfe29c90deca50efe15489496964e022b6cf9de",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0078.png",
+      "expected": "2899a3dc45dde0dfc72f85002bf1c75cc4784d70535da8de7f9a0d53df100756",
+      "actual": "2899a3dc45dde0dfc72f85002bf1c75cc4784d70535da8de7f9a0d53df100756",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0079.png",
+      "expected": "8746cb1bbedc500e155c91c97160c23d8b9308400e8008266ed223254f838fe0",
+      "actual": "8746cb1bbedc500e155c91c97160c23d8b9308400e8008266ed223254f838fe0",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0080.png",
+      "expected": "f6809dbcd118bb57b778ce8711fa34f6caac1aab4d6fc5044cb86e5b22512075",
+      "actual": "f6809dbcd118bb57b778ce8711fa34f6caac1aab4d6fc5044cb86e5b22512075",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0081.png",
+      "expected": "5f555a2fb9b5c790f59bb2df191cb8bfb00e62e1e9387fdac8c6f097baec642d",
+      "actual": "5f555a2fb9b5c790f59bb2df191cb8bfb00e62e1e9387fdac8c6f097baec642d",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0082.png",
+      "expected": "fd0653a5c13ab0fdfe219b8998333117386a1dcc34dd7d2feb9a78933107fc35",
+      "actual": "fd0653a5c13ab0fdfe219b8998333117386a1dcc34dd7d2feb9a78933107fc35",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0083.png",
+      "expected": "05ae4180d2a64c0aa55234c0b72ef08a305e72997de7feef00f46754cade9a89",
+      "actual": "05ae4180d2a64c0aa55234c0b72ef08a305e72997de7feef00f46754cade9a89",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0084.png",
+      "expected": "bd06dc89d9f67d1254643b54ad8ff222507f73b39610768a581daa39654d48df",
+      "actual": "bd06dc89d9f67d1254643b54ad8ff222507f73b39610768a581daa39654d48df",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0085.png",
+      "expected": "601489460aa8a919e3407e83faa2d726686a4fb83d5bca662abcc1784345d105",
+      "actual": "601489460aa8a919e3407e83faa2d726686a4fb83d5bca662abcc1784345d105",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0086.png",
+      "expected": "bfd990e5148c5813c1bf78cdf5d9c4a4d6b8810aa5d44de19d1a8a3f33ace7da",
+      "actual": "bfd990e5148c5813c1bf78cdf5d9c4a4d6b8810aa5d44de19d1a8a3f33ace7da",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0087.png",
+      "expected": "92982c552ba0b576cb02aa4ad879cdf1d9ce1dbc9d9027ff35f87043db57e26b",
+      "actual": "92982c552ba0b576cb02aa4ad879cdf1d9ce1dbc9d9027ff35f87043db57e26b",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0088.png",
+      "expected": "21e727342458f84610c0ce74ff84cd6ff2b0a26038bd6fafb9f1efe004fcb765",
+      "actual": "21e727342458f84610c0ce74ff84cd6ff2b0a26038bd6fafb9f1efe004fcb765",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0089.png",
+      "expected": "c2279e7b064cf86063e91b913cbf2e4b138a339aa55945fb0d530f28e6d1a01e",
+      "actual": "c2279e7b064cf86063e91b913cbf2e4b138a339aa55945fb0d530f28e6d1a01e",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0090.png",
+      "expected": "510be81b05f53c693b4eab91ea79334e17a4df35078fc4395eea751acfc500fe",
+      "actual": "510be81b05f53c693b4eab91ea79334e17a4df35078fc4395eea751acfc500fe",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0091.png",
+      "expected": "3e5537f515bb26fa122351bb2004d74539b3ca5344bf2e1796e78efa2d93cbcb",
+      "actual": "3e5537f515bb26fa122351bb2004d74539b3ca5344bf2e1796e78efa2d93cbcb",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0092.png",
+      "expected": "d98dec678c0bd54b28dd1b579f4485a5bafab3e9f6e411fadcced472e42d7b09",
+      "actual": "d98dec678c0bd54b28dd1b579f4485a5bafab3e9f6e411fadcced472e42d7b09",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0093.png",
+      "expected": "2c7162828f8e921266be88e40e2d96859b57c32ab61e396423e7b5da91cb6ea6",
+      "actual": "2c7162828f8e921266be88e40e2d96859b57c32ab61e396423e7b5da91cb6ea6",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0094.png",
+      "expected": "eafcdc02d0f5cbb8e604a2820aed33b9d8b0da48f23d1a51846b17bf0edd56e1",
+      "actual": "eafcdc02d0f5cbb8e604a2820aed33b9d8b0da48f23d1a51846b17bf0edd56e1",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0095.png",
+      "expected": "8388b9255efbf56f6a65c10fefeeacab38e077dbc0808e0f436c2964b24626f6",
+      "actual": "8388b9255efbf56f6a65c10fefeeacab38e077dbc0808e0f436c2964b24626f6",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0096.png",
+      "expected": "27d31331eb45970ab4f447d8aebf2198513e8f36c5630d116a1050483aaad705",
+      "actual": "27d31331eb45970ab4f447d8aebf2198513e8f36c5630d116a1050483aaad705",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0097.png",
+      "expected": "ba5b136154762fc080dd13a9f7701343ff21d138cf3cf041c963e76c9f32b384",
+      "actual": "ba5b136154762fc080dd13a9f7701343ff21d138cf3cf041c963e76c9f32b384",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0098.png",
+      "expected": "1550682621e61851dfe3f4778f43169e26472996092c141d40f47302d47d42f0",
+      "actual": "1550682621e61851dfe3f4778f43169e26472996092c141d40f47302d47d42f0",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0099.png",
+      "expected": "2f61e3c358ef70b3a202922b24e5af18f5a4d0703f3dcbb11f39fb8abca1042d",
+      "actual": "2f61e3c358ef70b3a202922b24e5af18f5a4d0703f3dcbb11f39fb8abca1042d",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0100.png",
+      "expected": "cc2fe9e45be44826fa32e61d4613bbf6af3b9096fb623e979ab2c816f017b72e",
+      "actual": "cc2fe9e45be44826fa32e61d4613bbf6af3b9096fb623e979ab2c816f017b72e",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0101.png",
+      "expected": "c5dcb8421c2e47fdcb782a0f1fb8ec5f2baf57d6aeea14ca5abdc2acc28e8721",
+      "actual": "c5dcb8421c2e47fdcb782a0f1fb8ec5f2baf57d6aeea14ca5abdc2acc28e8721",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0102.png",
+      "expected": "fa2ea87a1d4dc48f578bc63e90de6acf626101cd9ebce4cccaf47122337eba5b",
+      "actual": "fa2ea87a1d4dc48f578bc63e90de6acf626101cd9ebce4cccaf47122337eba5b",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0103.png",
+      "expected": "e8c59f7b40cedb0bd9aff3978c94297a1361c4fb06ebed749837ca1476af3b05",
+      "actual": "e8c59f7b40cedb0bd9aff3978c94297a1361c4fb06ebed749837ca1476af3b05",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0104.png",
+      "expected": "0b6cf5ec59a696594d766ef2570f151d54a54015b7073d6e55016ab73f78dff5",
+      "actual": "0b6cf5ec59a696594d766ef2570f151d54a54015b7073d6e55016ab73f78dff5",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0105.png",
+      "expected": "a524590df0ffdb13be460e66e842ee3c7dd7c8502a2595aaf401d4d02a928846",
+      "actual": "a524590df0ffdb13be460e66e842ee3c7dd7c8502a2595aaf401d4d02a928846",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0106.png",
+      "expected": "3ed91c4ecdc28c3088b98105780e90989a6d1d91ec72fd8723deec33254b9f37",
+      "actual": "3ed91c4ecdc28c3088b98105780e90989a6d1d91ec72fd8723deec33254b9f37",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0107.png",
+      "expected": "83c8dd55cd49e82adb06bb2c5d4b4be350c54d8877e23432db05dcd2e641f47e",
+      "actual": "83c8dd55cd49e82adb06bb2c5d4b4be350c54d8877e23432db05dcd2e641f47e",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0108.png",
+      "expected": "545f3bcd39369dea6a5538958f6695a25e5c5079184e0c9de6c7fb315b63064d",
+      "actual": "545f3bcd39369dea6a5538958f6695a25e5c5079184e0c9de6c7fb315b63064d",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0109.png",
+      "expected": "dda5ea09e3c9b04e6ca1ede759fc2ea21443089abd7e1e568ed52b11c69eaa12",
+      "actual": "dda5ea09e3c9b04e6ca1ede759fc2ea21443089abd7e1e568ed52b11c69eaa12",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0110.png",
+      "expected": "ea1f4662ebf6da161a27d51348e506a4052b541a331cefd2feb0fab1f12539a0",
+      "actual": "ea1f4662ebf6da161a27d51348e506a4052b541a331cefd2feb0fab1f12539a0",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0111.png",
+      "expected": "641d8d2fd5106bd2056b61ae1eeb5c825a5bdb8b362f6265917a00f780e88a74",
+      "actual": "641d8d2fd5106bd2056b61ae1eeb5c825a5bdb8b362f6265917a00f780e88a74",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0112.png",
+      "expected": "71bbe7104d94220f10878ef9710076c8ec681158bfea1691d958e7624ac5bd79",
+      "actual": "71bbe7104d94220f10878ef9710076c8ec681158bfea1691d958e7624ac5bd79",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0113.png",
+      "expected": "d51fcf411ea41e3833006254fce02602e2b026d60b31b2864adba2c1f4a36b23",
+      "actual": "d51fcf411ea41e3833006254fce02602e2b026d60b31b2864adba2c1f4a36b23",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0114.png",
+      "expected": "81dbea5d7f6f4ca01a3d692e73269f81b1cf205f675d55ae204c2ef72f9a31fb",
+      "actual": "81dbea5d7f6f4ca01a3d692e73269f81b1cf205f675d55ae204c2ef72f9a31fb",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0115.png",
+      "expected": "d59755901e7d49c7d32e2f456b50b09cee322a8f7e01de7b47247b3f5c908dd9",
+      "actual": "d59755901e7d49c7d32e2f456b50b09cee322a8f7e01de7b47247b3f5c908dd9",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0116.png",
+      "expected": "3e305ad5b3fa5b52e513b06c97a1460a120e75f8268705e61cab648a6277ce69",
+      "actual": "3e305ad5b3fa5b52e513b06c97a1460a120e75f8268705e61cab648a6277ce69",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0117.png",
+      "expected": "15ac54d65eb848a87422245ed96eb2c240dea996089b39c830a7cc6d4467f887",
+      "actual": "15ac54d65eb848a87422245ed96eb2c240dea996089b39c830a7cc6d4467f887",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0118.png",
+      "expected": "41b65e0e5d3aecc5089b7b18fe037f2acf5b54e211b60352936ec2eb35453695",
+      "actual": "41b65e0e5d3aecc5089b7b18fe037f2acf5b54e211b60352936ec2eb35453695",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0119.png",
+      "expected": "a2fee7c7a0deeee905ca4246db76aea0733b8518482fab26d908fa03e87c5751",
+      "actual": "a2fee7c7a0deeee905ca4246db76aea0733b8518482fab26d908fa03e87c5751",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0120.png",
+      "expected": "b2966f575a0d0dd383fcc7ddca18b238f41de95213526549bb07282f819dd775",
+      "actual": "b2966f575a0d0dd383fcc7ddca18b238f41de95213526549bb07282f819dd775",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0121.png",
+      "expected": "35990a46a9edbd36d905c931e49ca6494625441b03d871939fbaf2439c26f5a6",
+      "actual": "35990a46a9edbd36d905c931e49ca6494625441b03d871939fbaf2439c26f5a6",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0122.png",
+      "expected": "af7b1a2fa416e3987b0d17be4f7c106d33f1bd65e659a5db4c687e03537205f7",
+      "actual": "af7b1a2fa416e3987b0d17be4f7c106d33f1bd65e659a5db4c687e03537205f7",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0123.png",
+      "expected": "484b07a7eb12ef67a55fed41389f4db0307a82fd55bfdc5c415b55d1498324c5",
+      "actual": "484b07a7eb12ef67a55fed41389f4db0307a82fd55bfdc5c415b55d1498324c5",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0124.png",
+      "expected": "b2e068a29bcf8f00452bc505551fe5684cd13f8d37aab3383767dcbd4ffdd97e",
+      "actual": "b2e068a29bcf8f00452bc505551fe5684cd13f8d37aab3383767dcbd4ffdd97e",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0125.png",
+      "expected": "a775eed2c2f20eed6192fc6961c9427b8673989bdaa5a15b29c9085b78697f35",
+      "actual": "a775eed2c2f20eed6192fc6961c9427b8673989bdaa5a15b29c9085b78697f35",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0126.png",
+      "expected": "3ecce8a5d05d5f768e41e5548fd3098f8d8c9234840251fc0036b66896acd00a",
+      "actual": "3ecce8a5d05d5f768e41e5548fd3098f8d8c9234840251fc0036b66896acd00a",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0127.png",
+      "expected": "3875eadc57d089c57a5aba3da0db1d2562086ba263f7bf44251a59af748d08c7",
+      "actual": "3875eadc57d089c57a5aba3da0db1d2562086ba263f7bf44251a59af748d08c7",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0128.png",
+      "expected": "642b602126773f728289aa91e3eca4fcef3c8edd62c4357e20897bb917150c93",
+      "actual": "642b602126773f728289aa91e3eca4fcef3c8edd62c4357e20897bb917150c93",
+      "pass": true
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/frames/frame-0129.png",
+      "expected": "6bd29c38a496dd383510a1bb5f81956b97ad2c090b708b738e1343707d096ac3",
+      "actual": "6bd29c38a496dd383510a1bb5f81956b97ad2c090b708b738e1343707d096ac3",
+      "pass": true
+    }
+  ],
+  "protected": [
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/00-neutral-book-facing-tabi.png",
+      "expected": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+      "actual": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/01-drinking-book-facing-tabi.png",
+      "expected": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c",
+      "actual": "d2d0f379211e12b4d3d7d3866efd8ad05a5c6066b4801bb8bcb28414635cd27c",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/02-reading-book-facing-tabi.png",
+      "expected": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "actual": "2741e36f98d9f968843e76e45491dfe24d3b2b132eb92724112e70e65e8e3c13",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/03-window-watch-book-facing-tabi.png",
+      "expected": "5b3ba59efe869e1158be5ce4d770a33fa1ed0c7fa6e29ed4d608c5c747bcf59a",
+      "actual": "5b3ba59efe869e1158be5ce4d770a33fa1ed0c7fa6e29ed4d608c5c747bcf59a",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/01-asakusa-sensoji-panorama.png",
+      "expected": "fc39b3d0bdc632ac2cfbea90a68f148507745f9f71a0dc1d13c5d18e0b7420f8",
+      "actual": "fc39b3d0bdc632ac2cfbea90a68f148507745f9f71a0dc1d13c5d18e0b7420f8",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/02-sumida-river-skytree-panorama.png",
+      "expected": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20",
+      "actual": "1f627d73e2448447b731219564c76b4edfa239dc366aa0e9eda110ebb22c1d20",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/03-ueno-shinobazu-pond-panorama.png",
+      "expected": "41bd4ad859c62e83ff802422a2479431954cc98e0cb91122ce04a84265e149a2",
+      "actual": "41bd4ad859c62e83ff802422a2479431954cc98e0cb91122ce04a84265e149a2",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/04-yanaka-residential-rooftops-panorama.png",
+      "expected": "bde1a4827cc8716292dcb3ea0bfac44951f0e1ce2c6621d7b23c558b86803182",
+      "actual": "bde1a4827cc8716292dcb3ea0bfac44951f0e1ce2c6621d7b23c558b86803182",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/05-shinjuku-skyline-panorama.png",
+      "expected": "54940a967372d259cb3661997b152ffb410156d1d8ad58e82c900fcbbba0fe67",
+      "actual": "54940a967372d259cb3661997b152ffb410156d1d8ad58e82c900fcbbba0fe67",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tabi-assets/scenario/book-panorama-20261002T033127Z/06-tokyo-bay-rainbow-bridge-panorama.png",
+      "expected": "54850c937d59c1023c95996c1c73d9ac43b11913e507dca13dee400f8bf3bd60",
+      "actual": "54850c937d59c1023c95996c1c73d9ac43b11913e507dca13dee400f8bf3bd60",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tests/tabi-tokyo-continuity-30s-1080p.mp4",
+      "expected": "abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea",
+      "actual": "abb990dab8542e30113fc0fe9ee89de5275e5c7c79167916f2f5ae4d755c81ea",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/tests/tokyo-parallax-20s-1080p.mp4",
+      "expected": "30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7",
+      "actual": "30364b7e3a50b88ce217504f5f7e7805c7fa07f1cd16e113f7f12be0e30d20f7",
+      "pass": true
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-24/head-watch-20261002T035933Z/review/tabi-head-watch-5s-768x448-candidate.mp4",
+      "expected": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2",
+      "actual": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2",
+      "pass": true
+    }
+  ],
+  "allPinsUnchanged": true,
+  "allProtectedUnchanged": true
+}

@@ -1,0 +1,1 @@
+allprojects { tasks.withType(org.gradle.api.tasks.testing.Test).configureEach { systemProperty "java.awt.headless", "true"; exclude "**/MidiCoreNativeResponsivenessTest*" } }

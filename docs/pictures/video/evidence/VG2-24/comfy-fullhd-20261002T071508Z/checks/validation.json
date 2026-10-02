@@ -1,0 +1,64 @@
+{
+  "finalFocused": {
+    "counts": {
+      "tests": 60,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "reports": [
+      {
+        "path": "build/test-results/test/TEST-app.melotrail.architecture.TargetArchitectureRulesTest.xml",
+        "sha256": "726e74eef3d43e6347c47517c9adbe74fd0ba25ee362d8ceaa761ce0dce94e80",
+        "counts": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "path": "build/test-results/test/TEST-app.melotrail.documentation.DocumentationIntegrityTest.xml",
+        "sha256": "5856de5a97278405d43c531eac29e5603903a31813bf13ddaf3416cfad622171",
+        "counts": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "path": "build/test-results/test/TEST-app.melotrail.video.ComfyVideoClientTest.xml",
+        "sha256": "7f38f6e1ffa4da9bcd9bad0b24d6bd09576e414741ef3de4105bc2441dca6364",
+        "counts": {
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "path": "build/test-results/test/TEST-app.melotrail.video.ComfyVideoRuntimeTest.xml",
+        "sha256": "65b5fd1a2e1b8cb539bf90da7d0a5286da7c7a797f5dc4d48b210caa0a6eab0a",
+        "counts": {
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    ]
+  },
+  "fullRepositoryChecks": {
+    "owner": "docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/checks",
+    "makeTest": "PASSED: 1 executed, 13 up-to-date, 2m43s",
+    "makeBuild": "PASSED: 1 executed, 13 up-to-date, 2m39s",
+    "rootTests": 794,
+    "desktopTests": 239,
+    "excluded": [
+      "MidiCoreNativeResponsivenessTest"
+    ],
+    "scope": "Full gates ran during the preceding Full-HD study in this same implementation turn. Production/test sources are unchanged by the later ComfyUI redirect; final protocol/runtime/docs/architecture focused checks and the actual owned ComfyUI graph validate that continuation."
+  },
+  "media": "One real ComfyUI finishing graph; two full verification traversals; 129-frame content comparison and rejected face-dropout negative; six full-size visual samples."
+}

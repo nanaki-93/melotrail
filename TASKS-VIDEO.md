@@ -426,7 +426,7 @@ code changed, so full `make test`/`make build` were not repeated for this reset.
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
 | VG2-23 | Inspect existing scene/action references and prepare initial scene-matched drink/read/watch and additional Tokyo scenery reference candidates in the user-requested asset folders. Keep the original scene/props/style, pin sources/results and disclose missing registration/motion capability. This row delivers static candidates, not animation-ready layers or artistic approval. | VG2-21 | DONE |
-| VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | BLOCKED |
+| VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | REVIEW |
 | VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-24 | TODO |
 | VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | TODO |
 | VG2-27 | Review the exact breath/head/watch, drink and read clips at normal speed and relevant in-betweens. Record identity/style, attachment, contact, prop continuity, cadence and return decisions for every required activity. Repair rejected actions before the full film; no test score or static candidate substitutes. | VG2-24, VG2-25, VG2-26 | WAITING_USER |
@@ -505,6 +505,58 @@ composites retain old exterior beside the fronds and clip the returning head.
 This candidate fails visual inspection. The three-attempt limit is reached:
 VG2-24 is BLOCKED pending a fresh precise-contour repair allowance. No new model,
 artwork, MP4, take or full-film pass; source assets and approved motion are intact.
+
+VG2-24 Full-HD follow-up (2026-10-02): the user authorizes the fresh repair and
+requests “good quality, not the 768” for YouTube. The new bounded owner is
+`docs/pictures/video/evidence/VG2-24/youtube-head-20261002T063633Z/`. It combines
+the approved high-resolution reading scene and Sumida exterior with the accepted
+native motion, enhanced once through the already installed RealESRGAN x2plus.
+No new motion generation, model download or hosted job. One initial composition
+and two corrections remove tested contour omissions and the lower-coat stripe;
+all 129 lossless frames preserve the declared fixed interior regions exactly.
+Six real-frame contour regressions and the before/after stripe witness pass.
+
+Local review: `review/tabi-window-watch-1080p.mp4`, SHA-256
+`3d1d004337379ff804e3ac58676d4f02bb601fde04dd08ebf2c2da7d55d6dbe3`.
+The sole encode is silent 1920×1080 H.264 High/yuv420p/BT.709, about 19.8 Mbps;
+129 frames decode and ten decoded colour/compression samples pass. This enhances
+a 768×448 motion source; it does not establish native-1080 motion detail. Visible
+transition softness/right-frond distortion and a blended left coat/tail edge
+remain. The container also starts at 0.04s, reports 5.120078s and has 511/512/513
+presentation-tick intervals instead of uniform 512 ticks at timebase 1/12800.
+No re-encode was attempted. VG2-24 remains BLOCKED for a further bounded quality
+and timing correction; the MP4 is a review candidate, not upload-ready or a
+completed action. Human composition/breathing review, other actions, the full
+180-second corridor and its repeat join remain open. Media stay local.
+
+The user subsequently accepts the animation but rejects face cropping, bad
+shading/disappearance and explicitly requires ComfyUI. The external composite
+above is rejected history; do not continue that masking method. New owner:
+`docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/`.
+One actual graph runs through the existing ComfyVideoRuntime/ComfyVideoClient:
+LoadVideo → GetVideoComponents → RealESRGAN x2plus → whole-frame Lanczos resize,
+crop disabled → CreateVideo → SaveVideo (H.264 CRF16). It consumes the accepted
+original motion, not the rejected composite. No new motion synthesis or model.
+
+Review: `review/tabi-head-watch-comfy-1080p.mp4`, SHA-256
+`fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b`.
+Silent 1920×1080 H.264 High/yuv420p, 129 frames, exact 25fps/5.16s starting at zero,
+about 16.7 Mbps, BT.709 matrix/primaries with correctly signalled sRGB transfer.
+All 129 frames decode; face-content comparison against the native source passes,
+including a face-dropout negative. Six full-size frames were visually inspected.
+Runtime stopped, session evidence was hash-verified and its owned temporary
+session removed. VG2-24 returns to REVIEW: this is a tested ComfyUI Full-HD finish
+of accepted native 768×448 motion, not native-1080 synthesis or a full-film pass.
+Original generative frond deformation and scenery/prop drift remain; independent
+breathing, final appearance, rigid corridor and repeat review are still open.
+The API graph, client helper and evidence are retained; media stay local.
+
+Validation for this continuation: final ComfyUI client/runtime, documentation and
+architecture focused checks pass (60 tests). Headless filtered `make test` and
+`make build` passed earlier in this same finishing run (794 root tests, 239 cached
+desktop tests; native-window test excluded). Production/test sources are unchanged;
+the later real ComfyUI graph and all-frame checks validate the new media path.
+Validation scope and report hashes are in the new run's `checks/validation.json`.
 
 ### Route 1 — Standalone rig proof tasks
 

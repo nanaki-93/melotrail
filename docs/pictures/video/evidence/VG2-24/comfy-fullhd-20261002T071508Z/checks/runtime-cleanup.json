@@ -1,0 +1,30 @@
+{
+  "source": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/runs/comfy-2e07b268-aab2-48a4-b8db-ba1bc26abf14",
+  "retained": "docs/pictures/video/evidence/VG2-24/comfy-fullhd-20261002T071508Z/runtime-session",
+  "files": [
+    {
+      "relativePath": "input/accepted-motion.mp4",
+      "bytes": 1910375,
+      "sha256": "5d936dec6813e55ffcd7593c4f36ea3e041b79978cced53b7da754eb63a986e2"
+    },
+    {
+      "relativePath": "output/shots/tabi-fullhd-comfy_00001_.mp4",
+      "bytes": 10802013,
+      "sha256": "fb91ba066b4f4eaee8975f344670d3be575268b64a4f9115a21882b2e0e25e4b"
+    },
+    {
+      "relativePath": "user/comfyui.db",
+      "bytes": 151552,
+      "sha256": "dfd2064e29206e42771c95544c6f239e98d5c7286cc1f3e4ac667333ae43152a"
+    },
+    {
+      "relativePath": "user/comfyui.db.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "runtimeStopped": true,
+  "hashVerified": true,
+  "removedOnlyOwnedSession": true,
+  "at": "2026-10-02T07:20:36.131211+00:00"
+}
