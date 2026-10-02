@@ -1,0 +1,6 @@
+MotionInputError: Section placement or camera travel exceeds declared V18a scenery capability 'motion-6'.
+    at Object.validateRequest (/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/render.cjs:433:51)
+    at main (/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/scripts/check-scenery.cjs:13:29)
+Exception in thread "main" app.melotrail.video.adapter.VideoMediaProcessException: Video media process exited with code 1:     at main (/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/scripts/check-scenery.cjs:13:29).
+	at app.melotrail.video.adapter.VideoMediaProcess.run(VideoMediaProcess.kt:291)
+	at MediaStage.main(MediaStage.java:15)

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-02T10:06:32.081252+00:00",
+  "classPins": {
+    "ComfyFinish.class": "91a9a95f698dcf06053f00ed3d77e7b8e8877101c5de9a90a1c4d29defc4b1a1",
+    "MediaStage.class": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+  },
+  "admissionSha256": "4b56a2267a01677a541b557a18a4ce303d86e961361e042c37ad8615ae4b06d7",
+  "commandOwner": "ComfyFinish via production ComfyVideoRuntime/ComfyVideoClient"
+}

@@ -1,0 +1,2 @@
+{"status":"BLOCKED","full60SecondRequiredNearTravel":4324.808013355592,"allowedNearTravel":4280,"missingCanvasPixels":44.808013355592266,"minimumCanvasWidth":6245,"proposedCanvasWidth":6264,"proposedFilterMargin":19.191986644407734,"shortRangeTypedValidation":true,"shortRangeExactOverlap":false,"joinError":"Supplied scenery sections 'near-old-coverage' and 'near-new-coverage' do not match exactly across the offscreen join at absolute frame 1230.","videoRenders":0,"videoEncodes":0,"normalSpeedReview":false,"diagnosticOnly":true}
+OWNED_MEDIA_ELAPSED=PT0.456130125S

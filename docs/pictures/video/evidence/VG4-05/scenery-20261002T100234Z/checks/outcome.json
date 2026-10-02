@@ -1,0 +1,37 @@
+{
+  "status": "BLOCKED",
+  "full60SecondRequiredNearTravel": 4324.808013355592,
+  "allowedNearTravel": 4280,
+  "missingCanvasPixels": 44.808013355592266,
+  "minimumCanvasWidth": 6245,
+  "proposedCanvasWidth": 6264,
+  "proposedFilterMargin": 19.191986644407734,
+  "shortRangeTypedValidation": true,
+  "shortRangeExactOverlap": false,
+  "joinError": "Supplied scenery sections 'near-old-coverage' and 'near-new-coverage' do not match exactly across the offscreen join at absolute frame 1230.",
+  "videoRenders": 0,
+  "videoEncodes": 0,
+  "normalSpeedReview": false,
+  "diagnosticOnly": true,
+  "recordedAt": "2026-10-02T10:16:46.394627+00:00",
+  "humanAcceptanceRecorded": "VG2-26 exact reading clip accepted",
+  "comfyUiWork": "One full-frame neutral still enhancement succeeded, runtime STOPPED and retained",
+  "implementationAttempts": [
+    {
+      "attempt": 0,
+      "result": "preparation refused: Canvas pin role prefix"
+    },
+    {
+      "attempt": 1,
+      "result": "preparation refused: floating viewport integers; starting absolute trajectory also corrected before next attempt"
+    },
+    {
+      "attempt": 2,
+      "result": "production import and short request pass; 60s near capability and exact near overlap fail"
+    }
+  ],
+  "sourcePreparation": "Far painted coverage passes 5400 shutter positions, but this is not all-plane 60s readiness",
+  "statusReason": "TASKS-VIDEO execution contract: initial implementation plus two bounded repairs used. No further repair or movie run without a fresh explicit instruction.",
+  "mediaStorage": "local only; scripts/checks/docs versioned",
+  "overlapClarification": "Decoded source pixels before x=4900 are identical; the renderer refuses their subpixel viewport parity. Do not label this as missing shared raw artwork."
+}

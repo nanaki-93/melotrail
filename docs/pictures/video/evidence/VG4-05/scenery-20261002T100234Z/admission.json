@@ -1,0 +1,36 @@
+{
+  "task": "VG4-05",
+  "userInstruction": "approved, go with the next",
+  "recordedAt": "2026-10-02T10:09:38.333148+00:00",
+  "scope": "Production import, 5400 shutter coverage positions over 60 seconds, one 300-frame 1080p30 moving join proof at absolute 1170..1469. Fixed approved neutral; existing ComfyUI-painted far/middle and approved v5 near. One fresh ComfyUI full-frame neutral enhancement completed separately. Main window only; moving action envelopes and small left panes remain later obligations.",
+  "limits": {
+    "wholeNativeRunnerSeconds": 900,
+    "nativeProcessMemoryBytes": 2147483648,
+    "observedTreeRssBytes": 5368709120,
+    "totalNewEvidenceBytes": 4294967296,
+    "freeDiskReserveBytes": 21474836480,
+    "encodes": 1,
+    "builtInCountProbeTraversals": 1,
+    "builtInFullDecodeTraversals": 1,
+    "additionalFullDecodeTraversals": 1,
+    "additionalProbeTraversals": 0,
+    "automaticRetries": 0
+  },
+  "stages": {
+    "renderMaximumSeconds": 540,
+    "encodeAndBuiltInChecksMaximumSeconds": 180,
+    "additionalReviewDecodeMaximumSeconds": 180
+  },
+  "stop": "Stop and preserve on time/RSS/disk/source/pressure failure; no automatic native retry. All media local; only helpers/checks/docs committed.",
+  "fullRoute": {
+    "targetSeconds": 180,
+    "frames": 5400,
+    "minimumAuthoredWidths": [
+      5467,
+      10173,
+      14420
+    ],
+    "ready": false,
+    "closingJoin": "Must return camera/depth and closing artwork to opening with equal travel velocity; not solved by this short proof."
+  }
+}

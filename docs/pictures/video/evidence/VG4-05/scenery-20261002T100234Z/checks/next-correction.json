@@ -1,0 +1,48 @@
+{
+  "task": "VG4-05",
+  "state": "PREPARED_FOR_AUTHORIZATION",
+  "changes": [
+    {
+      "owner": "new derived near PNG under scenario/scenery-<new-run-id>/",
+      "change": "Prepare both outgoing and incoming near sections on matching 6264x1080 canvases. Preserve original decoded pixels through x=4899 and v5 artwork from x=4956 onward. Retain original source files. Recheck exact rendered overlap; do not relax pixel equality.",
+      "why": "60s near travel is 4324.808px; 6264px bounds provide 19.192px margin. Match decoded overlap exactly, not within the former two-level raster tolerance.",
+      "artCoverage": "Any transparent edge extension is backed by separately painted middle/far layers and does not count as new scenery."
+    },
+    {
+      "owner": "SceneryPilot.kt proof input map",
+      "change": "Use the fresh near tile, rebuild production imported scene, keep fixed neutral and exact reference speed/depth unchanged."
+    }
+  ],
+  "execution": {
+    "preparationSeconds": 120,
+    "preparationMemoryBytes": 2147483648,
+    "nativeSharedSeconds": 900,
+    "renderSeconds": 540,
+    "encodeAndBuiltInVerificationSeconds": 180,
+    "additionalDecodeSeconds": 180,
+    "nativeMemoryBytes": 2147483648,
+    "observedTreeRssBytes": 5368709120,
+    "newDiskBytes": 4294967296,
+    "freeDiskReserveBytes": 21474836480,
+    "movieCount": 1,
+    "frames": 300,
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "automaticRetries": 0,
+    "newComfyUiJobs": 0
+  },
+  "gates": [
+    "All-plane 60s capability coverage",
+    "Exact shared source overlap at all shutter positions",
+    "No fixed cabin/face/notebook changes outside aperture",
+    "Visual source samples pass before the first movie attempt"
+  ],
+  "stillPending": [
+    "Other Tokyo POIs and 180s route",
+    "Small left panes",
+    "Moving-character envelope/action composition",
+    "Full segment closing join"
+  ],
+  "diagnosticClarification": "Read-only comparison finds zero decoded source differences before x=4900; the current different-sized sections still fail subpixel rendered viewport equality. Matching source pixels alone did not establish the moving join. Equal-size preparation is a proposed correction, not a proved fix."
+}

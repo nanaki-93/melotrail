@@ -1,0 +1,3 @@
+Exception in thread "main" java.lang.IllegalArgumentException: Controlled runtime pin roles are incomplete or mislabelled
+	at app.melotrail.video.domain.VideoControlledMotionRuntimeBinding.<init>(VideoGenerationJob.kt:631)
+	at SceneryPilotKt.main(SceneryPilot.kt:42)

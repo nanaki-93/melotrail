@@ -1,0 +1,138 @@
+{
+  "at": "2026-10-02T10:26:01.288902+00:00",
+  "removedScratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg4-scenery-xchsxgx4",
+  "originalUserUnstagedNumstat": "16\t0\tAGENTS.md\n6\t2\tPLAN-AUDIO.md\n6\t2\tPLAN-VIDEO.md\n8\t1\tREADME.md\n16\t4\tTASKS-AUDIO.md\n53\t13\tTASKS-VIDEO.md\n6\t2\tdocs/ARCHITECTURE.md\n9\t0\tdocs/TABI_VIDEO.md\n60\t1\tdocs/VALIDATION.md\n",
+  "removedFiles": [
+    {
+      "relativePath": "PLAN-VIDEO.md.before",
+      "bytes": 37536,
+      "sha256": "97ade454277d2649a4c023aa0a7c343e824a2600e840877e7baec541686f00c5"
+    },
+    {
+      "relativePath": "PLAN-VIDEO.md.head",
+      "bytes": 37198,
+      "sha256": "636b62b2f88aa6f8bb80d854a1d830c51af82316987f3948600e2d952a05012a"
+    },
+    {
+      "relativePath": "TASKS-VIDEO.md.before",
+      "bytes": 271770,
+      "sha256": "a91b0ad00e97018018ba13b36b8e46842a4054d7bf668863a32c5e7595f0cda5"
+    },
+    {
+      "relativePath": "TASKS-VIDEO.md.head",
+      "bytes": 268802,
+      "sha256": "07a45f9dd0d2d9cae3785ae7c2618ae3b06b9b34d5fbcb003c01eceb6dc62740"
+    },
+    {
+      "relativePath": "classes/ComfyFinish.class",
+      "bytes": 13403,
+      "sha256": "91a9a95f698dcf06053f00ed3d77e7b8e8877101c5de9a90a1c4d29defc4b1a1"
+    },
+    {
+      "relativePath": "classes/META-INF/main.kotlin_module",
+      "bytes": 44,
+      "sha256": "8e6eb4a41fa71cccc2a5a63af6c5fbaf641a1e8018c4f6f87467205a5d7d7933"
+    },
+    {
+      "relativePath": "classes/MediaStage.class",
+      "bytes": 3934,
+      "sha256": "742da938dd283861cf514f52da83954533bcc6d4616993ad2c4898453ed20f8e"
+    },
+    {
+      "relativePath": "classes/SceneryPilotKt$main$$inlined$sortedBy$1.class",
+      "bytes": 1884,
+      "sha256": "c4137e31355ff435240d7a9763e87eadf42c604da044e1d87fdc077f269bbc68"
+    },
+    {
+      "relativePath": "classes/SceneryPilotKt.class",
+      "bytes": 49161,
+      "sha256": "6d5df0fbb9a8d676bb13bd924af7a00a8a76a8def5e567b8eaed146fec9d8f05"
+    },
+    {
+      "relativePath": "classpath.log",
+      "bytes": 728,
+      "sha256": "387b6350dca60dd979baacad88d69794845e3dbf9e597a9f8bfe0c136b7f8a27"
+    },
+    {
+      "relativePath": "compile-repair.log",
+      "bytes": 688,
+      "sha256": "0604b9e255fb881ecd4f53d6a86b36a0c7e7e7d35a4aaa447dbc2f31dcd67b98"
+    },
+    {
+      "relativePath": "compile-repair2.log",
+      "bytes": 688,
+      "sha256": "0604b9e255fb881ecd4f53d6a86b36a0c7e7e7d35a4aaa447dbc2f31dcd67b98"
+    },
+    {
+      "relativePath": "compile.log",
+      "bytes": 688,
+      "sha256": "0604b9e255fb881ecd4f53d6a86b36a0c7e7e7d35a4aaa447dbc2f31dcd67b98"
+    },
+    {
+      "relativePath": "context.json",
+      "bytes": 425,
+      "sha256": "7386145eec4ead4f8eefae47c40f7a32d02e5a8e54df7b041006b94adf3511af"
+    },
+    {
+      "relativePath": "docs/TABI_VIDEO.md.before",
+      "bytes": 353070,
+      "sha256": "6bc1ca209d94291d7587ba0b33053b435ac2a3a0cdd641a7225d3db6ede46307"
+    },
+    {
+      "relativePath": "docs/TABI_VIDEO.md.head",
+      "bytes": 352476,
+      "sha256": "141478a45a26208d8d8ca5da098b564cb38eab11224cdc7794bdd02e44b91dee"
+    },
+    {
+      "relativePath": "docs/VALIDATION.md.before",
+      "bytes": 174042,
+      "sha256": "77fd6731b6c4708dfd4c3f22d5b2a631585ac301e0b23f0302bd865da7ae4288"
+    },
+    {
+      "relativePath": "docs/VALIDATION.md.head",
+      "bytes": 170171,
+      "sha256": "feb4b11a12ddd4f470b7ceea60b4d6aea9c866dc7133757415cb24cbaa0d9523"
+    },
+    {
+      "relativePath": "focused.log",
+      "bytes": 715,
+      "sha256": "675f0fbed477a874b29942af8c63e4f34315a6948240bed2eb92c9fc3d2761cf"
+    },
+    {
+      "relativePath": "java.pid",
+      "bytes": 5,
+      "sha256": "4cbff38463e7ab635a0b021459660e35eeca6b720d86c72236282900e12bfc49"
+    },
+    {
+      "relativePath": "make-build.log",
+      "bytes": 2244,
+      "sha256": "6caecdf3540c151ee7aef263899bf8187fe028b93f1ac2484d8cddd4fb55d9fb"
+    },
+    {
+      "relativePath": "make-test.log",
+      "bytes": 2076,
+      "sha256": "23a6b81a541a99c1bf4a362591fd596dd652ed2eec978bd715d9d3c5dea950bf"
+    },
+    {
+      "relativePath": "node-tests.log",
+      "bytes": 3324,
+      "sha256": "53f7aca1c1ae674160de32ce3228a69e68037bfcdcbf2dec177379c5e4c2473b"
+    },
+    {
+      "relativePath": "original-numstat.txt",
+      "bytes": 178,
+      "sha256": "cc2225eb3938a4217b83892f20f1ce31081a0d1c621d95902dbfca787a724b95"
+    },
+    {
+      "relativePath": "runtime-classpath.txt",
+      "bytes": 2975,
+      "sha256": "cc0f4db15abb4f7854ec9dde645d41388ca2f773b040569e379f0454a0124489"
+    }
+  ],
+  "retainedEvidence": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z",
+  "runtimeSessionAlreadyRetainedAndRemoved": true,
+  "ownedProcessesStopped": true,
+  "videoAttempts": 0,
+  "scope": "Only this run's unique OS scratch is removed. Source art, derived art, failed preparation projects and runtime/review evidence remain local. Existing build fixtures/history and unrelated environments are not cleaned.",
+  "removed": true
+}

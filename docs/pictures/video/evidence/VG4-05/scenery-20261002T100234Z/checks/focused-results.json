@@ -1,0 +1,48 @@
+{
+  "status": "PASS",
+  "classes": [
+    {
+      "class": "app.melotrail.architecture.TargetArchitectureRulesTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "sha256": "a1e2044583dd5aa2ff3faa5ebb18794d9e4b8e73b0dea222e939870ee510846f"
+    },
+    {
+      "class": "app.melotrail.documentation.DocumentationIntegrityTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "sha256": "1ca2bdbc75e9803dce8470634e76b752bc14125e3d51e79256b70de5e5d2cf93"
+    },
+    {
+      "class": "app.melotrail.video.VideoAnimationAssetsTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "sha256": "047bb612706c7570c8b9b4ebdb533bb6c51665178416ad15d0e530ed235b413e"
+    },
+    {
+      "class": "app.melotrail.video.VideoControlledMediaStageTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "sha256": "97e598fb6a6893ac0b969cbb881c491c4d39935a4dde20221a8610e424d5bdba"
+    },
+    {
+      "class": "app.melotrail.video.VideoMotionDescriptorFixtureTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "sha256": "ad054f07a363dc588062c456ce0e297ec9a2c5b84790476dca4ffb492830b3f6"
+    },
+    {
+      "class": "app.melotrail.video.VideoMotionRendererTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "sha256": "cbeb4d12240e0b79bdd8f585e7d51f9f0cf5189e804fb334a6dae183920c2a50"
+    }
+  ],
+  "totalTests": 70
+}

@@ -242,6 +242,12 @@ Fine cuff/frond detail varies during the transitions. Full decode/timing and
 all-frame face-content checks pass; VG2-26 remains REVIEW for this exact movie.
 No fixed exterior, seamless loop, 30fps conversion or full-film delivery follows.
 
+The user subsequently says “approved, go with the next”, accepting the exact
+reading movie above. `pictures/video/evidence/VG2-26/accepted-reading-20261002T100234Z/checks/user-acceptance.json`
+pins its unchanged bytes and graphs. VG2-26 is DONE for this human-reviewed
+checkpoint; minor transition detail variation remains disclosed. This authorizes
+the next VG4-05 scenery step, without closing breathing/fixed-scene or full-film gates.
+
 ## Selected blink/parallax baseline (2026-10-02)
 
 **Historical recovery scope.** Its recovered bytes/settings remain valid; the
@@ -2540,6 +2546,21 @@ filter margins and verify every trajectory/shutter position. Use bounded tiles
 rather than raising image-size limits. The renderer currently loads all supplied
 images; 300-frame chunks alone do not bound asset memory. Measure the selected
 kit and scope loading changes only if necessary, without dropping consumed pins.
+
+VG4-05 preparation (2026-10-02):
+`pictures/video/evidence/VG4-05/scenery-20261002T100234Z/` retains a successful
+whole-frame ComfyUI enhancement of the approved neutral still and deterministic
+preparation from existing painted scenery. The far strip now has 250 additional
+painted pixels at the original scale and passes 5400 shutter coverage positions.
+This is only far-plane/main-window coverage. The full 60s request fails because
+the near image allows 4280px travel while the trajectory requires 4324.808px;
+the short handoff also fails exact old/v5 rendered-pixel parity. Two setup repairs
+preceded these findings. No movie rendering/encoding, take or motion approval
+occurred. VG4-05 is BLOCKED under the queue’s attempt limit. The next correction
+is specified in `checks/next-correction.json`: fresh 6264px near bounds and exact
+shared original pixels, with old source/media preserved. Transparent backing
+margin must not be claimed as new art. Small left panes, moving action mattes,
+other districts, full 180s coverage and closing continuity remain pending.
 
 ### Supervised production runner, then the app
 

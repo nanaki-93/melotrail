@@ -1,0 +1,32 @@
+{
+  "task": "VG2-26",
+  "reviewer": "project user",
+  "date": "2026-10-02T10:02:34.223191+00:00",
+  "quote": "approved, go with the next",
+  "decision": "Accept the exact guided reading clip and proceed with VG4-05 Tokyo scenery preparation.",
+  "movie": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/review/tabi-read-comfy-1080p.mp4",
+    "bytes": 6099541,
+    "sha256": "33ff22fa164a696a65d3c71db0d50d3b145ff2007704d6741979ac50978a5db6"
+  },
+  "nativeSource": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/review/tabi-read-native.mp4",
+    "bytes": 968903,
+    "sha256": "bc51f87a45541d46d22020a1be2f564e99bb1c58ed9be51bc36f70d854f3d791"
+  },
+  "workflow": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/generation/workflow/guided-read-api.json",
+    "bytes": 5782,
+    "sha256": "5776169457281a3ac024066a4d2d6d40f92b8d147078ba1b43a7e29adb6945f0"
+  },
+  "finishWorkflow": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-26/reading-20261002T093426Z/finish/workflow/finish-full-frame-api.json",
+    "bytes": 801,
+    "sha256": "c304343b1190027ad7a86ab156cf42df43a56eaa26a9dd39cdcf2f23a0781966"
+  },
+  "knownLimitationsAcceptedForThisClip": [
+    "Minor cuff/frond detail variation during transitions",
+    "Native motion 768x448 enhanced through ComfyUI to 1080p, 129 frames at 25fps"
+  ],
+  "scope": "Closes this reading review only. Does not approve unseen clips, breathing/fixed-scene gates, 30fps conversion, scenery joins or the full film."
+}

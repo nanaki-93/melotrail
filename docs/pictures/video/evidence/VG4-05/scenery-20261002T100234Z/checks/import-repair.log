@@ -1,0 +1,4 @@
+Exception in thread "main" java.lang.IllegalArgumentException: Renderer integer is not exact
+	at app.melotrail.video.domain.VideoControlledMotionDescriptor.parsedLong(VideoGenerationJob.kt:564)
+	at app.melotrail.video.domain.VideoControlledMotionDescriptor.<init>(VideoGenerationJob.kt:363)
+	at SceneryPilotKt.main(SceneryPilot.kt:60)

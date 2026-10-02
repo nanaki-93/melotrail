@@ -1,0 +1,10 @@
+{
+  "pixelsDifferentBefore4900": 0,
+  "maximumChannelDeltaBefore4900": 0,
+  "firstNewNonzeroAlphaColumn": 4956,
+  "lastOldNonzeroAlphaColumn": 4127,
+  "joinRightmostSourceCoordinate": 4877.328881469115,
+  "proposedExactOldPrefixEndExclusive": 4900,
+  "examples": [],
+  "scope": "Read-only difference diagnosis. No source repair or native movie attempt."
+}

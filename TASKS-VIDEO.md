@@ -429,7 +429,7 @@ code changed, so full `make test`/`make build` were not repeated for this reset.
 | VG2-24 | Prove gentle breathing/head movement and a readable look toward the window in one short continuous test. Inspect existing controls/local ComfyUI first; prepare only needed backing, moving head/body support, masks and fixed seat/table contact. Preserve original style/camera and inspect actual in-between frames; planar rotation alone is not a proved head turn. Keep rigid scenery outside the character-motion stage. | VG2-23, VG2-02 | REVIEW |
 | VG2-28 | Retain human approval of the exact ComfyUI head/watch clip and full-frame 1080p finishing workflow as the reference for subsequent action tests. This splits the accepted checkpoint from VG2-24's remaining breathing and fixed-scene obligations; it does not approve those obligations or the full film. | VG2-23, VG2-02 | DONE |
 | VG2-25 | Prove a scene-matched drink action: reach for the original takeaway cup, lift, sip and return it to the table. Continuous attached hands/wrists/cuffs/arms, consistent cup/lid, no duplicate cup or hand ghosting, stable character/contact and clean return. Try the selected local workflow first; prepare only missing compatible inputs. One fresh bounded short motion test, no old wave replay or pose-flip substitute. | VG2-28 | DONE |
-| VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | REVIEW |
+| VG2-26 | Prove reading the original open table notebook: settle gaze/head toward pages, small readable eye/head/hand movement, then look up/return. Use the corrected spread facing TABI, keep headphones on head, notebook/cup/pen coherent and forearms attached. A static held reading drawing is insufficient; a page turn is optional only if independently supported. One fresh bounded short motion test with exact inputs. | VG2-25 | DONE |
 | VG2-27 | Review the exact breath/head/watch, drink and read clips at normal speed and relevant in-betweens. Record identity/style, attachment, contact, prop continuity, cadence and return decisions for every required activity. Repair rejected actions before the full film; no test score or static candidate substitutes. | VG2-24, VG2-25, VG2-26 | WAITING_USER |
 
 VG2-23 first preparation: `docs/pictures/video/evidence/VG2-23/action-scope-20261002T030904Z/`.
@@ -636,6 +636,13 @@ make/Node outcomes and report hashes are in `checks/validation.json`, with the
 native-window test excluded. Sixteen protected original/reference files remain
 byte-exact, both owned runtimes stopped, and media stay local. VG2-27 still needs
 all required action decisions, including VG2-24's remaining obligations.
+
+VG2-26 acceptance (2026-10-02): the user says “approved, go with the next”.
+The exact reading movie, native source and both workflows were reverified in
+`docs/pictures/video/evidence/VG2-26/accepted-reading-20261002T100234Z/checks/user-acceptance.json`.
+This closes reading at the disclosed cuff/frond quality. VG2-24’s remaining
+breathing/fixed-scene obligations and VG2-27 are unchanged. Next is the independently
+ready VG4-05 scenery preparation and short join proof.
 
 ### Route 1 — Standalone rig proof tasks
 
@@ -2962,7 +2969,7 @@ No production surface may outrun VG3-03 approval; material changes need renewed 
 | --- | --- | --- | --- |
 | VG4-03 | Scope preparation dependencies to their declared consumed components; keep shared/unspecified dependencies global, reject incomplete or invalid declarations and preserve unaffected pending chunks and completed takes. Bounded prerequisite split from VG4-01. | VG2-02 | DONE |
 | VG4-04 | Persist immutable continuous-plan proposals under the existing Video project lock, with exact source/descriptor pins, append-only versions, revision guards, confined publication and verified reopen. A saved proposal is not executable readiness or a render checkpoint. | VG2-02, VG4-03 | DONE |
-| VG4-05 | Prepare matching Tokyo extensions and offscreen joins using the existing scenario assets plus new same-style points of interest in scenario/. Preserve reference speed/scale, rigid far/middle/near depth and quiet travel. Prove a short moving join and at least 60-second coverage first, with the full 180-second route and closing join scoped from the outset. Mattes must fit the required moving-character envelope, not only the old fixed head. | VG2-23, VG1-02 | TODO |
+| VG4-05 | Prepare matching Tokyo extensions and offscreen joins using the existing scenario assets plus new same-style points of interest in scenario/. Preserve reference speed/scale, rigid far/middle/near depth and quiet travel. Prove a short moving join and at least 60-second coverage first, with the full 180-second route and closing join scoped from the outset. Mattes must fit the required moving-character envelope, not only the old fixed head. | VG2-23, VG1-02 | BLOCKED |
 | VG4-07 | After all required action proofs/review, bind only the proven character-motion method and schedule through existing VideoAssembly/Planner/Store and preparation/descriptor owners. Pin motion/art/prop versions, absolute timing/rests/returns and dependency invalidation. Current held poses are not continuous drink/read motion. No automatic rig adoption, second schema/ledger or UI. | VG4-03, VG4-04, VG2-27 | TODO |
 | VG4-08 | Deferred after the 2026-10-02 baseline reset. Standalone description-to-action proof: implement a small explicit supported vocabulary mapping exact descriptions to the reviewed rig actions, absolute timing, bounded speed/amplitude, rests and compatible scenery. Show the interpretation; fixture-test two distinct briefs plus unsupported action/viewpoint/prop, ambiguous timing and channel conflict. No generated code execution, arbitrary prompt-to-film claim, LLM/provider addition, production schema or UI. Agent/manual mappings remain labelled until automated mapping is actually tested. | VG2-10 | OPTIONAL |
 | VG4-09 | Adapt the reviewed local character-motion method to the existing controlled media-stage/job/process/result owners after VG4-07. Prove import, moving support/occlusion, absolute frame dispatch, cancellation/reopen, stale-result/no-overwrite and truthful decode reservations. Preserve the fixed cabin and independently moving scenery. No failed socket reuse or assumed Blender backend. | VG4-07, VG2-02 | TODO |
@@ -3000,6 +3007,23 @@ fixtures, event/pose boundary parity, changed order/timing/pose invalidation,
 unsupported/conflicting sequences and unchanged completed media. No new generic
 timeline editor, background generator or second planner. This row is planned,
 not admitted or implemented.
+
+VG4-05 bounded preparation (2026-10-02), **BLOCKED**:
+`docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/` retains one successful
+ComfyUI/RealESRGAN full-frame neutral enhancement to 1080p, a 250-pixel extension
+from unused original ComfyUI-painted far scenery, and the exact reading acceptance.
+Production asset import and the short 39–49s request pass after two harness
+corrections. The full 60s source check then refuses the near plane: required
+translation 4324.808px exceeds its 4280px bound. Independent read-only diagnosis
+also confirms the old/v5 near sections fail the renderer’s exact rendered-pixel overlap
+gate. No video render, encode or take occurred. Far-only painted coverage is
+not full corridor readiness; small left panes and moving-character support remain
+unproved. The initial implementation and two bounded repairs are exhausted.
+`checks/next-correction.json` scopes a fresh derived near tile with 6264px bounds
+and exact original-pixel overlap, preserving all old media and reference speed.
+A fresh explicit run instruction is required before that correction/native proof.
+Headless repository validation is retained in `checks/validation.json`; it does
+not promote this failed scenery check or grant human motion approval.
 
 VG4-05/06 owners: selected derived scenery and an ignored production-service test
 harness; current `VideoAnimationAssets`, `VideoScenePreparation`, prepared-scene

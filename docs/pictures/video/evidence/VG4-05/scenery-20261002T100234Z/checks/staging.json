@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "strategy": "Apply own before/current changes into matching HEAD spans; preserve all original user diff signatures and the nine-file unstaged numstat. No reset or stash.",
+  "documentation": [
+    {
+      "path": "TASKS-VIDEO.md",
+      "ownedHunks": 4,
+      "selectedBlob": "1df848637c8af526ac682705fbc01236152596f7",
+      "workingSha256": "d33774266494ae641fbb0bc9669e9f79a2b4dc28918f25096638052883af2f0e"
+    },
+    {
+      "path": "docs/TABI_VIDEO.md",
+      "ownedHunks": 2,
+      "selectedBlob": "6dcb36a4fa6b8f400a9683106cc17a94f644be39",
+      "workingSha256": "2c53cc13b56c1f26f37e19928a75f1d65729be53c7985fec1f477a208e2a1920"
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "ownedHunks": 1,
+      "selectedBlob": "6ade29f29e9cdd607f8c08792acb05b983d7dcfb",
+      "workingSha256": "93bed4d46d8bf1ac82db1129e3a1ee39e5dec67020bbd412790cf9aeef191f2e"
+    }
+  ]
+}

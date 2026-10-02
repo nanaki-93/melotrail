@@ -1,0 +1,55 @@
+{
+  "task": "VG4-05",
+  "authorization": "User: approved, go with the next. Standing request for ComfyUI and Full HD, media local.",
+  "scope": "One full-frame neutral still enhancement in ComfyUI. Existing source unchanged; no synthesized motion or new artwork. Then separately bounded scenery preparation/render.",
+  "native": {
+    "inferenceAttempts": 1,
+    "automaticRetries": 0,
+    "wholeRunnerLimitSeconds": 300,
+    "observedProcessTreeRssLimitBytes": 17179869184,
+    "ownedEvidenceAndSessionLimitBytes": 268435456,
+    "minimumFreeDiskBytes": 21474836480
+  },
+  "pins": [
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/tabi-assets/train-actions/book-panorama-20261002T033127Z/00-neutral-book-facing-tabi.png",
+      "bytes": 2185733,
+      "sha256": "0a965e28d292768fca35a8cb61de6ec4419540a79906aea7c12dbf81d540c34d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/plate-finish/request.json",
+      "bytes": 785,
+      "sha256": "1c64c39dbda0f494238da6354da040b891b95b2c443cb66ecf9b9dff748a3a74"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/plate-finish/scripts/run.py",
+      "bytes": 7118,
+      "sha256": "eac13c049853348f3794406890d7aec7a8520993b4cf567aeedc397a3088951a"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/plate-finish/scripts/MediaStage.java",
+      "bytes": 1475,
+      "sha256": "939dbcbb898e1fa11267d0deb5dc4a7b6adab831880fa9c1451eb097642e517d"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/plate-finish/scripts/ComfyFinish.java",
+      "bytes": 6686,
+      "sha256": "745d84b00036b02a9a9b0a16f7e019c967a924a1ab9ac0cbf51a625ba5aaff97"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/plate-finish/workflow/finish-full-frame-api.json",
+      "bytes": 787,
+      "sha256": "be874cdaf7c6940efe35b427cd6537c24d6908074c074de5accca62b4665b823"
+    },
+    {
+      "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/models/comfyui/upscale_models/RealESRGAN_x2plus.pth",
+      "bytes": 67061725,
+      "sha256": "49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb"
+    },
+    {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/src/main/resources/video/comfyui/runtime-profile.json",
+      "bytes": 7353,
+      "sha256": "f810b08dfde88e80fc753887fd568cb71f30594a6196882b0e3a620026641b06"
+    }
+  ]
+}

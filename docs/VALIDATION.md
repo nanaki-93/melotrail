@@ -283,6 +283,27 @@ is opened. Sixteen protected files are byte-exact. VG2-26 is REVIEW; media stay
 local and only scripts, graphs, requests, checks and owner documentation are
 committed. No further native generation is needed for this review candidate.
 
+The user subsequently says “approved, go with the next”, accepting the exact
+reading movie above. `pictures/video/evidence/VG2-26/accepted-reading-20261002T100234Z/checks/user-acceptance.json`
+pins its unchanged bytes and graphs. VG2-26 is DONE for this human-reviewed
+checkpoint; minor transition detail variation remains disclosed. This authorizes
+the next VG4-05 scenery step, without closing breathing/fixed-scene or full-film gates.
+
+VG4-05 preparation (2026-10-02):
+`pictures/video/evidence/VG4-05/scenery-20261002T100234Z/` retains a successful
+whole-frame ComfyUI enhancement of the approved neutral still and deterministic
+preparation from existing painted scenery. The far strip now has 250 additional
+painted pixels at the original scale and passes 5400 shutter coverage positions.
+This is only far-plane/main-window coverage. The full 60s request fails because
+the near image allows 4280px travel while the trajectory requires 4324.808px;
+the short handoff also fails exact old/v5 rendered-pixel parity. Two setup repairs
+preceded these findings. No movie rendering/encoding, take or motion approval
+occurred. VG4-05 is BLOCKED under the queue’s attempt limit. The next correction
+is specified in `checks/next-correction.json`: fresh 6264px near bounds and exact
+shared original pixels, with old source/media preserved. Transparent backing
+margin must not be claimed as new art. Small left panes, moving action mattes,
+other districts, full 180s coverage and closing continuity remain pending.
+
 VG2-21 recovery evidence is in
 `docs/pictures/video/evidence/VG2-21/baseline-20261002T025705Z/`. The read-only
 verifier checks 68 local file pins, including both exact reference MP4s and every

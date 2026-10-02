@@ -1,0 +1,22 @@
+{
+  "inspectedAt": "2026-10-02T10:19:36.069673+00:00",
+  "fullHdNeutral": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG4-05/scenery-20261002T100234Z/plate-finish/review/neutral-comfy-1080p.png",
+    "sha256": "594d6a161ab580e2bc0dda0a93e9f20d61aa43fd682313abe5f3c33052216111",
+    "dimensions": [
+      1920,
+      1080
+    ],
+    "visualNotes": "Whole frame inspected: face, fronds, attached arms, correctly facing notebook, cup, train and existing scene retained. No cropping or face dropout observed in this static enhancement."
+  },
+  "movingWindowMatteReview": "NOT_RUN: source validation blocked before movie rendering or combined samples",
+  "runtimeStopped": true,
+  "observedPidsGone": [
+    23284,
+    23367
+  ],
+  "movieRenders": 0,
+  "videoEncodes": 0,
+  "whole60sReadiness": "FAIL",
+  "humanSceneryApproval": "PENDING"
+}
