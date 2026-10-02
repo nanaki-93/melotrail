@@ -1,0 +1,27 @@
+{
+  "status": "PREPARATION_DEADLINE_FAILED_NO_RETRY",
+  "failure": {
+    "status": "STOPPED_NO_RETRY",
+    "error": "Shared phase/cumulative deadline expired",
+    "decoderReservations": 0,
+    "operationsReserved": 2,
+    "sampledPeakAggregateRssBytes": 357498880,
+    "peakNewStorageBytes": 535042239,
+    "elapsedSeconds": 104.567885417
+  },
+  "completedComposedSourceFrames": 150,
+  "writtenConvertedFiles": 19,
+  "sourceStageCompleted": false,
+  "completedEncodes": 0,
+  "probeScans": 0,
+  "fullDecodes": 0,
+  "reviewCopies": 0,
+  "compositionProof": {
+    "fixedMaximum": 0,
+    "movingMaximum": 0,
+    "neutralReturnMaximum": 0,
+    "elapsedSeconds": 86.611
+  },
+  "cause": "Composition and colour conversion shared 120 seconds including 20 seconds for teardown. PNG composition took 86.611 seconds, leaving insufficient time for conversion. The supervisor stopped the owned process at the phase deadline.",
+  "nextProposal": "Reuse all 150 completed, hash-verified corrected PNGs; do not recomposite or rerender. Allocate 180 seconds to source copy/conversion, 60 to encoding and 120 to validation/copy, retaining a six-minute cumulative maximum. Fresh one-attempt admission is required."
+}

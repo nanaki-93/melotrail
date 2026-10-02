@@ -1,0 +1,14 @@
+{
+  "status": "NON_LIVE_SOURCE_REUSE_PROPOSAL",
+  "storageDecision": "Keep media locally; commit scripts and checks (Recommended)",
+  "prospectiveIgnoredMedia": [
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T023519Z/live/source/frame-0001.png",
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T023519Z/live/encoded_input/frame-0001.png",
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T023519Z/live/decoded/frame-0001.png",
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T023519Z/review/wave.mp4"
+  ],
+  "packetSha256": "9ac8e0d88259bbbf870d84df0fc8dfc1edb801a13ceb65aaf0ddf902e6cf099c",
+  "admissionPresent": false,
+  "liveOutputPresent": false,
+  "pendingScratch": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-saved-source-c7x7g5q5"
+}

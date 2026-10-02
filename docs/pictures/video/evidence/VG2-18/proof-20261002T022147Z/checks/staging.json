@@ -1,0 +1,18 @@
+{
+  "scope": "Preserve original user edits during selective evidence staging",
+  "scratch": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-review-staging-r_6wex71",
+  "files": {
+    "TASKS-VIDEO.md": {
+      "baseline": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-review-staging-r_6wex71/TASKS-VIDEO.md",
+      "sha256": "1ec51127fbb3089409debc226bf4dd9f4e5b985e73bcdeedafd722f7708cc905"
+    },
+    "docs/TABI_VIDEO.md": {
+      "baseline": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-review-staging-r_6wex71/TABI_VIDEO.md",
+      "sha256": "866142d0059f140b2510bb6c1f7b02ff18d4a0edd302269802e6452335b2ebe2"
+    },
+    "docs/VALIDATION.md": {
+      "baseline": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-review-staging-r_6wex71/VALIDATION.md",
+      "sha256": "ab8344ae72a1e8df2ad6a63df4cee49530f7a1a95780ddbc916b9b40bc9a2839"
+    }
+  }
+}

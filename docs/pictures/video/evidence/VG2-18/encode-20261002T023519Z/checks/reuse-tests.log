@@ -1,0 +1,12 @@
+✔ validated source is copied byte-for-byte without altering the original (2.46375ms)
+✔ a changed source fails before creating a destination (1.198208ms)
+✔ existing output and a source symlink cannot be silently accepted (0.912291ms)
+✔ the prepared six-minute budget reserves more time for conversion and schedules no recomposition (0.736917ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 70.768291

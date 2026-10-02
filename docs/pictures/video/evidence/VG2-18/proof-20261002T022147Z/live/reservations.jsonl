@@ -1,0 +1,2 @@
+{"argv": ["/opt/homebrew/Cellar/node/25.8.2/bin/node", "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/compose_frames.cjs", "--compose"], "decoderCost": 0, "decoderReservations": 0, "operation": "compose", "sequence": 1}
+{"argv": ["/opt/homebrew/Cellar/node/25.8.2/bin/node", "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/verify_pixels.cjs", "source"], "decoderCost": 0, "decoderReservations": 0, "operation": "source", "sequence": 2}

@@ -920,6 +920,37 @@ Full headless validation evidence belongs to the new proposal's `checks/` folder
 VG2-18 is WAITING_USER for that explicit new attempt. VG2-07 still requires a
 normal-speed review movie before a second activity, longer film or app integration.
 
+VG2-18 corrected-source run / preparation deadline (2026-10-02): the user
+answered “yes, go for the video” to the six-minute/2-GiB one-attempt proposal.
+`docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/` completed and validated
+all 150 corrected source PNGs: original fixed artwork is exact, retained moving
+pixels are unchanged, neutral return is exact, and 33,044 pixels show the wave.
+Composition took 86.611s. Composition and colour conversion shared a 120s phase,
+including 20s reserved for teardown; the supervisor stopped conversion after
+19 written transport PNGs. The initial phase estimate was insufficient for both
+steps. Total elapsed 104.57s, sampled owned RSS 357,498,880 bytes, peak new storage
+535,042,239 bytes. Two operations reserved, zero MP4 traversals; no encode, probe,
+decode or review movie. The 169 local PNGs, hashes and failure remain; run scratch
+is removed. There is still no moving appearance approval.
+
+The prepared continuation is
+`docs/pictures/video/evidence/VG2-18/encode-20261002T023519Z/`, packet SHA
+`9ac8e0d88259bbbf870d84df0fc8dfc1edb801a13ceb65aaf0ddf902e6cf099c`.
+It copies the 150 completed source PNGs byte-for-byte; it performs no new
+composition, rendering, mask change or colour-path change. A read-only check of
+all saved PNG hashes and decoded pixel hashes passes against the completed
+composition proof. The exact six-operation packet passes child-spy review.
+Regressions reject changed source bytes, source aliases and existing outputs.
+
+Proposed fresh admission retains 360s cumulative and 2-GiB new storage, but
+allocates 180s to copying/conversion, 60s to encoding and 120s to validation/copy,
+with shared phase clocks and teardown time included. All other memory/disk/swap,
+source/colour, two-traversal and zero-retry limits remain. Measured corrected
+source size is 472,855,496 bytes; new-storage estimate with margin is
+1,806,762,542 bytes. Prior allowance is not carried over. Full headless checks
+are retained in the new proposal's `checks/`. VG2-18 remains WAITING_USER for
+this fresh attempt; VG2-07 cannot review a wave movie until it passes.
+
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under
 `docs/pictures/video/tests/` with fresh names), this queue and TABI/Validation.

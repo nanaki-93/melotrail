@@ -655,6 +655,29 @@ Headless regression and build results are retained in that proposal's `checks/`.
 Normal-speed user review remains pending; still inspection notes a sleeve/body
 seam, so an encoded technical pass would not imply aesthetic acceptance.
 
+VG2-18 admitted composition / phase-timeout result (2026-10-02):
+`pictures/video/evidence/VG2-18/proof-20261002T022147Z/` retains “yes, go for the
+video”, the completed 150-frame composition proof, 169 local PNG hashes and the
+shared-deadline failure. All corrected source PNGs were written and decoded back
+to the expected pixels: zero fixed/moving alteration and exact neutral return.
+Composition took 86.611s; only 19 converted files were written before the 120s
+shared phase's teardown boundary. Source conversion did not complete. No MP4,
+probe, decode or review publication occurred; two operations/zero traversals
+reserved. Total elapsed 104.57s, sampled owned RSS 357,498,880 bytes, peak new
+storage 535,042,239 bytes. Owned process termination and scratch cleanup completed.
+
+The separately prepared `VG2-18/encode-20261002T023519Z/` proposal copies validated
+source PNGs rather than repeating composition. All 150 saved file and decoded
+pixel hashes match the completed proof in a read-only check; no new images are
+created. Changed-source, alias and output-collision negatives pass, as does the
+exact packet's six-child-spy/two-traversal review. A fresh run would retain 360s
+cumulative, with 180s copy/conversion, 60s encoding and 120s validation/publication,
+4-GiB owned RSS, 2-GiB new storage and the unchanged admission/source/colour gates.
+Storage estimate is 1,806,762,542 bytes from the measured corrected PNG total.
+Headless regression/build evidence is retained in the proposal's `checks/`.
+This is not a continuation under the spent admission, a native encode pass or a
+human motion-quality decision.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

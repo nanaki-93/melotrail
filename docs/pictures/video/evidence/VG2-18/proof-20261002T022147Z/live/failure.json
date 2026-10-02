@@ -1,0 +1,9 @@
+{
+  "status": "STOPPED_NO_RETRY",
+  "error": "Shared phase/cumulative deadline expired",
+  "decoderReservations": 0,
+  "operationsReserved": 2,
+  "sampledPeakAggregateRssBytes": 357498880,
+  "peakNewStorageBytes": 535042239,
+  "elapsedSeconds": 104.567885417
+}

@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 416, in <module>
+    try:run(p)
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 369, in run
+    budget.invoke(op['id'], op['argv'], lambda op=op: supervisor.execute(op))
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 164, in invoke
+    return delegate()
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 369, in <lambda>
+    budget.invoke(op['id'], op['argv'], lambda op=op: supervisor.execute(op))
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 302, in execute
+    self.check(deadline - 20, rss)
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 275, in check
+    enforce(self.p, self.baseline, sample(), rss, storage, time.monotonic(), min(deadline or self.deadline, phase_end, self.deadline))
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 231, in enforce
+    need(now < deadline, 'Shared phase/cumulative deadline expired')
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py", line 41, in need
+    raise RuntimeError(message)
+RuntimeError: Shared phase/cumulative deadline expired

@@ -305,6 +305,22 @@ A fresh six-minute/2-GiB, one-attempt admission is needed for composition, encod
 and the two counted media traversals. No new Blender render or colour experiment
 is proposed. Media stays local; only scripts, checks and hashes enter Git.
 
+### VG2-18 completed source frames, encoding pending (2026-10-02)
+
+The admitted correction under `pictures/video/evidence/VG2-18/proof-20261002T022147Z/`
+saved and validated all 150 corrected frames. Fixed artwork, arm pixels and
+neutral return pass their exact checks. Its shared preparation phase expired
+during colour conversion, after 19 transport frames, so no MP4 was encoded.
+The source sequence is complete and reusable; all failed-run media remains local.
+
+The new `VG2-18/encode-20261002T023519Z/` proposal reuses those PNGs unchanged and
+passes all saved byte/pixel-hash checks. It avoids composition and rendering,
+retains the approved one-pixel support margin and verified colour path, and
+assigns more of the same six-minute budget to conversion. It needs a fresh
+one-attempt admission with a 2-GiB storage ceiling; no automatic retry follows
+from the stopped run. Sleeve/body seam and hand-drawing transitions still need
+normal-speed review of a successfully encoded movie.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,
