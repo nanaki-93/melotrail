@@ -1,0 +1,175 @@
+{
+  "scope": "Standalone data-only rig; no rendered/moving acceptance",
+  "pins": [
+    {
+      "path": "build/vg2-character-art-a3/full-foreground.png",
+      "sha256": "e9d69d59f21ecac1d15561487c193d19d3cef2e65ca2970a1669c062dec9e93a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/upper_sleeve_candidate_v1.png",
+      "sha256": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/kit-freeze.json",
+      "sha256": "abd44d15a3230db153c4b827fecb65b59f21b1e7d75be42bb1a4c2861f0f0107"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-front.png",
+      "sha256": "16ae432fb9b63d1185297cd23e710a2ff8dd114d6a40b3f31b43550ebe550651"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-overlap.png",
+      "sha256": "cf734e9489a82cae424b692addacf7835b27742633a129dc29d2c6db8014962f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-front.png",
+      "sha256": "6a3a046b1bf62b765918fc84f5060e5c84f148c378e3eeb3f60a920f88dec8d2"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-overlap.png",
+      "sha256": "859cb421af6cd434b2b6fb3b02223d9a6bfac01c9b3f7192d22583d5bf8c3423"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png",
+      "sha256": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/assemble-wrists.cjs",
+      "sha256": "b0df7acfa31b8c2ae7ed8c03ea03ddb9a2aaf9da659d3fd39786baab19dcf8c5"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/build-geometry-v3.json",
+      "sha256": "18fef5d1973700b3cad06b201749a93da000d2da61031363ce7d2d207c525db6"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/check-geometry-v3.json",
+      "sha256": "46673f27744137e157b034a2cf596b7d91eb7a1869aac564a7c1a0631d07b771"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-failure-v2.json",
+      "sha256": "6694dea6eebd0c18b071629e07fb8d8d87d2d53a69ea647a9e07f4ace44d4c90"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-result-v3.json",
+      "sha256": "5c6772542e55221f30b49736fc88977b1520d0684b5e87f561b35536991d0202"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-result.json",
+      "sha256": "bd3d46695739fb8ee995ccae1377f3a0a06e00a9bb0692fc2ee94e572aca2946"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/initial-support-failure.json",
+      "sha256": "c46c33a23df4db6d21501853839b737cdc5ff23ec9b028e2cc76e88fe98bfbda"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/support-final.json",
+      "sha256": "38758b361ecd0fe2c9c204bf42f553710be681a5d44925199a71f41fad6cec00"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/admission.json",
+      "sha256": "67704251744cb0ec5851c24b2854875342bf9a46440fea5e7ba0362cb33d8937"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/baseline-status.txt",
+      "sha256": "9028ea009e4904950413d40bfe83c493ee6823f2693083cad13242e3cf8ce372"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/boundaries.json",
+      "sha256": "7adb27912685c6b950f157a54e17055ebb5ce4a5bc96fd55191916e6b1d3995c"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig-v2.json",
+      "sha256": "bdffe144c0729ad693aa6e993bd7cad114ba0f6689353538adc75ae0faa98793"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig.json",
+      "sha256": "267cd0336e137cf1774449886403ebefa3f2b0a34ee5a0154e5d467c61f5445d"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v2.blend",
+      "sha256": "856bd913f8af91954c7e4138197f555a1505145c5e6b3ad5505c072d70948526"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend",
+      "sha256": "ed1b388299b7f672b259d1ca8381da91fc53d6a52b036007abeec8d5117d4821"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave.blend",
+      "sha256": "bc6ad7eecef5596e5ab60bddc5edc6aa00d0306ec2765ac3b23353f0102117b9"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-data.py",
+      "sha256": "f85fe8cd1edafa38ed3be25c8f4d75e5fd2745137f19b4a8c129a8850f8513a9"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-handoff.cjs",
+      "sha256": "718e38212dd994613869f4695c9dd45d8151f45c484f9a29c5b996052cadcac7"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-support.cjs",
+      "sha256": "21fc26554e60795531840949508036158bdeb16601f26bd9799b2a06450af593"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/evaluate.py",
+      "sha256": "4f06252d167043f3fc9c7a28bde33afc3100ab5c5302f5bbb75a1cc5ac0ebf40"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/motion.py",
+      "sha256": "b5c67bc9d2afa24c90df0fb5c49250a25c2ec216621f7ebd6f362ffb0e70d85a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/prepare.cjs",
+      "sha256": "7be8748918cfc2fa7c3de04ff4a2146c4e25067a5c42f08129c3a92f2de0346e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py",
+      "sha256": "95c26229c42e85d80c5328ba0f082e7c438077331f0df72128b26b038393b483"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig_guard.py",
+      "sha256": "ace226b502f22e329d2004f8acb85b9271cbb1b42918859b1e42c1c8c39660ec"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/validate.sh",
+      "sha256": "53ac9537581cde00080ac796caecb74ea01b97c5a7fb2076bf9cfc41382424b9"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/allowed.png",
+      "sha256": "4b8221992026414485689cb3543d258f7b63bfd3a30a7d3a97643a32b3032f1f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/forearm_separate.png",
+      "sha256": "779172217a62df81538b0339d9a38ff7f50a65478addd59c7470666bb82a8d47"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/hidden_shoulder_elbow_overlap.png",
+      "sha256": "fb51a410627d4112ca6c906fcff564bd521519529f0f6e0791f93089e810465f"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/occlusion.png",
+      "sha256": "be1ad8fe17af81c8f9fa768017a136af1ab54405e1be993a9322e5d7497acf5a"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/protected.png",
+      "sha256": "54e594265f2ec78a0b8c82d0a3231c2c28138dab974b7c1ee6fe7731735f1318"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/revealed_torso_cabin_backing.png",
+      "sha256": "ed5b018850c1977ffded4c7d27c88a15f3405ed1851bee24599755e832f356e6"
+    },
+    {
+      "path": "tools/video-motion/vg2-rig-motion.test.cjs",
+      "sha256": "73d7f31e150f7d4aeb42966cde2f8529cf549200274d9b52cd0b8881f51fe452"
+    },
+    {
+      "path": "tools/video-motion/vg2-rig-support.test.cjs",
+      "sha256": "53f3a9510da87c680fa18925badc87064d4436d87a5568553034fe2bb039d866"
+    }
+  ],
+  "selectedScene": "rig/tabi-wave-v3.blend",
+  "limitations": [
+    "Two registered hand drawings switch once during lift and once during lower; cuff/hand transition quality requires moving review.",
+    "Inherited inner sleeve/body seam is unchanged.",
+    "Geometry/support evaluation is not Blender pixel/colour or moving approval."
+  ]
+}

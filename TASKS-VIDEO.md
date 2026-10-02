@@ -499,9 +499,9 @@ movie as an animation baseline.
 | ID | Step and completion condition | Depends on | State |
 | --- | --- | --- | --- |
 | VG2-12 | Inspect the existing TABI source pool and retained preparation; freeze one view/outfit, neutral 48 as starting appearance reference and a five-second/150-frame neutral → lift → two wrist beats → lower → neutral test. Identify exact reusable parts, missing hidden surfaces/hand shapes, joint limits, fixed/contact regions and future output owners. Confirm rights/source provenance and propose the smallest finite artwork/rig/test budgets; no asset creation or native render. | CORE-01 | DONE |
-| VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | REVIEW |
-| VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | WAITING_USER |
-| VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | TODO |
+| VG2-13 | Prepare only the admitted coherent wave parts as new derivatives: fixed body/head, one upper-sleeve/forearm/cuff assembly, necessary registered hand drawings, joint overlaps and exposed backing/occlusion. Reuse pixels first; Pi image generation only for identified missing parts within the new explicit call/correction cap. Retain raw outputs and all failed candidates. Deliver part/anchor data and neutral/extreme static composites with alpha/scale/seam/support checks; no whole-arm-per-keyframe generation. | VG2-12 | DONE |
+| VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | DONE |
+| VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | DONE |
 | VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | TODO |
 | VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | TODO |
 | VG2-18 | Execute one explicitly admitted five-second/150-frame rigged wave with fixed cabin/head/body contact, encode/probe/full-decode and publish a new validated review copy. Measure stage time/RSS/disk and every frame's geometry/occlusion/edge/colour/PTS/return checks. No automatic retry, import, take selection or short-success-to-full-film promotion. Preserve source PNGs, rig/action/input pins and all failed media. | VG2-17 | TODO |
@@ -726,6 +726,43 @@ The inner sleeve/body junction is inherited and the two cuff drawings differ;
 complete silhouette approval and transition/cloth consistency are not inferred
 from the wrist repair. Headless validation receipts are retained in `checks/`;
 `MidiCoreNativeResponsivenessTest` remains excluded, not passed.
+
+VG2-14 continuation decision / VG2-15 rig checkpoint (2026-10-02): after the
+connected-wrists v3 sheet, the user says “you can continue with the point 2 of
+the list”. Point 2 is reusable character motion. The exact decision/artifact
+SHA is recorded in `docs/pictures/video/evidence/VG2-14/proceed-20261002T010147Z/decision.json`.
+This selects the latest changed neutral and extremes for the rig proof, with
+the previously disclosed sleeve/body seam and differing cuff drawings; it does
+not invent a detailed quality rating or moving approval. Prior rejections stay
+unchanged. VG2-13/14 close for this scoped continuation; VG2-15 is DONE.
+
+VG2-15 evidence owner: `docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/`.
+Selected scene `rig/tabi-wave-v3.blend` uses textured cutout meshes, an orthographic
+camera, three linked shoulder/elbow/wrist controls and one reusable wave action.
+No VSE arm swaps, new artwork, application schema or production import. The head,
+cabin and lower contact are fixed. Hand/wrist/front cuff share a single transform;
+two registered hand drawings switch at frames 25/128, requiring later moving review.
+All 150 frames match after save/reopen and nonsequential evaluation; limb lengths,
+scale, UVs, depth, anchors, finite support and identical neutral return pass.
+The alpha checker inspects 13×13 joint regions and continuous sleeve/wrist corridors,
+plus 1,134,801 transformed contour points. Initial complementary-mask seams failed
+in 120 frames; an existing green overlap texture now supplies hidden wrist support.
+The second build stopped before reopen because embedded Blender rewrote a pinned
+bytecode cache. The retained final repair disables bytecode writes; task-owned cache
+was preserved in a ZIP and removed. Three bounded data attempts total 8.09 seconds,
+peak sampled aggregate RSS 282,542,080 bytes, zero rendered frames/media traversals.
+Actual initial-seam, detached-hand, sleeve-clipping, inverted-mesh and changed-UV/
+return negatives are retained. The detached-hand negative exposed an alpha-only
+checker weakness; explicit part-to-joint checks and a full wrist corridor fix it.
+The first architecture check rejected a Python test in the tool-runtime tree;
+its proof helper now stays in this evidence owner behind a canonical Node test,
+preserving the architecture rule and its failed receipt without changing wiring.
+Focused JVM checks, 69 Node tests and nine standalone data checks pass. Filtered
+`make test`/`make build` pass (2m37s/2m39s, each 1 executed/13 up-to-date);
+diff checking passes. Receipts are retained in `checks/`; the native-window test remains
+excluded, not passed. Blender pixels/colour and normal-speed quality are unproved.
+Next is VG2-16's non-live supervision/colour/wave packet preparation; no media
+admission or second-action approval follows from this geometry checkpoint.
 
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under

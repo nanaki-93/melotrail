@@ -1,0 +1,525 @@
+{
+  "schema": "private-vg2-15-cutout-proof-1",
+  "textures": {
+    "revealed_torso_cabin_backing": {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/revealed_torso_cabin_backing.png",
+      "sha256": "ed5b018850c1977ffded4c7d27c88a15f3405ed1851bee24599755e832f356e6",
+      "size": [
+        1920,
+        1080
+      ]
+    },
+    "forearm_separate": {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/forearm_separate.png",
+      "sha256": "779172217a62df81538b0339d9a38ff7f50a65478addd59c7470666bb82a8d47",
+      "size": [
+        160,
+        154
+      ]
+    },
+    "hidden_shoulder_elbow_overlap": {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/hidden_shoulder_elbow_overlap.png",
+      "sha256": "fb51a410627d4112ca6c906fcff564bd521519529f0f6e0791f93089e810465f",
+      "size": [
+        128,
+        64
+      ]
+    },
+    "upper": {
+      "path": "docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/upper_sleeve_candidate_v1.png",
+      "sha256": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54",
+      "size": [
+        1254,
+        1254
+      ]
+    },
+    "neutral-front": {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-front.png",
+      "sha256": "16ae432fb9b63d1185297cd23e710a2ff8dd114d6a40b3f31b43550ebe550651",
+      "size": [
+        1109,
+        1418
+      ]
+    },
+    "neutral-overlap": {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-overlap.png",
+      "sha256": "cf734e9489a82cae424b692addacf7835b27742633a129dc29d2c6db8014962f",
+      "size": [
+        1109,
+        1418
+      ]
+    },
+    "open-front": {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-front.png",
+      "sha256": "6a3a046b1bf62b765918fc84f5060e5c84f148c378e3eeb3f60a920f88dec8d2",
+      "size": [
+        1109,
+        1418
+      ]
+    },
+    "open-overlap": {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-overlap.png",
+      "sha256": "859cb421af6cd434b2b6fb3b02223d9a6bfac01c9b3f7192d22583d5bf8c3423",
+      "size": [
+        1109,
+        1418
+      ]
+    },
+    "allowed": {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/allowed.png",
+      "sha256": "4b8221992026414485689cb3543d258f7b63bfd3a30a7d3a97643a32b3032f1f",
+      "size": [
+        1920,
+        1080
+      ]
+    },
+    "occlusion": {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/occlusion.png",
+      "sha256": "be1ad8fe17af81c8f9fa768017a136af1ab54405e1be993a9322e5d7497acf5a",
+      "size": [
+        1920,
+        1080
+      ]
+    },
+    "protected": {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/protected.png",
+      "sha256": "54e594265f2ec78a0b8c82d0a3231c2c28138dab974b7c1ee6fe7731735f1318",
+      "size": [
+        1920,
+        1080
+      ]
+    }
+  },
+  "parts": {
+    "background": {
+      "texture": "revealed_torso_cabin_backing",
+      "control": "fixed",
+      "anchor": [
+        0,
+        0
+      ],
+      "scale": 1,
+      "sourceAngle": 0,
+      "depth": 0,
+      "crop": [
+        0,
+        0,
+        1920,
+        1080
+      ],
+      "hand": null
+    },
+    "shoulder-cover": {
+      "texture": "hidden_shoulder_elbow_overlap",
+      "control": "shoulder-cover",
+      "anchor": [
+        32,
+        32
+      ],
+      "scale": 0.59375,
+      "sourceAngle": 0,
+      "depth": 10,
+      "crop": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "hand": null
+    },
+    "elbow-cover": {
+      "texture": "hidden_shoulder_elbow_overlap",
+      "control": "elbow-cover",
+      "anchor": [
+        96,
+        32
+      ],
+      "scale": 0.6875,
+      "sourceAngle": 0,
+      "depth": 20,
+      "crop": [
+        64,
+        0,
+        64,
+        64
+      ],
+      "hand": null
+    },
+    "upper": {
+      "texture": "upper",
+      "control": "shoulder",
+      "anchor": [
+        628,
+        264
+      ],
+      "scale": 0.12266541101984492,
+      "sourceAngle": 1.5610744108753192,
+      "depth": 30,
+      "crop": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "hand": null
+    },
+    "forearm": {
+      "texture": "forearm_separate",
+      "control": "elbow",
+      "anchor": [
+        56,
+        110
+      ],
+      "scale": 1,
+      "sourceAngle": -1.0146300966744437,
+      "depth": 50,
+      "crop": [
+        0,
+        0,
+        160,
+        154
+      ],
+      "hand": null
+    },
+    "neutral-front": {
+      "texture": "neutral-front",
+      "control": "wrist",
+      "anchor": [
+        620,
+        1120
+      ],
+      "scale": 0.14,
+      "sourceAngle": -1.0146300966744437,
+      "depth": 60,
+      "crop": [
+        0,
+        0,
+        1109,
+        1418
+      ],
+      "hand": "neutral"
+    },
+    "neutral-overlap": {
+      "texture": "neutral-overlap",
+      "control": "wrist",
+      "anchor": [
+        620,
+        1120
+      ],
+      "scale": 0.14,
+      "sourceAngle": -1.0146300966744437,
+      "depth": 40,
+      "crop": [
+        0,
+        0,
+        1109,
+        1418
+      ],
+      "hand": "neutral"
+    },
+    "open-front": {
+      "texture": "open-front",
+      "control": "wrist",
+      "anchor": [
+        550,
+        1120
+      ],
+      "scale": 0.14,
+      "sourceAngle": -1.0146300966744437,
+      "depth": 60,
+      "crop": [
+        0,
+        0,
+        1109,
+        1418
+      ],
+      "hand": "open"
+    },
+    "open-overlap": {
+      "texture": "open-overlap",
+      "control": "wrist",
+      "anchor": [
+        550,
+        1120
+      ],
+      "scale": 0.14,
+      "sourceAngle": -1.0146300966744437,
+      "depth": 40,
+      "crop": [
+        0,
+        0,
+        1109,
+        1418
+      ],
+      "hand": "open"
+    },
+    "protected": {
+      "texture": "protected",
+      "control": "fixed",
+      "anchor": [
+        0,
+        0
+      ],
+      "scale": 1,
+      "sourceAngle": 0,
+      "depth": 100,
+      "crop": [
+        0,
+        0,
+        1920,
+        1080
+      ],
+      "hand": null
+    },
+    "wrist-support": {
+      "texture": "hidden_shoulder_elbow_overlap",
+      "control": "wrist",
+      "anchor": [
+        32,
+        32
+      ],
+      "scale": 0.375,
+      "sourceAngle": -1.0141961639184918,
+      "depth": 35,
+      "crop": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "hand": null
+    }
+  },
+  "dimensions": [
+    1920,
+    1080
+  ],
+  "frames": 150,
+  "fps": 30,
+  "shoulder": [
+    772,
+    619
+  ],
+  "lengths": [
+    88.32326986700618,
+    87.13208364316787
+  ],
+  "limits": {
+    "shoulder": [
+      15,
+      60
+    ],
+    "forearm": [
+      -90,
+      -48
+    ],
+    "wrist": [
+      -12,
+      12
+    ],
+    "jointErrorPixels": 0.001,
+    "scaleRelativeError": 1e-05,
+    "supportAlpha": 8,
+    "minimumJointAlpha": 240,
+    "minimumJointHalfWidth": 2,
+    "minimumSeamHalfWidth": 6,
+    "maximumAnchorStep": 6,
+    "maximumAngleStep": 3
+  },
+  "keys": [
+    {
+      "frame": 0,
+      "angles": [
+        59.36,
+        -79.4,
+        0
+      ],
+      "hand": "neutral"
+    },
+    {
+      "frame": 9,
+      "angles": [
+        59.36,
+        -79.4,
+        0
+      ],
+      "hand": "neutral"
+    },
+    {
+      "frame": 14,
+      "angles": [
+        60,
+        -80,
+        0
+      ],
+      "hand": "neutral"
+    },
+    {
+      "frame": 38,
+      "angles": [
+        32,
+        -65,
+        0
+      ],
+      "hand": "open"
+    },
+    {
+      "frame": 46,
+      "angles": [
+        32,
+        -65,
+        -10
+      ],
+      "hand": "open"
+    },
+    {
+      "frame": 60,
+      "angles": [
+        32,
+        -65,
+        10
+      ],
+      "hand": "open"
+    },
+    {
+      "frame": 76,
+      "angles": [
+        32,
+        -65,
+        -10
+      ],
+      "hand": "open"
+    },
+    {
+      "frame": 90,
+      "angles": [
+        32,
+        -65,
+        10
+      ],
+      "hand": "open"
+    },
+    {
+      "frame": 102,
+      "angles": [
+        32,
+        -65,
+        0
+      ],
+      "hand": "open"
+    },
+    {
+      "frame": 112,
+      "angles": [
+        32,
+        -65,
+        0
+      ],
+      "hand": "open"
+    },
+    {
+      "frame": 140,
+      "angles": [
+        59.36,
+        -79.4,
+        0
+      ],
+      "hand": "neutral"
+    },
+    {
+      "frame": 149,
+      "angles": [
+        59.36,
+        -79.4,
+        0
+      ],
+      "hand": "neutral"
+    }
+  ],
+  "handSwitchFrames": [
+    25,
+    128
+  ],
+  "wristSpecs": {
+    "open": {
+      "file": "attempts/hand-wave-1.png",
+      "sha256": "c5f5bbd41dc709ba83eddf3a4594716f4c09ec300e76134d354ed7d150343d70",
+      "base": [
+        550,
+        1120
+      ],
+      "scale": 0.14,
+      "entry": [
+        592,
+        765
+      ],
+      "bridge": [
+        520,
+        716,
+        185,
+        72
+      ],
+      "cuffContour": "M 0 0 H 1109 V 950 H 893 Q 884 1015 848 1058 Q 798 1115 747 1137 Q 684 1166 598 1162 Q 495 1150 422 1100 Q 293 1024 193 889 H 0 Z"
+    },
+    "neutral": {
+      "file": "attempts/hand-neutral-1.png",
+      "sha256": "1ea8c932f5e7adec901faac367eb6a3ec95571351d8f40fb58fed7815b02a865",
+      "base": [
+        620,
+        1120
+      ],
+      "scale": 0.14,
+      "entry": [
+        650,
+        748
+      ],
+      "bridge": [
+        587,
+        680,
+        170,
+        67
+      ],
+      "cuffContour": "M 0 0 H 1109 V 909 H 992 Q 975 1000 919 1048 Q 851 1111 784 1134 Q 710 1148 637 1137 Q 548 1120 480 1080 Q 333 1009 244 861 H 0 Z"
+    }
+  },
+  "alphaPolicy": "Straight source alpha; one emission/transparent mix per texture, ordered depths; front and overlap use complementary source masks. No fades. Protected backdrop restores foreground and fixed-pixel region.",
+  "neutralReference": {
+    "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png",
+    "sha256": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968"
+  },
+  "limitations": [
+    "Two registered hand drawings switch once during lift and once during lower; cuff/hand transition quality requires moving review.",
+    "Inherited inner sleeve/body seam is unchanged.",
+    "Geometry/support evaluation is not Blender pixel/colour or moving approval."
+  ],
+  "boundaries": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/boundaries.json",
+    "sha256": "7adb27912685c6b950f157a54e17055ebb5ce4a5bc96fd55191916e6b1d3995c"
+  },
+  "dependencies": [
+    {
+      "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/prepare.cjs",
+      "sha256": "7be8748918cfc2fa7c3de04ff4a2146c4e25067a5c42f08129c3a92f2de0346e"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/kit-freeze.json",
+      "sha256": "abd44d15a3230db153c4b827fecb65b59f21b1e7d75be42bb1a4c2861f0f0107"
+    },
+    {
+      "path": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/assemble-wrists.cjs",
+      "sha256": "b0df7acfa31b8c2ae7ed8c03ea03ddb9a2aaf9da659d3fd39786baab19dcf8c5"
+    },
+    {
+      "path": "build/vg2-character-art-a3/full-foreground.png",
+      "sha256": "e9d69d59f21ecac1d15561487c193d19d3cef2e65ca2970a1669c062dec9e93a",
+      "width": 1920,
+      "height": 1080,
+      "alpha": {
+        "zero": 1896985,
+        "partial": 2616,
+        "opaque": 173999
+      }
+    }
+  ],
+  "bindingCorrection": "Reuse the existing green hidden-joint texture as a 24px wrist underlap behind the generated overlap, supplied forearm and front cuff. It covers only the subpixel seam caused by complementary source-alpha edges; no new artwork or hand transform."
+}

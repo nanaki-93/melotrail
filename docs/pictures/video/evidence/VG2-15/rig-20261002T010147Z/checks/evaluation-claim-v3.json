@@ -1,0 +1,70 @@
+{
+  "commands": [
+    [
+      "build",
+      [
+        "/Applications/Blender.app/Contents/MacOS/Blender",
+        "--factory-startup",
+        "--background",
+        "--disable-autoexec",
+        "--threads",
+        "4",
+        "--python-exit-code",
+        "1",
+        "--python",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py",
+        "--",
+        "build"
+      ]
+    ],
+    [
+      "check",
+      [
+        "/Applications/Blender.app/Contents/MacOS/Blender",
+        "--factory-startup",
+        "--background",
+        "--disable-autoexec",
+        "--threads",
+        "4",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend",
+        "--python-exit-code",
+        "1",
+        "--python",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py",
+        "--",
+        "check"
+      ]
+    ]
+  ],
+  "pins": {
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig_guard.py": "ace226b502f22e329d2004f8acb85b9271cbb1b42918859b1e42c1c8c39660ec",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py": "95c26229c42e85d80c5328ba0f082e7c438077331f0df72128b26b038393b483",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-support.cjs": "9c4835780fba1e16841a246f12aac083f5ad8df834e7dc3c8ada817f7fb04633",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/motion.py": "b5c67bc9d2afa24c90df0fb5c49250a25c2ec216621f7ebd6f362ffb0e70d85a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/evaluate.py": "4f06252d167043f3fc9c7a28bde33afc3100ab5c5302f5bbb75a1cc5ac0ebf40",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/prepare.cjs": "7be8748918cfc2fa7c3de04ff4a2146c4e25067a5c42f08129c3a92f2de0346e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/occlusion.png": "be1ad8fe17af81c8f9fa768017a136af1ab54405e1be993a9322e5d7497acf5a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/allowed.png": "4b8221992026414485689cb3543d258f7b63bfd3a30a7d3a97643a32b3032f1f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/protected.png": "54e594265f2ec78a0b8c82d0a3231c2c28138dab974b7c1ee6fe7731735f1318",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/hidden_shoulder_elbow_overlap.png": "fb51a410627d4112ca6c906fcff564bd521519529f0f6e0791f93089e810465f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/revealed_torso_cabin_backing.png": "ed5b018850c1977ffded4c7d27c88a15f3405ed1851bee24599755e832f356e6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/forearm_separate.png": "779172217a62df81538b0339d9a38ff7f50a65478addd59c7470666bb82a8d47",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig.json": "267cd0336e137cf1774449886403ebefa3f2b0a34ee5a0154e5d467c61f5445d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/boundaries.json": "7adb27912685c6b950f157a54e17055ebb5ce4a5bc96fd55191916e6b1d3995c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/baseline-status.txt": "9028ea009e4904950413d40bfe83c493ee6823f2693083cad13242e3cf8ce372",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/admission.json": "67704251744cb0ec5851c24b2854875342bf9a46440fea5e7ba0362cb33d8937",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig-v2.json": "bdffe144c0729ad693aa6e993bd7cad114ba0f6689353538adc75ae0faa98793"
+  },
+  "blenderSha256": "f5c1f2a0c0bca3389ec772d355242b700975ea84e66cbb3f5257a7bce8e5adeb",
+  "limits": {
+    "implementationAttempts": 3,
+    "dataEvaluationSeconds": 120,
+    "aggregateRssBytes": 4294967296,
+    "newStorageBytes": 536870912,
+    "renders": 0,
+    "encodes": 0,
+    "decodes": 0,
+    "imageGeneration": 0
+  },
+  "renderedFrames": 0
+}

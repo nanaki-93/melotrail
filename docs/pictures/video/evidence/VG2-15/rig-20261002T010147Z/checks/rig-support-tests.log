@@ -1,0 +1,14 @@
+✔ all 150 reopened frames retain complete joint regions, sleeve corridors, UVs and neutral return (162.038875ms)
+✔ actual initial cuff seam fails the unchanged full attachment test (3.486958ms)
+✔ moving cuff away from forearm is rejected even when its wrist-entry pixels remain intact (0.216208ms)
+✔ clipping a sleeve cross-section fails rather than passing pivot-centre witnesses (0.888917ms)
+✔ flipped mesh and moving UVs fail (6.080083ms)
+✔ an altered neutral return cannot pass unchanged geometric checks (60.788334ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 376.600583

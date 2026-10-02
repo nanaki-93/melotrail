@@ -1,0 +1,7 @@
+{
+  "initialNegative": "Moving all wrist textures 30px passed the initial alpha-only checker because isolated blobs can each have covered centres.",
+  "fix": "Require each part native anchor to match its evaluated joint, plus an unbroken 8px-wide wrist-to-hand-entry corridor.",
+  "followupTestFix": "The flipped-quad test was updated to call alphaAt directly, because the new earlier registration check correctly rejects that mutation before alpha evaluation.",
+  "rigChanged": false,
+  "nativeProcessesRerun": false
+}

@@ -1,0 +1,7 @@
+/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py:54: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes = True
+Info: Saved as "tabi-wave-v3.blend"
+{"status": "DATA_GEOMETRY_PASS_NOT_PIXELS", "mode": "build", "framesEvaluated": 150, "renderedFrames": 0}
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:49:19)
+
+Blender quit

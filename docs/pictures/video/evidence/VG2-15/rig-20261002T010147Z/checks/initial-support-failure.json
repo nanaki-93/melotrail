@@ -1,0 +1,2485 @@
+{
+  "status": "FAIL",
+  "failures": [
+    {
+      "frame": 0,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 1,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 2,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 3,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 4,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 5,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 6,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 7,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 8,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 9,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 10,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        817.8299133212056,
+        559.3410869809048
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 11,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        817.266662302215,
+        559.4633757129855
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 12,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        816.5939520850433,
+        559.6096975535226
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 13,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        816.0299428307983,
+        559.7327149615617
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 14,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        815.7932575558856,
+        559.7844170302216
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 15,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        816.1623321019597,
+        559.6745037354567
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 16,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        817.2257815146086,
+        559.3561005231068
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 17,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.9162039897258,
+        558.8447238345204
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 18,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        821.1642709045818,
+        558.1543181086915
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 19,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        823.8992385998451,
+        557.2985987227846
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 20,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        827.0495339657055,
+        556.291142196832
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "frame": 21,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        830.5434468524234,
+        555.1460919245599
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "frame": 22,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        834.3091994167313,
+        553.8785534435233
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 23,
+      "jointRegionHoles": 6,
+      "handEntry": [
+        838.276183830914,
+        552.5052777111199
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 24,
+      "jointRegionHoles": 5,
+      "handEntry": [
+        842.3752164955256,
+        551.0445432720661
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 30,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        868.2732832860183,
+        543.6853829818452
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 31,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        871.5565546289045,
+        542.2772606371732
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 34,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        879.3707098385946,
+        538.7815447086938
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 35,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        881.1694664517643,
+        537.9466905401787
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 36,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        882.5037641885414,
+        537.3198450325284
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 37,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.3351678946839,
+        536.9258398191809
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 38,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 39,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.2470404472446,
+        536.791365722263
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 40,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        882.2577227904741,
+        536.8106225145074
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 41,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        880.8601929446901,
+        536.8711984098716
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 45,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        875.3031551887658,
+        537.5029467315698
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 46,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        874.933406148756,
+        537.5674869067756
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 47,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        875.1842304911144,
+        537.5234047095196
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 48,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        875.8876561214404,
+        537.4067097046492
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 53,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 54,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        885.4809794317634,
+        536.8198395732896
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 3,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 55,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        887.2609906113627,
+        536.9140963657048
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 56,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        888.884607243287,
+        537.0556368673351
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 57,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        890.2755664365798,
+        537.219486908704
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 3
+        },
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 58,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        891.3595127571847,
+        537.3746415776759
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 3
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 59,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        892.0634012175024,
+        537.4884371249069
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 60,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        892.3144075096079,
+        537.5314997351062
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 61,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        892.1210848488829,
+        537.4982080851784
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 62,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        891.573981266971,
+        537.4082361526639
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 63,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        890.7219666031751,
+        537.2804593144378
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 3
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 64,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        889.6138455743304,
+        537.1366352630977
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 65,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        888.2989618513451,
+        536.9984379037749
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 66,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        886.8276655057924,
+        536.8852711621587
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 67,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        885.2513380539855,
+        536.8123322948309
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 3,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 68,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 70,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        880.4174778338818,
+        536.8985666795702
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 74,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        875.6733811484252,
+        537.4411632704333
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 75,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        875.1266468207824,
+        537.5334027837926
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 76,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        874.933406148756,
+        537.5674869067756
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 77,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        875.1842304911144,
+        537.5234047095196
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 78,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        875.8876561214404,
+        537.4067097046492
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 83,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 84,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        885.4809794317634,
+        536.8198395732896
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 3,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 85,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        887.2609906113627,
+        536.9140963657048
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 86,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        888.884607243287,
+        537.0556368673351
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 87,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        890.2755664365798,
+        537.219486908704
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 3
+        },
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 88,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        891.3595127571847,
+        537.3746415776759
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 3
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 89,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        892.0634012175024,
+        537.4884371249069
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 90,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        892.3144075096079,
+        537.5314997351062
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 91,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        892.1450418466476,
+        537.5022847439527
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 92,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        891.6762708989269,
+        537.4245999231482
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 93,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        890.9668235556849,
+        537.3156402919776
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 3
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 6
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 94,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        890.0753977671941,
+        537.1934920125365
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Elbow-Wrist",
+          "n": 19,
+          "w": 2
+        }
+      ]
+    },
+    {
+      "frame": 95,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        889.0613242977867,
+        537.0742799784234
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 96,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        887.9845846203465,
+        536.9705880392016
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 1,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 97,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        886.9058592776892,
+        536.8901846920827
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 98,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        885.8862533335781,
+        536.8357025265717
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 3,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 99,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        884.9870335757169,
+        536.8049543382292
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 2,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 3,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 100,
+      "jointRegionHoles": 5,
+      "handEntry": [
+        884.269337302825,
+        536.7920171174668
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 3,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 101,
+      "jointRegionHoles": 5,
+      "handEntry": [
+        883.79421017321,
+        536.7891198670588
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 3,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 102,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 103,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 104,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 105,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 106,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 107,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 108,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 109,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 110,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 111,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 112,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 113,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        883.4175753818758,
+        536.8883524075222
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 114,
+      "jointRegionHoles": 4,
+      "handEntry": [
+        882.8218059437547,
+        537.175824471123
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 4,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 115,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        881.8608182403301,
+        537.6365408704484
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 5
+        },
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 5
+        }
+      ]
+    },
+    {
+      "frame": 116,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        880.5586253233961,
+        538.2552738035296
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 117,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        878.937963895707,
+        539.0160334284259
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 120,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        872.3914193983135,
+        541.9912716404208
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 4
+        },
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 121,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        869.7254105981527,
+        543.1594310323183
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "frame": 128,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        844.868319019548,
+        550.3087228959973
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 129,
+      "jointRegionHoles": 5,
+      "handEntry": [
+        841.4514642278879,
+        551.5576368969447
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 130,
+      "jointRegionHoles": 6,
+      "handEntry": [
+        838.1075625170446,
+        552.7493640829927
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -6,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -5,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -4,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 131,
+      "jointRegionHoles": 3,
+      "handEntry": [
+        834.8780073032265,
+        553.8722869852438
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 6,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -3,
+          "y": 2
+        },
+        {
+          "joint": "Wrist",
+          "x": -2,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 132,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        831.8051840309372,
+        554.9154974429034
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "frame": 133,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        828.9323197035918,
+        555.8690340291773
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "frame": 134,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        826.3029442997145,
+        556.7234841942416
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "frame": 135,
+      "jointRegionHoles": 2,
+      "handEntry": [
+        823.9607733802382,
+        557.4701094726189
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": 5,
+          "y": 1
+        },
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 136,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        821.949205937974,
+        558.1006169719061
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 137,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        820.3117735479625,
+        558.6065737326636
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 138,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        819.0910535675994,
+        558.9794902176073
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 139,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.3288790438861,
+        559.2105328022956
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 140,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 141,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 142,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 143,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 144,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 145,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 146,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 147,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 148,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "frame": 149,
+      "jointRegionHoles": 1,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": [
+        {
+          "joint": "Wrist",
+          "x": -1,
+          "y": 2
+        }
+      ]
+    }
+  ]
+}

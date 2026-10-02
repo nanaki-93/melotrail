@@ -1,0 +1,12 @@
+{
+  "status": "DATA_ONLY_BUILD_REOPEN_PASS",
+  "completed": [
+    "build",
+    "check"
+  ],
+  "elapsedSeconds": 5.38974375,
+  "sampledPeakAggregateRssBytes": 282542080,
+  "newStorageBytes": 9537823,
+  "renderedFrames": 0,
+  "mediaTraversals": 0
+}

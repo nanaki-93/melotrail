@@ -220,6 +220,28 @@ Cumulative use is 5 image attempts, 19 part derivatives and 8 static passes; no
 Blender, video, import or selected take. VG2-13 is REVIEW; VG2-14 awaits the exact
 new appearance decision. Existing rejections and motion/colour failures remain.
 
+### VG2-14 continuation / standalone articulated rig (2026-10-02)
+
+After reviewing connected-wrists v3, the user requests continuing point 2, reusable
+character motion. The exact instruction and selected artifact SHA are retained in
+`pictures/video/evidence/VG2-14/proceed-20261002T010147Z/decision.json`. This is
+permission to use that changed neutral/pose kit in the motion proof, with its
+disclosed sleeve seam and hand-drawing limitations; no detailed aesthetic or
+moving approval is inferred.
+
+The reusable cutout scene is
+`pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend`.
+It has linked shoulder, elbow and wrist controls, stable source UVs and one
+150-frame wave action. The head/fronds, scene and planted contact remain fixed.
+Hand, wrist and cuff transform together; two hand drawings change at frames 25/128.
+Save/reopen and all-frame data evaluation pass, including complete joint regions,
+continuous sleeve/wrist support and exact neutral return. An existing green hidden
+overlap supplies a small wrist underlap to close the initial split-alpha seam.
+All source art and rejected rig candidates remain. No frame has been rendered;
+the inherited sleeve/body seam, hand/cuff switch and actual renderer alpha/colour
+still require pixel and normal-speed checks. This is a standalone proof artifact,
+not an implemented Melotrail feature or a second reviewed activity.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

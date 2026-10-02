@@ -1,0 +1,14 @@
+{
+  "userMessage": "you can continue with the point 2 of the list",
+  "localDate": "2026-10-02",
+  "decision": "Proceed from the latest connected-wrists v3 kit into point 2 reusable-motion proof. This selects its changed neutral and useful poses for the proof, without claiming an unqualified quality rating or motion approval.",
+  "artifact": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png",
+  "sha256": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968",
+  "kitFreeze": "docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/kit-freeze.json",
+  "kitFreezeSha256": "abd44d15a3230db153c4b827fecb65b59f21b1e7d75be42bb1a4c2861f0f0107",
+  "knownLimitations": [
+    "Inherited inner sleeve/body seam remains visible.",
+    "Different neutral/open cuff drawings need moving review."
+  ],
+  "oldRejections": "Retained; no old artwork or motion acceptance is retroactive."
+}

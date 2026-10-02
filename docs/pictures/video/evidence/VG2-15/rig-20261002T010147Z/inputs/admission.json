@@ -1,0 +1,19 @@
+{
+  "owner": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z",
+  "sourceDecision": "docs/pictures/video/evidence/VG2-14/proceed-20261002T010147Z/decision.json",
+  "scope": "VG2-15 only: register unchanged selected textures; save and reopen a standalone Blender cutout rig; evaluate 150 frames and geometry/alpha support without rendering.",
+  "userMessage": "you can continue with the point 2 of the list",
+  "limits": {
+    "implementationAttempts": 3,
+    "dataEvaluationSeconds": 120,
+    "aggregateRssBytes": 4294967296,
+    "newStorageBytes": 536870912,
+    "renders": 0,
+    "encodes": 0,
+    "decodes": 0,
+    "imageGeneration": 0
+  },
+  "runtime": "Installed Blender 5.2.2 LTS, background only; no visible window.",
+  "scratch": "/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-15-att7pys4",
+  "baselineHead": "47c5472daaffb65af983d030e55ac8ad0031e73b"
+}

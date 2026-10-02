@@ -1,0 +1,20 @@
+{
+  "ordinal": 2,
+  "argv": [
+    "/Applications/Blender.app/Contents/MacOS/Blender",
+    "--factory-startup",
+    "--background",
+    "--disable-autoexec",
+    "--threads",
+    "4",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend",
+    "--python-exit-code",
+    "1",
+    "--python",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py",
+    "--",
+    "check"
+  ],
+  "renderCost": 0,
+  "mediaTraversals": 0
+}

@@ -1,0 +1,19 @@
+{
+  "ordinal": 1,
+  "argv": [
+    "/Applications/Blender.app/Contents/MacOS/Blender",
+    "--factory-startup",
+    "--background",
+    "--disable-autoexec",
+    "--threads",
+    "4",
+    "--python-exit-code",
+    "1",
+    "--python",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py",
+    "--",
+    "build"
+  ],
+  "renderCost": 0,
+  "mediaTraversals": 0
+}

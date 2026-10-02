@@ -530,11 +530,33 @@ build receipts are in `checks/`; the native-window class is excluded, not passed
 Tests cannot approve anatomy, the inherited inner sleeve/body junction, differing
 cuff drawings or their moving transition. VG2-14 remains a human appearance gate.
 
+VG2-14/15 continuation and data evidence (2026-10-02): the user's instruction
+“you can continue with the point 2 of the list” selects connected-wrists v3 for
+the rig proof. Exact source decision:
+`pictures/video/evidence/VG2-14/proceed-20261002T010147Z/decision.json`.
+It records the changed neutral/extremes and known sleeve/cuff limitations without
+fabricating moving approval. Standalone scene/checks are in
+`pictures/video/evidence/VG2-15/rig-20261002T010147Z/`; selected scene is
+`rig/tabi-wave-v3.blend`. All 150 data frames survive save/reopen and absolute-frame
+reordering, with stable lengths/UV/depth/contact and identical return. Complete
+joint regions and sleeve/wrist corridors pass; 1,134,801 texture-boundary samples
+remain inside the camera. Retained negatives cover the actual 120-frame initial
+cuff seam, a detached hand that fooled alpha-only centres, sleeve clipping, bad
+UVs/inversion/return, missing parts, wrong pins, unsupported poses and conflicting
+controls. Existing hidden fabric closes the seam, and part-to-joint registration
+closes the checker gap. A pinned bytecode change interrupted the second build;
+the third disables embedded-Python bytecode writes and passes. All three bounded
+data attempts used 8.09 seconds and at most 282,542,080 bytes sampled aggregate
+RSS, with zero rendered frames or media traversals. Headless focused, Node,
+Python and make checks are retained beside the evidence; the native-window test
+is excluded. Renderer colour/alpha, hand/cuff switches and moving quality remain
+unproved; this does not authorize new media or further action expansion.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain
-separate scenery, restart, resource, whole-cut and editor gates. No rig or new
-motion has yet passed this procedure.
+separate scenery, restart, resource, whole-cut and editor gates. No rendered rig
+movement has yet passed this procedure. The VG2-15 data-only pass above is narrower.
 
 ### Episode reuse validation procedure (2026-09-30)
 

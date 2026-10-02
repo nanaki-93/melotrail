@@ -1,0 +1,1369 @@
+{
+  "status": "GEOMETRIC_ALPHA_SUPPORT_PASS_NOT_RENDERED",
+  "frames": 150,
+  "edgePoints": 1134801,
+  "exposedOffCanvas": 0,
+  "maxAnchorStep": 3.6160723345198664,
+  "maxAngleStep": 2.128279883381925,
+  "facts": [
+    {
+      "frame": 0,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 1,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 2,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 3,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 4,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 5,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 6,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 7,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 8,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 9,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 10,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        817.8299133212056,
+        559.3410869809048
+      ],
+      "holes": []
+    },
+    {
+      "frame": 11,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        817.266662302215,
+        559.4633757129855
+      ],
+      "holes": []
+    },
+    {
+      "frame": 12,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        816.5939520850433,
+        559.6096975535226
+      ],
+      "holes": []
+    },
+    {
+      "frame": 13,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        816.0299428307983,
+        559.7327149615617
+      ],
+      "holes": []
+    },
+    {
+      "frame": 14,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        815.7932575558856,
+        559.7844170302216
+      ],
+      "holes": []
+    },
+    {
+      "frame": 15,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        816.1623321019597,
+        559.6745037354567
+      ],
+      "holes": []
+    },
+    {
+      "frame": 16,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        817.2257815146086,
+        559.3561005231068
+      ],
+      "holes": []
+    },
+    {
+      "frame": 17,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.9162039897258,
+        558.8447238345204
+      ],
+      "holes": []
+    },
+    {
+      "frame": 18,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        821.1642709045818,
+        558.1543181086915
+      ],
+      "holes": []
+    },
+    {
+      "frame": 19,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        823.8992385998451,
+        557.2985987227846
+      ],
+      "holes": []
+    },
+    {
+      "frame": 20,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        827.0495339657055,
+        556.291142196832
+      ],
+      "holes": []
+    },
+    {
+      "frame": 21,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        830.5434468524234,
+        555.1460919245599
+      ],
+      "holes": []
+    },
+    {
+      "frame": 22,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        834.3091994167313,
+        553.8785534435233
+      ],
+      "holes": []
+    },
+    {
+      "frame": 23,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        838.276183830914,
+        552.5052777111199
+      ],
+      "holes": []
+    },
+    {
+      "frame": 24,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        842.3752164955256,
+        551.0445432720661
+      ],
+      "holes": []
+    },
+    {
+      "frame": 25,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        848.7873434178778,
+        551.3683752238798
+      ],
+      "holes": []
+    },
+    {
+      "frame": 26,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        852.9204281911268,
+        549.8302255941544
+      ],
+      "holes": []
+    },
+    {
+      "frame": 27,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        856.9913686175596,
+        548.2685029599643
+      ],
+      "holes": []
+    },
+    {
+      "frame": 28,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        860.9423442893657,
+        546.7069361836617
+      ],
+      "holes": []
+    },
+    {
+      "frame": 29,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        864.7197020123917,
+        545.1706458940723
+      ],
+      "holes": []
+    },
+    {
+      "frame": 30,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        868.2732832860183,
+        543.6853829818452
+      ],
+      "holes": []
+    },
+    {
+      "frame": 31,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        871.5565546289045,
+        542.2772606371732
+      ],
+      "holes": []
+    },
+    {
+      "frame": 32,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        874.5269226182816,
+        540.9729275293952
+      ],
+      "holes": []
+    },
+    {
+      "frame": 33,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        877.1442442799097,
+        539.798996561223
+      ],
+      "holes": []
+    },
+    {
+      "frame": 34,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        879.3707098385946,
+        538.7815447086938
+      ],
+      "holes": []
+    },
+    {
+      "frame": 35,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        881.1694664517643,
+        537.9466905401787
+      ],
+      "holes": []
+    },
+    {
+      "frame": 36,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        882.5037641885414,
+        537.3198450325284
+      ],
+      "holes": []
+    },
+    {
+      "frame": 37,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.3351678946839,
+        536.9258398191809
+      ],
+      "holes": []
+    },
+    {
+      "frame": 38,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 39,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.2470404472446,
+        536.791365722263
+      ],
+      "holes": []
+    },
+    {
+      "frame": 40,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        882.2577227904741,
+        536.8106225145074
+      ],
+      "holes": []
+    },
+    {
+      "frame": 41,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        880.8601929446901,
+        536.8711984098716
+      ],
+      "holes": []
+    },
+    {
+      "frame": 42,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        879.2609177386474,
+        536.9886718677692
+      ],
+      "holes": []
+    },
+    {
+      "frame": 43,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        877.666212009371,
+        537.1572940961984
+      ],
+      "holes": []
+    },
+    {
+      "frame": 44,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        876.2800994437841,
+        537.3460885778461
+      ],
+      "holes": []
+    },
+    {
+      "frame": 45,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        875.3031551887658,
+        537.5029467315698
+      ],
+      "holes": []
+    },
+    {
+      "frame": 46,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        874.933406148756,
+        537.5674869067756
+      ],
+      "holes": []
+    },
+    {
+      "frame": 47,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        875.1842304911144,
+        537.5234047095196
+      ],
+      "holes": []
+    },
+    {
+      "frame": 48,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        875.8876561214404,
+        537.4067097046492
+      ],
+      "holes": []
+    },
+    {
+      "frame": 49,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        876.9709867248406,
+        537.2470345706156
+      ],
+      "holes": []
+    },
+    {
+      "frame": 50,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        878.3612328282898,
+        537.0774481601554
+      ],
+      "holes": []
+    },
+    {
+      "frame": 51,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        879.9842413988255,
+        536.9291373754193
+      ],
+      "holes": []
+    },
+    {
+      "frame": 52,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        881.7638367017327,
+        536.827547337462
+      ],
+      "holes": []
+    },
+    {
+      "frame": 53,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 54,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        885.4809794317634,
+        536.8198395732896
+      ],
+      "holes": []
+    },
+    {
+      "frame": 55,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        887.2609906113627,
+        536.9140963657048
+      ],
+      "holes": []
+    },
+    {
+      "frame": 56,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        888.884607243287,
+        537.0556368673351
+      ],
+      "holes": []
+    },
+    {
+      "frame": 57,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        890.2755664365798,
+        537.219486908704
+      ],
+      "holes": []
+    },
+    {
+      "frame": 58,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        891.3595127571847,
+        537.3746415776759
+      ],
+      "holes": []
+    },
+    {
+      "frame": 59,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        892.0634012175024,
+        537.4884371249069
+      ],
+      "holes": []
+    },
+    {
+      "frame": 60,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        892.3144075096079,
+        537.5314997351062
+      ],
+      "holes": []
+    },
+    {
+      "frame": 61,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        892.1210848488829,
+        537.4982080851784
+      ],
+      "holes": []
+    },
+    {
+      "frame": 62,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        891.573981266971,
+        537.4082361526639
+      ],
+      "holes": []
+    },
+    {
+      "frame": 63,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        890.7219666031751,
+        537.2804593144378
+      ],
+      "holes": []
+    },
+    {
+      "frame": 64,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        889.6138455743304,
+        537.1366352630977
+      ],
+      "holes": []
+    },
+    {
+      "frame": 65,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        888.2989618513451,
+        536.9984379037749
+      ],
+      "holes": []
+    },
+    {
+      "frame": 66,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        886.8276655057924,
+        536.8852711621587
+      ],
+      "holes": []
+    },
+    {
+      "frame": 67,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        885.2513380539855,
+        536.8123322948309
+      ],
+      "holes": []
+    },
+    {
+      "frame": 68,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 69,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        881.9934629894203,
+        536.8190645245896
+      ],
+      "holes": []
+    },
+    {
+      "frame": 70,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        880.4174778338818,
+        536.8985666795702
+      ],
+      "holes": []
+    },
+    {
+      "frame": 71,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        878.9466479807904,
+        537.017792518942
+      ],
+      "holes": []
+    },
+    {
+      "frame": 72,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        877.6323502007313,
+        537.1614432861375
+      ],
+      "holes": []
+    },
+    {
+      "frame": 73,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        876.5248101752156,
+        537.3098744467075
+      ],
+      "holes": []
+    },
+    {
+      "frame": 74,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        875.6733811484252,
+        537.4411632704333
+      ],
+      "holes": []
+    },
+    {
+      "frame": 75,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        875.1266468207824,
+        537.5334027837926
+      ],
+      "holes": []
+    },
+    {
+      "frame": 76,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        874.933406148756,
+        537.5674869067756
+      ],
+      "holes": []
+    },
+    {
+      "frame": 77,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        875.1842304911144,
+        537.5234047095196
+      ],
+      "holes": []
+    },
+    {
+      "frame": 78,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        875.8876561214404,
+        537.4067097046492
+      ],
+      "holes": []
+    },
+    {
+      "frame": 79,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        876.9709867248406,
+        537.2470345706156
+      ],
+      "holes": []
+    },
+    {
+      "frame": 80,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        878.3612328282898,
+        537.0774481601554
+      ],
+      "holes": []
+    },
+    {
+      "frame": 81,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        879.9842413988255,
+        536.9291373754193
+      ],
+      "holes": []
+    },
+    {
+      "frame": 82,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        881.7638367017327,
+        536.827547337462
+      ],
+      "holes": []
+    },
+    {
+      "frame": 83,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 84,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        885.4809794317634,
+        536.8198395732896
+      ],
+      "holes": []
+    },
+    {
+      "frame": 85,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        887.2609906113627,
+        536.9140963657048
+      ],
+      "holes": []
+    },
+    {
+      "frame": 86,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        888.884607243287,
+        537.0556368673351
+      ],
+      "holes": []
+    },
+    {
+      "frame": 87,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        890.2755664365798,
+        537.219486908704
+      ],
+      "holes": []
+    },
+    {
+      "frame": 88,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        891.3595127571847,
+        537.3746415776759
+      ],
+      "holes": []
+    },
+    {
+      "frame": 89,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        892.0634012175024,
+        537.4884371249069
+      ],
+      "holes": []
+    },
+    {
+      "frame": 90,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        892.3144075096079,
+        537.5314997351062
+      ],
+      "holes": []
+    },
+    {
+      "frame": 91,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        892.1450418466476,
+        537.5022847439527
+      ],
+      "holes": []
+    },
+    {
+      "frame": 92,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        891.6762708989269,
+        537.4245999231482
+      ],
+      "holes": []
+    },
+    {
+      "frame": 93,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        890.9668235556849,
+        537.3156402919776
+      ],
+      "holes": []
+    },
+    {
+      "frame": 94,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        890.0753977671941,
+        537.1934920125365
+      ],
+      "holes": []
+    },
+    {
+      "frame": 95,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        889.0613242977867,
+        537.0742799784234
+      ],
+      "holes": []
+    },
+    {
+      "frame": 96,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        887.9845846203465,
+        536.9705880392016
+      ],
+      "holes": []
+    },
+    {
+      "frame": 97,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        886.9058592776892,
+        536.8901846920827
+      ],
+      "holes": []
+    },
+    {
+      "frame": 98,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        885.8862533335781,
+        536.8357025265717
+      ],
+      "holes": []
+    },
+    {
+      "frame": 99,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        884.9870335757169,
+        536.8049543382292
+      ],
+      "holes": []
+    },
+    {
+      "frame": 100,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        884.269337302825,
+        536.7920171174668
+      ],
+      "holes": []
+    },
+    {
+      "frame": 101,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.79421017321,
+        536.7891198670588
+      ],
+      "holes": []
+    },
+    {
+      "frame": 102,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 103,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 104,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 105,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 106,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 107,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 108,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 109,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 110,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 111,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 112,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.6223485570224,
+        536.789161784565
+      ],
+      "holes": []
+    },
+    {
+      "frame": 113,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        883.4175753818758,
+        536.8883524075222
+      ],
+      "holes": []
+    },
+    {
+      "frame": 114,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        882.8218059437547,
+        537.175824471123
+      ],
+      "holes": []
+    },
+    {
+      "frame": 115,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        881.8608182403301,
+        537.6365408704484
+      ],
+      "holes": []
+    },
+    {
+      "frame": 116,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        880.5586253233961,
+        538.2552738035296
+      ],
+      "holes": []
+    },
+    {
+      "frame": 117,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        878.937963895707,
+        539.0160334284259
+      ],
+      "holes": []
+    },
+    {
+      "frame": 118,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        877.0214567514028,
+        539.903149983466
+      ],
+      "holes": []
+    },
+    {
+      "frame": 119,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        874.831570646646,
+        540.9003851696036
+      ],
+      "holes": []
+    },
+    {
+      "frame": 120,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        872.3914193983135,
+        541.9912716404208
+      ],
+      "holes": []
+    },
+    {
+      "frame": 121,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        869.7254105981527,
+        543.1594310323183
+      ],
+      "holes": []
+    },
+    {
+      "frame": 122,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        866.8592261076084,
+        544.3885797003138
+      ],
+      "holes": []
+    },
+    {
+      "frame": 123,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        863.8201029075985,
+        545.6621233389633
+      ],
+      "holes": []
+    },
+    {
+      "frame": 124,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        860.6375741223787,
+        546.9641827635724
+      ],
+      "holes": []
+    },
+    {
+      "frame": 125,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        857.3428264331003,
+        548.2787989091431
+      ],
+      "holes": []
+    },
+    {
+      "frame": 126,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        853.9689000407,
+        549.5909231622509
+      ],
+      "holes": []
+    },
+    {
+      "frame": 127,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        850.5510757682405,
+        550.885648514222
+      ],
+      "holes": []
+    },
+    {
+      "frame": 128,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        844.868319019548,
+        550.3087228959973
+      ],
+      "holes": []
+    },
+    {
+      "frame": 129,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        841.4514642278879,
+        551.5576368969447
+      ],
+      "holes": []
+    },
+    {
+      "frame": 130,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        838.1075625170446,
+        552.7493640829927
+      ],
+      "holes": []
+    },
+    {
+      "frame": 131,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        834.8780073032265,
+        553.8722869852438
+      ],
+      "holes": []
+    },
+    {
+      "frame": 132,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        831.8051840309372,
+        554.9154974429034
+      ],
+      "holes": []
+    },
+    {
+      "frame": 133,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        828.9323197035918,
+        555.8690340291773
+      ],
+      "holes": []
+    },
+    {
+      "frame": 134,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        826.3029442997145,
+        556.7234841942416
+      ],
+      "holes": []
+    },
+    {
+      "frame": 135,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        823.9607733802382,
+        557.4701094726189
+      ],
+      "holes": []
+    },
+    {
+      "frame": 136,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        821.949205937974,
+        558.1006169719061
+      ],
+      "holes": []
+    },
+    {
+      "frame": 137,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        820.3117735479625,
+        558.6065737326636
+      ],
+      "holes": []
+    },
+    {
+      "frame": 138,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        819.0910535675994,
+        558.9794902176073
+      ],
+      "holes": []
+    },
+    {
+      "frame": 139,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.3288790438861,
+        559.2105328022956
+      ],
+      "holes": []
+    },
+    {
+      "frame": 140,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 141,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 142,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 143,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 144,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 145,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 146,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 147,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 148,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    },
+    {
+      "frame": 149,
+      "jointRegionHoles": 0,
+      "handEntry": [
+        818.0660250628483,
+        559.2898863447425
+      ],
+      "holes": []
+    }
+  ],
+  "handDrawingChanges": [
+    25,
+    128
+  ],
+  "unproved": [
+    "Rendered colour/alpha/edge quality",
+    "Normal-speed hand/cuff substitutions",
+    "Inherited sleeve/body seam in movement"
+  ]
+}

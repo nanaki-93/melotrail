@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.melotrail.architecture.TargetArchitectureRulesTest" tests="10" skipped="0" failures="1" errors="0" timestamp="2026-10-02T01:11:41.971Z" hostname="Marcos-MacBook-Pro.local" time="0.17">
+  <properties/>
+  <testcase name="target source tree obeys the MIDI Core dependency policy()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.055"/>
+  <testcase name="MIDI export and video launcher do not dispatch to a Swift soundtrack application()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.011"/>
+  <testcase name="domain desktop and MIDI adapter violations are rejected()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.002"/>
+  <testcase name="video project boundaries reject domain IO and cross-workspace dependencies()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.001"/>
+  <testcase name="MIDI application has no audio production or worker runtime()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.057">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;[]&gt; but was: &lt;[tools/video-motion/vg2-rig-motion.test.py]&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;[]&gt; but was: &lt;[tools/video-motion/vg2-rig-motion.test.py]&gt;
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+	at app//kotlin.test.junit5.JUnit5Asserter.assertEquals(JUnitSupport.kt:32)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertEquals(Assertions.kt:63)
+	at app//kotlin.test.AssertionsKt.assertEquals(Unknown Source)
+	at app//kotlin.test.AssertionsKt__AssertionsKt.assertEquals$default(Assertions.kt:62)
+	at app//kotlin.test.AssertionsKt.assertEquals$default(Unknown Source)
+	at app//app.melotrail.architecture.TargetArchitectureRulesTest.MIDI application has no audio production or worker runtime(TargetArchitectureRulesTest.kt:103)
+	at java.base@21.0.11/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base@21.0.11/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base@21.0.11/java.util.ArrayList.forEach(ArrayList.java:1596)
+</failure>
+  </testcase>
+  <testcase name="legacy data payloads and their application consumers remain removed()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.027"/>
+  <testcase name="MIDI Core entrypoints do not depend on rejected application workflows()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.007"/>
+  <testcase name="ImageIO is confined to the video image filesystem adapter()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.001"/>
+  <testcase name="only MIDI Core musical generation and no model adapters remain()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.007"/>
+  <testcase name="exclusive Qwen and schema V4 fixtures are removed with their owners()" classname="app.melotrail.architecture.TargetArchitectureRulesTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
