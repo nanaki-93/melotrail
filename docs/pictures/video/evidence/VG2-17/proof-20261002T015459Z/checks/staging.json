@@ -1,0 +1,18 @@
+{
+  "scope": "Preserve unrelated user documentation edits during selective index staging",
+  "scratch": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-evidence-staging-77dwxwdq",
+  "files": {
+    "TASKS-VIDEO.md": {
+      "baseline": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-evidence-staging-77dwxwdq/TASKS-VIDEO.md",
+      "sha256": "746c5b84fb252d42b479c6f8e7ce585b678f387ebd1456fc0c548a4bf30f23d9"
+    },
+    "docs/TABI_VIDEO.md": {
+      "baseline": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-evidence-staging-77dwxwdq/TABI_VIDEO.md",
+      "sha256": "e5358a2bfc167ca9e11fca4fbcc91d1c8a7f9968b50e4b430ad9310cf5ab3f83"
+    },
+    "docs/VALIDATION.md": {
+      "baseline": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-wave-evidence-staging-77dwxwdq/VALIDATION.md",
+      "sha256": "c1092ef18a83c81ec8e49c4e7475c01c684ad444ac8a5c615ac7ebafb6465d1d"
+    }
+  }
+}

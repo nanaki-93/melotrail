@@ -1,0 +1,47 @@
+{
+  "status": "COMMON_SRGB_DECODE_PASS_NOT_HUMAN_APPROVAL",
+  "frames": [
+    {
+      "frame": 1,
+      "mae": 2.1507016782407407,
+      "max": 98,
+      "decodedSha256": "796d3a94a845ccda3c51f61edf10f6b0960c33ed0151022b61298670ab93a16b"
+    },
+    {
+      "frame": 2,
+      "mae": 2.0801287615740742,
+      "max": 99,
+      "decodedSha256": "fdc25a500944d44af815c0fa37bc79a1bf0726b2d515d5b813bd3a5d7c50d0bc"
+    },
+    {
+      "frame": 3,
+      "mae": 2.0664756944444442,
+      "max": 99,
+      "decodedSha256": "c7895bd829cadd8a235d29a977468de1ce005294640170148c9b500a5882f21e"
+    },
+    {
+      "frame": 4,
+      "mae": 2.0559215856481483,
+      "max": 99,
+      "decodedSha256": "2a58c0ae75966007578ab7876103d3ef150fe164fa490facaa3e9331c8461b40"
+    },
+    {
+      "frame": 5,
+      "mae": 2.0474479166666666,
+      "max": 99,
+      "decodedSha256": "53fcf84523a5f2b97fb946623dfe82697bfab3bc11e3001ca764954959c738b1"
+    },
+    {
+      "frame": 6,
+      "mae": 2.04037037037037,
+      "max": 99,
+      "decodedSha256": "a5c212799797ef78086d69457f7158b9e50a2dd6a9c24c9cca3670dbc30bebc9"
+    }
+  ],
+  "patchMaximum": 3,
+  "neutral": {
+    "mae": 0.5314366319444445,
+    "max": 20
+  },
+  "signalComparison": "Decode Rec.709 RGB -> linear -> sRGB, then compare with original sRGB source."
+}

@@ -1,0 +1,14 @@
+{
+  "frames": 6,
+  "fps": 30,
+  "seconds": 0.2,
+  "audioStreams": 0,
+  "codec": "h264",
+  "width": 640,
+  "height": 360,
+  "sar": "1:1",
+  "pixFmt": "yuv420p",
+  "timeBase": "1/15360",
+  "ptsStep": 512,
+  "color": "bt709"
+}

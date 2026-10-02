@@ -1,0 +1,1 @@
+{"status":"COMMON_SRGB_DECODE_PASS_NOT_HUMAN_APPROVAL","frames":6,"patchMaximum":3,"neutral":{"mae":0.5314366319444445,"max":20},"signalComparison":"Decode Rec.709 RGB -> linear -> sRGB, then compare with original sRGB source."}

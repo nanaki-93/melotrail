@@ -1,0 +1,1374 @@
+{
+  "status": "FROZEN_PROPOSAL_NOT_AUTHORIZED",
+  "kind": "wave",
+  "owner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z",
+  "tools": {
+    "node": "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+    "ffmpeg": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+    "ffprobe": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+    "blender": "/Applications/Blender.app/Contents/MacOS/Blender",
+    "python": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+    "sandbox": "/usr/bin/sandbox-exec"
+  },
+  "files": {
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/preview.py": "db324c02f8e59855250c9a946098a3ee8cc8da9bc959767aadf041e803057ed7",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/paths.py": "60178ec2e66d67413263be25ef53610d89ebdf039c0769b5d0b99975546b1791",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/colour_source.cjs": "ff7ef33e8dd55549602f74dfc4583eb36e6c1f977cf27cc213dccd9bc2d61d4b",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/render_wave.py": "0e16566243fcda545c3e2553fadf47fc4fdbbeea460e9787d35b0b289b295a6c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/freeze.py": "3579960c7e332ab4993a9ee25a722b9450c5869a6998de10420d91415b3763d1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/verify_pixels.cjs": "957fafbef3f65b74a0afe6920ca225859e0ae7d2ea18a581ed8a16838bb4e7fc",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/review_packet.py": "53443149a17ad1cd83c284850903310a67cf6a62e31ee12a05a46e7986561bf1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/colour.cjs": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/scripts/check-supervision.py": "b0aec69974861422f02df03fe710aa2b8bfcbe40780a35cabb2db5f39c6c708a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/inputs/scope.json": "911d979ae51a9f432ed7940e68769380ff4bf215b269208459ac1b8c66db6284",
+    "/Users/marcoandreose/DEV/lab/melotrail/build/vg2-character-art-a3/full-foreground.png": "e9d69d59f21ecac1d15561487c193d19d3cef2e65ca2970a1669c062dec9e93a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/continuation-20261001-153813Z/parts/upper_sleeve_candidate_v1.png": "ade111341aa27274348afa9ea5b56c4b6b6b9da446760981be28d2f31a003d54",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/checks/kit-freeze.json": "abd44d15a3230db153c4b827fecb65b59f21b1e7d75be42bb1a4c2861f0f0107",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-front.png": "16ae432fb9b63d1185297cd23e710a2ff8dd114d6a40b3f31b43550ebe550651",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/neutral-overlap.png": "cf734e9489a82cae424b692addacf7835b27742633a129dc29d2c6db8014962f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-front.png": "6a3a046b1bf62b765918fc84f5060e5c84f148c378e3eeb3f60a920f88dec8d2",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/parts/open-overlap.png": "859cb421af6cd434b2b6fb3b02223d9a6bfac01c9b3f7192d22583d5bf8c3423",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/review/connected-wrists-v3.png": "98beb200f181dd815791381381693f5a48ca9fba5ab1234d0dd1c4299bf1a968",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-13/wrist-repair-20261001T175547Z/scripts/assemble-wrists.cjs": "b0df7acfa31b8c2ae7ed8c03ea03ddb9a2aaf9da659d3fd39786baab19dcf8c5",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/build-geometry-v3.json": "18fef5d1973700b3cad06b201749a93da000d2da61031363ce7d2d207c525db6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/check-geometry-v3.json": "46673f27744137e157b034a2cf596b7d91eb7a1869aac564a7c1a0631d07b771",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-failure-v2.json": "6694dea6eebd0c18b071629e07fb8d8d87d2d53a69ea647a9e07f4ace44d4c90",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-result-v3.json": "5c6772542e55221f30b49736fc88977b1520d0684b5e87f561b35536991d0202",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/evaluation-result.json": "bd3d46695739fb8ee995ccae1377f3a0a06e00a9bb0692fc2ee94e572aca2946",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/initial-support-failure.json": "c46c33a23df4db6d21501853839b737cdc5ff23ec9b028e2cc76e88fe98bfbda",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/support-final.json": "38758b361ecd0fe2c9c204bf42f553710be681a5d44925199a71f41fad6cec00",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/admission.json": "67704251744cb0ec5851c24b2854875342bf9a46440fea5e7ba0362cb33d8937",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/baseline-status.txt": "9028ea009e4904950413d40bfe83c493ee6823f2693083cad13242e3cf8ce372",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/boundaries.json": "7adb27912685c6b950f157a54e17055ebb5ce4a5bc96fd55191916e6b1d3995c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig-v2.json": "bdffe144c0729ad693aa6e993bd7cad114ba0f6689353538adc75ae0faa98793",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/inputs/rig.json": "267cd0336e137cf1774449886403ebefa3f2b0a34ee5a0154e5d467c61f5445d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v2.blend": "856bd913f8af91954c7e4138197f555a1505145c5e6b3ad5505c072d70948526",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend": "ed1b388299b7f672b259d1ca8381da91fc53d6a52b036007abeec8d5117d4821",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave.blend": "bc6ad7eecef5596e5ab60bddc5edc6aa00d0306ec2765ac3b23353f0102117b9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-data.py": "f85fe8cd1edafa38ed3be25c8f4d75e5fd2745137f19b4a8c129a8850f8513a9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-handoff.cjs": "0f0215e6506306156d12f297e2df75748325bf33beb0e139af99be3c6cb62884",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/check-support.cjs": "21fc26554e60795531840949508036158bdeb16601f26bd9799b2a06450af593",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/evaluate.py": "4f06252d167043f3fc9c7a28bde33afc3100ab5c5302f5bbb75a1cc5ac0ebf40",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/motion.py": "b5c67bc9d2afa24c90df0fb5c49250a25c2ec216621f7ebd6f362ffb0e70d85a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/prepare.cjs": "7be8748918cfc2fa7c3de04ff4a2146c4e25067a5c42f08129c3a92f2de0346e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py": "95c26229c42e85d80c5328ba0f082e7c438077331f0df72128b26b038393b483",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig_guard.py": "7809cccbd59b91f1d0304fb9630f42f30f2c7603a6a25efb508e043297fbeda6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/validate.sh": "53ac9537581cde00080ac796caecb74ea01b97c5a7fb2076bf9cfc41382424b9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/allowed.png": "4b8221992026414485689cb3543d258f7b63bfd3a30a7d3a97643a32b3032f1f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/forearm_separate.png": "779172217a62df81538b0339d9a38ff7f50a65478addd59c7470666bb82a8d47",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/hidden_shoulder_elbow_overlap.png": "fb51a410627d4112ca6c906fcff564bd521519529f0f6e0791f93089e810465f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/occlusion.png": "be1ad8fe17af81c8f9fa768017a136af1ab54405e1be993a9322e5d7497acf5a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/protected.png": "54e594265f2ec78a0b8c82d0a3231c2c28138dab974b7c1ee6fe7731735f1318",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/revealed_torso_cabin_backing.png": "ed5b018850c1977ffded4c7d27c88a15f3405ed1851bee24599755e832f356e6",
+    "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-rig-motion.test.cjs": "73d7f31e150f7d4aeb42966cde2f8529cf549200274d9b52cd0b8881f51fe452",
+    "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-rig-support.test.cjs": "53f3a9510da87c680fa18925badc87064d4436d87a5568553034fe2bb039d866",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/handoff-final.json": "c6adebf06ff97fc77ed494970d4d9a59c2c8250e9b15a95795030803ebcbb6db",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/inputs/scope.json": "9d59474a79b51669df5f38b3337aa279eb5dd3ff1657d3f6f0e2ed3da4ab1e95",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/preview.py": "756e26c601d5478206773bed23d37df46a4453bdab5faaa96222484be60d0589",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/validate.sh": "536d6074ba89dc305cbc3f43c29b2050dbbf2fad40a648a1d247ddf976eee982",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/encoding.py": "a8cb05f18f2d6cc5238c448f5aefdc92e196ee2a8a7b57adb9f6c5c8a7ccef5c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/paths.py": "60178ec2e66d67413263be25ef53610d89ebdf039c0769b5d0b99975546b1791",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/colour_source.cjs": "6c6b8259b78b8ca9d3e7f32ff618225bdbf948e335a60985e74008560ed7d8a3",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/render_wave.py": "0e16566243fcda545c3e2553fadf47fc4fdbbeea460e9787d35b0b289b295a6c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/freeze.py": "f082c27170f35e06fad2caa32f6ea698d023d6dbe64cdd1a9f9305477d3f2d26",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/verify_pixels.cjs": "3cb719b71101874c99bd20c8b676e5e9d3f3576de3eb721d0184874ee1b47c83",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/review_packet.py": "9660e5a87f3930ef89d7ff888524780374f91d3a64596c3733be322d6e49eeee",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/colour.cjs": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/scripts/check-supervision.py": "14168fc09ac6c54fed6ad07c3221d6dc5f2ca6874c054668ea57db1d8c8b1eb4",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source-pixels.json": "e6073569b6da0c78b0616da78526c0ac59f38c8c226b362a1fe768544c18a7fb",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0001.png": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0001.png": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0002.png": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0002.png": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0003.png": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0003.png": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0004.png": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0004.png": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0005.png": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0005.png": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/source/frame-0006.png": "dce089dd3535d6e3ab9fb5cd78a9f781ed0c584da32836f4e50b6770fcebbb0f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/encoded_input/frame-0006.png": "06377f837160011701e647e572c5a7924de18be4c2afdd5026ffa26927e15182",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z/live/patches.json": "ecf0abd3431976c46b95e2aad566ad47bc26615453c3c527cb8de5665af01656",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/packets/wave-proposal-v2.json": "cfbc0703fbf37366fb5b450065db6c6d50daaabda762c875ef74d7bf2eda7e47",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/inputs/scope.json": "62f3a0ae79fc70aacb9ef5de08532d76c8b4a4cc31ac605fb6b27ee928e12371",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/preview.py": "f05dbc518e23518f4174d4bd84b0b35434bdc7391a2129434c0572ba423f4ffd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/validate.sh": "ef71903a418e0ae7ef11e872fbaa50ae0fcd4b81faa8af2347eea66affbacefc",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/encoding.py": "0e2ae5a1583304eef75b103870d1b62bade779abd60e1fa30c99f9a7bad16f89",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/png_transport.cjs": "1e010b89b533c0d63780f644ff4e680777f212b750b6f9c19702f501bfa8a461",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/paths.py": "60178ec2e66d67413263be25ef53610d89ebdf039c0769b5d0b99975546b1791",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/colour_source.cjs": "6c6b8259b78b8ca9d3e7f32ff618225bdbf948e335a60985e74008560ed7d8a3",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/check_saved_frames.cjs": "fd053c25412135da43a2a64c83acb1de9954e372d602ff5a872ecc6d8843fbdb",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/render_wave.py": "0e16566243fcda545c3e2553fadf47fc4fdbbeea460e9787d35b0b289b295a6c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/freeze.py": "19fd11f7216f652188a96424c3ae995a6dfb80082b91b80c17fd218bc0c20a7c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/verify_pixels.cjs": "6543cb469c150a384ed3bf5d3d76e5a35a1b1a078be0633f7fba496c27425a0a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/review_packet.py": "9613fe1d0d1d9463f08e2d98f660e057784b6a2ee5805d3ced8c0dc1177d2de4",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/colour.cjs": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/check-supervision.py": "937edf9fb5a3718a83999905b386d61d55c92e7b41d823841c27878d3a7f2016",
+    "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z/packets/wave-proposal.json": "b0e4125152f0a2515aa0088629101c52dd09093d579d55ac4419f7b1dc0e9f67",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/result.json": "3f44bb3d7ffe931f25e6eb1381eb880c3f135d1d8e82c400d037410d29b47fd2",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/decoded-pixels.json": "55335a73e097f34a9583952eb0b8d002bc3b694842b42c93202282cefa6e0362",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/source-pixels.json": "62abad65b83a08cb278cc3cd084bda5afd6d11f57ab5c7d2c7244af395d45f63",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/media-facts.json": "1e072a80ca6f2a18a365e563b2084426c322980e371584ac87775e59c980f6e6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/packets/colour.json": "b5d026f71f95b852373ebea52ae9bcc644d60cf7845064b7fb9587b72705b7c5",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/packets/wave.json": "e78abd24283add21a528b41443af7ecfb39ae0a15fab183f2ed1254060afc698",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/preview.py": "6ebd9194746b5b952e697ba0ed904bad5119110b809f494c799bdcfedcefae21",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/validate.sh": "ba98dd3fa477cc7319bc2f74637e08ca27bbdb5ccfcd3de9f11995a5b709f8d7",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/encoding.py": "0e2ae5a1583304eef75b103870d1b62bade779abd60e1fa30c99f9a7bad16f89",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/png_transport.cjs": "1e010b89b533c0d63780f644ff4e680777f212b750b6f9c19702f501bfa8a461",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/paths.py": "60178ec2e66d67413263be25ef53610d89ebdf039c0769b5d0b99975546b1791",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/compose_frames.cjs": "c43bb89984e0b0f29ee0f9d5ee60e265062c74309bea54da49932ad51dba320e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/freeze.py": "4eb3bd4be4abdbca065728227e298aefc974418f5f4f26e71d351e9de27a7916",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/verify_pixels.cjs": "6543cb469c150a384ed3bf5d3d76e5a35a1b1a078be0633f7fba496c27425a0a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/review_packet.py": "c066b35c75d875f9ca513a20e6bf0b266765d0ff1a23f0b54cd95ecebe3717fb",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/colour.cjs": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/check-supervision.py": "14d54e1ed28bb2f2c7d4ac1223284b9e2b4a41412265d6ddef4fe620e5e7d7ed",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/inputs/scope.json": "2caa9b2b4c9ef148af1c13c6f04bf3a4e8a8128024678fe05102d456bbfa57f8",
+    "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-fixed-artwork.test.cjs": "52fd6bef021c8d1f0481f5299d9d3dd6078c2377953d7466e5234abf95db23eb",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/checks/local-media-storage.json": "34155ab43123d5e4021c4cf9a56fceb933c58c276df72122fa533651d1495e74",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/rendered-geometry.json": "0183b2c80c291dfe1534c46e7214899c3a52c2c97b8fc004b707aa6700624c50",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/failure.json": "574030116f9170d60656e0d70a5c48f89c212a1034db15da30e7c6286d70eb79",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/checks/source-diagnosis.json": "c1075d3a4557c1a96b07cc83203c3747f91b7c82cf8080aa66ac6ec02fb0242f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/checks/failure-analysis.json": "0dca9b33eb752b985208287a16a0f698dc0e1467cdf9edd17f8eb1409672ea9e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0001.png": "1b907e8f45e039e19956eb22f36a350b04380e86a9b4ed7e454bb2db5b5e2b16",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0002.png": "3dc3ae04aa4fa8ea284b3846b4da7db430ab7e063863e259a92cbcb748f220cf",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0003.png": "c25e080135dfcb738055f578a433c74dc20c34fc1469c4f14cd53745d477d811",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0004.png": "73765656ba98e9349826db8b552afb06f66713f08a7d0782bc57c8cfae719b26",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0005.png": "35f0b71219beba6fa65c62c20abd2c24803937168ddbd7d8433d5c3a3cd2c85e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0006.png": "123df07eeca9cf173d1be61bcf44e5fa98205a88d50bafed134e6c5427e9e52a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0007.png": "a8573ce1525f7fb5a6a7a1d5b24db095164dfbfc9731f72a3dc17769b89416da",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0008.png": "9d694348d44742bb739d687f6045a253b4da23ecc0780ca5bcec9f908a68a408",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0009.png": "205b5932e47e73c5589df8f9c6c583149159964de0faf4fbe39fb28a130d8dcf",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0010.png": "51d41820c8b777e7c63243ed81fba6e99fe356bbb735a61699044a6a4f7e1b51",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0011.png": "ec46c8ebb35a084aacc5d7231654e610e73910c191cc1d1ad478c01c26b2ac16",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0012.png": "c6b5f7a0188b5fc54512b3228d88086034e7e2932ba567b1aade6f9062d8e60a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0013.png": "5df506fba7a509ebae2daa3c9fde315c4267f8187cf178630cdce7b75288db06",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0014.png": "369880aaa13d3b84756a3ab83699d4bc83cda78b3cb6376fd07cf9655b7fac37",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0015.png": "e87fa5fb8f8f9eb9b7cd9b5864fb675014cf055b183666a4ed15c6e6996453bd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0016.png": "51c072940172b6cf695379b1c2da0a002f66bbbfc12fd51a6aa82202b2bdf9dc",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0017.png": "9e8a228f24b8d33dfd2860d654a26bbb542b5943b1db9644aec00d77c327edd7",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0018.png": "81588f67d5b6fcfe8c6e53c4bdf64e0d9bf1068aa2fbdc518a1983e4f9af0df9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0019.png": "c5c276afc2dbde5d3fc1066e9388ae81b1645ec47cfaf8f6703728e1231b0896",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0020.png": "d28de45ebf519015f445a2355e07bc7ba0c0bf4175a3691d08468b622dda4694",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0021.png": "00f9f6487b44648da57e5ddf09f17263f5cc0ff2ce05a97c6a19f69002ec92ef",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0022.png": "824897ee45a6c62c7da3631190cb1d5f7c80af267a707cdc40a4e4a30232a96e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0023.png": "398e25cce6c3081f8dfed8179c9a5a60de6a3a4d18796342c980d8652971a20a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0024.png": "208f7d3c82df9f062fc0ba1280dfdc4b62485d7cd1ec9226c3f47e4a3157ce55",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0025.png": "2b5176c8200ee5e56c2564a6cf56132a0f1c2c011996effd5d6b91625588a557",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0026.png": "e2f84cda8a3304cf00a08df7ca173cce614193f010f133002b9db70e337e1506",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0027.png": "477a31b3f74956b5d0b115f2eba38098cb53601cf08a19377968bc874e924b7b",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0028.png": "085bb4f0ad57653dd65db8273c81776c6e40d9b6b5f53428b3e92da9fd4047fa",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0029.png": "cd0d3e99a18c99bd787b7fa66f4f07f4861ac76b847e8c51fec22adbed220a41",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0030.png": "fc38ce4d0ff57ce63f44ca2f05b8354dc2b823fdb36827f939dae4598201f034",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0031.png": "bb52dc592b5ca844a54a86bd3fda1b34acfc636baa6a58ed4fdc59307275a62a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0032.png": "6e205b10ebaf5be2e0800da0bd9efcc08be8344e064cbc35d38c22309797d15f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0033.png": "5ea3c48aa1754abc62b5c2c4e6d96027a999b4f6707f655bae62fa8b6d21c9c7",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0034.png": "d77de1fbc76df0a51cca1428797e44cd2fd9a590a1536b466138a587672108ce",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0035.png": "905654e659b87a1ec196381c631f08245f063fc502b38c200c4f395aac5eb08e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0036.png": "43b5f54e3bfa13106dd41cba9d7b8a6195e8fdd20321c4f2ef9be2ce58f36ebe",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0037.png": "59c3dd98c74f24991cb2a8dfa982630be8dadc5541978aab823d2da3b8348ff2",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0038.png": "aafe30e44122b2d517f289ca659c3f56c0d365ed5962745ef9aa43cfca8ea19e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0039.png": "d59099b9bc562cfcce77a09b1f3867dad10b19d0734d34f933f99998d82bb4c6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0040.png": "9c7751237bf4c2b27809c6d02f7a23692167b4e2d7a96adbdaebb087f2e44a8d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0041.png": "174adf920118814cb574b8aece4ffe394b99efb95996c01ca9dc93a78d8ed54c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0042.png": "e58cc7939fa7eb1def35359d95f8807524b2e17f1156031ef7739d62b0d34533",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0043.png": "d5d81f484fd106f0f2e407b295dc1112c76ecc06f6a24262495c90dd7f9e7eb6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0044.png": "79e73cd0d876720340d49d7bf2fce077420726b9249352489bbe002e918892c6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0045.png": "fa4a7e3d266ad553b26aa5677a393773370d5e16d7c10b073e4761b5bb4803ea",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0046.png": "43e7d953c2bb385209ddbe7c4b238ee2eb0972aac16477016b3876691acee9e1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0047.png": "b24d5fd8a4c6b873bfa2f798405f861db5cf1d91c3df0f031e02efc2a8eed972",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0048.png": "58a351b5e0265bbcba1abfcaeb819b9d385788175845ef62c8b78d8e3e518563",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0049.png": "7068182c6bb2831456835caff8afbd0056d480c3b3494d3bd5e6c1f9cfb41e2a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0050.png": "3356f35f99e6899803752ab6737a845c5a7376a37b19ff28d7ff36c001f50d35",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0051.png": "7b30a8ceaf8a161d6c962b0eacaa4350508cb534c133eff256beaada3650499c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0052.png": "f48d0cc237366ac354a90de60f3ef8597279102e0bdd71bec005b0e9920a3e46",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0053.png": "e3818c973b3e99782c69c2381f6ea4bd820fd0271662441c45d98b1a2b0ecf7c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0054.png": "cdb350732f3b1e1804ab41dab42d2c0f59034a65a2ec326d6ac5febeaf3f99a6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0055.png": "cdff3a9141d3bfbace088a93316ae3ca5a55db30b0333487b2bc9825d9d548f0",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0056.png": "f125cf13d9baad1433fa2ea0a88e8308e01529eeddf55f61b199f3817b77797b",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0057.png": "8da7dac813fbd0387cd1a703e664b9b6af026e9e5000214e899c2a011622c27c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0058.png": "2575913a50ee37da020f116a5299bf111c3c0f3eb206e310f78a13bbeb245506",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0059.png": "9f5d834566fae9f125ce8c33db98e8ed4f0817cad67d75f74b139de77a7e81b3",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0060.png": "96ec0d808de036c71af728c20e450a11eeb89c6aabdf4df31ebc1c1f2c9f48a6",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0061.png": "cfa3dfa269499848d21def772c24c4cdc59eaa1c7138d9895e647ab9aa88c6d5",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0062.png": "bc16e94b9e5a4383774b88e6a5df06196098cfc9122d396f226c5197772ad1de",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0063.png": "e3846d24389510f9edb05257eb59e16a2c39031f5fba02fd18cabadf1dea4b14",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0064.png": "b73bec458104d723880a3027a594aaa91576d56d9d92e34a30742252a74ace98",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0065.png": "e0d6d18a066e1f518a536f3878735238821907f48f59e9393207dd86878d61ba",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0066.png": "34f843366148efe4284350ea2d7d53c8c55ce7f2e389e9c0c92e4ac8cbdf24cd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0067.png": "3ab6286c176f3734d39e8e4caf23434dc3227f5a54a639a2af08f092f891ba6b",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0068.png": "87248892f5b801ea477ba622422fa1efb2ceb2087419546dbee1665a384aab37",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0069.png": "911e9aa78e454157424f46fc2e64b938ab218028f1d39709a7e9005738f5229b",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0070.png": "0566d492fd1b7aeeb1af630685aae00923d43f8e1cf8be500a6773a89ab14dd8",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0071.png": "952612108aedbacf1805d0016e6c79fad4b790b7a034091479a6c4c9696d3e05",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0072.png": "29fa3fcde4caa9995fec16f71d340d29f6a419e70b710b4de2108fe252ffb90f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0073.png": "758ab65966bf93020390c31882a4facffa974f13355dea71a6358f23e58d6356",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0074.png": "69636c6c739326698bffcc0f9f9c037a116c16c1cabb8449c01adf3ba04b79cd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0075.png": "4e3cb852eba3f17ca76aeda6ce51d3bbf4f072995ae1dab95d3f1b5e3758244a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0076.png": "03ba4fd05d5f62ddaca54850de8774fbd2addbddee26dbef0417df8b6444856e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0077.png": "a9cb6637c80c9bca823c824093d043461f5b40d07fc7a5be884ff45a0502c293",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0078.png": "15ac1e3eb41ba3c5e983ad1a43b38d275e747d419fd3541c259d488a2171417a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0079.png": "f6294be2fca354d2aed2242e830f45f0513a74f3b19916908589c6fb8fa4866a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0080.png": "0c1ae3424d06f8d91aa8aaea440471b9bcc26a7e43c87731640eff025799e01d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0081.png": "5e898c8e766458166af6d6f5430a12e03444a98a0ee5dc6961e34362e68fb214",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0082.png": "9d6da9c7ee4685146e6854dd8c6c27227a37db41d1252fda4463c9fd07246c1e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0083.png": "d0d738e9350c9d69c0bc7f9c00b1831cc627ff7c6d1876342d80f2ad775e20df",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0084.png": "de362225e1cba1193aa2eba22441d6881ccc137d6f36e65bb40a104f5592398c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0085.png": "434e8ce1b2e6e1cd6eb84947e7657da9b6b390f16f8148c2c272302efbc8a1e9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0086.png": "4e9031c595450c850343383b8583b9c5990357535a32b6288b7f151edfc62afe",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0087.png": "41288b27ad47b894bea33f3009261872cf5be3ec56cd004f5c5e69544878fc45",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0088.png": "224e1190cd625472ccc16a41eceec201de9e9e260bf8169ace6254f1be66b946",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0089.png": "18d8d1701d9b5b224e2c6d582d5773c0c6b3d882c58076305efb527fbdd08f75",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0090.png": "594990cc7fc7074229a4c2eeae37a49337c55fbb30c194a9e26a16434e15d4bf",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0091.png": "8408469efb60b464f60cc7c86859ac2e9a8735f6a4a92a62270e91d71df79e13",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0092.png": "feee54d10b226fc5526e623895e6b10560b55ee75715ff1e220e7819d10e3322",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0093.png": "3312b8a2dd7e16010a9b33a31431313d162742a68bd822370813c322b711f2d9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0094.png": "79f82bde9607ebd41853a7e4e61926a617205f0c5388c20f5114c9388977541e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0095.png": "35f355fc3742b8209e38b021d21313b7517227b82abc175fa384a4d0a495a27e",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0096.png": "253b98702b2118220d4d6e05b9113e1764465597a93d738b6d527ef88bc0d33d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0097.png": "1808f74c827685f36d9daf9618d7c4ed44e227fafa6162acbdd77af850ba8ef3",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0098.png": "2a471a93f07a6409a833b47b8ca7adb4c31c9c0c6991c53aea9ac6d24b98e507",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0099.png": "8aba432fefeeecec6c426ec6b933999df495105398ed67399c9fadf9db5a937d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0100.png": "fb832a3a0ac5d245c1d4dc587291b9c0e533eadad3dc55f8ed602154bc166cf0",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0101.png": "988408ce11adc972c3f7245021199252bbdcf874ce8b7a7b20c804d723158a20",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0102.png": "6205057af82164a8a015c35ad81db8cbfe9ee214830c5cf4048e5e3a8c42cc3d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0103.png": "56b00efd22523dbebe6aa29203547845943217a57356d60ad399ebf7fc7f2e27",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0104.png": "bdf12b88fc609d48c924d55a9688fbf6afc48da6f0ac35fb7eac2ab961bf1029",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0105.png": "e8fc6b0418ca805a07c4c713c5c997b710f85ae8b060447742283c8632d26d95",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0106.png": "741eb91620f4072a4fbde245271f4c032965d7c7946ed41ab9fa2c8877c4b468",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0107.png": "ecfc4a381f40b47aadae0a82d283faddcc2c740c31f302c1dcd266df2ba03616",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0108.png": "aa90241596ed34c30f5df95de7211fd1b79e29f89f5e2017d222be83ddfb8efe",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0109.png": "2a0f9ce0453b96b51dfcabcd861383ebefc1458afcc069b2eb06eaacbafd6f27",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0110.png": "628e2bdd7c36a7a2f09b83312fb8649ea60c4167fc586c8f5a0e3628ee71e9b0",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0111.png": "f7819c62b7a85beaaf15858dab2b336e475f67a4b07a2eb0adfaba2247d8ab20",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0112.png": "ef8ee97b326238a79fec91e15b15c5955b6513ce5ed7704f8f5e998c198461ab",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0113.png": "54bf2ed241bcd8cb03bb2420d9dce6740aac051b5f4d80004a10663a67a244f0",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0114.png": "ac06bf8b9fd98303adc91f72eaf26227673a4dbd2e17dc919c4e3eed81983d75",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0115.png": "4a544edb44924b3b955f7b961c3a52821e238d902f27b7707ff972b6ad309fcf",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0116.png": "554ca5e5946a617621be9331ac67ee8f60bc7f11abdceae7ed06a3739742cde0",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0117.png": "b49f8193680ef390c3c95a6cf76d94c42bc2f6d9d968622462cee0e96f9c8bef",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0118.png": "38554d63cca798d55f869319d4b0afad74dffe35e77685073ecdb36706383113",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0119.png": "ae022dce847493998ca8713e223759568dc6018cf9bd6948d45fd0f1ad1eaafd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0120.png": "c51ee4faed1c46472a7e861bbccf2f0fb20d9e83ef0d2fed8eb07a259b54ce7d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0121.png": "eaf705cdb2662a93ce7716183da02d281fcb59cba18ca070b6445031828c7518",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0122.png": "f68b709fb4be12dd0624463e4f179ca127bfac1775cb00b049697930e0eaadb1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0123.png": "24400c834f2f3cd4e80270cfc247570ea7ccd91b8ceccb1128ac1055d1722802",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0124.png": "000efc5e634b0e3b2e7409f690bdd5a46c75eaf75d6d95a267a0432672fd6bcb",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0125.png": "627b68ee97eb9ad5a40f7560063e19267c323e038628bc0eb637c2b3ae6aee5f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0126.png": "1df4abc85e0c7029e3789bb465c0a5494216889c9236a342fc4c61e66b75522d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0127.png": "45c89932c4dcdefc8142f929351cc34e13b9a3b70a13136c761f814b5fdabad8",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0128.png": "bedbea1623c3721e951e312c793ed697bf888a365a138a42de4441f25c132588",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0129.png": "922a37029a7931a35008f351ad0d6b5c4b5689765e0a719ade79ad3a1a9eb853",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0130.png": "e5829abe0f8d803929eb8dc8e3b09f264bdff22e65705db0b717207fdc3f5808",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0131.png": "ce66177163dbe9518173c929b14eb4e0e538999a1496dd2425173f63ef17ff27",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0132.png": "1fed61ca606eedc6ee361d527391d026a6af33c58d311ea4cac70147e0bb9fc3",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0133.png": "cb06816d58c9d80e9a224052d9b3b8bf337e241602927087dc89e5931e8a84dd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0134.png": "cc18a99d9242aa348cc9d14b958d117db9689dcc41de0eb3d2060f461e290711",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0135.png": "6be35549235baf70f8cc90e68e4a3b2d5756331c34e1fe6fd2b71ecb2cccc013",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0136.png": "6cdd07a3e1c617a738c950b1f119c33b512b02e06e35dbe2d01ed70ca811757d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0137.png": "8bde734e6693e16d6ea264f388d4d5bf842b15707a8324b454742cf9c2139b31",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0138.png": "92f92244ee236dd4caf549a5fd0c81a60a436d624d9a72dc3fe9f3d4590bd7a1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0139.png": "a5fc31da7d508cc70efacb38f1fd74fb65c71d2e857c7e35fbcb9671da1836ef",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0140.png": "5ea181cff2eddee8c814e1006af25f3233a0911e6d932e81a85f05194bf2b2a3",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0141.png": "ac52d4f82c4411f35a29cc0ba20a2083ffd65c93ebffbcdd1c85006c1f0b40a8",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0142.png": "3c0a1c27aa19bf92881accd24572ad3de6396e0dc4c53944af9d918101103c8f",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0143.png": "524d88f32d3e22c4cb02da548a29f712b387c856f9741042bcce3ea4cd4811dd",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0144.png": "64400e8bc77e8e6049df48810c114bede9bcdd52ff58efbd3b685d9d719f6c95",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0145.png": "6ab706035b15563d906da9ece84c90604f73418bd4cc4e24bc7ae050402537bb",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0146.png": "a66659d9b6ed2730fc2820e777515821b0c6427ddcd827e665d5be2964a11df9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0147.png": "19bfa6136885e09bc0f966620731fc785517fc19b260b358377af174bfda7ae1",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0148.png": "c27d2c140917b110013f0d639528da79e60c2894db79dee888275cf0ef1a9d95",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0149.png": "19c17cca5f2b903dd41245d609e81913e99c7d5a43000958cd9fb831dc2fa558",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0150.png": "9f6507856750a6c9704422507fe1749369c960de2abf943e7b93aa91637dd6a9",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/packets/wave.json": "637b2cab1e1b21eb8ef9b7b1d1376df8bd20afb921d9b2c917700043a06da57d",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/preview.py": "6ebd9194746b5b952e697ba0ed904bad5119110b809f494c799bdcfedcefae21",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/validate.sh": "86aefd611885baac4548483de254953691d000e33245a160daedda15166fb85a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/encoding.py": "0e2ae5a1583304eef75b103870d1b62bade779abd60e1fa30c99f9a7bad16f89",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/png_transport.cjs": "1e010b89b533c0d63780f644ff4e680777f212b750b6f9c19702f501bfa8a461",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/paths.py": "60178ec2e66d67413263be25ef53610d89ebdf039c0769b5d0b99975546b1791",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/compose_frames.cjs": "1509e50de394c2577f8998878ff55d7408f47f0a5d9e1d1eaa2f0386102aa00a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/support.cjs": "765113e0e0cb6e41293d6fa2206b6f2cbed27bc4d6221079ec48901cb5628d18",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/freeze.py": "07927d5817c854707dc7c50d74c02666804b57becff1195613ab9ed60b79169c",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/verify_pixels.cjs": "bfe8f7335ddaca1e7024b3c879367eba95828791a33788cede0e61c359a9f06a",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/review_packet.py": "c066b35c75d875f9ca513a20e6bf0b266765d0ff1a23f0b54cd95ecebe3717fb",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/colour.cjs": "b6279cadccba9214db3bc9c9b9d5370e1b556ff7ff62f75df5917c71096e5b36",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/check-supervision.py": "14d54e1ed28bb2f2c7d4ac1223284b9e2b4a41412265d6ddef4fe620e5e7d7ed",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/inputs/scope.json": "ba283937b2e6bf43d5eec3fb4f24c7da05641fa0fa073c7f71f2dc530a120914",
+    "/Users/marcoandreose/DEV/lab/melotrail/tools/video-motion/vg2-support-margin.test.cjs": "0d74d12c0537353188cabc5249487ad507773d0cf7049e07e3cc53bf4d067b54",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/checks/all-frames-temporal-diagnosis.json": "c7204fb62db32281f179284266b2dcfd10182b0e673bd1bc39b32633ce04f67d"
+  },
+  "runtimeFile": {
+    "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z/inputs/runtime-v2.json",
+    "sha256": "1fc93364f80b01e077f55764561d8750c1fc77eac4f6b191516bd82164f9b217"
+  },
+  "destinations": {
+    "work": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live",
+    "review": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/review/wave.mp4",
+    "stagedReview": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/review/.wave.mp4.partial"
+  },
+  "destinationContract": {
+    "paths": {
+      "work": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live",
+      "review": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/review/wave.mp4",
+      "stagedReview": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/review/.wave.mp4.partial"
+    },
+    "ancestors": [
+      {
+        "path": "/",
+        "device": 16777229,
+        "inode": 2
+      },
+      {
+        "path": "/Users",
+        "device": 16777229,
+        "inode": 18416
+      },
+      {
+        "path": "/Users/marcoandreose",
+        "device": 16777229,
+        "inode": 287433
+      },
+      {
+        "path": "/Users/marcoandreose/DEV",
+        "device": 16777229,
+        "inode": 3518029
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab",
+        "device": 16777229,
+        "inode": 3518030
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail",
+        "device": 16777229,
+        "inode": 46036015
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs",
+        "device": 16777229,
+        "inode": 46789313
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures",
+        "device": 16777229,
+        "inode": 46717955
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video",
+        "device": 16777229,
+        "inode": 60958782
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence",
+        "device": 16777229,
+        "inode": 110571326
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18",
+        "device": 16777229,
+        "inode": 111740542
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z",
+        "device": 16777229,
+        "inode": 112130029
+      },
+      {
+        "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/review",
+        "device": 16777229,
+        "inode": 112130031
+      }
+    ]
+  },
+  "scratch": {
+    "path": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-fixed-artwork-cabso2g1",
+    "device": 16777229,
+    "inode": 112130124
+  },
+  "sandboxProfile": "(version 1)\n(allow default)\n(deny network*)\n(deny process-fork)\n(deny file-write* (require-not (require-any (subpath \"/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live\") (subpath \"/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-fixed-artwork-cabso2g1\"))))\n",
+  "operations": [
+    {
+      "id": "compose",
+      "phase": "compose",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/compose_frames.cjs",
+        "--compose"
+      ]
+    },
+    {
+      "id": "source",
+      "phase": "compose",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/verify_pixels.cjs",
+        "source"
+      ]
+    },
+    {
+      "id": "encode",
+      "phase": "encode",
+      "decoderCost": 0,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-hide_banner",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-f",
+        "image2",
+        "-framerate",
+        "30",
+        "-start_number",
+        "1",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/encoded_input/frame-%04d.png",
+        "-frames:v",
+        "150",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-c:v",
+        "h264_videotoolbox",
+        "-allow_sw",
+        "0",
+        "-b:v",
+        "12M",
+        "-vf",
+        "scale=iw:ih:in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p",
+        "-pix_fmt",
+        "yuv420p",
+        "-aspect",
+        "1920:1080",
+        "-colorspace",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-color_primaries",
+        "bt709",
+        "-color_range",
+        "tv",
+        "-video_track_timescale",
+        "15360",
+        "-movflags",
+        "+faststart",
+        "-f",
+        "mp4",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "probe",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffprobe",
+        "-v",
+        "error",
+        "-count_frames",
+        "-show_streams",
+        "-show_frames",
+        "-show_format",
+        "-of",
+        "json",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/preview.mp4"
+      ]
+    },
+    {
+      "id": "decode",
+      "phase": "validationAndCopy",
+      "decoderCost": 1,
+      "argv": [
+        "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/ffmpeg",
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-n",
+        "-threads",
+        "1",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-i",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/preview.mp4",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-fps_mode",
+        "passthrough",
+        "-vf",
+        "scale=iw:ih:in_range=tv:out_range=full:in_color_matrix=bt709",
+        "-pix_fmt",
+        "rgba",
+        "-threads",
+        "1",
+        "-start_number",
+        "1",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/decoded/frame-%04d.png"
+      ]
+    },
+    {
+      "id": "pixels",
+      "phase": "validationAndCopy",
+      "decoderCost": 0,
+      "argv": [
+        "/opt/homebrew/Cellar/node/25.8.2/bin/node",
+        "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/scripts/verify_pixels.cjs",
+        "decoded"
+      ]
+    }
+  ],
+  "limits": {
+    "attempts": 1,
+    "retries": 0,
+    "fallbacks": 0,
+    "cumulativeSeconds": 360,
+    "phaseSeconds": {
+      "compose": 120,
+      "encode": 120,
+      "validationAndCopy": 120
+    },
+    "aggregateRssBytes": 4294967296,
+    "newStorageBytes": 2147483648,
+    "minimumFreeDiskBytes": 19327352832,
+    "minimumFreeMemoryBytes": 3221225472,
+    "normalMemoryPressureSamples": 3,
+    "maximumSwapGrowthBytes": 0,
+    "freeDiskReserveBytes": 10737418240
+  },
+  "delivery": {
+    "frames": 150,
+    "fps": 30,
+    "seconds": 5.0,
+    "width": 1920,
+    "height": 1080,
+    "codec": "h264",
+    "audioStreams": 0
+  },
+  "pixelContract": {
+    "sourceProtectedMaxDelta": 2,
+    "decodedSrgbMae": 5,
+    "armSrgbMae": 6,
+    "patchSrgbMaxDelta": 4,
+    "decodedReturnMae": 2.5
+  },
+  "artSample": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/revealed_torso_cabin_backing.png",
+    "sha256": "ed5b018850c1977ffded4c7d27c88a15f3405ed1851bee24599755e832f356e6"
+  },
+  "allowedMask": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/textures/allowed.png",
+    "sha256": "4b8221992026414485689cb3543d258f7b63bfd3a30a7d3a97643a32b3032f1f"
+  },
+  "rig": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/rig/tabi-wave-v3.blend",
+    "sha256": "ed1b388299b7f672b259d1ca8381da91fc53d6a52b036007abeec8d5117d4821"
+  },
+  "rigHelper": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/scripts/rig.py",
+    "sha256": "95c26229c42e85d80c5328ba0f082e7c438077331f0df72128b26b038393b483"
+  },
+  "geometry": {
+    "path": "docs/pictures/video/evidence/VG2-15/rig-20261002T010147Z/checks/check-geometry-v3.json",
+    "sha256": "46673f27744137e157b034a2cf596b7d91eb7a1869aac564a7c1a0631d07b771"
+  },
+  "colourProof": {
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/result.json": "3f44bb3d7ffe931f25e6eb1381eb880c3f135d1d8e82c400d037410d29b47fd2",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/decoded-pixels.json": "55335a73e097f34a9583952eb0b8d002bc3b694842b42c93202282cefa6e0362",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/source-pixels.json": "62abad65b83a08cb278cc3cd084bda5afd6d11f57ab5c7d2c7244af395d45f63",
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/live/media-facts.json": "1e072a80ca6f2a18a365e563b2084426c322980e371584ac87775e59c980f6e6"
+  },
+  "colourPath": "Explicit CPU sRGB EOTF -> Rec.709 OETF PNG transport, then Rec.709 RGB/YUV matrix. Decoded comparisons invert both transfer functions into common sRGB.",
+  "nativeCounts": {
+    "renderBatches": 0,
+    "retainedFrameReads": 150,
+    "sourceComposites": 150,
+    "pngConversions": 150,
+    "encodes": 1,
+    "probeScans": 1,
+    "fullDecodes": 1,
+    "validatedReviewCopies": 1,
+    "transportMetadataDerivatives": 150
+  },
+  "admissionBoundary": "FRESH USER PERMISSION REQUIRED AFTER FAILED FIRST WAVE. Six minutes and 2 GiB maximum, one attempt, no retries; passing colour proof retained and hash-bound.",
+  "storage": "User selects local media and frames; only scripts, checks and hashes enter Git.",
+  "limitOfProof": "One local colour experiment or one five-second standalone rig wave; no production import, selected take, app feature, second activity or full-film acceptance.",
+  "reuseOwner": null,
+  "correction": "Use each saved render unchanged inside the explicitly expanded one-pixel support mask and original artwork pixels outside it. Before composition reject any temporal change outside the mask. No further mask expansion, fades, new artwork, rig/motion changes or Blender rerender. Preserve strict source and decoded colour contracts.",
+  "installedManifest": {
+    "path": "/Users/marcoandreose/Library/Application Support/MelotrailVideo/tools/ffmpeg/9.0.1-melotrail-1/bin/melotrail-video-tools.json",
+    "sha256": "a42b61206224afaaa543226a5617ca6cf5bb70276171e77fc90f3457d8ef14dd",
+    "ffmpegSha256": "3eec1c025127efed8f81259f833081920e57f809c9558ef1528d03d1e600b9e9",
+    "sourceRevision": "bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa"
+  },
+  "retainedFrames": [
+    {
+      "frame": 1,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0001.png",
+      "sha256": "1b907e8f45e039e19956eb22f36a350b04380e86a9b4ed7e454bb2db5b5e2b16"
+    },
+    {
+      "frame": 2,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0002.png",
+      "sha256": "3dc3ae04aa4fa8ea284b3846b4da7db430ab7e063863e259a92cbcb748f220cf"
+    },
+    {
+      "frame": 3,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0003.png",
+      "sha256": "c25e080135dfcb738055f578a433c74dc20c34fc1469c4f14cd53745d477d811"
+    },
+    {
+      "frame": 4,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0004.png",
+      "sha256": "73765656ba98e9349826db8b552afb06f66713f08a7d0782bc57c8cfae719b26"
+    },
+    {
+      "frame": 5,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0005.png",
+      "sha256": "35f0b71219beba6fa65c62c20abd2c24803937168ddbd7d8433d5c3a3cd2c85e"
+    },
+    {
+      "frame": 6,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0006.png",
+      "sha256": "123df07eeca9cf173d1be61bcf44e5fa98205a88d50bafed134e6c5427e9e52a"
+    },
+    {
+      "frame": 7,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0007.png",
+      "sha256": "a8573ce1525f7fb5a6a7a1d5b24db095164dfbfc9731f72a3dc17769b89416da"
+    },
+    {
+      "frame": 8,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0008.png",
+      "sha256": "9d694348d44742bb739d687f6045a253b4da23ecc0780ca5bcec9f908a68a408"
+    },
+    {
+      "frame": 9,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0009.png",
+      "sha256": "205b5932e47e73c5589df8f9c6c583149159964de0faf4fbe39fb28a130d8dcf"
+    },
+    {
+      "frame": 10,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0010.png",
+      "sha256": "51d41820c8b777e7c63243ed81fba6e99fe356bbb735a61699044a6a4f7e1b51"
+    },
+    {
+      "frame": 11,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0011.png",
+      "sha256": "ec46c8ebb35a084aacc5d7231654e610e73910c191cc1d1ad478c01c26b2ac16"
+    },
+    {
+      "frame": 12,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0012.png",
+      "sha256": "c6b5f7a0188b5fc54512b3228d88086034e7e2932ba567b1aade6f9062d8e60a"
+    },
+    {
+      "frame": 13,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0013.png",
+      "sha256": "5df506fba7a509ebae2daa3c9fde315c4267f8187cf178630cdce7b75288db06"
+    },
+    {
+      "frame": 14,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0014.png",
+      "sha256": "369880aaa13d3b84756a3ab83699d4bc83cda78b3cb6376fd07cf9655b7fac37"
+    },
+    {
+      "frame": 15,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0015.png",
+      "sha256": "e87fa5fb8f8f9eb9b7cd9b5864fb675014cf055b183666a4ed15c6e6996453bd"
+    },
+    {
+      "frame": 16,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0016.png",
+      "sha256": "51c072940172b6cf695379b1c2da0a002f66bbbfc12fd51a6aa82202b2bdf9dc"
+    },
+    {
+      "frame": 17,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0017.png",
+      "sha256": "9e8a228f24b8d33dfd2860d654a26bbb542b5943b1db9644aec00d77c327edd7"
+    },
+    {
+      "frame": 18,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0018.png",
+      "sha256": "81588f67d5b6fcfe8c6e53c4bdf64e0d9bf1068aa2fbdc518a1983e4f9af0df9"
+    },
+    {
+      "frame": 19,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0019.png",
+      "sha256": "c5c276afc2dbde5d3fc1066e9388ae81b1645ec47cfaf8f6703728e1231b0896"
+    },
+    {
+      "frame": 20,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0020.png",
+      "sha256": "d28de45ebf519015f445a2355e07bc7ba0c0bf4175a3691d08468b622dda4694"
+    },
+    {
+      "frame": 21,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0021.png",
+      "sha256": "00f9f6487b44648da57e5ddf09f17263f5cc0ff2ce05a97c6a19f69002ec92ef"
+    },
+    {
+      "frame": 22,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0022.png",
+      "sha256": "824897ee45a6c62c7da3631190cb1d5f7c80af267a707cdc40a4e4a30232a96e"
+    },
+    {
+      "frame": 23,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0023.png",
+      "sha256": "398e25cce6c3081f8dfed8179c9a5a60de6a3a4d18796342c980d8652971a20a"
+    },
+    {
+      "frame": 24,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0024.png",
+      "sha256": "208f7d3c82df9f062fc0ba1280dfdc4b62485d7cd1ec9226c3f47e4a3157ce55"
+    },
+    {
+      "frame": 25,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0025.png",
+      "sha256": "2b5176c8200ee5e56c2564a6cf56132a0f1c2c011996effd5d6b91625588a557"
+    },
+    {
+      "frame": 26,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0026.png",
+      "sha256": "e2f84cda8a3304cf00a08df7ca173cce614193f010f133002b9db70e337e1506"
+    },
+    {
+      "frame": 27,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0027.png",
+      "sha256": "477a31b3f74956b5d0b115f2eba38098cb53601cf08a19377968bc874e924b7b"
+    },
+    {
+      "frame": 28,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0028.png",
+      "sha256": "085bb4f0ad57653dd65db8273c81776c6e40d9b6b5f53428b3e92da9fd4047fa"
+    },
+    {
+      "frame": 29,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0029.png",
+      "sha256": "cd0d3e99a18c99bd787b7fa66f4f07f4861ac76b847e8c51fec22adbed220a41"
+    },
+    {
+      "frame": 30,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0030.png",
+      "sha256": "fc38ce4d0ff57ce63f44ca2f05b8354dc2b823fdb36827f939dae4598201f034"
+    },
+    {
+      "frame": 31,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0031.png",
+      "sha256": "bb52dc592b5ca844a54a86bd3fda1b34acfc636baa6a58ed4fdc59307275a62a"
+    },
+    {
+      "frame": 32,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0032.png",
+      "sha256": "6e205b10ebaf5be2e0800da0bd9efcc08be8344e064cbc35d38c22309797d15f"
+    },
+    {
+      "frame": 33,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0033.png",
+      "sha256": "5ea3c48aa1754abc62b5c2c4e6d96027a999b4f6707f655bae62fa8b6d21c9c7"
+    },
+    {
+      "frame": 34,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0034.png",
+      "sha256": "d77de1fbc76df0a51cca1428797e44cd2fd9a590a1536b466138a587672108ce"
+    },
+    {
+      "frame": 35,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0035.png",
+      "sha256": "905654e659b87a1ec196381c631f08245f063fc502b38c200c4f395aac5eb08e"
+    },
+    {
+      "frame": 36,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0036.png",
+      "sha256": "43b5f54e3bfa13106dd41cba9d7b8a6195e8fdd20321c4f2ef9be2ce58f36ebe"
+    },
+    {
+      "frame": 37,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0037.png",
+      "sha256": "59c3dd98c74f24991cb2a8dfa982630be8dadc5541978aab823d2da3b8348ff2"
+    },
+    {
+      "frame": 38,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0038.png",
+      "sha256": "aafe30e44122b2d517f289ca659c3f56c0d365ed5962745ef9aa43cfca8ea19e"
+    },
+    {
+      "frame": 39,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0039.png",
+      "sha256": "d59099b9bc562cfcce77a09b1f3867dad10b19d0734d34f933f99998d82bb4c6"
+    },
+    {
+      "frame": 40,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0040.png",
+      "sha256": "9c7751237bf4c2b27809c6d02f7a23692167b4e2d7a96adbdaebb087f2e44a8d"
+    },
+    {
+      "frame": 41,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0041.png",
+      "sha256": "174adf920118814cb574b8aece4ffe394b99efb95996c01ca9dc93a78d8ed54c"
+    },
+    {
+      "frame": 42,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0042.png",
+      "sha256": "e58cc7939fa7eb1def35359d95f8807524b2e17f1156031ef7739d62b0d34533"
+    },
+    {
+      "frame": 43,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0043.png",
+      "sha256": "d5d81f484fd106f0f2e407b295dc1112c76ecc06f6a24262495c90dd7f9e7eb6"
+    },
+    {
+      "frame": 44,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0044.png",
+      "sha256": "79e73cd0d876720340d49d7bf2fce077420726b9249352489bbe002e918892c6"
+    },
+    {
+      "frame": 45,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0045.png",
+      "sha256": "fa4a7e3d266ad553b26aa5677a393773370d5e16d7c10b073e4761b5bb4803ea"
+    },
+    {
+      "frame": 46,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0046.png",
+      "sha256": "43e7d953c2bb385209ddbe7c4b238ee2eb0972aac16477016b3876691acee9e1"
+    },
+    {
+      "frame": 47,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0047.png",
+      "sha256": "b24d5fd8a4c6b873bfa2f798405f861db5cf1d91c3df0f031e02efc2a8eed972"
+    },
+    {
+      "frame": 48,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0048.png",
+      "sha256": "58a351b5e0265bbcba1abfcaeb819b9d385788175845ef62c8b78d8e3e518563"
+    },
+    {
+      "frame": 49,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0049.png",
+      "sha256": "7068182c6bb2831456835caff8afbd0056d480c3b3494d3bd5e6c1f9cfb41e2a"
+    },
+    {
+      "frame": 50,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0050.png",
+      "sha256": "3356f35f99e6899803752ab6737a845c5a7376a37b19ff28d7ff36c001f50d35"
+    },
+    {
+      "frame": 51,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0051.png",
+      "sha256": "7b30a8ceaf8a161d6c962b0eacaa4350508cb534c133eff256beaada3650499c"
+    },
+    {
+      "frame": 52,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0052.png",
+      "sha256": "f48d0cc237366ac354a90de60f3ef8597279102e0bdd71bec005b0e9920a3e46"
+    },
+    {
+      "frame": 53,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0053.png",
+      "sha256": "e3818c973b3e99782c69c2381f6ea4bd820fd0271662441c45d98b1a2b0ecf7c"
+    },
+    {
+      "frame": 54,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0054.png",
+      "sha256": "cdb350732f3b1e1804ab41dab42d2c0f59034a65a2ec326d6ac5febeaf3f99a6"
+    },
+    {
+      "frame": 55,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0055.png",
+      "sha256": "cdff3a9141d3bfbace088a93316ae3ca5a55db30b0333487b2bc9825d9d548f0"
+    },
+    {
+      "frame": 56,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0056.png",
+      "sha256": "f125cf13d9baad1433fa2ea0a88e8308e01529eeddf55f61b199f3817b77797b"
+    },
+    {
+      "frame": 57,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0057.png",
+      "sha256": "8da7dac813fbd0387cd1a703e664b9b6af026e9e5000214e899c2a011622c27c"
+    },
+    {
+      "frame": 58,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0058.png",
+      "sha256": "2575913a50ee37da020f116a5299bf111c3c0f3eb206e310f78a13bbeb245506"
+    },
+    {
+      "frame": 59,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0059.png",
+      "sha256": "9f5d834566fae9f125ce8c33db98e8ed4f0817cad67d75f74b139de77a7e81b3"
+    },
+    {
+      "frame": 60,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0060.png",
+      "sha256": "96ec0d808de036c71af728c20e450a11eeb89c6aabdf4df31ebc1c1f2c9f48a6"
+    },
+    {
+      "frame": 61,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0061.png",
+      "sha256": "cfa3dfa269499848d21def772c24c4cdc59eaa1c7138d9895e647ab9aa88c6d5"
+    },
+    {
+      "frame": 62,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0062.png",
+      "sha256": "bc16e94b9e5a4383774b88e6a5df06196098cfc9122d396f226c5197772ad1de"
+    },
+    {
+      "frame": 63,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0063.png",
+      "sha256": "e3846d24389510f9edb05257eb59e16a2c39031f5fba02fd18cabadf1dea4b14"
+    },
+    {
+      "frame": 64,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0064.png",
+      "sha256": "b73bec458104d723880a3027a594aaa91576d56d9d92e34a30742252a74ace98"
+    },
+    {
+      "frame": 65,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0065.png",
+      "sha256": "e0d6d18a066e1f518a536f3878735238821907f48f59e9393207dd86878d61ba"
+    },
+    {
+      "frame": 66,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0066.png",
+      "sha256": "34f843366148efe4284350ea2d7d53c8c55ce7f2e389e9c0c92e4ac8cbdf24cd"
+    },
+    {
+      "frame": 67,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0067.png",
+      "sha256": "3ab6286c176f3734d39e8e4caf23434dc3227f5a54a639a2af08f092f891ba6b"
+    },
+    {
+      "frame": 68,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0068.png",
+      "sha256": "87248892f5b801ea477ba622422fa1efb2ceb2087419546dbee1665a384aab37"
+    },
+    {
+      "frame": 69,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0069.png",
+      "sha256": "911e9aa78e454157424f46fc2e64b938ab218028f1d39709a7e9005738f5229b"
+    },
+    {
+      "frame": 70,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0070.png",
+      "sha256": "0566d492fd1b7aeeb1af630685aae00923d43f8e1cf8be500a6773a89ab14dd8"
+    },
+    {
+      "frame": 71,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0071.png",
+      "sha256": "952612108aedbacf1805d0016e6c79fad4b790b7a034091479a6c4c9696d3e05"
+    },
+    {
+      "frame": 72,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0072.png",
+      "sha256": "29fa3fcde4caa9995fec16f71d340d29f6a419e70b710b4de2108fe252ffb90f"
+    },
+    {
+      "frame": 73,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0073.png",
+      "sha256": "758ab65966bf93020390c31882a4facffa974f13355dea71a6358f23e58d6356"
+    },
+    {
+      "frame": 74,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0074.png",
+      "sha256": "69636c6c739326698bffcc0f9f9c037a116c16c1cabb8449c01adf3ba04b79cd"
+    },
+    {
+      "frame": 75,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0075.png",
+      "sha256": "4e3cb852eba3f17ca76aeda6ce51d3bbf4f072995ae1dab95d3f1b5e3758244a"
+    },
+    {
+      "frame": 76,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0076.png",
+      "sha256": "03ba4fd05d5f62ddaca54850de8774fbd2addbddee26dbef0417df8b6444856e"
+    },
+    {
+      "frame": 77,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0077.png",
+      "sha256": "a9cb6637c80c9bca823c824093d043461f5b40d07fc7a5be884ff45a0502c293"
+    },
+    {
+      "frame": 78,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0078.png",
+      "sha256": "15ac1e3eb41ba3c5e983ad1a43b38d275e747d419fd3541c259d488a2171417a"
+    },
+    {
+      "frame": 79,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0079.png",
+      "sha256": "f6294be2fca354d2aed2242e830f45f0513a74f3b19916908589c6fb8fa4866a"
+    },
+    {
+      "frame": 80,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0080.png",
+      "sha256": "0c1ae3424d06f8d91aa8aaea440471b9bcc26a7e43c87731640eff025799e01d"
+    },
+    {
+      "frame": 81,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0081.png",
+      "sha256": "5e898c8e766458166af6d6f5430a12e03444a98a0ee5dc6961e34362e68fb214"
+    },
+    {
+      "frame": 82,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0082.png",
+      "sha256": "9d6da9c7ee4685146e6854dd8c6c27227a37db41d1252fda4463c9fd07246c1e"
+    },
+    {
+      "frame": 83,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0083.png",
+      "sha256": "d0d738e9350c9d69c0bc7f9c00b1831cc627ff7c6d1876342d80f2ad775e20df"
+    },
+    {
+      "frame": 84,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0084.png",
+      "sha256": "de362225e1cba1193aa2eba22441d6881ccc137d6f36e65bb40a104f5592398c"
+    },
+    {
+      "frame": 85,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0085.png",
+      "sha256": "434e8ce1b2e6e1cd6eb84947e7657da9b6b390f16f8148c2c272302efbc8a1e9"
+    },
+    {
+      "frame": 86,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0086.png",
+      "sha256": "4e9031c595450c850343383b8583b9c5990357535a32b6288b7f151edfc62afe"
+    },
+    {
+      "frame": 87,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0087.png",
+      "sha256": "41288b27ad47b894bea33f3009261872cf5be3ec56cd004f5c5e69544878fc45"
+    },
+    {
+      "frame": 88,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0088.png",
+      "sha256": "224e1190cd625472ccc16a41eceec201de9e9e260bf8169ace6254f1be66b946"
+    },
+    {
+      "frame": 89,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0089.png",
+      "sha256": "18d8d1701d9b5b224e2c6d582d5773c0c6b3d882c58076305efb527fbdd08f75"
+    },
+    {
+      "frame": 90,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0090.png",
+      "sha256": "594990cc7fc7074229a4c2eeae37a49337c55fbb30c194a9e26a16434e15d4bf"
+    },
+    {
+      "frame": 91,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0091.png",
+      "sha256": "8408469efb60b464f60cc7c86859ac2e9a8735f6a4a92a62270e91d71df79e13"
+    },
+    {
+      "frame": 92,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0092.png",
+      "sha256": "feee54d10b226fc5526e623895e6b10560b55ee75715ff1e220e7819d10e3322"
+    },
+    {
+      "frame": 93,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0093.png",
+      "sha256": "3312b8a2dd7e16010a9b33a31431313d162742a68bd822370813c322b711f2d9"
+    },
+    {
+      "frame": 94,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0094.png",
+      "sha256": "79f82bde9607ebd41853a7e4e61926a617205f0c5388c20f5114c9388977541e"
+    },
+    {
+      "frame": 95,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0095.png",
+      "sha256": "35f355fc3742b8209e38b021d21313b7517227b82abc175fa384a4d0a495a27e"
+    },
+    {
+      "frame": 96,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0096.png",
+      "sha256": "253b98702b2118220d4d6e05b9113e1764465597a93d738b6d527ef88bc0d33d"
+    },
+    {
+      "frame": 97,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0097.png",
+      "sha256": "1808f74c827685f36d9daf9618d7c4ed44e227fafa6162acbdd77af850ba8ef3"
+    },
+    {
+      "frame": 98,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0098.png",
+      "sha256": "2a471a93f07a6409a833b47b8ca7adb4c31c9c0c6991c53aea9ac6d24b98e507"
+    },
+    {
+      "frame": 99,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0099.png",
+      "sha256": "8aba432fefeeecec6c426ec6b933999df495105398ed67399c9fadf9db5a937d"
+    },
+    {
+      "frame": 100,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0100.png",
+      "sha256": "fb832a3a0ac5d245c1d4dc587291b9c0e533eadad3dc55f8ed602154bc166cf0"
+    },
+    {
+      "frame": 101,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0101.png",
+      "sha256": "988408ce11adc972c3f7245021199252bbdcf874ce8b7a7b20c804d723158a20"
+    },
+    {
+      "frame": 102,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0102.png",
+      "sha256": "6205057af82164a8a015c35ad81db8cbfe9ee214830c5cf4048e5e3a8c42cc3d"
+    },
+    {
+      "frame": 103,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0103.png",
+      "sha256": "56b00efd22523dbebe6aa29203547845943217a57356d60ad399ebf7fc7f2e27"
+    },
+    {
+      "frame": 104,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0104.png",
+      "sha256": "bdf12b88fc609d48c924d55a9688fbf6afc48da6f0ac35fb7eac2ab961bf1029"
+    },
+    {
+      "frame": 105,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0105.png",
+      "sha256": "e8fc6b0418ca805a07c4c713c5c997b710f85ae8b060447742283c8632d26d95"
+    },
+    {
+      "frame": 106,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0106.png",
+      "sha256": "741eb91620f4072a4fbde245271f4c032965d7c7946ed41ab9fa2c8877c4b468"
+    },
+    {
+      "frame": 107,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0107.png",
+      "sha256": "ecfc4a381f40b47aadae0a82d283faddcc2c740c31f302c1dcd266df2ba03616"
+    },
+    {
+      "frame": 108,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0108.png",
+      "sha256": "aa90241596ed34c30f5df95de7211fd1b79e29f89f5e2017d222be83ddfb8efe"
+    },
+    {
+      "frame": 109,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0109.png",
+      "sha256": "2a0f9ce0453b96b51dfcabcd861383ebefc1458afcc069b2eb06eaacbafd6f27"
+    },
+    {
+      "frame": 110,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0110.png",
+      "sha256": "628e2bdd7c36a7a2f09b83312fb8649ea60c4167fc586c8f5a0e3628ee71e9b0"
+    },
+    {
+      "frame": 111,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0111.png",
+      "sha256": "f7819c62b7a85beaaf15858dab2b336e475f67a4b07a2eb0adfaba2247d8ab20"
+    },
+    {
+      "frame": 112,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0112.png",
+      "sha256": "ef8ee97b326238a79fec91e15b15c5955b6513ce5ed7704f8f5e998c198461ab"
+    },
+    {
+      "frame": 113,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0113.png",
+      "sha256": "54bf2ed241bcd8cb03bb2420d9dce6740aac051b5f4d80004a10663a67a244f0"
+    },
+    {
+      "frame": 114,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0114.png",
+      "sha256": "ac06bf8b9fd98303adc91f72eaf26227673a4dbd2e17dc919c4e3eed81983d75"
+    },
+    {
+      "frame": 115,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0115.png",
+      "sha256": "4a544edb44924b3b955f7b961c3a52821e238d902f27b7707ff972b6ad309fcf"
+    },
+    {
+      "frame": 116,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0116.png",
+      "sha256": "554ca5e5946a617621be9331ac67ee8f60bc7f11abdceae7ed06a3739742cde0"
+    },
+    {
+      "frame": 117,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0117.png",
+      "sha256": "b49f8193680ef390c3c95a6cf76d94c42bc2f6d9d968622462cee0e96f9c8bef"
+    },
+    {
+      "frame": 118,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0118.png",
+      "sha256": "38554d63cca798d55f869319d4b0afad74dffe35e77685073ecdb36706383113"
+    },
+    {
+      "frame": 119,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0119.png",
+      "sha256": "ae022dce847493998ca8713e223759568dc6018cf9bd6948d45fd0f1ad1eaafd"
+    },
+    {
+      "frame": 120,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0120.png",
+      "sha256": "c51ee4faed1c46472a7e861bbccf2f0fb20d9e83ef0d2fed8eb07a259b54ce7d"
+    },
+    {
+      "frame": 121,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0121.png",
+      "sha256": "eaf705cdb2662a93ce7716183da02d281fcb59cba18ca070b6445031828c7518"
+    },
+    {
+      "frame": 122,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0122.png",
+      "sha256": "f68b709fb4be12dd0624463e4f179ca127bfac1775cb00b049697930e0eaadb1"
+    },
+    {
+      "frame": 123,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0123.png",
+      "sha256": "24400c834f2f3cd4e80270cfc247570ea7ccd91b8ceccb1128ac1055d1722802"
+    },
+    {
+      "frame": 124,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0124.png",
+      "sha256": "000efc5e634b0e3b2e7409f690bdd5a46c75eaf75d6d95a267a0432672fd6bcb"
+    },
+    {
+      "frame": 125,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0125.png",
+      "sha256": "627b68ee97eb9ad5a40f7560063e19267c323e038628bc0eb637c2b3ae6aee5f"
+    },
+    {
+      "frame": 126,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0126.png",
+      "sha256": "1df4abc85e0c7029e3789bb465c0a5494216889c9236a342fc4c61e66b75522d"
+    },
+    {
+      "frame": 127,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0127.png",
+      "sha256": "45c89932c4dcdefc8142f929351cc34e13b9a3b70a13136c761f814b5fdabad8"
+    },
+    {
+      "frame": 128,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0128.png",
+      "sha256": "bedbea1623c3721e951e312c793ed697bf888a365a138a42de4441f25c132588"
+    },
+    {
+      "frame": 129,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0129.png",
+      "sha256": "922a37029a7931a35008f351ad0d6b5c4b5689765e0a719ade79ad3a1a9eb853"
+    },
+    {
+      "frame": 130,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0130.png",
+      "sha256": "e5829abe0f8d803929eb8dc8e3b09f264bdff22e65705db0b717207fdc3f5808"
+    },
+    {
+      "frame": 131,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0131.png",
+      "sha256": "ce66177163dbe9518173c929b14eb4e0e538999a1496dd2425173f63ef17ff27"
+    },
+    {
+      "frame": 132,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0132.png",
+      "sha256": "1fed61ca606eedc6ee361d527391d026a6af33c58d311ea4cac70147e0bb9fc3"
+    },
+    {
+      "frame": 133,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0133.png",
+      "sha256": "cb06816d58c9d80e9a224052d9b3b8bf337e241602927087dc89e5931e8a84dd"
+    },
+    {
+      "frame": 134,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0134.png",
+      "sha256": "cc18a99d9242aa348cc9d14b958d117db9689dcc41de0eb3d2060f461e290711"
+    },
+    {
+      "frame": 135,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0135.png",
+      "sha256": "6be35549235baf70f8cc90e68e4a3b2d5756331c34e1fe6fd2b71ecb2cccc013"
+    },
+    {
+      "frame": 136,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0136.png",
+      "sha256": "6cdd07a3e1c617a738c950b1f119c33b512b02e06e35dbe2d01ed70ca811757d"
+    },
+    {
+      "frame": 137,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0137.png",
+      "sha256": "8bde734e6693e16d6ea264f388d4d5bf842b15707a8324b454742cf9c2139b31"
+    },
+    {
+      "frame": 138,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0138.png",
+      "sha256": "92f92244ee236dd4caf549a5fd0c81a60a436d624d9a72dc3fe9f3d4590bd7a1"
+    },
+    {
+      "frame": 139,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0139.png",
+      "sha256": "a5fc31da7d508cc70efacb38f1fd74fb65c71d2e857c7e35fbcb9671da1836ef"
+    },
+    {
+      "frame": 140,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0140.png",
+      "sha256": "5ea181cff2eddee8c814e1006af25f3233a0911e6d932e81a85f05194bf2b2a3"
+    },
+    {
+      "frame": 141,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0141.png",
+      "sha256": "ac52d4f82c4411f35a29cc0ba20a2083ffd65c93ebffbcdd1c85006c1f0b40a8"
+    },
+    {
+      "frame": 142,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0142.png",
+      "sha256": "3c0a1c27aa19bf92881accd24572ad3de6396e0dc4c53944af9d918101103c8f"
+    },
+    {
+      "frame": 143,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0143.png",
+      "sha256": "524d88f32d3e22c4cb02da548a29f712b387c856f9741042bcce3ea4cd4811dd"
+    },
+    {
+      "frame": 144,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0144.png",
+      "sha256": "64400e8bc77e8e6049df48810c114bede9bcdd52ff58efbd3b685d9d719f6c95"
+    },
+    {
+      "frame": 145,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0145.png",
+      "sha256": "6ab706035b15563d906da9ece84c90604f73418bd4cc4e24bc7ae050402537bb"
+    },
+    {
+      "frame": 146,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0146.png",
+      "sha256": "a66659d9b6ed2730fc2820e777515821b0c6427ddcd827e665d5be2964a11df9"
+    },
+    {
+      "frame": 147,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0147.png",
+      "sha256": "19bfa6136885e09bc0f966620731fc785517fc19b260b358377af174bfda7ae1"
+    },
+    {
+      "frame": 148,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0148.png",
+      "sha256": "c27d2c140917b110013f0d639528da79e60c2894db79dee888275cf0ef1a9d95"
+    },
+    {
+      "frame": 149,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0149.png",
+      "sha256": "19c17cca5f2b903dd41245d609e81913e99c7d5a43000958cd9fb831dc2fa558"
+    },
+    {
+      "frame": 150,
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source/frame-0150.png",
+      "sha256": "9f6507856750a6c9704422507fe1749369c960de2abf943e7b93aa91637dd6a9"
+    }
+  ],
+  "supportMarginPixels": 1,
+  "supportReason": "Explicit 1-pixel Chebyshev dilation of the original frozen mask: captures measured x=747 antialias pixels in six frames. Original-mask failure remains; no source/colour tolerance changes.",
+  "newStorageEstimate": {
+    "method": "Three 150-frame sequences at measured retained-frame total, plus 25 percent margin and 32 MiB for MP4, logs and packet",
+    "retainedSourceBytes": 512713491,
+    "estimatedNewBytes": 1956230023,
+    "maximumBytes": 2147483648
+  }
+}

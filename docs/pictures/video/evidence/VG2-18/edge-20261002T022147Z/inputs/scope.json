@@ -1,0 +1,16 @@
+{
+  "previousPacketOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/transfer-20261002T014011Z",
+  "failedColourOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T011754Z",
+  "colourOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z",
+  "waveOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z",
+  "status": "NON_LIVE_PREPARATION_FRESH_NATIVE_ADMISSION_REQUIRED",
+  "reason": "Keep original artwork outside an explicitly expanded one-pixel support margin, preserve all retained motion including its antialiased edge, and reject any motion outside that new margin. Old-mask failure remains recorded. No rerender or relaxed source/colour thresholds.",
+  "storage": "User selects local media/frames; commit helpers, checks and hashes only.",
+  "originalPacketOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-16/packets-20261002T011754Z",
+  "filterFailureOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/repair-20261002T014011Z",
+  "pngDecoderSource": "https://github.com/FFmpeg/FFmpeg/blob/bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa/libavcodec/pngdec.c#L724",
+  "dataOnlyProof": "checks/saved-frames.json confirms identical compressed pixels and raw values in all six retained frames; no PNG derivative was written.",
+  "retainedWaveOwner": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z",
+  "previousWavePacket": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/packets/wave.json",
+  "previousCompositionPacket": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/packets/wave.json"
+}

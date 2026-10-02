@@ -284,6 +284,27 @@ Required filters are checked against installed capabilities before dispatch. Thi
 is a non-live preparation result; actual encoded colour and the five-second wave
 still need a fresh admitted run and normal-speed review respectively.
 
+### VG2-17 pass and retained first wave frames (2026-10-02)
+
+The PNG metadata correction passed the admitted colour encode and full decode in
+`pictures/video/evidence/VG2-17/proof-20261002T015459Z/`. Its Rec.709 path is now
+verified for the tiny colour proof. The conditional wave rendered all 150 frames
+under `pictures/video/evidence/VG2-18/proof-20261002T015459Z/`, then stopped before
+encoding because resampled fixed artwork exceeded the source pixel limit. There
+is no validated wave movie yet. The images, hashes, geometry and failure remain
+local; run scratch is removed. A sleeve/body seam remains visible in inspected
+stills, and hand-drawing transitions still require normal-speed human review.
+
+The prepared `VG2-18/edge-20261002T022147Z/` proposal reuses the rendered motion.
+It copies original artwork outside an explicitly enlarged one-pixel support
+margin, preserving the antialiased arm edge that crosses the old mask in six
+frames. The rejected original-mask composition is retained separately. All 150
+in-memory corrected frames preserve fixed and moving pixels exactly and return
+to neutral; these checks create no images and do not approve motion appearance.
+A fresh six-minute/2-GiB, one-attempt admission is needed for composition, encoding
+and the two counted media traversals. No new Blender render or colour experiment
+is proposed. Media stays local; only scripts, checks and hashes enter Git.
+
 ## TABI train-series recipe (2026-09-30)
 
 **User-selected direction:** every episode currently features TABI in the train,

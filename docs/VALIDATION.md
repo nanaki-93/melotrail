@@ -616,6 +616,45 @@ supervision checks pass. Headless `make test` (2m33s), `make build` (2m32s) and 
 checks pass, each make gate with one executed/13 up-to-date tasks. The native-window
 test remains excluded. No native result is claimed for this new transport path.
 
+VG2-17 admitted colour pass (2026-10-02):
+`pictures/video/evidence/VG2-17/proof-20261002T015459Z/` records the user's fresh
+“yes, go for it”, six reused source frames, matching cICP transport, one encode,
+one combined FFprobe count/PTS scan and one full FFmpeg decode. All strict colour
+and timing gates pass; patch maximum 3, worst display-equivalent mean error 2.151,
+neutral mean error 0.532. Exactly two media traversals were reserved. Elapsed
+13.92s, sampled aggregate owned RSS 44,957,696 bytes, attempt storage 5,305,186 bytes.
+
+VG2-18 first render failure:
+`pictures/video/evidence/VG2-18/proof-20261002T015459Z/` retains all 150 PNGs,
+matching rendered geometry and their hashes. The source gate fails on frame one:
+440,600 protected pixels exceed two code values; maximum 79. The source stage
+stops before any conversion or encode, with two operations/zero media traversals
+reserved. Elapsed 49.64s, render 42.95s, sampled aggregate owned RSS 735,723,520
+bytes, peak new storage 513,413,569 bytes. Colour/wave scratch is removed.
+No waveform, wave movie, user acceptance or full-film delivery is inferred.
+
+The read-only all-frame diagnosis finds six frames with antialias spill at x=747
+outside the old mask, maximum 5 and 13 pixel/frame locations above 2. The first
+non-live composition proposal rejects this instead of clipping it; its failure
+and cancelled unused scratch are recorded under `VG2-18/preserve-20261002T021617Z/`.
+A copied phase-clock fixture initially used the old 60s validation deadline;
+its retained failure and correction to the proposed 120s clock are data-only.
+
+`pictures/video/evidence/VG2-18/edge-20261002T022147Z/` proposes an explicit one-pixel
+support margin, adding 1,228 pixels. All 150 retained frames have zero temporal
+change beyond that margin. In-memory composition gives zero fixed-artwork error,
+zero alteration of moving pixels, 33,044 changed wave pixels and exact neutral
+return. Old-mask failures remain failures; the source/colour numeric thresholds
+are unchanged. No PNGs or native media are produced by this preparation. Exact
+packet review uses six child spies and two simulated traversal reservations.
+A fresh run would use three shared 120s phases (360s total), 4-GiB owned RSS and
+2-GiB new storage, the same memory/disk/swap admission rules, and zero retries.
+Its storage estimate is 1,956,230,023 bytes; the hard bound is not an estimate.
+The installed tools and passing colour proof are pinned; there is no rerender.
+Headless regression and build results are retained in that proposal's `checks/`.
+Normal-speed user review remains pending; still inspection notes a sleeve/body
+seam, so an encoded technical pass would not imply aesthetic acceptance.
+
 A failed wave blocks action-library expansion, longer films and app integration,
 not independent MIDI/fixture work. Each new colour test/render has its own finite
 admission; historical attempts and budgets cannot be reused. Longer films retain

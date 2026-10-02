@@ -1,0 +1,5 @@
+{
+  "status": "STOPPED_NO_RETRY",
+  "error": "Stage failed; evidence retained, no retry: source",
+  "packetSha256": "e78abd24283add21a528b41443af7ecfb39ae0a15fab183f2ed1254060afc698"
+}

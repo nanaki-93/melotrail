@@ -1,0 +1,14 @@
+{
+  "status": "NON_LIVE_PROPOSAL_MEDIA_STORAGE_CONFIRMED",
+  "storageDecision": "Keep media locally; commit scripts and checks (Recommended)",
+  "prospectiveIgnoredFiles": [
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/source/frame-0001.png",
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/encoded_input/frame-0001.png",
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/live/decoded/frame-0001.png",
+    "docs/pictures/video/evidence/VG2-18/proof-20261002T022147Z/review/wave.mp4"
+  ],
+  "packetSha256": "cb652b544703f0026fecfa63c4f7b183d5e00937189c717241a4d3221f9465cc",
+  "runAdmissionPresent": false,
+  "liveOutputPresent": false,
+  "scratch": "Empty canonical directory retained only for the pending exact proposal. Previous admitted/cancelled run scratch has been removed."
+}

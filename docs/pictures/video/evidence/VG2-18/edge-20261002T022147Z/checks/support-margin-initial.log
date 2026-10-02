@@ -1,0 +1,13 @@
+✔ a one-pixel margin includes diagonals and nothing beyond its boundary (0.552ms)
+✔ support expansion clips only to the actual image dimensions (0.0575ms)
+✔ unproposed larger margins and malformed masks are rejected (0.587792ms)
+✔ observed antialias edge is retained, while the original mask still rejects it (0.664083ms)
+✔ new out-of-support movement still fails rather than being painted over (0.090333ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 166.186833

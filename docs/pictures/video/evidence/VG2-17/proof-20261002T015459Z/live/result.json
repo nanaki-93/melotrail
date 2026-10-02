@@ -1,0 +1,12 @@
+{
+  "status": "TECHNICAL_PROOF_PASS_NOT_MOVING_APPROVAL",
+  "packetSha256": "b5d026f71f95b852373ebea52ae9bcc644d60cf7845064b7fb9587b72705b7c5",
+  "mp4Sha256": "b6b8ae9f7d3edf6ae055f729a72e76a0d8d3a61ff4442243ace8a2164c975840",
+  "reviewFile": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/review/colour.mp4",
+  "decoderTraversals": 2,
+  "elapsedSeconds": 13.916174125,
+  "sampledPeakAggregateRssBytes": 44957696,
+  "newStorageBytes": 5305186,
+  "productionImports": 0,
+  "humanReview": "Normal-speed appearance/cadence/identity/contact/return pending; no full-film claim"
+}

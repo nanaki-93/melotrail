@@ -503,8 +503,8 @@ movie as an animation baseline.
 | VG2-14 | User approves the exact assembled neutral, identity/clothes, parts and useful extreme poses, or requests bounded corrections. Explicitly approve any change from neutral 48; historical static approvals do not approve newly prepared parts. No moving approval yet. | VG2-13 | DONE |
 | VG2-15 | Build the smallest standalone Blender textured 2D mesh/cutout rig from approved parts, with bounded shoulder/elbow/wrist controls, stable texture coordinates/depth/alpha, fixed head/lower contact and one reusable wave action. Save/reopen and evaluate all 150 frames without video rendering; test anchor continuity, allowed angle/scale bounds, complete support and identical neutral return. Use data-only negatives for missing parts, wrong pins, unsupported poses and conflicting controls. No VSE whole-arm flips, app/schema changes or production import. | VG2-14 | DONE |
 | VG2-16 | Prepare fresh direct-owned supervision and exact non-live packets for a tiny colour proof and the later wave. Reuse proven guard/path code behind regressions for actual phase dispatch, irreversible operation/decoder counts, destination aliases/collisions, cancellation, resource expiry and no-start after failed preflight. Freeze selected installed tools/helpers/rig/parts; count every planned probe/decode/copy stage. Independently review the exact candidate with data-only child spies; do not reuse the failed socket or launch media. | VG2-15 | DONE |
-| VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | WAITING_USER |
-| VG2-18 | Execute one explicitly admitted five-second/150-frame rigged wave with fixed cabin/head/body contact, encode/probe/full-decode and publish a new validated review copy. Measure stage time/RSS/disk and every frame's geometry/occlusion/edge/colour/PTS/return checks. No automatic retry, import, take selection or short-success-to-full-film promotion. Preserve source PNGs, rig/action/input pins and all failed media. | VG2-17 | TODO |
+| VG2-17 | Under a separate tiny-media admission, prove actual sRGB source → Rec.709 encoding and display-equivalent round-trip on known ramps/colour patches plus selected art samples. Use one short synthetic sequence, one encode and the explicitly counted probe/full decode; no Blender render or production import. Check pixels against declared transfer conversion as well as stream tags, preserve failures and stop if installed tools cannot perform it. Freeze the passing colour path into a newly reviewed wave packet, without weakening the prior colour check. | VG2-16 | DONE |
+| VG2-18 | Execute one explicitly admitted five-second/150-frame rigged wave with fixed cabin/head/body contact, encode/probe/full-decode and publish a new validated review copy. Measure stage time/RSS/disk and every frame's geometry/occlusion/edge/colour/PTS/return checks. No automatic retry, import, take selection or short-success-to-full-film promotion. Preserve source PNGs, rig/action/input pins and all failed media. | VG2-17 | WAITING_USER |
 | VG2-19 | After both actions and description mapping pass, run one separately bounded pair of 20–30-second standalone scene tests with identical approved rig/art/action versions but two materially different supported descriptions/order/timing. Include rest, both activities, returns and bounded scenery travel within measured coverage. No manual keyframe/rig edit between requests, regenerated character or whole-clip repeat. Validate both complete outputs, absolute-frame repeatability/chunk parity and changed-request dependencies; each clip gets its own explicit one-attempt budget. | VG2-10, VG4-08, VG2-17 | TODO |
 | VG2-20 | User reviews both reuse clips against their original descriptions for motion quality, continuity/contact and actual differences, and decides whether the rigged process warrants minimal production binding. Record limitations and the selected proof runtime; do not infer permanent app-backend adoption, long-film readiness or UI permission. Reject/repair the method before scaling if the same arm defect remains. | VG2-19 | WAITING_USER |
 
@@ -867,6 +867,58 @@ Both revised packets passed independent child-spy review. Focused JVM, 81 Node
 and 22 direct supervision checks passed, with headless `make test` (2m33s),
 `make build` (2m32s) and diff whitespace checks. Each make gate executed one task
 with 13 up-to-date; the native-window test was excluded, not verified.
+
+VG2-17 passed / VG2-18 stopped before encoding (2026-10-02): the user answered
+“yes, go for it” to the prepared PNG metadata check and conditional first wave.
+The colour owner `docs/pictures/video/evidence/VG2-17/proof-20261002T015459Z/`
+passed six source frames, one encode, the combined count/PTS scan and one full
+decode. Rec.709 tags and numeric display conversion pass: maximum patch error 3,
+worst whole-frame mean error 2.151, neutral mean error 0.532. Elapsed 13.92s,
+sampled owned RSS 44,957,696 bytes, retained attempt storage 5,305,186 bytes.
+VG2-17 is DONE. Its successful proof is pinned in the first final wave packet,
+SHA `e78abd24283add21a528b41443af7ecfb39ae0a15fab183f2ed1254060afc698`.
+
+The wave owner `docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/`
+rendered all 150 frames once, with geometry matching the saved rig proof. The
+source check rejected fixed artwork resampling: maximum RGB difference 79 versus
+the frozen limit 2, already on frame one. No converted sequence, encode, probe,
+decode or review movie followed. Two operations were reserved, zero MP4 traversals;
+elapsed 49.64s, sampled owned RSS 735,723,520 bytes, peak new storage 513,413,569
+bytes. All 150 local PNGs and their hashes remain; task-owned run scratch is removed.
+Still inspection shows connected wrists but a visible sleeve/body seam; neither
+these stills nor numeric geometry constitute moving appearance approval.
+
+Read-only diagnosis found a second boundary issue in the saved frames: six frames
+have antialiased motion one pixel left of the old mask, maximum difference 5;
+13 pixel/frame locations exceed 2. The first composition proposal under
+`docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/` correctly rejects
+that spill, produces no media, and is cancelled before admission. Its failed
+all-frame check and the initial stale phase-deadline fixture expectation remain.
+
+The new non-live proposal is
+`docs/pictures/video/evidence/VG2-18/edge-20261002T022147Z/`, packet SHA
+`cb652b544703f0026fecfa63c4f7b183d5e00937189c717241a4d3221f9465cc`.
+It explicitly adds a one-pixel support margin (1,228 pixels) to the old mask;
+the old-mask failure is not reclassified as passing. It uses original artwork
+outside that margin and unmodified retained render pixels inside it, rejecting
+any temporal movement beyond the margin. All 150 in-memory checks pass with
+zero fixed-artwork error, zero alteration of retained moving pixels, exact neutral
+return and 33,044 changed wave pixels. No image files or native media were created.
+The exact packet also passes independent child-spy review with six operations and
+two simulated MP4 traversal reservations. Regression coverage includes the actual
+79-code source mismatch, antialias spill, unchanged moving pixels and rejection
+of motion beyond the proposed margin.
+
+Proposed fresh admission: one 150-frame composition/conversion/encode/combined
+probe/full-decode/review-copy attempt, no Blender render, 360s total with three
+shared 120s phases, 4-GiB aggregate owned RSS and 2-GiB new storage. The existing
+18-GiB disk admission, 10-GiB reserve, three NORMAL/3-GiB-free-memory samples and
+zero swap-growth requirements remain. Estimate 1,956,230,023 new bytes from the
+measured frame total with margin; hard limits still stop excess. Passing colour
+is reused, source/colour tolerances are unchanged, and no retry is admitted.
+Full headless validation evidence belongs to the new proposal's `checks/` folder.
+VG2-18 is WAITING_USER for that explicit new attempt. VG2-07 still requires a
+normal-speed review movie before a second activity, longer film or app integration.
 
 **Owners and bounded scope:** new ignored `build/` proof owner selected in VG2-12,
 new asset derivatives only (publish approved review copies under

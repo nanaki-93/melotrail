@@ -1,0 +1,9 @@
+{
+  "status": "STOPPED_NO_RETRY",
+  "error": "Stage failed; evidence retained, no retry: source",
+  "decoderReservations": 0,
+  "operationsReserved": 2,
+  "sampledPeakAggregateRssBytes": 735723520,
+  "peakNewStorageBytes": 513413569,
+  "elapsedSeconds": 49.637200084
+}

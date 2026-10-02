@@ -1,0 +1,43 @@
+{
+  "status": "FAILED_SOURCE_PRESERVATION_NO_RETRY",
+  "failure": {
+    "status": "STOPPED_NO_RETRY",
+    "error": "Stage failed; evidence retained, no retry: source",
+    "decoderReservations": 0,
+    "operationsReserved": 2,
+    "sampledPeakAggregateRssBytes": 735723520,
+    "peakNewStorageBytes": 513413569,
+    "elapsedSeconds": 49.637200084
+  },
+  "renderedFrames": 150,
+  "completedSourceConversions": 0,
+  "completedEncodes": 0,
+  "probeScans": 0,
+  "fullDecodes": 0,
+  "reviewCopies": 0,
+  "actualError": "fixed source region changed",
+  "diagnosis": {
+    "sampledFrames": [
+      1,
+      25,
+      26,
+      76,
+      128,
+      129,
+      150
+    ],
+    "protectedPixelMaxAgainstArtwork": 79,
+    "protectedPixelsOverTwo": 440600,
+    "sampledProtectedTemporalMaximum": 0,
+    "wholeNeutralReturnMaximum": 0,
+    "interpretation": "The fixed rendered artwork differs from the imported pixel reference, while sampled fixed pixels remain identical across time. Linear texture sampling/EEVEE output is consistent with this spatial resampling; no camera or background movement was measured in sampled frames."
+  },
+  "visualInspection": {
+    "sourceFrames": [
+      1,
+      76
+    ],
+    "observation": "Wrist remains visibly connected in these stills. A sleeve/body seam remains visible around the raised elbow, and the drawing switch still needs normal-speed human review. No aesthetic approval inferred."
+  },
+  "nextCorrection": "Keep rendered arm pixels only inside the existing frozen allowed mask and copy original artwork exactly outside it. Require every retained frame to have identical fixed pixels relative to the retained first frame before composition; reject any outside-mask motion instead of concealing it. Preserve mask, motion and colour thresholds. Reuse saved frames, no Blender rerender. Fresh native admission required."
+}

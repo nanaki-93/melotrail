@@ -1,0 +1,422 @@
+{
+  "status": "READ_ONLY_FAILURE_DIAGNOSIS_NOT_A_PASS",
+  "nativeMediaOperations": 0,
+  "newImageFiles": 0,
+  "packetSha256": "e78abd24283add21a528b41443af7ecfb39ae0a15fab183f2ed1254060afc698",
+  "sourceProtectedMaxDelta": 2,
+  "frames": [
+    {
+      "frame": 1,
+      "sha256": "1b907e8f45e039e19956eb22f36a350b04380e86a9b4ed7e454bb2db5b5e2b16",
+      "protectedAgainstArtwork": {
+        "maximum": 79,
+        "meanAbsoluteError": 1.6046945917704254,
+        "pixels": 1982565,
+        "pixelsOverTwo": 440600,
+        "boundsOverTwo": [
+          0,
+          0,
+          1919,
+          1079
+        ],
+        "worst": {
+          "x": 417,
+          "y": 778,
+          "actual": [
+            99,
+            82,
+            54
+          ],
+          "expected": [
+            20,
+            44,
+            30
+          ]
+        }
+      },
+      "protectedAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 1982565,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      },
+      "wholeAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 2073600,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      }
+    },
+    {
+      "frame": 25,
+      "sha256": "2b5176c8200ee5e56c2564a6cf56132a0f1c2c011996effd5d6b91625588a557",
+      "protectedAgainstArtwork": {
+        "maximum": 79,
+        "meanAbsoluteError": 1.6046945917704254,
+        "pixels": 1982565,
+        "pixelsOverTwo": 440600,
+        "boundsOverTwo": [
+          0,
+          0,
+          1919,
+          1079
+        ],
+        "worst": {
+          "x": 417,
+          "y": 778,
+          "actual": [
+            99,
+            82,
+            54
+          ],
+          "expected": [
+            20,
+            44,
+            30
+          ]
+        }
+      },
+      "protectedAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 1982565,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      },
+      "wholeAgainstFirstFrame": {
+        "maximum": 249,
+        "meanAbsoluteError": 0.5266533243312758,
+        "pixels": 2073600,
+        "pixelsOverTwo": 26661,
+        "boundsOverTwo": [
+          748,
+          474,
+          908,
+          736
+        ],
+        "worst": {
+          "x": 768,
+          "y": 701,
+          "actual": [
+            251,
+            224,
+            224
+          ],
+          "expected": [
+            2,
+            73,
+            52
+          ]
+        }
+      }
+    },
+    {
+      "frame": 26,
+      "sha256": "e2f84cda8a3304cf00a08df7ca173cce614193f010f133002b9db70e337e1506",
+      "protectedAgainstArtwork": {
+        "maximum": 79,
+        "meanAbsoluteError": 1.6046945917704254,
+        "pixels": 1982565,
+        "pixelsOverTwo": 440600,
+        "boundsOverTwo": [
+          0,
+          0,
+          1919,
+          1079
+        ],
+        "worst": {
+          "x": 417,
+          "y": 778,
+          "actual": [
+            99,
+            82,
+            54
+          ],
+          "expected": [
+            20,
+            44,
+            30
+          ]
+        }
+      },
+      "protectedAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 1982565,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      },
+      "wholeAgainstFirstFrame": {
+        "maximum": 251,
+        "meanAbsoluteError": 0.5947974537037037,
+        "pixels": 2073600,
+        "pixelsOverTwo": 29282,
+        "boundsOverTwo": [
+          748,
+          456,
+          911,
+          736
+        ],
+        "worst": {
+          "x": 800,
+          "y": 605,
+          "actual": [
+            1,
+            71,
+            48
+          ],
+          "expected": [
+            252,
+            172,
+            64
+          ]
+        }
+      }
+    },
+    {
+      "frame": 76,
+      "sha256": "03ba4fd05d5f62ddaca54850de8774fbd2addbddee26dbef0417df8b6444856e",
+      "protectedAgainstArtwork": {
+        "maximum": 79,
+        "meanAbsoluteError": 1.6046945917704254,
+        "pixels": 1982565,
+        "pixelsOverTwo": 440600,
+        "boundsOverTwo": [
+          0,
+          0,
+          1919,
+          1079
+        ],
+        "worst": {
+          "x": 417,
+          "y": 778,
+          "actual": [
+            99,
+            82,
+            54
+          ],
+          "expected": [
+            20,
+            44,
+            30
+          ]
+        }
+      },
+      "protectedAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 1982565,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      },
+      "wholeAgainstFirstFrame": {
+        "maximum": 253,
+        "meanAbsoluteError": 0.8614475630144033,
+        "pixels": 2073600,
+        "pixelsOverTwo": 35720,
+        "boundsOverTwo": [
+          748,
+          442,
+          937,
+          736
+        ],
+        "worst": {
+          "x": 805,
+          "y": 595,
+          "actual": [
+            0,
+            29,
+            19
+          ],
+          "expected": [
+            253,
+            191,
+            89
+          ]
+        }
+      }
+    },
+    {
+      "frame": 128,
+      "sha256": "bedbea1623c3721e951e312c793ed697bf888a365a138a42de4441f25c132588",
+      "protectedAgainstArtwork": {
+        "maximum": 79,
+        "meanAbsoluteError": 1.6046945917704254,
+        "pixels": 1982565,
+        "pixelsOverTwo": 440600,
+        "boundsOverTwo": [
+          0,
+          0,
+          1919,
+          1079
+        ],
+        "worst": {
+          "x": 417,
+          "y": 778,
+          "actual": [
+            99,
+            82,
+            54
+          ],
+          "expected": [
+            20,
+            44,
+            30
+          ]
+        }
+      },
+      "protectedAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 1982565,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      },
+      "wholeAgainstFirstFrame": {
+        "maximum": 252,
+        "meanAbsoluteError": 0.6161832883230453,
+        "pixels": 2073600,
+        "pixelsOverTwo": 29710,
+        "boundsOverTwo": [
+          748,
+          455,
+          913,
+          736
+        ],
+        "worst": {
+          "x": 801,
+          "y": 605,
+          "actual": [
+            1,
+            72,
+            49
+          ],
+          "expected": [
+            253,
+            178,
+            70
+          ]
+        }
+      }
+    },
+    {
+      "frame": 129,
+      "sha256": "922a37029a7931a35008f351ad0d6b5c4b5689765e0a719ade79ad3a1a9eb853",
+      "protectedAgainstArtwork": {
+        "maximum": 79,
+        "meanAbsoluteError": 1.6046945917704254,
+        "pixels": 1982565,
+        "pixelsOverTwo": 440600,
+        "boundsOverTwo": [
+          0,
+          0,
+          1919,
+          1079
+        ],
+        "worst": {
+          "x": 417,
+          "y": 778,
+          "actual": [
+            99,
+            82,
+            54
+          ],
+          "expected": [
+            20,
+            44,
+            30
+          ]
+        }
+      },
+      "protectedAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 1982565,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      },
+      "wholeAgainstFirstFrame": {
+        "maximum": 249,
+        "meanAbsoluteError": 0.5491287294238684,
+        "pixels": 2073600,
+        "pixelsOverTwo": 27247,
+        "boundsOverTwo": [
+          748,
+          473,
+          910,
+          736
+        ],
+        "worst": {
+          "x": 768,
+          "y": 701,
+          "actual": [
+            251,
+            224,
+            224
+          ],
+          "expected": [
+            2,
+            73,
+            52
+          ]
+        }
+      }
+    },
+    {
+      "frame": 150,
+      "sha256": "9f6507856750a6c9704422507fe1749369c960de2abf943e7b93aa91637dd6a9",
+      "protectedAgainstArtwork": {
+        "maximum": 79,
+        "meanAbsoluteError": 1.6046945917704254,
+        "pixels": 1982565,
+        "pixelsOverTwo": 440600,
+        "boundsOverTwo": [
+          0,
+          0,
+          1919,
+          1079
+        ],
+        "worst": {
+          "x": 417,
+          "y": 778,
+          "actual": [
+            99,
+            82,
+            54
+          ],
+          "expected": [
+            20,
+            44,
+            30
+          ]
+        }
+      },
+      "protectedAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 1982565,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      },
+      "wholeAgainstFirstFrame": {
+        "maximum": 0,
+        "meanAbsoluteError": 0,
+        "pixels": 2073600,
+        "pixelsOverTwo": 0,
+        "boundsOverTwo": null,
+        "worst": null
+      }
+    }
+  ],
+  "elapsedSeconds": 0.538
+}

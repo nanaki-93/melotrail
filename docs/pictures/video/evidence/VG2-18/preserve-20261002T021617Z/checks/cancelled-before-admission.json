@@ -1,0 +1,7 @@
+{
+  "status": "DATA_CHECK_FAILED_NOT_ADMITTED",
+  "reason": "Original support mask misses one pixel of antialiased motion in six of 150 retained frames. Do not clip or relax colour/source tolerances. A new explicit support-margin proposal is required.",
+  "removedScratch": "/private/var/folders/lz/20cqfx4x2k98r89q68w3q3ch0000gn/T/melotrail-vg2-fixed-artwork-rd_nmcvn",
+  "nativeMediaOperations": 0,
+  "newImageFiles": 0
+}

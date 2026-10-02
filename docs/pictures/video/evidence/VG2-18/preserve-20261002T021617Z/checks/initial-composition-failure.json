@@ -1,0 +1,8 @@
+{
+  "status": "DATA_ONLY_COMPOSITION_FAILED",
+  "packetSha256": "637b2cab1e1b21eb8ef9b7b1d1376df8bd20afb921d9b2c917700043a06da57d",
+  "error": "unexpected motion outside frozen support mask: 26 !== 25",
+  "newImageFiles": 0,
+  "nativeToolsLaunched": 0,
+  "note": "Seven sampled frames were temporally identical, but the all-frame check found at least a one-code difference. This exact proposal is not eligible for admission; retain and diagnose all frames before any new proposal."
+}

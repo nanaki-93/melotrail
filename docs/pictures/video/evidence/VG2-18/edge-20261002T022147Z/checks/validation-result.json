@@ -1,0 +1,24 @@
+{
+  "status": "HEADLESS_VALIDATION_PASS_NON_LIVE_PROPOSAL",
+  "focusedJvm": "DocumentationIntegrityTest, TargetArchitectureRulesTest, VideoAnimationAssetsTest, VideoMotionDescriptorFixtureTest passed",
+  "nodeTestsPassed": 93,
+  "supervisionTestsPassed": 22,
+  "makeTest": "PASS in 2m34s; 1 executed, 13 up-to-date",
+  "makeBuild": "PASS in 2m31s; 1 executed, 13 up-to-date",
+  "excludedTests": [
+    "MidiCoreNativeResponsivenessTest"
+  ],
+  "excludedReason": "Native-window validation is prohibited by repository instructions; excluded, not verified.",
+  "checks": {
+    "focused-final.log": "d3c8615c89999fbb4d955e0afc1dc8dfdf3612bd378b60e310446c2f2e2596c7",
+    "node-final.log": "f8b40726d2ef12d6eb37d92e06d9b16bb0bb16e9bf7df2a980df774164a5fab8",
+    "python-final.log": "c5d26ff48b2255e3a5f805752b3a795093000ff28ce7bd586c4d869e928f4891",
+    "make-test.log": "b5f0474aff5b63abd6785b6911aea7773425f4b63b602a792d8bdb6faef6d339",
+    "make-build.log": "21a36a4fa310b5b7e6286f35e016628544933ff7065517e9ceaa088ef8c448e7",
+    "diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "packet-review.log": "c0a494bcfbf476266bfd87a917215285f52db1b0397631f798922fee92e359ee",
+    "all-frames-in-memory.json": "f1856f7c51ffb0a064049d29ec12535bb150f8a39319b7f88ed992db47ab077b"
+  },
+  "nativeProposalExecuted": false,
+  "noAutomaticRetry": true
+}

@@ -1,0 +1,1213 @@
+{
+  "status": "IN_MEMORY_COMPOSITION_PASS_NO_MEDIA",
+  "packetSha256": "cb652b544703f0026fecfa63c4f7b183d5e00937189c717241a4d3221f9465cc",
+  "nativeMediaOperations": 0,
+  "newImageFiles": 0,
+  "supportMarginPixels": 1,
+  "frames": [
+    {
+      "frame": 1,
+      "retainedSha256": "1b907e8f45e039e19956eb22f36a350b04380e86a9b4ed7e454bb2db5b5e2b16",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 2,
+      "retainedSha256": "3dc3ae04aa4fa8ea284b3846b4da7db430ab7e063863e259a92cbcb748f220cf",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 3,
+      "retainedSha256": "c25e080135dfcb738055f578a433c74dc20c34fc1469c4f14cd53745d477d811",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 4,
+      "retainedSha256": "73765656ba98e9349826db8b552afb06f66713f08a7d0782bc57c8cfae719b26",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 5,
+      "retainedSha256": "35f0b71219beba6fa65c62c20abd2c24803937168ddbd7d8433d5c3a3cd2c85e",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 6,
+      "retainedSha256": "123df07eeca9cf173d1be61bcf44e5fa98205a88d50bafed134e6c5427e9e52a",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 7,
+      "retainedSha256": "a8573ce1525f7fb5a6a7a1d5b24db095164dfbfc9731f72a3dc17769b89416da",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 8,
+      "retainedSha256": "9d694348d44742bb739d687f6045a253b4da23ecc0780ca5bcec9f908a68a408",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 9,
+      "retainedSha256": "205b5932e47e73c5589df8f9c6c583149159964de0faf4fbe39fb28a130d8dcf",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 10,
+      "retainedSha256": "51d41820c8b777e7c63243ed81fba6e99fe356bbb735a61699044a6a4f7e1b51",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 11,
+      "retainedSha256": "ec46c8ebb35a084aacc5d7231654e610e73910c191cc1d1ad478c01c26b2ac16",
+      "composedPixelsSha256": "69611dc513f6a311ae5bb2389fbf0e5d8251d430a7fb168cab9840c52fc620b9",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 12,
+      "retainedSha256": "c6b5f7a0188b5fc54512b3228d88086034e7e2932ba567b1aade6f9062d8e60a",
+      "composedPixelsSha256": "be9a25e2b1d8f45a720afa42f45969ea54de6b94236c01a57359bc3346f3e967",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 13,
+      "retainedSha256": "5df506fba7a509ebae2daa3c9fde315c4267f8187cf178630cdce7b75288db06",
+      "composedPixelsSha256": "f252082882b549211c2f34e6b0b4c3d4f5b00c192e8b743a9db62454b911dfd5",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 14,
+      "retainedSha256": "369880aaa13d3b84756a3ab83699d4bc83cda78b3cb6376fd07cf9655b7fac37",
+      "composedPixelsSha256": "a2a28202699ec9f8a07c2a4336f362b7db8610c7f9ac8855e62aaa43d486f0bf",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 15,
+      "retainedSha256": "e87fa5fb8f8f9eb9b7cd9b5864fb675014cf055b183666a4ed15c6e6996453bd",
+      "composedPixelsSha256": "fa99eebf4eb76fec70a5ed40f0354d4bb5c77f2e5739cb16d4474fa8b172e320",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 16,
+      "retainedSha256": "51c072940172b6cf695379b1c2da0a002f66bbbfc12fd51a6aa82202b2bdf9dc",
+      "composedPixelsSha256": "7fab7922a08085ae7f77ad67615887ae2c77dc8aea3401c9b177f0b85f715129",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 17,
+      "retainedSha256": "9e8a228f24b8d33dfd2860d654a26bbb542b5943b1db9644aec00d77c327edd7",
+      "composedPixelsSha256": "d4190fc61f0b1429bf263c7450ab757ed0746dffe725c5ad075e3933a01c01fd",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 18,
+      "retainedSha256": "81588f67d5b6fcfe8c6e53c4bdf64e0d9bf1068aa2fbdc518a1983e4f9af0df9",
+      "composedPixelsSha256": "01b06a1a0e7adaa6c7006d85ca8f35ce83271f3f890fa98a3b203205d4720863",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 19,
+      "retainedSha256": "c5c276afc2dbde5d3fc1066e9388ae81b1645ec47cfaf8f6703728e1231b0896",
+      "composedPixelsSha256": "8b4164deefe238bf5afcbd903cfade2ee89fbb3351f80085da8a0bfc6f79e3ac",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 20,
+      "retainedSha256": "d28de45ebf519015f445a2355e07bc7ba0c0bf4175a3691d08468b622dda4694",
+      "composedPixelsSha256": "abf75192aada02cc82f46fa2975f4bba8d7bc871984d43cf27783982bf20d325",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 21,
+      "retainedSha256": "00f9f6487b44648da57e5ddf09f17263f5cc0ff2ce05a97c6a19f69002ec92ef",
+      "composedPixelsSha256": "8604e100333b412336cbb6e075975086938acd978a823960366902fb92d1ce01",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 22,
+      "retainedSha256": "824897ee45a6c62c7da3631190cb1d5f7c80af267a707cdc40a4e4a30232a96e",
+      "composedPixelsSha256": "e0a33d937cc6e386309ac333fa49d3cd65182f33338cef3335928e8c3d031d2f",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 23,
+      "retainedSha256": "398e25cce6c3081f8dfed8179c9a5a60de6a3a4d18796342c980d8652971a20a",
+      "composedPixelsSha256": "24a8c0ef22f48dfb2be2785230f42bff8d9b2f9cf165833756e16cd929d646b8",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 24,
+      "retainedSha256": "208f7d3c82df9f062fc0ba1280dfdc4b62485d7cd1ec9226c3f47e4a3157ce55",
+      "composedPixelsSha256": "73191c4ee383d313113715e5be20d64b43b586bbb25940df1d8986408c60382c",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 25,
+      "retainedSha256": "2b5176c8200ee5e56c2564a6cf56132a0f1c2c011996effd5d6b91625588a557",
+      "composedPixelsSha256": "74f1f6a77e1c64a2246f74e2bf3a90a65af2d4721a819be223ef5efe493697c1",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 26,
+      "retainedSha256": "e2f84cda8a3304cf00a08df7ca173cce614193f010f133002b9db70e337e1506",
+      "composedPixelsSha256": "5e1c0e644f28ada9af6d60364168edc064606a574a47dd62d1ef6cf159caea37",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 27,
+      "retainedSha256": "477a31b3f74956b5d0b115f2eba38098cb53601cf08a19377968bc874e924b7b",
+      "composedPixelsSha256": "3390cad0030ab5953d98b0a46e2b764338acb5c5ce3d4ebcf585d956403e8ce4",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 28,
+      "retainedSha256": "085bb4f0ad57653dd65db8273c81776c6e40d9b6b5f53428b3e92da9fd4047fa",
+      "composedPixelsSha256": "4082c21fadc9e6d2d284b52ecd96e16ef2ff8cec5ef3c9b9c743e1dfda9b995c",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 29,
+      "retainedSha256": "cd0d3e99a18c99bd787b7fa66f4f07f4861ac76b847e8c51fec22adbed220a41",
+      "composedPixelsSha256": "9af9dc381a1a647f21ef8a426fecb4d0630383c3e6163982f9e25ff2be86b992",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 30,
+      "retainedSha256": "fc38ce4d0ff57ce63f44ca2f05b8354dc2b823fdb36827f939dae4598201f034",
+      "composedPixelsSha256": "c26992de5894d2a61b5c7c41dcec2844381767296514377a6af778aac51c3d2f",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 31,
+      "retainedSha256": "bb52dc592b5ca844a54a86bd3fda1b34acfc636baa6a58ed4fdc59307275a62a",
+      "composedPixelsSha256": "0aa207fb27963600909b9f79900c1b073f40b20dca4a097cb4be39562f8edea4",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 32,
+      "retainedSha256": "6e205b10ebaf5be2e0800da0bd9efcc08be8344e064cbc35d38c22309797d15f",
+      "composedPixelsSha256": "35294ab329075f6e860a8caef74c25a295b436dd7d12e6a9ce2c0ca82123dccd",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 33,
+      "retainedSha256": "5ea3c48aa1754abc62b5c2c4e6d96027a999b4f6707f655bae62fa8b6d21c9c7",
+      "composedPixelsSha256": "688cdd662ee9e919ea126222817b624512c4fac8bfe7610ff89bcb4474055fc7",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 34,
+      "retainedSha256": "d77de1fbc76df0a51cca1428797e44cd2fd9a590a1536b466138a587672108ce",
+      "composedPixelsSha256": "c3c695c9fc574d537aea698060ae002830408df36caff315b7b60151f961dd69",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 35,
+      "retainedSha256": "905654e659b87a1ec196381c631f08245f063fc502b38c200c4f395aac5eb08e",
+      "composedPixelsSha256": "a67bb375b32552dacc41c7249eeed085f6a8e99b8b1e96ea856e3c6884f8befc",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 36,
+      "retainedSha256": "43b5f54e3bfa13106dd41cba9d7b8a6195e8fdd20321c4f2ef9be2ce58f36ebe",
+      "composedPixelsSha256": "47a0e9691e5dea5b9402ebb1bbf3ca8cd5c294abb9440d3fddc270e0c55d63f5",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 37,
+      "retainedSha256": "59c3dd98c74f24991cb2a8dfa982630be8dadc5541978aab823d2da3b8348ff2",
+      "composedPixelsSha256": "cbfe5de79ff4f13ffda52fba7bc1cfb61390e94e2feb84c8f88fdd3cd9ef6857",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 38,
+      "retainedSha256": "aafe30e44122b2d517f289ca659c3f56c0d365ed5962745ef9aa43cfca8ea19e",
+      "composedPixelsSha256": "20ada970a245dc73aed440d4bd06a22f458ff2c324e9015110e394761f31760d",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 39,
+      "retainedSha256": "d59099b9bc562cfcce77a09b1f3867dad10b19d0734d34f933f99998d82bb4c6",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 40,
+      "retainedSha256": "9c7751237bf4c2b27809c6d02f7a23692167b4e2d7a96adbdaebb087f2e44a8d",
+      "composedPixelsSha256": "2336b73c4c330d0153062345acc7a7f3b2e520f1e45d90252eacd6ecfe84a052",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 41,
+      "retainedSha256": "174adf920118814cb574b8aece4ffe394b99efb95996c01ca9dc93a78d8ed54c",
+      "composedPixelsSha256": "3538a2a3ce025af3f34e8e8e36338792dda7b4dafb60abccc43230cf8029b29e",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 42,
+      "retainedSha256": "e58cc7939fa7eb1def35359d95f8807524b2e17f1156031ef7739d62b0d34533",
+      "composedPixelsSha256": "6ba60b5d2dd09f45e70f60d353d7aa744b1df213e899590c23bb0440193cb3ce",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 43,
+      "retainedSha256": "d5d81f484fd106f0f2e407b295dc1112c76ecc06f6a24262495c90dd7f9e7eb6",
+      "composedPixelsSha256": "4276df0f39ef1609d96a9f2f336dd227cbbf766b409d1946a08f813ee6c25c6a",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 44,
+      "retainedSha256": "79e73cd0d876720340d49d7bf2fce077420726b9249352489bbe002e918892c6",
+      "composedPixelsSha256": "6752c1ab2f03ffc46b0ed88c7336d3b1dbcd9ae2c6bcace78c512f8508638dff",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 45,
+      "retainedSha256": "fa4a7e3d266ad553b26aa5677a393773370d5e16d7c10b073e4761b5bb4803ea",
+      "composedPixelsSha256": "8baa6cb8fae19704ae0dcc2a093c54a3b17a245ee911ab581aff7a4276958058",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 46,
+      "retainedSha256": "43e7d953c2bb385209ddbe7c4b238ee2eb0972aac16477016b3876691acee9e1",
+      "composedPixelsSha256": "ab8f1b618b5faaf7dba068938a01969ea0f99d846cfe477b242a2aa44b2ee7ff",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 47,
+      "retainedSha256": "b24d5fd8a4c6b873bfa2f798405f861db5cf1d91c3df0f031e02efc2a8eed972",
+      "composedPixelsSha256": "b36757e93e5017654712158cbf9f7b58fdb2ed60893594998fccbd18d919b806",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 48,
+      "retainedSha256": "58a351b5e0265bbcba1abfcaeb819b9d385788175845ef62c8b78d8e3e518563",
+      "composedPixelsSha256": "6e98da9c49a9f7d8dfcca5c3f2a771204f8f1318c05bd0ab6153fa988a73bda2",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 49,
+      "retainedSha256": "7068182c6bb2831456835caff8afbd0056d480c3b3494d3bd5e6c1f9cfb41e2a",
+      "composedPixelsSha256": "50650c07f86bedf323121708b0165af7e5f2ca91ab409c6471b0e57386739eaa",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 50,
+      "retainedSha256": "3356f35f99e6899803752ab6737a845c5a7376a37b19ff28d7ff36c001f50d35",
+      "composedPixelsSha256": "40e826bf20681420cf2dd74e58704616c5d65b30aabefa3ba2cf77a7d5051d2d",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 51,
+      "retainedSha256": "7b30a8ceaf8a161d6c962b0eacaa4350508cb534c133eff256beaada3650499c",
+      "composedPixelsSha256": "9ae0d544db44f2be01160eacdea9856ef2c98ee59f327859253edb0fc070f9f6",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 52,
+      "retainedSha256": "f48d0cc237366ac354a90de60f3ef8597279102e0bdd71bec005b0e9920a3e46",
+      "composedPixelsSha256": "4f045ca3356589b0aece0763b7bbf46be35e0051fd3832af6838ffb6da4a7e85",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 53,
+      "retainedSha256": "e3818c973b3e99782c69c2381f6ea4bd820fd0271662441c45d98b1a2b0ecf7c",
+      "composedPixelsSha256": "252a9e663dd1d4fa0725e7f0031ac0aa073943ba73a8a660fff5371dd2a62d2c",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 54,
+      "retainedSha256": "cdb350732f3b1e1804ab41dab42d2c0f59034a65a2ec326d6ac5febeaf3f99a6",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 55,
+      "retainedSha256": "cdff3a9141d3bfbace088a93316ae3ca5a55db30b0333487b2bc9825d9d548f0",
+      "composedPixelsSha256": "f4540c6b1045efd9602a5c8f8dbc4bd20d931c21ab22804310743567fb6700c4",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 56,
+      "retainedSha256": "f125cf13d9baad1433fa2ea0a88e8308e01529eeddf55f61b199f3817b77797b",
+      "composedPixelsSha256": "6a4ae83fb32fd49bdae7abfde702bc0b28dfd7e5bd04486b6bcdb8e2f55daa37",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 57,
+      "retainedSha256": "8da7dac813fbd0387cd1a703e664b9b6af026e9e5000214e899c2a011622c27c",
+      "composedPixelsSha256": "002d8ed34976a8895053cd60f2525caf64ef21fc942d3df8e8c968b762376896",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 58,
+      "retainedSha256": "2575913a50ee37da020f116a5299bf111c3c0f3eb206e310f78a13bbeb245506",
+      "composedPixelsSha256": "ca27788d5ae922496c637feb97d5059284ea09fe7b7d7d820240991afd934cd8",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 59,
+      "retainedSha256": "9f5d834566fae9f125ce8c33db98e8ed4f0817cad67d75f74b139de77a7e81b3",
+      "composedPixelsSha256": "806ffd9bcb35f86693452138119f446cc6b8732fae2cfe9b8d676ddce4510c71",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 60,
+      "retainedSha256": "96ec0d808de036c71af728c20e450a11eeb89c6aabdf4df31ebc1c1f2c9f48a6",
+      "composedPixelsSha256": "c93d7ccc17afe25f92e62d83c4965b3b1cc0690fa98daf1bc2abaecaf4e7f530",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 61,
+      "retainedSha256": "cfa3dfa269499848d21def772c24c4cdc59eaa1c7138d9895e647ab9aa88c6d5",
+      "composedPixelsSha256": "60155f80347d10883eb39a9049f20c5d9b956baaaf6bea32b46ee64c507b1313",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 62,
+      "retainedSha256": "bc16e94b9e5a4383774b88e6a5df06196098cfc9122d396f226c5197772ad1de",
+      "composedPixelsSha256": "1d0ebed5d08cdad92efd79dd19ddd2c6a0d69da22f9167cb1115edb31a250c1b",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 63,
+      "retainedSha256": "e3846d24389510f9edb05257eb59e16a2c39031f5fba02fd18cabadf1dea4b14",
+      "composedPixelsSha256": "c095ff12916349661d0a7b281de8a2a3a7d3bd43d1791cd1223ee318387d3b0b",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 64,
+      "retainedSha256": "b73bec458104d723880a3027a594aaa91576d56d9d92e34a30742252a74ace98",
+      "composedPixelsSha256": "8cce8720c0b7e62083efc849e2d684532ab012b7adb6e49081514ba591ee1f9b",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 65,
+      "retainedSha256": "e0d6d18a066e1f518a536f3878735238821907f48f59e9393207dd86878d61ba",
+      "composedPixelsSha256": "ed9c3a804cb3c999359237397281294ef99354bd28326859d513f247b751f5ca",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 66,
+      "retainedSha256": "34f843366148efe4284350ea2d7d53c8c55ce7f2e389e9c0c92e4ac8cbdf24cd",
+      "composedPixelsSha256": "4b7cece08dd9d1abd0dd5791be645f7fd3c5ba9955a48898a3f6ebf517bd4230",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 67,
+      "retainedSha256": "3ab6286c176f3734d39e8e4caf23434dc3227f5a54a639a2af08f092f891ba6b",
+      "composedPixelsSha256": "aa08a74a9e4d9226fa946ee212fc2c778cab3602c961ec2956b4ed0a12f7cc80",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 68,
+      "retainedSha256": "87248892f5b801ea477ba622422fa1efb2ceb2087419546dbee1665a384aab37",
+      "composedPixelsSha256": "10743ceb4a8670736050173e22a7d119021b562259fce9537b77dbbd8569da8f",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 69,
+      "retainedSha256": "911e9aa78e454157424f46fc2e64b938ab218028f1d39709a7e9005738f5229b",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 70,
+      "retainedSha256": "0566d492fd1b7aeeb1af630685aae00923d43f8e1cf8be500a6773a89ab14dd8",
+      "composedPixelsSha256": "a7412f321386526fe89fbcfd14ef028b65aba643b6c094f6e4d2522422a84b63",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 71,
+      "retainedSha256": "952612108aedbacf1805d0016e6c79fad4b790b7a034091479a6c4c9696d3e05",
+      "composedPixelsSha256": "62dd5d6f6efa8a93cd8c7f951869d8631bd62f7f2234268a85a2d0d7fbf707a7",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 72,
+      "retainedSha256": "29fa3fcde4caa9995fec16f71d340d29f6a419e70b710b4de2108fe252ffb90f",
+      "composedPixelsSha256": "9eaf2233cb1f821d142a13e3b387fe720bb1c5d0bd6215a843e74e8973c14cfd",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 73,
+      "retainedSha256": "758ab65966bf93020390c31882a4facffa974f13355dea71a6358f23e58d6356",
+      "composedPixelsSha256": "5fd025aa0a86b9fffdc10829366b748a9db9aa9a4c7886767d2dcdd7b6b94130",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 74,
+      "retainedSha256": "69636c6c739326698bffcc0f9f9c037a116c16c1cabb8449c01adf3ba04b79cd",
+      "composedPixelsSha256": "8c6d09a351a946712a0a009a0b8d9aece0e210b7cb79509505494a8cb93a7154",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 75,
+      "retainedSha256": "4e3cb852eba3f17ca76aeda6ce51d3bbf4f072995ae1dab95d3f1b5e3758244a",
+      "composedPixelsSha256": "85afe83314956c94c8eb6a73c7ad4a44b6c994eac798278d3e92f4ccbea6f49a",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 76,
+      "retainedSha256": "03ba4fd05d5f62ddaca54850de8774fbd2addbddee26dbef0417df8b6444856e",
+      "composedPixelsSha256": "7b037c9dcbd81282f01f79c993860f9324076367b21f05e20b9a6adf516eda52",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 77,
+      "retainedSha256": "a9cb6637c80c9bca823c824093d043461f5b40d07fc7a5be884ff45a0502c293",
+      "composedPixelsSha256": "b36757e93e5017654712158cbf9f7b58fdb2ed60893594998fccbd18d919b806",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 78,
+      "retainedSha256": "15ac1e3eb41ba3c5e983ad1a43b38d275e747d419fd3541c259d488a2171417a",
+      "composedPixelsSha256": "6e98da9c49a9f7d8dfcca5c3f2a771204f8f1318c05bd0ab6153fa988a73bda2",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 79,
+      "retainedSha256": "f6294be2fca354d2aed2242e830f45f0513a74f3b19916908589c6fb8fa4866a",
+      "composedPixelsSha256": "50650c07f86bedf323121708b0165af7e5f2ca91ab409c6471b0e57386739eaa",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 80,
+      "retainedSha256": "0c1ae3424d06f8d91aa8aaea440471b9bcc26a7e43c87731640eff025799e01d",
+      "composedPixelsSha256": "40e826bf20681420cf2dd74e58704616c5d65b30aabefa3ba2cf77a7d5051d2d",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 81,
+      "retainedSha256": "5e898c8e766458166af6d6f5430a12e03444a98a0ee5dc6961e34362e68fb214",
+      "composedPixelsSha256": "9ae0d544db44f2be01160eacdea9856ef2c98ee59f327859253edb0fc070f9f6",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 82,
+      "retainedSha256": "9d6da9c7ee4685146e6854dd8c6c27227a37db41d1252fda4463c9fd07246c1e",
+      "composedPixelsSha256": "4f045ca3356589b0aece0763b7bbf46be35e0051fd3832af6838ffb6da4a7e85",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 83,
+      "retainedSha256": "d0d738e9350c9d69c0bc7f9c00b1831cc627ff7c6d1876342d80f2ad775e20df",
+      "composedPixelsSha256": "252a9e663dd1d4fa0725e7f0031ac0aa073943ba73a8a660fff5371dd2a62d2c",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 84,
+      "retainedSha256": "de362225e1cba1193aa2eba22441d6881ccc137d6f36e65bb40a104f5592398c",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 85,
+      "retainedSha256": "434e8ce1b2e6e1cd6eb84947e7657da9b6b390f16f8148c2c272302efbc8a1e9",
+      "composedPixelsSha256": "f4540c6b1045efd9602a5c8f8dbc4bd20d931c21ab22804310743567fb6700c4",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 86,
+      "retainedSha256": "4e9031c595450c850343383b8583b9c5990357535a32b6288b7f151edfc62afe",
+      "composedPixelsSha256": "6a4ae83fb32fd49bdae7abfde702bc0b28dfd7e5bd04486b6bcdb8e2f55daa37",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 87,
+      "retainedSha256": "41288b27ad47b894bea33f3009261872cf5be3ec56cd004f5c5e69544878fc45",
+      "composedPixelsSha256": "002d8ed34976a8895053cd60f2525caf64ef21fc942d3df8e8c968b762376896",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 88,
+      "retainedSha256": "224e1190cd625472ccc16a41eceec201de9e9e260bf8169ace6254f1be66b946",
+      "composedPixelsSha256": "ca27788d5ae922496c637feb97d5059284ea09fe7b7d7d820240991afd934cd8",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 89,
+      "retainedSha256": "18d8d1701d9b5b224e2c6d582d5773c0c6b3d882c58076305efb527fbdd08f75",
+      "composedPixelsSha256": "806ffd9bcb35f86693452138119f446cc6b8732fae2cfe9b8d676ddce4510c71",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 90,
+      "retainedSha256": "594990cc7fc7074229a4c2eeae37a49337c55fbb30c194a9e26a16434e15d4bf",
+      "composedPixelsSha256": "c93d7ccc17afe25f92e62d83c4965b3b1cc0690fa98daf1bc2abaecaf4e7f530",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 91,
+      "retainedSha256": "8408469efb60b464f60cc7c86859ac2e9a8735f6a4a92a62270e91d71df79e13",
+      "composedPixelsSha256": "60155f80347d10883eb39a9049f20c5d9b956baaaf6bea32b46ee64c507b1313",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 92,
+      "retainedSha256": "feee54d10b226fc5526e623895e6b10560b55ee75715ff1e220e7819d10e3322",
+      "composedPixelsSha256": "a50e0e1c439770ec546fbe1810ecfd1c00394892a273e4d52fdcb0937f5f9b29",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 93,
+      "retainedSha256": "3312b8a2dd7e16010a9b33a31431313d162742a68bd822370813c322b711f2d9",
+      "composedPixelsSha256": "a95f4dfd2c52966d6179009aaa0eb896cd670a0957aab8fdacb0edc58bb2284c",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 94,
+      "retainedSha256": "79f82bde9607ebd41853a7e4e61926a617205f0c5388c20f5114c9388977541e",
+      "composedPixelsSha256": "01c0ae9f769cb71929c029841c2d07dc569d56e5ad4458cbc7e2bdf5e06606e3",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 95,
+      "retainedSha256": "35f355fc3742b8209e38b021d21313b7517227b82abc175fa384a4d0a495a27e",
+      "composedPixelsSha256": "3ad11c8060b2da1a898dbb7b1ae527dc853d48a8d9c486225f47ec27b40375c8",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 96,
+      "retainedSha256": "253b98702b2118220d4d6e05b9113e1764465597a93d738b6d527ef88bc0d33d",
+      "composedPixelsSha256": "f9949c8ddedf8f194ca702583f422091a9caedce830ebb33d3cc510213933eac",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 97,
+      "retainedSha256": "1808f74c827685f36d9daf9618d7c4ed44e227fafa6162acbdd77af850ba8ef3",
+      "composedPixelsSha256": "f23eaca7425693f97170dacb6a01d630c5d161a1a2477a23c3c327517c4762ed",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 98,
+      "retainedSha256": "2a471a93f07a6409a833b47b8ca7adb4c31c9c0c6991c53aea9ac6d24b98e507",
+      "composedPixelsSha256": "f87eb79f03d2e841c5ce0fdbdcfe3d2a0cebdb666a35d75854772e8d7e2d4030",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 99,
+      "retainedSha256": "8aba432fefeeecec6c426ec6b933999df495105398ed67399c9fadf9db5a937d",
+      "composedPixelsSha256": "5e9dc66044e936ab54fc1c3055653a27b89ddc1aa71e25471c5ea20cfb463fa6",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 100,
+      "retainedSha256": "fb832a3a0ac5d245c1d4dc587291b9c0e533eadad3dc55f8ed602154bc166cf0",
+      "composedPixelsSha256": "a56da98aacc098ebffa7cc51e24e0e0e280fd934c74f8e2e2185a1ca2885ab10",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 101,
+      "retainedSha256": "988408ce11adc972c3f7245021199252bbdcf874ce8b7a7b20c804d723158a20",
+      "composedPixelsSha256": "d972cf2a975a2197455304c5c7d9925d794c4217a67b628f09b460ef9fbad588",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 102,
+      "retainedSha256": "6205057af82164a8a015c35ad81db8cbfe9ee214830c5cf4048e5e3a8c42cc3d",
+      "composedPixelsSha256": "b1d374f2ccbb3a891d2da6e663bdb1aaa1155188e45b05979e30c3d93e660258",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 103,
+      "retainedSha256": "56b00efd22523dbebe6aa29203547845943217a57356d60ad399ebf7fc7f2e27",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 104,
+      "retainedSha256": "bdf12b88fc609d48c924d55a9688fbf6afc48da6f0ac35fb7eac2ab961bf1029",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 105,
+      "retainedSha256": "e8fc6b0418ca805a07c4c713c5c997b710f85ae8b060447742283c8632d26d95",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 106,
+      "retainedSha256": "741eb91620f4072a4fbde245271f4c032965d7c7946ed41ab9fa2c8877c4b468",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 107,
+      "retainedSha256": "ecfc4a381f40b47aadae0a82d283faddcc2c740c31f302c1dcd266df2ba03616",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 108,
+      "retainedSha256": "aa90241596ed34c30f5df95de7211fd1b79e29f89f5e2017d222be83ddfb8efe",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 109,
+      "retainedSha256": "2a0f9ce0453b96b51dfcabcd861383ebefc1458afcc069b2eb06eaacbafd6f27",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 110,
+      "retainedSha256": "628e2bdd7c36a7a2f09b83312fb8649ea60c4167fc586c8f5a0e3628ee71e9b0",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 111,
+      "retainedSha256": "f7819c62b7a85beaaf15858dab2b336e475f67a4b07a2eb0adfaba2247d8ab20",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 112,
+      "retainedSha256": "ef8ee97b326238a79fec91e15b15c5955b6513ce5ed7704f8f5e998c198461ab",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 113,
+      "retainedSha256": "54bf2ed241bcd8cb03bb2420d9dce6740aac051b5f4d80004a10663a67a244f0",
+      "composedPixelsSha256": "6453437cd00f1ad8baf2bf4b2abc64c911acaa8fbc1fff56340f7f2dbc9c7092",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 114,
+      "retainedSha256": "ac06bf8b9fd98303adc91f72eaf26227673a4dbd2e17dc919c4e3eed81983d75",
+      "composedPixelsSha256": "772ca847cbbea5db1bf77c056be14fe61bc737b37a92005b4eac80fe8298a07e",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 115,
+      "retainedSha256": "4a544edb44924b3b955f7b961c3a52821e238d902f27b7707ff972b6ad309fcf",
+      "composedPixelsSha256": "372fb3b5db2576c51bd0a187b554001da8559851da0bd45b4da4ed71a2c35ccf",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 116,
+      "retainedSha256": "554ca5e5946a617621be9331ac67ee8f60bc7f11abdceae7ed06a3739742cde0",
+      "composedPixelsSha256": "8bb71d3e743b047e0deb9231f5d44a3629cc796dc02da67ce2aec5d761a0d015",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 117,
+      "retainedSha256": "b49f8193680ef390c3c95a6cf76d94c42bc2f6d9d968622462cee0e96f9c8bef",
+      "composedPixelsSha256": "0cfcee64f425f324a25a78a40db20ccc1f293342b0202af93fec2263fea343c8",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 118,
+      "retainedSha256": "38554d63cca798d55f869319d4b0afad74dffe35e77685073ecdb36706383113",
+      "composedPixelsSha256": "4abf86822d86ab420690d38b42c5480b12e2861f626d2d3e7f44336232b83944",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 119,
+      "retainedSha256": "ae022dce847493998ca8713e223759568dc6018cf9bd6948d45fd0f1ad1eaafd",
+      "composedPixelsSha256": "6ff2989795cc20ff724655b5dc6cc02922a1619909904c6b345b577f80bc0940",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 120,
+      "retainedSha256": "c51ee4faed1c46472a7e861bbccf2f0fb20d9e83ef0d2fed8eb07a259b54ce7d",
+      "composedPixelsSha256": "43ad421ff5cce3be6d41056fef8e718bd7207085a4eb07def6c9e7f4cdc1492e",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 121,
+      "retainedSha256": "eaf705cdb2662a93ce7716183da02d281fcb59cba18ca070b6445031828c7518",
+      "composedPixelsSha256": "f6b89d775966dcc721159cd730c17721ca63d281c8a9d96eea6105a1daec9b8a",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 122,
+      "retainedSha256": "f68b709fb4be12dd0624463e4f179ca127bfac1775cb00b049697930e0eaadb1",
+      "composedPixelsSha256": "44de0179eb5e90eee9ee3a681b312c405d3e6605e46fb66ce13930eaca193dac",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 123,
+      "retainedSha256": "24400c834f2f3cd4e80270cfc247570ea7ccd91b8ceccb1128ac1055d1722802",
+      "composedPixelsSha256": "6ad8a3d8623bba41ecae7206d760c75adc6a0f6448073fbdd5c4cefd530e33b3",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 124,
+      "retainedSha256": "000efc5e634b0e3b2e7409f690bdd5a46c75eaf75d6d95a267a0432672fd6bcb",
+      "composedPixelsSha256": "e8f64e6b8a79f571b32803ce92607b3494bed046f18458274c69af8f2d5dc511",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 125,
+      "retainedSha256": "627b68ee97eb9ad5a40f7560063e19267c323e038628bc0eb637c2b3ae6aee5f",
+      "composedPixelsSha256": "5ac7840521a12214af67eb4152dfe3f2b3984b20fe1a997f6a0bc5915e9b7f7a",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 126,
+      "retainedSha256": "1df4abc85e0c7029e3789bb465c0a5494216889c9236a342fc4c61e66b75522d",
+      "composedPixelsSha256": "66078087de0a699537f68f5c02e03d777ae96bf406c9b307ffbbe49dd20c66bb",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 127,
+      "retainedSha256": "45c89932c4dcdefc8142f929351cc34e13b9a3b70a13136c761f814b5fdabad8",
+      "composedPixelsSha256": "9035b0f421deb9e06ba63751ff0426c8f63ef63f2ed04b74614b01daaa385248",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 128,
+      "retainedSha256": "bedbea1623c3721e951e312c793ed697bf888a365a138a42de4441f25c132588",
+      "composedPixelsSha256": "ec86642edabfb3ba36e2ca733e2acbb5e64515b6ea2ae594a02efad51e1d77ee",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 129,
+      "retainedSha256": "922a37029a7931a35008f351ad0d6b5c4b5689765e0a719ade79ad3a1a9eb853",
+      "composedPixelsSha256": "5d1be45c5e24c0b7b24aa9e08f32c9ca884050e2f18967567d18c72ef1188b39",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 130,
+      "retainedSha256": "e5829abe0f8d803929eb8dc8e3b09f264bdff22e65705db0b717207fdc3f5808",
+      "composedPixelsSha256": "377757ca8b9a264e232ee859433d8982d5cce7574079fab40be0965f84226a98",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 131,
+      "retainedSha256": "ce66177163dbe9518173c929b14eb4e0e538999a1496dd2425173f63ef17ff27",
+      "composedPixelsSha256": "dbf2dfca009385172362ce03165cfb5c6104e64230263e6ea3713c68a5b088d1",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 132,
+      "retainedSha256": "1fed61ca606eedc6ee361d527391d026a6af33c58d311ea4cac70147e0bb9fc3",
+      "composedPixelsSha256": "4fafb5d25a305b49002a181f85aa18685cb7d27297314e6baa34c844585fe015",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 133,
+      "retainedSha256": "cb06816d58c9d80e9a224052d9b3b8bf337e241602927087dc89e5931e8a84dd",
+      "composedPixelsSha256": "0e767309c44832c2b55518bee2fa5c8c53cc0391830f9fa9874661ab9be0a075",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 134,
+      "retainedSha256": "cc18a99d9242aa348cc9d14b958d117db9689dcc41de0eb3d2060f461e290711",
+      "composedPixelsSha256": "4e8173b1ad221ba750a394ded10449cad8b8f4e5f90e7d4103efd4fbb4461533",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 135,
+      "retainedSha256": "6be35549235baf70f8cc90e68e4a3b2d5756331c34e1fe6fd2b71ecb2cccc013",
+      "composedPixelsSha256": "3615e158180f2aa5be33d420c26d4d76fad98cd5da194c7d3065738c8736ffd1",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 136,
+      "retainedSha256": "6cdd07a3e1c617a738c950b1f119c33b512b02e06e35dbe2d01ed70ca811757d",
+      "composedPixelsSha256": "1d191eca2c3409393b90ec06a374db2e25c97c48637524053c46df827d6c2699",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 137,
+      "retainedSha256": "8bde734e6693e16d6ea264f388d4d5bf842b15707a8324b454742cf9c2139b31",
+      "composedPixelsSha256": "5775684bf4628d34f5efda4695cfcb4b21753ba764cb903e5f737a97996d8e43",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 138,
+      "retainedSha256": "92f92244ee236dd4caf549a5fd0c81a60a436d624d9a72dc3fe9f3d4590bd7a1",
+      "composedPixelsSha256": "8e0f705a92048a74c530baa3ed7e597f527a7caaa076e0cdfe7f86030ca679e0",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 139,
+      "retainedSha256": "a5fc31da7d508cc70efacb38f1fd74fb65c71d2e857c7e35fbcb9671da1836ef",
+      "composedPixelsSha256": "ac239e03ca5a0b765213a63db9a4f3aaeeb7c98cc981539f8e6b0b781ff706d1",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 140,
+      "retainedSha256": "5ea181cff2eddee8c814e1006af25f3233a0911e6d932e81a85f05194bf2b2a3",
+      "composedPixelsSha256": "8a8c8d36dc5a1ae62bfda5281d9908e7d065600069373b0a4d3306819be93d05",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 141,
+      "retainedSha256": "ac52d4f82c4411f35a29cc0ba20a2083ffd65c93ebffbcdd1c85006c1f0b40a8",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 142,
+      "retainedSha256": "3c0a1c27aa19bf92881accd24572ad3de6396e0dc4c53944af9d918101103c8f",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 143,
+      "retainedSha256": "524d88f32d3e22c4cb02da548a29f712b387c856f9741042bcce3ea4cd4811dd",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 144,
+      "retainedSha256": "64400e8bc77e8e6049df48810c114bede9bcdd52ff58efbd3b685d9d719f6c95",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 145,
+      "retainedSha256": "6ab706035b15563d906da9ece84c90604f73418bd4cc4e24bc7ae050402537bb",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 146,
+      "retainedSha256": "a66659d9b6ed2730fc2820e777515821b0c6427ddcd827e665d5be2964a11df9",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 147,
+      "retainedSha256": "19bfa6136885e09bc0f966620731fc785517fc19b260b358377af174bfda7ae1",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 148,
+      "retainedSha256": "c27d2c140917b110013f0d639528da79e60c2894db79dee888275cf0ef1a9d95",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 149,
+      "retainedSha256": "19c17cca5f2b903dd41245d609e81913e99c7d5a43000958cd9fb831dc2fa558",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    },
+    {
+      "frame": 150,
+      "retainedSha256": "9f6507856750a6c9704422507fe1749369c960de2abf943e7b93aa91637dd6a9",
+      "composedPixelsSha256": "c88b0704f157b7ffa6b879dffb6519c1a8179d20de0258e3beec560bb6f83c93",
+      "fixedMaximum": 0,
+      "movingMaximum": 0,
+      "rawProtectedMaximum": 79
+    }
+  ],
+  "changedPixels": 33044,
+  "neutralReturnMaximum": 0,
+  "fixedPixels": 1981337,
+  "elapsedSeconds": 19.491
+}

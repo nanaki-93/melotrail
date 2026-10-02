@@ -1,0 +1,15 @@
+✔ fixed artwork is exact while every moving-channel value is preserved (1.040333ms)
+✔ motion outside the existing support mask cannot be hidden by composition (0.560167ms)
+✔ motion inside the support mask remains visible (0.058875ms)
+✔ different dimensions and incomplete pixel data are rejected (0.110291ms)
+✔ transparent source or fixed-artwork pixels are rejected (0.090916ms)
+✔ empty and full replacement masks cannot erase the fixed/moving boundary (0.106792ms)
+✔ actual measured mismatch exceeds the unchanged pixel limit until fixed artwork is restored (0.425208ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 134.513958

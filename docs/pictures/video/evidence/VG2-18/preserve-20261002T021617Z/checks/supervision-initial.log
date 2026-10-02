@@ -1,0 +1,13 @@
+.F....................
+======================================================================
+FAIL: test_actual_phase_dispatch_shared_deadlines_and_publication (__main__.Guards)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/preserve-20261002T021617Z/scripts/check-supervision.py", line 254, in test_actual_phase_dispatch_shared_deadlines_and_publication
+    with self.assertRaisesRegex(RuntimeError,'deadline'):supervisor.check()
+AssertionError: RuntimeError not raised
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.016s
+
+FAILED (failures=1)

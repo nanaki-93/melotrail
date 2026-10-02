@@ -1,0 +1,1078 @@
+{
+  "status": "READ_ONLY_TEMPORAL_DIAGNOSIS",
+  "newImageFiles": 0,
+  "frames": [
+    {
+      "frame": 1,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 2,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 3,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 4,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 5,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 6,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 7,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 8,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 9,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 10,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 11,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 12,
+      "maximum": 1,
+      "changedPixels": 3,
+      "pixelsOverTwo": 0,
+      "worst": {
+        "x": 747,
+        "y": 636
+      }
+    },
+    {
+      "frame": 13,
+      "maximum": 2,
+      "changedPixels": 11,
+      "pixelsOverTwo": 0,
+      "worst": {
+        "x": 747,
+        "y": 642
+      }
+    },
+    {
+      "frame": 14,
+      "maximum": 4,
+      "changedPixels": 12,
+      "pixelsOverTwo": 5,
+      "worst": {
+        "x": 747,
+        "y": 642
+      }
+    },
+    {
+      "frame": 15,
+      "maximum": 5,
+      "changedPixels": 13,
+      "pixelsOverTwo": 6,
+      "worst": {
+        "x": 747,
+        "y": 642
+      }
+    },
+    {
+      "frame": 16,
+      "maximum": 3,
+      "changedPixels": 12,
+      "pixelsOverTwo": 2,
+      "worst": {
+        "x": 747,
+        "y": 641
+      }
+    },
+    {
+      "frame": 17,
+      "maximum": 1,
+      "changedPixels": 1,
+      "pixelsOverTwo": 0,
+      "worst": {
+        "x": 747,
+        "y": 642
+      }
+    },
+    {
+      "frame": 18,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 19,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 20,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 21,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 22,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 23,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 24,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 25,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 26,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 27,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 28,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 29,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 30,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 31,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 32,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 33,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 34,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 35,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 36,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 37,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 38,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 39,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 40,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 41,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 42,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 43,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 44,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 45,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 46,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 47,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 48,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 49,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 50,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 51,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 52,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 53,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 54,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 55,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 56,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 57,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 58,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 59,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 60,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 61,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 62,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 63,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 64,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 65,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 66,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 67,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 68,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 69,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 70,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 71,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 72,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 73,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 74,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 75,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 76,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 77,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 78,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 79,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 80,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 81,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 82,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 83,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 84,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 85,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 86,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 87,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 88,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 89,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 90,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 91,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 92,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 93,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 94,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 95,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 96,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 97,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 98,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 99,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 100,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 101,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 102,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 103,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 104,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 105,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 106,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 107,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 108,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 109,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 110,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 111,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 112,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 113,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 114,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 115,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 116,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 117,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 118,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 119,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 120,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 121,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 122,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 123,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 124,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 125,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 126,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 127,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 128,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 129,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 130,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 131,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 132,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 133,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 134,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 135,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 136,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 137,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 138,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 139,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 140,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 141,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 142,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 143,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 144,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 145,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 146,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 147,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 148,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 149,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    },
+    {
+      "frame": 150,
+      "maximum": 0,
+      "changedPixels": 0,
+      "pixelsOverTwo": 0,
+      "worst": null
+    }
+  ],
+  "maximum": 5,
+  "framesWithChanges": 6,
+  "totalPixelsOverTwo": 13,
+  "elapsedSeconds": 6.037
+}

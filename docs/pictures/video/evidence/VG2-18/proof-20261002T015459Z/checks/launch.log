@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/preview.py", line 420, in <module>
+    try:run(p)
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/preview.py", line 373, in run
+    budget.invoke(op['id'], op['argv'], lambda op=op: supervisor.execute(op))
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/preview.py", line 168, in invoke
+    return delegate()
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/preview.py", line 373, in <lambda>
+    budget.invoke(op['id'], op['argv'], lambda op=op: supervisor.execute(op))
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/preview.py", line 309, in execute
+    need(proc.returncode == 0, 'Stage failed; evidence retained, no retry: ' + op['id'])
+  File "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-17/metadata-20261002T015459Z/scripts/preview.py", line 42, in need
+    raise RuntimeError(message)
+RuntimeError: Stage failed; evidence retained, no retry: source

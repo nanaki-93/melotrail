@@ -1,0 +1,112 @@
+{
+  "packetSha256": "e78abd24283add21a528b41443af7ecfb39ae0a15fab183f2ed1254060afc698",
+  "startedUtcUnixSeconds": 1790907214.778395,
+  "cumulativeSeconds": 900,
+  "baselineSamples": [
+    {
+      "freeMemoryBytes": 18316607488,
+      "pressureCode": "1",
+      "swapUsedBytes": 0,
+      "freeDiskBytes": 267196739584
+    },
+    {
+      "freeMemoryBytes": 18313789440,
+      "pressureCode": "1",
+      "swapUsedBytes": 0,
+      "freeDiskBytes": 267196739584
+    },
+    {
+      "freeMemoryBytes": 18345558016,
+      "pressureCode": "1",
+      "swapUsedBytes": 0,
+      "freeDiskBytes": 267196739584
+    }
+  ],
+  "ownedDirectories": {
+    "/": {
+      "path": "/",
+      "device": 16777229,
+      "inode": 2
+    },
+    "/Users": {
+      "path": "/Users",
+      "device": 16777229,
+      "inode": 18416
+    },
+    "/Users/marcoandreose": {
+      "path": "/Users/marcoandreose",
+      "device": 16777229,
+      "inode": 287433
+    },
+    "/Users/marcoandreose/DEV": {
+      "path": "/Users/marcoandreose/DEV",
+      "device": 16777229,
+      "inode": 3518029
+    },
+    "/Users/marcoandreose/DEV/lab": {
+      "path": "/Users/marcoandreose/DEV/lab",
+      "device": 16777229,
+      "inode": 3518030
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail",
+      "device": 16777229,
+      "inode": 46036015
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs",
+      "device": 16777229,
+      "inode": 46789313
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures",
+      "device": 16777229,
+      "inode": 46717955
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video",
+      "device": 16777229,
+      "inode": 60958782
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence",
+      "device": 16777229,
+      "inode": 110571326
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18",
+      "device": 16777229,
+      "inode": 111740542
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z",
+      "device": 16777229,
+      "inode": 112021839
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/review": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/review",
+      "device": 16777229,
+      "inode": 112021845
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live",
+      "device": 16777229,
+      "inode": 112118728
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/source",
+      "device": 16777229,
+      "inode": 112118729
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/decoded": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/decoded",
+      "device": 16777229,
+      "inode": 112118730
+    },
+    "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/encoded_input": {
+      "path": "/Users/marcoandreose/DEV/lab/melotrail/docs/pictures/video/evidence/VG2-18/proof-20261002T015459Z/live/encoded_input",
+      "device": 16777229,
+      "inode": 112118731
+    }
+  }
+}
